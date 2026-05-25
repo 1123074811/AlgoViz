@@ -1410,6 +1410,12 @@ export default function Visualizer() {
         const script = generatePreset(selectedAlgorithm.id, data)
         if (script) {
           setAnimationScript(script)
+          // Sync input textarea with actual data used
+          if (script.initialState.data.length > 0) {
+            setInputData(JSON.stringify(script.initialState.data))
+          } else if (script.initialState.nodes) {
+            setInputData(JSON.stringify({ nodes: script.initialState.nodes.length, edges: script.initialState.edges?.length }))
+          }
           return
         }
       }
@@ -1417,8 +1423,11 @@ export default function Visualizer() {
       const preset = getPreset(selectedAlgorithm.id)
       if (preset) {
         setAnimationScript(preset)
-        if (inputData === '[5, 3, 8, 1, 9, 2]') {
+        // Sync input display
+        if (preset.initialState.data.length > 0) {
           setInputData(JSON.stringify(preset.initialState.data))
+        } else if (preset.initialState.nodes) {
+          setInputData(JSON.stringify({ nodes: preset.initialState.nodes.length, edges: preset.initialState.edges?.length }))
         }
         return
       }
@@ -1714,6 +1723,18 @@ export default function Visualizer() {
                     <span className="text-slate-400">{t('visualizer.space')}</span>
                     <span className="font-code text-slate-600">{complexity.space}</span>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Output / Result */}
+            {currentStep >= totalSteps && totalSteps > 0 && visualState.arrayData.length > 0 && (
+              <div className="p-3 rounded-lg border border-green-200 bg-green-50">
+                <h4 className="text-xs font-semibold text-green-700 mb-1.5">
+                  {lang === 'zh' ? '输出结果' : 'Output'}
+                </h4>
+                <div className="text-[11px] text-green-600 font-code leading-relaxed break-all">
+                  [{visualState.arrayData.join(', ')}]
                 </div>
               </div>
             )}
