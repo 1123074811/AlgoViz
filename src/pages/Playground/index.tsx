@@ -9,6 +9,15 @@ import type { AnimationScript } from '@/types/animation'
 import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
 import Header from '@/components/Layout/Header'
 
+interface HistoryEntry {
+  id: string
+  code: string
+  language: string
+  inputData: string
+  script: AnimationScript
+  timestamp: number
+}
+
 const DEFAULT_CODE = `def bubble_sort(arr):
     n = len(arr)
     for i in range(n):
@@ -24,6 +33,14 @@ const LANGUAGE_OPTIONS = [
   { value: 'java', label: 'Java' },
 ]
 
+function loadHistory(): HistoryEntry[] {
+  try { return JSON.parse(localStorage.getItem('algoviz-playground-history') || '[]') }
+  catch { return [] }
+}
+function saveHistory(entries: HistoryEntry[]) {
+  localStorage.setItem('algoviz-playground-history', JSON.stringify(entries.slice(0, 50)))
+}
+
 export default function Playground() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -34,6 +51,8 @@ export default function Playground() {
   const [animationScript, setAnimationScript] = useState<AnimationScript | null>(null)
   const [aiStatus, setAiStatus] = useState<'idle' | 'analyzing' | 'success' | 'error'>('idle')
   const [aiError, setAiError] = useState('')
+  const [history, setHistory] = useState<HistoryEntry[]>(loadHistory)
+  const [showHistory, setShowHistory] = useState(true)
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
 
   const hasApiConfig = getApiConfig() !== null
@@ -55,13 +74,41 @@ export default function Playground() {
     })
     if (result.success && result.script) {
       setAnimationScript(result.script); setAiStatus('success')
+      // Save to history
+      const entry: HistoryEntry = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        code, language: codeLanguage, inputData,
+        script: result.script,
+        timestamp: Date.now(),
+      }
+      const updated = [entry, ...history].slice(0, 50)
+      setHistory(updated)
+      saveHistory(updated)
     } else {
       setAiError(result.error || '分析失败'); setAiStatus('error')
     }
   }
 
+  const handleRestore = (entry: HistoryEntry) => {
+    setCode(entry.code)
+    setCodeLanguage(entry.language)
+    setInputData(entry.inputData)
+    setAnimationScript(entry.script)
+    setAiStatus('success')
+  }
+
+  const handleDelete = (id: string) => {
+    const updated = history.filter(h => h.id !== id)
+    setHistory(updated)
+    saveHistory(updated)
+  }
+
+  const formatTime = (ts: number) => {
+    const d = new Date(ts)
+    return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
+  }
+
   const progress = totalSteps > 0 ? (currentStep / totalSteps) * 100 : 0
-  const steps = animationScript?.steps ?? []
   const complexity = animationScript?.complexity
 
   useEffect(() => { document.title = 'AI Playground — AlgoViz' }, [])
@@ -69,86 +116,106 @@ export default function Playground() {
   return (
     <div className="h-full flex flex-col bg-white">
       <Header />
-      {/* Header bar */}
+      {/* Sub-header bar */}
       <div className="h-10 border-b border-border flex items-center justify-between px-4 shrink-0 bg-surface">
         <div className="flex items-center gap-3">
-          <Icon name="brain" size={16} className="text-primary" />
-          <span className="font-semibold text-sm text-slate-700">AI 代码实验室</span>
-          <span className="text-[10px] text-muted">粘贴或编写代码，AI 分析并生成可视化动画</span>
+          <button onClick={() => setShowHistory(!showHistory)} className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 cursor-pointer border-none bg-transparent px-1">
+            <Icon name={showHistory ? 'chevron-left' : 'chevron-right'} size={12} />
+            <Icon name="brain" size={14} className="text-primary" />
+            AI 代码实验室
+          </button>
+          <span className="text-[10px] text-muted hidden sm:inline">粘贴或编写代码，AI 分析并生成可视化动画</span>
         </div>
         <div className="flex items-center gap-2">
-          <select
-            value={codeLanguage}
-            onChange={(e) => setCodeLanguage(e.target.value)}
-            className="text-[11px] font-medium px-2 py-1 rounded border border-border bg-white text-slate-600 outline-none cursor-pointer"
-          >
+          <select value={codeLanguage} onChange={(e) => setCodeLanguage(e.target.value)} className="text-[11px] font-medium px-2 py-1 rounded border border-border bg-white text-slate-600 outline-none cursor-pointer">
             {LANGUAGE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
-          <button
-            onClick={handleAnalyze}
-            disabled={aiStatus === 'analyzing'}
+          <button onClick={handleAnalyze} disabled={aiStatus === 'analyzing'}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border-none cursor-pointer transition-all ${
               !hasApiConfig ? 'bg-slate-100 text-slate-400' :
               aiStatus === 'analyzing' ? 'bg-violet-100 text-violet-600' :
-              'bg-violet-500 text-white hover:bg-violet-600 shadow-sm'
-            }`}
-          >
-            {aiStatus === 'analyzing' ? (
-              <><Icon name="loader2" size={12} className="animate-spin" /> 分析中...</>
-            ) : !hasApiConfig ? (
-              '⚙ 先配置 API Key'
-            ) : (
-              <><Icon name="zap" size={12} /> AI 分析代码</>
-            )}
+              'bg-violet-500 text-white hover:bg-violet-600 shadow-sm'}`}>
+            {aiStatus === 'analyzing' ? <><Icon name="loader2" size={12} className="animate-spin" /> 分析中...</>
+            : !hasApiConfig ? '⚙ 先配置 API Key'
+            : <><Icon name="zap" size={12} /> AI 分析代码</>}
           </button>
         </div>
       </div>
 
       {/* Main workspace */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left: Code editor */}
-        <div className="w-[40%] border-r border-border flex flex-col min-w-0">
+        {/* History panel */}
+        {showHistory && (
+          <div className="w-52 border-r border-border bg-surface flex flex-col shrink-0 overflow-hidden">
+            <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-600">历史记录</span>
+              <span className="text-[10px] text-muted">{history.length}</span>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {history.length === 0 ? (
+                <p className="text-[11px] text-slate-400 text-center py-8 px-3">
+                  暂无记录<br/>AI 分析后自动保存
+                </p>
+              ) : (
+                <div className="p-1.5 space-y-0.5">
+                  {history.map(entry => {
+                    const algoName = entry.script.algorithm || '自定义代码'
+                    const codePreview = entry.code.split('\n').slice(0, 2).join(' ').slice(0, 40)
+                    return (
+                      <button key={entry.id} onClick={() => handleRestore(entry)}
+                        className="w-full text-left p-2 rounded-md hover:bg-slate-100 transition-colors cursor-pointer border-none bg-transparent group">
+                        <div className="flex items-start justify-between gap-1">
+                          <span className="text-[10px] font-semibold text-primary truncate">{algoName}</span>
+                          <button onClick={(e) => { e.stopPropagation(); handleDelete(entry.id) }}
+                            className="shrink-0 opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center rounded text-muted hover:text-red-500 cursor-pointer border-none bg-transparent" title="删除">
+                            <Icon name="x" size={10} />
+                          </button>
+                        </div>
+                        <p className="text-[9px] text-muted mt-0.5 truncate">{codePreview}</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-[9px] text-slate-300 font-code">{entry.language}</span>
+                          <span className="text-[9px] text-slate-300">{formatTime(entry.timestamp)}</span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+            {history.length > 0 && (
+              <div className="p-2 border-t border-border">
+                <button onClick={() => { setHistory([]); saveHistory([]) }}
+                  className="w-full text-[10px] text-slate-400 hover:text-red-500 cursor-pointer border-none bg-transparent text-center">
+                  清空全部历史
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Code editor */}
+        <div className="flex-1 border-r border-border flex flex-col min-w-0">
           <div className="flex-1 overflow-hidden">
-            <Editor
-              height="100%"
+            <Editor height="100%"
               language={codeLanguage === 'cpp' ? 'cpp' : codeLanguage === 'javascript' ? 'javascript' : codeLanguage === 'java' ? 'java' : 'python'}
-              value={code}
-              onChange={(val) => setCode(val ?? '')}
-              onMount={handleEditorMount}
-              theme="light"
-              options={{
-                fontSize: 13, fontFamily: 'var(--font-code)', lineNumbers: 'on',
-                minimap: { enabled: false }, scrollBeyondLastLine: false,
-                wordWrap: 'on', padding: { top: 8 }, glyphMargin: true,
-                folding: true, renderLineHighlight: 'line',
-              }}
-            />
+              value={code} onChange={(val) => setCode(val ?? '')} onMount={handleEditorMount} theme="light"
+              options={{ fontSize: 13, fontFamily: 'var(--font-code)', lineNumbers: 'on', minimap: { enabled: false }, scrollBeyondLastLine: false, wordWrap: 'on', padding: { top: 8 }, glyphMargin: true, folding: true, renderLineHighlight: 'line' }} />
           </div>
           <div className="h-28 border-t border-border bg-surface p-3 shrink-0">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs font-medium text-slate-500">输入数据</span>
               <span className="text-[10px] text-muted">JSON 数组格式，如 [5,3,8,1,9,2]</span>
             </div>
-            <textarea
-              className="w-full h-[calc(100%-1.8rem)] resize-none rounded-md border border-border
-                         bg-white p-2 text-sm font-code outline-none focus:border-primary
-                         focus:ring-1 focus:ring-primary-200 transition-colors"
-              value={inputData}
-              onChange={(e) => setInputData(e.target.value)}
-              placeholder="[5, 3, 8, 1, 9, 2]"
-              disabled={aiStatus === 'analyzing'}
-            />
+            <textarea className="w-full h-[calc(100%-1.8rem)] resize-none rounded-md border border-border bg-white p-2 text-sm font-code outline-none focus:border-primary focus:ring-1 focus:ring-primary-200 transition-colors"
+              value={inputData} onChange={(e) => setInputData(e.target.value)} placeholder="[5, 3, 8, 1, 9, 2]" disabled={aiStatus === 'analyzing'} />
           </div>
         </div>
 
-        {/* Right: Visualization + Info */}
-        <div className="w-[60%] flex flex-col min-w-0">
-          {/* Canvas */}
+        {/* Visualization */}
+        <div className="flex-[1.5] flex flex-col min-w-0">
           <div className="flex-1 min-h-0">
             <VisualizationCanvas script={animationScript} visualState={visualState} currentStepData={currentStepData} />
           </div>
-
-          {/* Controls */}
           <div className="h-12 border-t border-border bg-white flex items-center justify-between px-4 shrink-0">
             <div className="flex items-center gap-1">
               <button className="ctrl-btn" onClick={reset} title="Reset"><Icon name="rotate-ccw" size={16} /></button>
@@ -174,7 +241,7 @@ export default function Playground() {
         </div>
       </div>
 
-      {/* AI Status overlay */}
+      {/* AI Error overlay */}
       {aiStatus === 'error' && (
         <div className="absolute bottom-14 right-4 max-w-sm p-3 rounded-lg border border-red-100 bg-red-50 shadow-lg z-50">
           <div className="flex items-start gap-2">
@@ -188,9 +255,9 @@ export default function Playground() {
         </div>
       )}
 
-      {/* Info panel (right side overlay) */}
+      {/* Info overlay */}
       {animationScript && currentStepData && (
-        <div className="absolute top-10 right-4 w-56 max-h-[calc(100%-8rem)] overflow-y-auto p-3 rounded-lg border border-border bg-white/95 shadow-lg backdrop-blur z-50 space-y-2 text-xs">
+        <div className="absolute top-[7.5rem] right-4 w-56 max-h-[calc(100%-10rem)] overflow-y-auto p-3 rounded-lg border border-border bg-white/95 shadow-lg backdrop-blur z-50 space-y-2 text-xs">
           <div className="p-2 rounded bg-warning-50">
             <div className="text-[10px] text-warning font-semibold mb-0.5">Step {currentStepData.stepId}</div>
             <p className="text-[11px] text-slate-700">{currentStepData.description.zh}</p>
@@ -207,7 +274,7 @@ export default function Playground() {
             <div className="p-2 rounded bg-surface">
               <div className="text-[10px] font-semibold text-slate-600 mb-1">复杂度</div>
               <div className="text-[10px] text-slate-500 space-y-0.5">
-                <div>时间: {complexity.time.best} / {complexity.time.average} / {complexity.time.worst}</div>
+                <div>时间: {complexity.time.best}/{complexity.time.average}/{complexity.time.worst}</div>
                 <div>空间: {complexity.space}</div>
               </div>
             </div>
