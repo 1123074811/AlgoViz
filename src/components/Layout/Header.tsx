@@ -17,6 +17,7 @@ export default function Header() {
   const navItems = [
     { path: '/', label: t('nav.home'), icon: 'home' as const },
     { path: '/visualizer', label: t('nav.visualizer'), icon: 'code2' as const },
+    { path: '/playground', label: t('nav.playground'), icon: 'brain' as const },
     { path: '/settings', label: t('nav.settings'), icon: 'settings' as const },
   ]
 

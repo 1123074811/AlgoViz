@@ -5,6 +5,7 @@ import MainLayout from '@/components/Layout/MainLayout'
 const Home = lazy(() => import('@/pages/Home'))
 const Visualizer = lazy(() => import('@/pages/Visualizer'))
 const Settings = lazy(() => import('@/pages/Settings'))
+const Playground = lazy(() => import('@/pages/Playground'))
 
 function LoadingFallback() {
   return (
@@ -24,31 +25,11 @@ export default function App() {
     >
       <Routes>
         <Route element={<MainLayout />}>
-          <Route
-            path="/"
-            element={
-              <Suspense fallback={<LoadingFallback />}>
-                <Home />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/visualizer"
-            element={
-              <Suspense fallback={<LoadingFallback />}>
-                <Visualizer />
-              </Suspense>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <Suspense fallback={<LoadingFallback />}>
-                <Settings />
-              </Suspense>
-            }
-          />
+          <Route path="/" element={<Suspense fallback={<LoadingFallback />}><Home /></Suspense>} />
+          <Route path="/visualizer" element={<Suspense fallback={<LoadingFallback />}><Visualizer /></Suspense>} />
+          <Route path="/settings" element={<Suspense fallback={<LoadingFallback />}><Settings /></Suspense>} />
         </Route>
+        <Route path="/playground" element={<Suspense fallback={<LoadingFallback />}><Playground /></Suspense>} />
       </Routes>
     </BrowserRouter>
   )

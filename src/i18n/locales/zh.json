@@ -6,6 +6,7 @@
   "nav": {
     "home": "首页",
     "visualizer": "可视化工作台",
+    "playground": "AI 代码实验室",
     "settings": "API 配置",
     "language": "语言"
   },

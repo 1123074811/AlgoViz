@@ -6,6 +6,7 @@
   "nav": {
     "home": "Home",
     "visualizer": "Visualizer",
+    "playground": "AI Lab",
     "settings": "API Config",
     "language": "Language"
   },
