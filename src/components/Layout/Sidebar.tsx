@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
 import { useNavigate } from 'react-router-dom'
-import { Icon, categoryIcons, type IconName } from '@/icons'
+import { Icon, categoryIcons, algorithmTypeIcons, type IconName } from '@/icons'
 import { useAlgorithmStore, type AlgorithmCategory, type Difficulty } from '@/store/algorithmStore'
 
 const CATEGORIES: { key: AlgorithmCategory | 'all'; icon: IconName }[] = [
@@ -10,7 +10,7 @@ const CATEGORIES: { key: AlgorithmCategory | 'all'; icon: IconName }[] = [
   { key: 'sorting', icon: 'arrow-up-down' },
   { key: 'graph', icon: 'git-graph' },
   { key: 'data-structure', icon: 'database' },
-  { key: 'dp', icon: 'hash' },
+  { key: 'dp', icon: 'table2' },
   { key: 'search-backtrack', icon: 'search' },
   { key: 'advanced', icon: 'brain' },
   { key: 'interview', icon: 'zap' },
@@ -172,7 +172,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   {globalIdx}
                 </span>
                 <Icon
-                  name={categoryIcons[algo.category] || 'code2'}
+                  name={algorithmTypeIcons[algo.id] || categoryIcons[algo.category] || 'code2'}
                   size={14}
                 />
                 <span className="flex-1 truncate font-medium">

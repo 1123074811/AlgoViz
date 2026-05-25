@@ -1,13 +1,16 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import Editor, { type OnMount } from '@monaco-editor/react'
+import type { OnMount } from '@monaco-editor/react'
 import { Icon } from '@/icons'
 import { useAnimationEngine } from '@/hooks/useAnimationEngine'
 import { analyzeCode, getApiConfig, type AIResult } from '@/ai'
 import type { AnimationScript } from '@/types/animation'
 import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
 import Header from '@/components/Layout/Header'
+import PlaybackControls from '@/components/Controls/PlaybackControls'
+import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
+import InputDataPanel from '@/components/Editor/InputDataPanel'
 
 interface HistoryEntry {
   id: string
@@ -108,7 +111,6 @@ export default function Playground() {
     return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
   }
 
-  const progress = totalSteps > 0 ? (currentStep / totalSteps) * 100 : 0
   const complexity = animationScript?.complexity
 
   useEffect(() => { document.title = 'AI Playground — AlgoViz' }, [])
@@ -143,10 +145,10 @@ export default function Playground() {
       </div>
 
       {/* Main workspace */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* History panel */}
         {showHistory && (
-          <div className="w-52 border-r border-border bg-surface flex flex-col shrink-0 overflow-hidden">
+          <div className="w-full lg:w-52 h-40 lg:h-auto border-b lg:border-b-0 lg:border-r border-border bg-surface flex flex-col shrink-0 overflow-hidden">
             <div className="px-3 py-2 border-b border-border flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-600">历史记录</span>
               <span className="text-[10px] text-muted">{history.length}</span>
@@ -194,50 +196,44 @@ export default function Playground() {
         )}
 
         {/* Code editor */}
-        <div className="flex-1 border-r border-border flex flex-col min-w-0">
-          <div className="flex-1 overflow-hidden">
-            <Editor height="100%"
-              language={codeLanguage === 'cpp' ? 'cpp' : codeLanguage === 'javascript' ? 'javascript' : codeLanguage === 'java' ? 'java' : 'python'}
-              value={code} onChange={(val) => setCode(val ?? '')} onMount={handleEditorMount} theme="light"
-              options={{ fontSize: 13, fontFamily: 'var(--font-code)', lineNumbers: 'on', minimap: { enabled: false }, scrollBeyondLastLine: false, wordWrap: 'on', padding: { top: 8 }, glyphMargin: true, folding: true, renderLineHighlight: 'line' }} />
-          </div>
-          <div className="h-28 border-t border-border bg-surface p-3 shrink-0">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-medium text-slate-500">输入数据</span>
-              <span className="text-[10px] text-muted">JSON 数组格式，如 [5,3,8,1,9,2]</span>
-            </div>
-            <textarea className="w-full h-[calc(100%-1.8rem)] resize-none rounded-md border border-border bg-white p-2 text-sm font-code outline-none focus:border-primary focus:ring-1 focus:ring-primary-200 transition-colors"
-              value={inputData} onChange={(e) => setInputData(e.target.value)} placeholder="[5, 3, 8, 1, 9, 2]" disabled={aiStatus === 'analyzing'} />
-          </div>
+        <div className="flex-1 lg:border-r border-border flex flex-col min-w-0 min-h-0">
+          <CodeEditorPanel
+            value={code}
+            language={codeLanguage}
+            onChange={setCode}
+            onMount={handleEditorMount}
+            disabled={aiStatus === 'analyzing'}
+            className="flex-1"
+          />
+          <InputDataPanel
+            value={inputData}
+            onChange={setInputData}
+            title="输入数据"
+            helperText="JSON 数组格式，如 [5,3,8,1,9,2]"
+            placeholder="[5, 3, 8, 1, 9, 2]"
+            disabled={aiStatus === 'analyzing'}
+            className="h-28"
+          />
         </div>
 
         {/* Visualization */}
-        <div className="flex-[1.5] flex flex-col min-w-0">
+        <div className="flex-[1.5] flex flex-col min-w-0 min-h-0">
           <div className="flex-1 min-h-0">
             <VisualizationCanvas script={animationScript} visualState={visualState} currentStepData={currentStepData} />
           </div>
-          <div className="h-12 border-t border-border bg-white flex items-center justify-between px-4 shrink-0">
-            <div className="flex items-center gap-1">
-              <button className="ctrl-btn" onClick={reset} title="Reset"><Icon name="rotate-ccw" size={16} /></button>
-              <button className="ctrl-btn" onClick={stepBackward} title="Prev"><Icon name="chevron-left" size={16} /></button>
-              <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-white hover:bg-primary-700 transition-colors cursor-pointer border-none" onClick={togglePlay} title={isPlaying ? 'Pause' : 'Play'}>
-                <Icon name={isPlaying ? 'pause' : 'play'} size={15} />
-              </button>
-              <button className="ctrl-btn" onClick={stepForward} title="Next"><Icon name="chevron-right" size={16} /></button>
-              <button className="ctrl-btn" onClick={goToEnd} title="End"><Icon name="fast-forward" size={16} /></button>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] text-slate-400 font-code">{currentStep}/{totalSteps}</span>
-              <div className="w-24 h-1 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-400">Speed</span>
-              <input type="range" min={0.25} max={4} step={0.25} value={speed} onChange={(e) => setSpeed(parseFloat(e.target.value))} className="w-16 h-1 accent-primary cursor-pointer" />
-              <span className="text-[11px] font-code text-slate-500 w-7">{speed}x</span>
-            </div>
-          </div>
+          <PlaybackControls
+            compact
+            isPlaying={isPlaying}
+            currentStep={currentStep}
+            totalSteps={totalSteps}
+            speed={speed}
+            onReset={reset}
+            onStepBackward={stepBackward}
+            onTogglePlay={togglePlay}
+            onStepForward={stepForward}
+            onGoToEnd={goToEnd}
+            onSpeedChange={setSpeed}
+          />
         </div>
       </div>
 
@@ -282,10 +278,6 @@ export default function Playground() {
         </div>
       )}
 
-      <style>{`
-        .ctrl-btn { width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:7px; border:none; background:transparent; color:#64748B; cursor:pointer; transition:all .15s; }
-        .ctrl-btn:hover { background:#F1F5F9; color:#1E293B; }
-      `}</style>
     </div>
   )
 }

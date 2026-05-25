@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import Editor, { type OnMount } from '@monaco-editor/react'
+import type { OnMount } from '@monaco-editor/react'
 import { Icon } from '@/icons'
 import { useAlgorithmStore } from '@/store/algorithmStore'
 import { getPreset, generatePreset, hasGenerator } from '@/presets'
@@ -8,6 +8,9 @@ import { useAnimationEngine } from '@/hooks/useAnimationEngine'
 import { analyzeCode, getApiConfig, type AIResult } from '@/ai'
 import { ALGORITHM_DEFS, type AlgorithmDefinition } from '@/data/algorithmDefs'
 import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
+import PlaybackControls from '@/components/Controls/PlaybackControls'
+import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
+import InputDataPanel from '@/components/Editor/InputDataPanel'
 
 type AIStatus = 'idle' | 'analyzing' | 'success' | 'error'
 
@@ -1363,6 +1366,7 @@ export default function Visualizer() {
 
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
   const decorationsRef = useRef<string[]>([])
+  const internalInputUpdate = useRef(false)
 
   const {
     visualState,
@@ -1395,6 +1399,14 @@ export default function Visualizer() {
 
   // Load preset or regenerate when algorithm or input changes
   useEffect(() => {
+    // Skip regeneration when we're just syncing inputData back to textarea.
+    // Prevents infinite loop for algorithms whose initialState.data differs
+    // from parsed input (KMP char-code conversion, Fenwick tree array, etc.)
+    if (internalInputUpdate.current) {
+      internalInputUpdate.current = false
+      return
+    }
+
     if (!selectedAlgorithm) return
     const lang = selectedAlgorithm.defaultLanguage as 'python' | 'javascript' | 'cpp' | 'java'
     setCodeLanguage(lang)
@@ -1412,9 +1424,17 @@ export default function Visualizer() {
           setAnimationScript(script)
           // Sync input textarea with actual data used
           if (script.initialState.data.length > 0) {
-            setInputData(JSON.stringify(script.initialState.data))
+            const newVal = JSON.stringify(script.initialState.data)
+            if (newVal !== inputData) {
+              internalInputUpdate.current = true
+              setInputData(newVal)
+            }
           } else if (script.initialState.nodes) {
-            setInputData(JSON.stringify({ nodes: script.initialState.nodes.length, edges: script.initialState.edges?.length }))
+            const newVal = JSON.stringify({ nodes: script.initialState.nodes.length, edges: script.initialState.edges?.length })
+            if (newVal !== inputData) {
+              internalInputUpdate.current = true
+              setInputData(newVal)
+            }
           }
           return
         }
@@ -1425,9 +1445,17 @@ export default function Visualizer() {
         setAnimationScript(preset)
         // Sync input display
         if (preset.initialState.data.length > 0) {
-          setInputData(JSON.stringify(preset.initialState.data))
+          const newVal = JSON.stringify(preset.initialState.data)
+          if (newVal !== inputData) {
+            internalInputUpdate.current = true
+            setInputData(newVal)
+          }
         } else if (preset.initialState.nodes) {
-          setInputData(JSON.stringify({ nodes: preset.initialState.nodes.length, edges: preset.initialState.edges?.length }))
+          const newVal = JSON.stringify({ nodes: preset.initialState.nodes.length, edges: preset.initialState.edges?.length })
+          if (newVal !== inputData) {
+            internalInputUpdate.current = true
+            setInputData(newVal)
+          }
         }
         return
       }
@@ -1530,22 +1558,25 @@ export default function Visualizer() {
     )
   }
 
-  const progress = totalSteps > 0 ? (currentStep / totalSteps) * 100 : 0
   const steps = animationScript?.steps ?? []
   const complexity = animationScript?.complexity
 
   return (
     <div className="h-full flex flex-col">
       {/* Three-column layout */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col xl:flex-row overflow-hidden">
         {/* Left: Code Editor (35%) */}
-        <div className="w-[35%] border-r border-border flex flex-col bg-white min-w-0">
-          <div className="h-9 border-b border-border flex items-center justify-between px-3 bg-surface shrink-0">
-            <span className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
-              <Icon name="code2" size={14} />
-              {selectedAlgorithm.name}
-            </span>
-            <div className="flex items-center gap-2">
+        <div className="xl:w-[35%] h-[42%] xl:h-auto border-b xl:border-b-0 xl:border-r border-border flex flex-col bg-white min-w-0 min-h-0">
+          <CodeEditorPanel
+            value={code}
+            language={codeLanguage}
+            onChange={setCode}
+            onMount={handleEditorMount}
+            disabled={aiStatus === 'analyzing'}
+            title={selectedAlgorithm.name}
+            className="flex-1"
+            rightSlot={
+              <>
               {/* Language selector */}
               <select
                 value={codeLanguage}
@@ -1568,48 +1599,18 @@ export default function Visualizer() {
                   {t('sidebar.presetBadge')}
                 </span>
               )}
-            </div>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <Editor
-              height="100%"
-              language={codeLanguage === 'cpp' ? 'cpp' : codeLanguage === 'javascript' ? 'javascript' : codeLanguage === 'java' ? 'java' : 'python'}
-              value={code}
-              onChange={(val) => setCode(val ?? '')}
-              onMount={handleEditorMount}
-              theme="light"
-              options={{
-                fontSize: 13,
-                fontFamily: 'var(--font-code)',
-                lineNumbers: 'on',
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                wordWrap: 'on',
-                padding: { top: 8 },
-                glyphMargin: true,
-                folding: false,
-                lineDecorationsWidth: 4,
-                lineNumbersMinChars: 3,
-                renderLineHighlight: 'none',
-                overviewRulerBorder: false,
-                hideCursorInOverviewRuler: true,
-              }}
-            />
-          </div>
-          <div className="h-32 border-t border-border bg-surface p-3 shrink-0">
-            <div className="text-xs font-medium text-slate-500 mb-1.5">
-              {t('visualizer.inputData')}
-            </div>
-            <textarea
-              className="w-full h-[calc(100%-1.5rem)] resize-none rounded-md border border-border
-                         bg-white p-2 text-sm font-code outline-none focus:border-primary
-                         focus:ring-1 focus:ring-primary-200 transition-colors"
-              value={inputData}
-              onChange={(e) => setInputData(e.target.value)}
-              placeholder="[5, 3, 8, 1, 9, 2]"
-              disabled={aiStatus === 'analyzing'}
-            />
-          </div>
+              </>
+            }
+          />
+          <InputDataPanel
+            value={inputData}
+            onChange={setInputData}
+            title={t('visualizer.inputData')}
+            helperText="JSON 数组格式，如 [5,3,8,1,9,2]"
+            placeholder="[5, 3, 8, 1, 9, 2]"
+            disabled={aiStatus === 'analyzing'}
+            className="h-28 xl:h-32"
+          />
           {/* Output result */}
           {currentStep >= totalSteps && totalSteps > 0 && visualState.arrayData.length > 0 && (
             <div className="h-20 border-t border-border bg-green-50 p-2.5 shrink-0">
@@ -1624,7 +1625,7 @@ export default function Visualizer() {
         </div>
 
         {/* Center: Canvas (45%) */}
-        <div className="w-[45%] border-r border-border min-w-0">
+        <div className="flex-1 xl:w-[45%] xl:flex-none border-b xl:border-b-0 xl:border-r border-border min-w-0 min-h-0">
           <VisualizationCanvas
             script={animationScript}
             visualState={visualState}
@@ -1633,7 +1634,7 @@ export default function Visualizer() {
         </div>
 
         {/* Right: Info Panel (20%) */}
-        <div className="w-[20%] flex flex-col bg-white min-w-0">
+        <div className="xl:w-[20%] h-44 xl:h-auto flex flex-col bg-white min-w-0 shrink-0">
           <div className="h-9 border-b border-border flex items-center px-3 bg-surface shrink-0">
             <span className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
               <Icon name="info" size={14} />
@@ -1762,37 +1763,31 @@ export default function Visualizer() {
       </div>
 
       {/* Bottom: Control Bar */}
-      <div className="h-14 border-t border-border bg-white flex items-center justify-between px-4 shrink-0">
-        <div className="flex items-center gap-2">
-          <button className="control-btn" onClick={reset} title={t('controls.reset')}>
-            <Icon name="rotate-ccw" size={18} />
-          </button>
-          <button className="control-btn" onClick={stepBackward} title={t('controls.prevStep')}>
-            <Icon name="chevron-left" size={18} />
-          </button>
-          <button
-            className="w-9 h-9 flex items-center justify-center rounded-lg bg-primary text-white
-                       hover:bg-primary-700 transition-colors cursor-pointer border-none"
-            onClick={togglePlay}
-            title={isPlaying ? t('controls.pause') : t('controls.play')}
-          >
-            <Icon name={isPlaying ? 'pause' : 'play'} size={18} />
-          </button>
-          <button className="control-btn" onClick={stepForward} title={t('controls.nextStep')}>
-            <Icon name="chevron-right" size={18} />
-          </button>
-          <button className="control-btn" onClick={goToEnd} title={t('controls.end')}>
-            <Icon name="fast-forward" size={18} />
-          </button>
-
-          {/* Separator */}
-          <div className="w-px h-5 bg-border mx-1" />
-
-          {/* AI Analysis Button */}
+      <PlaybackControls
+        isPlaying={isPlaying}
+        currentStep={currentStep}
+        totalSteps={totalSteps}
+        speed={speed}
+        onReset={reset}
+        onStepBackward={stepBackward}
+        onTogglePlay={togglePlay}
+        onStepForward={stepForward}
+        onGoToEnd={goToEnd}
+        onSpeedChange={setSpeed}
+        labels={{
+          reset: t('controls.reset'),
+          prevStep: t('controls.prevStep'),
+          play: t('controls.play'),
+          pause: t('controls.pause'),
+          nextStep: t('controls.nextStep'),
+          end: t('controls.end'),
+          speed: t('controls.speed'),
+        }}
+        extraActions={
           <button
             onClick={handleAIAnalyze}
             disabled={aiStatus === 'analyzing' || !hasApiConfig}
-            className="flex items-center gap-1.5 px-3 h-8 rounded-lg text-sm font-medium
+            className="flex items-center gap-1.5 px-2 sm:px-3 h-8 rounded-lg text-xs sm:text-sm font-medium
                        bg-gradient-to-r from-violet-500 to-purple-600 text-white
                        hover:from-violet-600 hover:to-purple-700
                        disabled:opacity-50 disabled:cursor-not-allowed
@@ -1804,64 +1799,12 @@ export default function Visualizer() {
             ) : (
               <Icon name="brain" size={14} />
             )}
-            {t('controls.aiAnalyze')}
+            <span className="hidden sm:inline">{t('controls.aiAnalyze')}</span>
           </button>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-slate-400 font-code w-[72px] text-right">
-            {currentStep} / {totalSteps}
-          </span>
-          <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-slate-400 uppercase tracking-wide">
-            {t('controls.speed')}
-          </span>
-          <input
-            type="range"
-            min={0.25}
-            max={4}
-            step={0.25}
-            value={speed}
-            onChange={(e) => setSpeed(parseFloat(e.target.value))}
-            className="w-20 h-1 accent-primary cursor-pointer"
-          />
-          <span className="text-xs font-code text-slate-500 w-8 text-right">
-            {speed}x
-          </span>
-        </div>
-      </div>
+        }
+      />
 
       <style>{`
-        .control-btn {
-          width: 34px;
-          height: 34px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 8px;
-          border: none;
-          background: transparent;
-          color: #64748B;
-          cursor: pointer;
-          transition: all 0.15s;
-        }
-        .control-btn:hover {
-          background: #F1F5F9;
-          color: #1E293B;
-        }
-        .control-btn:disabled {
-          opacity: 0.4;
-          cursor: not-allowed;
-          background: transparent;
-        }
         .active-line {
           background: rgba(245, 158, 11, 0.12) !important;
           border-left: 3px solid #F59E0B;
