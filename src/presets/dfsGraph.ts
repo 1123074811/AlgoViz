@@ -1,46 +1,48 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, GraphNodeState, ActionColor } from '@/types/animation'
+
+const N = ['0','1','2','3','4','5'] as const
+
+function dfsStep(id: number, ln: number, zh: string, en: string,
+  type: string, targets: number[], color: ActionColor,
+  comps: number, accs: number,
+  stack: string[], visited: string[], current: string | null,
+): AnimationScript['steps'][0] {
+  const ns: GraphNodeState[] = [
+    ...visited.map(i => ({ id: i, role: 'visited' as const, color: 'success' as ActionColor })),
+    ...stack.map(i => ({ id: i, role: 'stacked' as const, color: 'primary' as ActionColor })),
+  ]
+  if (current) ns.push({ id: current, role: 'current', color: 'warning' as ActionColor })
+  return {
+    stepId: id, codeLine: ln, description: { zh, en },
+    action: { type: type as AnimationScript['steps'][0]['action']['type'], targets, color },
+    stats: { comparisons: comps, swaps: 0, accesses: accs },
+    teachingState: { graph: { stack, output: visited, nodeStates: ns } },
+  }
+}
 
 const dfsGraphPreset: AnimationScript = {
   algorithm: 'dfs_graph',
-  complexity: {
-    time: { best: 'O(V+E)', average: 'O(V+E)', worst: 'O(V+E)' },
-    space: 'O(V)',
-  },
+  complexity: { time: { best: 'O(V+E)', average: 'O(V+E)', worst: 'O(V+E)' }, space: 'O(V)' },
   initialState: {
-    type: 'graph',
-    data: [],
-    nodes: [
-      { id: '0', label: 'A' },
-      { id: '1', label: 'B' },
-      { id: '2', label: 'C' },
-      { id: '3', label: 'D' },
-      { id: '4', label: 'E' },
-      { id: '5', label: 'F' },
-    ],
-    edges: [
-      { source: '0', target: '1' },
-      { source: '0', target: '2' },
-      { source: '1', target: '3' },
-      { source: '1', target: '4' },
-      { source: '2', target: '5' },
-    ],
+    type: 'graph', data: [],
+    nodes: N.map((id, i) => ({ id, label: String.fromCharCode(65 + i) })),
+    edges: [{ source: '0', target: '1' }, { source: '0', target: '2' }, { source: '1', target: '3' }, { source: '1', target: '4' }, { source: '2', target: '5' }],
   },
   steps: [
-    { stepId: 1, codeLine: 1, description: { zh: '从 A 开始 DFS', en: 'Start DFS from A' }, action: { type: 'highlight', targets: [0], color: 'primary' }, stats: { comparisons: 0, swaps: 0, accesses: 1 } },
-    { stepId: 2, codeLine: 2, description: { zh: '访问 A，标记为已访问', en: 'Visit A, mark visited' }, action: { type: 'mark', targets: [0], color: 'success' }, stats: { comparisons: 0, swaps: 0, accesses: 2 } },
-    { stepId: 3, codeLine: 4, description: { zh: '探索 A 的邻居 B（未访问），递归进入', en: 'Explore neighbor B (unvisited), recurse' }, action: { type: 'compare', targets: [0, 1], color: 'warning' }, stats: { comparisons: 1, swaps: 0, accesses: 3 } },
-    { stepId: 4, codeLine: 2, description: { zh: '访问 B', en: 'Visit B' }, action: { type: 'mark', targets: [1], color: 'success' }, stats: { comparisons: 1, swaps: 0, accesses: 4 } },
-    { stepId: 5, codeLine: 4, description: { zh: '探索 B 的邻居 D（未访问），递归进入', en: 'Explore neighbor D (unvisited), recurse' }, action: { type: 'compare', targets: [1, 3], color: 'warning' }, stats: { comparisons: 2, swaps: 0, accesses: 5 } },
-    { stepId: 6, codeLine: 2, description: { zh: '访问 D。D 无其他邻居，回溯到 B', en: 'Visit D. No more neighbors, backtrack to B' }, action: { type: 'mark', targets: [3], color: 'success' }, stats: { comparisons: 2, swaps: 0, accesses: 6 } },
-    { stepId: 7, codeLine: 4, description: { zh: '探索 B 的邻居 E（未访问），递归进入', en: 'Explore neighbor E (unvisited), recurse' }, action: { type: 'compare', targets: [1, 4], color: 'warning' }, stats: { comparisons: 3, swaps: 0, accesses: 7 } },
-    { stepId: 8, codeLine: 2, description: { zh: '访问 E。E 无其他邻居，回溯到 B', en: 'Visit E. No more neighbors, backtrack to B' }, action: { type: 'mark', targets: [4], color: 'success' }, stats: { comparisons: 3, swaps: 0, accesses: 8 } },
-    { stepId: 9, codeLine: 5, description: { zh: 'B 遍历完所有邻居，回溯到 A', en: 'B done, backtrack to A' }, action: { type: 'highlight', targets: [0, 1], color: 'muted' }, stats: { comparisons: 3, swaps: 0, accesses: 9 } },
-    { stepId: 10, codeLine: 4, description: { zh: '探索 A 的邻居 C（未访问），递归进入', en: 'Explore neighbor C (unvisited), recurse' }, action: { type: 'compare', targets: [0, 2], color: 'warning' }, stats: { comparisons: 4, swaps: 0, accesses: 10 } },
-    { stepId: 11, codeLine: 2, description: { zh: '访问 C', en: 'Visit C' }, action: { type: 'mark', targets: [2], color: 'success' }, stats: { comparisons: 4, swaps: 0, accesses: 11 } },
-    { stepId: 12, codeLine: 4, description: { zh: '探索 C 的邻居 F（未访问），递归进入', en: 'Explore neighbor F (unvisited), recurse' }, action: { type: 'compare', targets: [2, 5], color: 'warning' }, stats: { comparisons: 5, swaps: 0, accesses: 12 } },
-    { stepId: 13, codeLine: 2, description: { zh: '访问 F。F 无未访问邻居，回溯到 C', en: 'Visit F. Backtrack to C' }, action: { type: 'mark', targets: [5], color: 'success' }, stats: { comparisons: 5, swaps: 0, accesses: 13 } },
-    { stepId: 14, codeLine: 5, description: { zh: 'C 遍历完毕，回溯到 A。A 也无更多邻居', en: 'C done, backtrack to A. A done' }, action: { type: 'highlight', targets: [0, 2, 5], color: 'muted' }, stats: { comparisons: 5, swaps: 0, accesses: 14 } },
-    { stepId: 15, codeLine: 6, description: { zh: 'DFS 遍历完成！顺序：A → B → D → E → C → F', en: 'DFS done! Order: A -> B -> D -> E -> C -> F' }, action: { type: 'mark', targets: [0, 1, 2, 3, 4, 5], color: 'success' }, stats: { comparisons: 5, swaps: 0, accesses: 15 } },
+    dfsStep(1, 1, '从 A 开始 DFS。DFS 沿着一条路径深入到底，无法前进时回溯', 'Start DFS from A. DFS explores as deep as possible, then backtracks', 'highlight', [0], 'primary', 0, 1, ['0'], [], '0'),
+    dfsStep(2, 2, '访问 A，标记已访问。A 入栈（递归调用栈）', 'Visit A, mark visited. A pushed onto recursion stack', 'mark', [0], 'success', 0, 2, ['0'], ['0'], '0'),
+    dfsStep(3, 4, '探索 A→B：B 未被访问，沿边深入', 'Explore A->B: B unvisited, go deeper', 'compare', [0, 1], 'warning', 1, 3, ['0', '1'], ['0'], '1'),
+    dfsStep(4, 2, '访问 B，已访问节点: A,B。栈顶: B', 'Visit B. Visited: A,B. Stack top: B', 'mark', [1], 'success', 1, 4, ['0', '1'], ['0', '1'], '1'),
+    dfsStep(5, 4, '探索 B→D：D 未被访问，沿边深入', 'Explore B->D: D unvisited, go deeper', 'compare', [1, 3], 'warning', 2, 5, ['0', '1', '3'], ['0', '1'], '3'),
+    dfsStep(6, 2, '访问 D。D 无未访问邻居，回溯到 B。DFS 的关键：走到尽头后回退', 'Visit D. No more unvisited neighbors, backtrack to B. DFS hallmark: retreat when stuck', 'mark', [3], 'success', 2, 6, ['0', '1'], ['0', '1', '3'], '1'),
+    dfsStep(7, 4, '探索 B→E：E 未被访问，沿边深入', 'Explore B->E: E unvisited, go deeper', 'compare', [1, 4], 'warning', 3, 7, ['0', '1', '4'], ['0', '1', '3'], '4'),
+    dfsStep(8, 2, '访问 E。E 无未访问邻居，回溯到 B。B 所有邻居已处理，回溯到 A', 'Visit E. No more neighbors, backtrack B→A', 'mark', [4], 'success', 3, 8, ['0'], ['0', '1', '3', '4'], '0'),
+    dfsStep(9, 5, '回溯到 A，检查 A 的剩余邻居。A 还有邻居 C 未访问', 'Backtracked to A, check remaining neighbors. A has C unvisited', 'highlight', [0], 'muted', 3, 9, ['0'], ['0', '1', '3', '4'], '0'),
+    dfsStep(10, 4, '探索 A→C：C 未被访问，沿边深入', 'Explore A->C: C unvisited, go deeper', 'compare', [0, 2], 'warning', 4, 10, ['0', '2'], ['0', '1', '3', '4'], '2'),
+    dfsStep(11, 2, '访问 C', 'Visit C', 'mark', [2], 'success', 4, 11, ['0', '2'], ['0', '1', '3', '4', '2'], '2'),
+    dfsStep(12, 4, '探索 C→F：F 未被访问，沿边深入', 'Explore C->F: F unvisited, go deeper', 'compare', [2, 5], 'warning', 5, 12, ['0', '2', '5'], ['0', '1', '3', '4', '2'], '5'),
+    dfsStep(13, 2, '访问 F。F 无未访问邻居，回溯。栈为空，DFS 完成！', 'Visit F. No more neighbors, backtrack. Stack empty, DFS complete!', 'mark', [5], 'success', 5, 13, [], ['0', '1', '3', '4', '2', '5'], null),
+    dfsStep(14, 6, 'DFS 遍历顺序：A→B→D→E→C→F。DFS 深度优先，适合路径搜索、拓扑排序等问题', 'DFS order: A->B->D->E->C->F. DFS used for path finding, topological sort, cycle detection', 'mark', [0,1,2,3,4,5], 'success', 5, 14, [], ['0','1','3','4','2','5'], null),
   ],
 }
 

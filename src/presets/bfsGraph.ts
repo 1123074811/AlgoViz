@@ -1,4 +1,25 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, GraphNodeState, ActionColor } from '@/types/animation'
+
+const A = '0', B = '1', C = '2', D = '3', E = '4', F = '5'
+
+function bfsStep(id: number, codeLine: number, zh: string, en: string,
+  type: AnimationScript['steps'][0]['action']['type'], targets: number[], color: AnimationScript['steps'][0]['action']['color'],
+  comps: number, swaps: number, accs: number,
+  queue: string[], _visited: string[], output: string[],
+): AnimationScript['steps'][0] {
+  const nodeStates: GraphNodeState[] = [
+    ...output.map(id => ({ id, role: 'visited' as const, color: 'success' as ActionColor })),
+    ...queue.map(id => ({ id, role: 'queued' as const, color: 'primary' as ActionColor })),
+    ...(type === 'mark' && targets.length > 0 ? [{ id: String(targets[0]), role: 'current' as const, color: 'warning' as ActionColor }] : []),
+    ...(type === 'compare' ? targets.map(t => ({ id: String(t), role: 'current' as const, color: 'warning' as ActionColor })) : []),
+  ]
+  return {
+    stepId: id, codeLine, description: { zh, en }, action: { type, targets, color }, stats: { comparisons: comps, swaps, accesses: accs },
+    teachingState: {
+      graph: { queue, output, nodeStates },
+    },
+  }
+}
 
 const bfsGraphPreset: AnimationScript = {
   algorithm: 'bfs_graph',
@@ -10,40 +31,33 @@ const bfsGraphPreset: AnimationScript = {
     type: 'graph',
     data: [],
     nodes: [
-      { id: '0', label: 'A' },
-      { id: '1', label: 'B' },
-      { id: '2', label: 'C' },
-      { id: '3', label: 'D' },
-      { id: '4', label: 'E' },
-      { id: '5', label: 'F' },
+      { id: A, label: 'A' }, { id: B, label: 'B' }, { id: C, label: 'C' },
+      { id: D, label: 'D' }, { id: E, label: 'E' }, { id: F, label: 'F' },
     ],
     edges: [
-      { source: '0', target: '1' },
-      { source: '0', target: '2' },
-      { source: '1', target: '3' },
-      { source: '1', target: '4' },
-      { source: '2', target: '5' },
+      { source: A, target: B }, { source: A, target: C },
+      { source: B, target: D }, { source: B, target: E }, { source: C, target: F },
     ],
   },
   steps: [
-    { stepId: 1, codeLine: 4, description: { zh: '将起点 A 加入队列，标记为已访问', en: 'Enqueue start node A, mark visited' }, action: { type: 'highlight', targets: [0], color: 'primary' }, stats: { comparisons: 0, swaps: 0, accesses: 1 } },
-    { stepId: 2, codeLine: 5, description: { zh: 'A 出队，访问 A', en: 'Dequeue A, visit A' }, action: { type: 'mark', targets: [0], color: 'success' }, stats: { comparisons: 0, swaps: 0, accesses: 2 } },
-    { stepId: 3, codeLine: 7, description: { zh: '遍历 A 的邻居：发现 B（未访问），加入队列', en: 'Traverse A neighbors: found B (unvisited), enqueue' }, action: { type: 'compare', targets: [0, 1], color: 'warning' }, stats: { comparisons: 1, swaps: 0, accesses: 3 } },
-    { stepId: 4, codeLine: 8, description: { zh: '标记 B 为已访问，加入队列', en: 'Mark B visited, enqueue' }, action: { type: 'highlight', targets: [1], color: 'primary' }, stats: { comparisons: 1, swaps: 0, accesses: 4 } },
-    { stepId: 5, codeLine: 7, description: { zh: '遍历 A 的邻居：发现 C（未访问），加入队列', en: 'Traverse A neighbors: found C (unvisited), enqueue' }, action: { type: 'compare', targets: [0, 2], color: 'warning' }, stats: { comparisons: 2, swaps: 0, accesses: 5 } },
-    { stepId: 6, codeLine: 8, description: { zh: '标记 C 为已访问，加入队列。A 遍历完毕', en: 'Mark C visited, enqueue. A done' }, action: { type: 'highlight', targets: [2], color: 'primary' }, stats: { comparisons: 2, swaps: 0, accesses: 6 } },
-    { stepId: 7, codeLine: 5, description: { zh: 'B 出队，访问 B', en: 'Dequeue B, visit B' }, action: { type: 'mark', targets: [1], color: 'success' }, stats: { comparisons: 2, swaps: 0, accesses: 7 } },
-    { stepId: 8, codeLine: 7, description: { zh: '遍历 B 的邻居：发现 D（未访问），加入队列', en: 'Traverse B neighbors: found D (unvisited), enqueue' }, action: { type: 'compare', targets: [1, 3], color: 'warning' }, stats: { comparisons: 3, swaps: 0, accesses: 8 } },
-    { stepId: 9, codeLine: 8, description: { zh: '标记 D 为已访问，加入队列', en: 'Mark D visited, enqueue' }, action: { type: 'highlight', targets: [3], color: 'primary' }, stats: { comparisons: 3, swaps: 0, accesses: 9 } },
-    { stepId: 10, codeLine: 7, description: { zh: '遍历 B 的邻居：发现 E（未访问），加入队列', en: 'Traverse B neighbors: found E (unvisited), enqueue' }, action: { type: 'compare', targets: [1, 4], color: 'warning' }, stats: { comparisons: 4, swaps: 0, accesses: 10 } },
-    { stepId: 11, codeLine: 8, description: { zh: '标记 E 为已访问，加入队列。B 遍历完毕', en: 'Mark E visited, enqueue. B done' }, action: { type: 'highlight', targets: [4], color: 'primary' }, stats: { comparisons: 4, swaps: 0, accesses: 11 } },
-    { stepId: 12, codeLine: 5, description: { zh: 'C 出队，访问 C', en: 'Dequeue C, visit C' }, action: { type: 'mark', targets: [2], color: 'success' }, stats: { comparisons: 4, swaps: 0, accesses: 12 } },
-    { stepId: 13, codeLine: 7, description: { zh: '遍历 C 的邻居：发现 F（未访问），加入队列', en: 'Traverse C neighbors: found F (unvisited), enqueue' }, action: { type: 'compare', targets: [2, 5], color: 'warning' }, stats: { comparisons: 5, swaps: 0, accesses: 13 } },
-    { stepId: 14, codeLine: 8, description: { zh: '标记 F 为已访问。C 遍历完毕', en: 'Mark F visited. C done' }, action: { type: 'highlight', targets: [5], color: 'primary' }, stats: { comparisons: 5, swaps: 0, accesses: 14 } },
-    { stepId: 15, codeLine: 5, description: { zh: 'D 出队，访问 D（无新邻居）', en: 'Dequeue D, visit D (no new neighbors)' }, action: { type: 'mark', targets: [3], color: 'success' }, stats: { comparisons: 5, swaps: 0, accesses: 15 } },
-    { stepId: 16, codeLine: 5, description: { zh: 'E 出队，访问 E（无新邻居）', en: 'Dequeue E, visit E (no new neighbors)' }, action: { type: 'mark', targets: [4], color: 'success' }, stats: { comparisons: 5, swaps: 0, accesses: 16 } },
-    { stepId: 17, codeLine: 5, description: { zh: 'F 出队，访问 F。队列空，BFS 完成！', en: 'Dequeue F. Queue empty, BFS done!' }, action: { type: 'mark', targets: [5], color: 'success' }, stats: { comparisons: 5, swaps: 0, accesses: 17 } },
-    { stepId: 18, codeLine: 9, description: { zh: 'BFS 遍历顺序：A → B → C → D → E → F', en: 'BFS order: A -> B -> C -> D -> E -> F' }, action: { type: 'mark', targets: [0, 1, 2, 3, 4, 5], color: 'success' }, stats: { comparisons: 5, swaps: 0, accesses: 17 } },
+    bfsStep(1, 4, '起点 A 入队，标记为已发现。BFS 使用队列保证逐层展开', 'Start node A enqueued, marked discovered. BFS uses a queue for level-order traversal', 'highlight', [0], 'primary', 0, 0, 1, [A], [], []),
+    bfsStep(2, 5, 'A 出队并访问，A 作为第 1 层被处理', 'Dequeue and visit A, processed as level 1', 'mark', [0], 'success', 0, 0, 2, [], [], [A]),
+    bfsStep(3, 7, '检查边 A→B：B 未被访问，将 B 入队', 'Check edge A->B: B unvisited, enqueue B', 'compare', [0, 1], 'warning', 1, 0, 3, [B], [], [A]),
+    bfsStep(4, 8, '标记 B 为已发现，B 加入待处理队列', 'Mark B discovered, added to queue', 'highlight', [1], 'primary', 1, 0, 4, [B], [], [A]),
+    bfsStep(5, 7, '检查边 A→C：C 未被访问，将 C 入队', 'Check edge A->C: C unvisited, enqueue C', 'compare', [0, 2], 'warning', 2, 0, 5, [B, C], [], [A]),
+    bfsStep(6, 8, '标记 C 为已发现。A 的所有邻居检查完毕', 'Mark C discovered. A neighbors exhausted', 'highlight', [2], 'primary', 2, 0, 6, [B, C], [], [A]),
+    bfsStep(7, 5, 'B 出队并访问。BFS 按入队顺序处理节点', 'Dequeue and visit B. BFS processes in FIFO order', 'mark', [1], 'success', 2, 0, 7, [C], [], [A, B]),
+    bfsStep(8, 7, '检查边 B→D：D 未被访问，将 D 入队', 'Check edge B->D: D unvisited, enqueue D', 'compare', [1, 3], 'warning', 3, 0, 8, [C, D], [], [A, B]),
+    bfsStep(9, 8, '标记 D 为已发现，入队', 'Mark D discovered, enqueued', 'highlight', [3], 'primary', 3, 0, 9, [C, D], [], [A, B]),
+    bfsStep(10, 7, '检查边 B→E：E 未被访问，将 E 入队', 'Check edge B->E: E unvisited, enqueue E', 'compare', [1, 4], 'warning', 4, 0, 10, [C, D, E], [], [A, B]),
+    bfsStep(11, 8, '标记 E 为已发现。B 的邻居检查完毕', 'Mark E discovered. B neighbors exhausted', 'highlight', [4], 'primary', 4, 0, 11, [C, D, E], [], [A, B]),
+    bfsStep(12, 5, 'C 出队并访问', 'Dequeue and visit C', 'mark', [2], 'success', 4, 0, 12, [D, E], [], [A, B, C]),
+    bfsStep(13, 7, '检查边 C→F：F 未被访问，将 F 入队', 'Check edge C->F: F unvisited, enqueue F', 'compare', [2, 5], 'warning', 5, 0, 13, [D, E, F], [], [A, B, C]),
+    bfsStep(14, 8, '标记 F 为已发现。C 的邻居检查完毕', 'Mark F discovered. C neighbors exhausted', 'highlight', [5], 'primary', 5, 0, 14, [D, E, F], [], [A, B, C]),
+    bfsStep(15, 5, 'D 出队并访问（无未访问邻居，边已全部处理）', 'Dequeue and visit D (no unvisited neighbors)', 'mark', [3], 'success', 5, 0, 15, [E, F], [], [A, B, C, D]),
+    bfsStep(16, 5, 'E 出队并访问', 'Dequeue and visit E', 'mark', [4], 'success', 5, 0, 16, [F], [], [A, B, C, D, E]),
+    bfsStep(17, 5, 'F 出队并访问。队列已空，BFS 完成！', 'Dequeue and visit F. Queue empty, BFS complete!', 'mark', [5], 'success', 5, 0, 17, [], [], [A, B, C, D, E, F]),
+    bfsStep(18, 9, 'BFS 遍历顺序：A → B → C → D → E → F（逐层展开）', 'BFS order: A -> B -> C -> D -> E -> F (level by level)', 'mark', [0, 1, 2, 3, 4, 5], 'success', 5, 0, 17, [], [], [A, B, C, D, E, F]),
   ],
 }
 

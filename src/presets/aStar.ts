@@ -1,23 +1,35 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, ActionColor } from '@/types/animation'
+
+function aStep(id: number, ln: number, zh: string, en: string,
+  type: string, targets: number[], color: ActionColor,
+  comps: number, accs: number, scores: Record<string, string | number>,
+  openSet: string[], closedSet: string[],
+): AnimationScript['steps'][0] {
+  return {
+    stepId: id, codeLine: ln, description: { zh, en },
+    action: { type: type as AnimationScript['steps'][0]['action']['type'], targets, color },
+    stats: { comparisons: comps, swaps: 0, accesses: accs },
+    teachingState: { graph: { distances: scores, sets: { open: openSet, closed: closedSet } } },
+  }
+}
 
 const aStarPreset: AnimationScript = {
   algorithm: 'a_star',
   complexity: { time: { best: 'O(E)', average: 'O(E log V)', worst: 'O(E log V)' }, space: 'O(V)' },
   initialState: {
-    type: 'graph',
-    data: [],
+    type: 'graph', data: [],
     nodes: [{ id: '0', label: 'S' }, { id: '1', label: 'A' }, { id: '2', label: 'B' }, { id: '3', label: 'C' }, { id: '4', label: 'G' }],
     edges: [{ source: '0', target: '1', weight: 1 }, { source: '0', target: '2', weight: 4 }, { source: '1', target: '2', weight: 2 }, { source: '1', target: '3', weight: 5 }, { source: '2', target: '3', weight: 1 }, { source: '3', target: '4', weight: 3 }, { source: '2', target: '4', weight: 7 }],
   },
   steps: [
-    { stepId: 1, codeLine: 2, description: { zh: '起点 S(0,0)，目标 G(4,0)。f(n)=g(n)+h(n)', en: 'Start S(0,0), goal G(4,0). f(n)=g(n)+h(n)' }, action: { type: 'highlight', targets: [0], color: 'primary' }, stats: { comparisons: 0, swaps: 0, accesses: 1 } },
-    { stepId: 2, codeLine: 4, description: { zh: 'S 出队，检查邻居：S→A (g=1, h=3, f=4)。S→B (g=4, h=2, f=6)', en: 'Pop S, check: S→A(f=4), S→B(f=6)' }, action: { type: 'compare', targets: [0, 1], color: 'warning' }, stats: { comparisons: 1, swaps: 0, accesses: 2 } },
-    { stepId: 3, codeLine: 5, description: { zh: 'A(f=4) < B(f=6)，选 A。A→B(g=1+2=3<4, h=2, f=5) 更新 B(f=5)', en: 'A(f=4) < B(f=6), pick A. A→B: g=3<4, update B(f=5)' }, action: { type: 'compare', targets: [1, 2], color: 'warning' }, stats: { comparisons: 2, swaps: 0, accesses: 3 } },
-    { stepId: 4, codeLine: 5, description: { zh: 'A→C(g=1+5=6, h=?, f=9<∞) 更新 C(f=9)', en: 'A→C(g=6, f=9) update C' }, action: { type: 'compare', targets: [1, 3], color: 'warning' }, stats: { comparisons: 3, swaps: 0, accesses: 4 } },
-    { stepId: 5, codeLine: 4, description: { zh: 'B(f=5) 最小，出队。B→C(g=3+1=4<6, f=7) 更新 C(f=7)', en: 'B(f=5) min, pop. B→C: g=4<6, update C(f=7)' }, action: { type: 'compare', targets: [2, 3], color: 'warning' }, stats: { comparisons: 4, swaps: 0, accesses: 5 } },
-    { stepId: 6, codeLine: 4, description: { zh: 'B→G(g=3+7=10, f=10) 更新 G', en: 'B→G(g=10, f=10) update G' }, action: { type: 'compare', targets: [2, 4], color: 'warning' }, stats: { comparisons: 5, swaps: 0, accesses: 6 } },
-    { stepId: 7, codeLine: 4, description: { zh: 'C(f=7) 出队。C→G(g=4+3=7<10, f=7) 更新 G(f=7)，找到最短路径！', en: 'C(f=7) pop. C→G: g=7<10, update G(f=7). Found shortest!' }, action: { type: 'mark', targets: [0, 1, 2, 3, 4], color: 'success' }, stats: { comparisons: 6, swaps: 0, accesses: 7 } },
-    { stepId: 8, codeLine: 6, description: { zh: 'A* 完成！路径 S→A→B→C→G，总距离=7', en: 'A* done! Path S→A→B→C→G, total=7' }, action: { type: 'mark', targets: [], color: 'success' }, stats: { comparisons: 6, swaps: 0, accesses: 7 } },
+    aStep(1, 2, 'A* 搜索从 S 到 G。f(n)=g(n)+h(n)，g=实际距离，h=启发估计。A* 保证在可纳启发下找到最优解', 'A* from S to G. f(n)=g(n)+h(n), g=actual cost, h=heuristic. A* guarantees optimal with admissible heuristic', 'highlight', [0], 'primary', 0, 1, { 'g(S)': 0, 'h(S)': 4, 'f(S)': 4 }, ['0'], []),
+    aStep(2, 4, 'Open 集中 S(f=4) 最小，出队处理。检查 S→A：g=1, h=3, f=4 < ∞，A 入 open', 'S(f=4) smallest in open, dequeue. Check S->A: g=1, h=3, f=4 < ∞, A into open', 'compare', [0,1], 'warning', 1, 2, { 'g(A)': 1, 'h(A)': 3, 'f(A)': 4, 'g(B)': 4, 'h(B)': 2, 'f(B)': 6 }, ['1','2'], ['0']),
+    aStep(3, 4, 'S→B：g=4, h=2, f=6。Open: [A(f=4), B(f=6)]。A f 最小，选 A', 'S->B: g=4, h=2, f=6. Open: [A(f=4), B(f=6)]. A has min f, pick A', 'compare', [0,2], 'warning', 2, 3, { 'g(A)': 1, 'f(A)': 4, 'g(B)': 4, 'f(B)': 6 }, ['1','2'], ['0']),
+    aStep(4, 4, 'A 出队。A→B：g=1+2=3 < current g(B)=4，找到到 B 的更短路径！更新 B: g=3, f=5', 'Dequeue A. A->B: g=1+2=3 < 4, shorter path to B! Update B: g=3, f=5', 'compare', [1,2], 'warning', 3, 4, { 'g(A)': 1, 'f(A)': 4, 'g(B)': 3, 'f(B)': 5, 'g(C)': 6, 'f(C)': 7 }, ['2','3'], ['0','1']),
+    aStep(5, 4, 'A→C：g=1+5=6, h=1, f=7 < ∞，C 入 open。B(f=5) 最小，选 B', 'A->C: g=1+5=6, h=1, f=7 < ∞, C into open. B(f=5) is min, pick B', 'compare', [1,3], 'warning', 4, 5, { 'g(B)': 3, 'f(B)': 5, 'g(C)': 6, 'f(C)': 7 }, ['2','3'], ['0','1']),
+    aStep(6, 4, 'B 出队。B→C：g=3+1=4 < 6，更新 C：g=4, f=5。B→G：g=3+7=10, f=10，G 入 open', 'Dequeue B. B->C: g=3+1=4 < 6, update C: g=4, f=5. B->G: g=10, h=0, f=10, G into open', 'compare', [2,3], 'warning', 5, 6, { 'g(C)': 4, 'f(C)': 5, 'g(G)': 10, 'f(G)': 10 }, ['3','4'], ['0','1','2']),
+    aStep(7, 4, 'C(f=5) 最小，出队。C→G：g=4+3=7 < 10，更新 G：g=7, f=7！通过 C 到 G 更短', 'C(f=5) is min, dequeue. C->G: g=4+3=7 < 10, update G: g=7, f=7! Shorter via C', 'compare', [3,4], 'warning', 6, 7, { 'g(C)': 4, 'f(C)': 5, 'g(G)': 7, 'f(G)': 7 }, ['4'], ['0','1','2','3']),
+    aStep(8, 6, '目标 G 出队！A* 找到最短路径 S→A→B→C→G，总距离 7。A* 比 Dijkstra 快，因为启发函数 h 引导搜索方向', 'Goal G dequeued! Path S->A->B->C->G, total 7. A* faster than Dijkstra as heuristic guides search', 'mark', [0,1,2,3,4], 'success', 7, 8, { 'g(G)': 7, 'f(G)': 7 }, [], ['0','1','2','3','4']),
   ],
 }
 
