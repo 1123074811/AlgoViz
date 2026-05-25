@@ -1,6 +1,6 @@
-/** AnimationScript — the structured JSON format returned by AI or presets */
+/** AnimationScript - the structured JSON format returned by AI or presets */
 
-export type RendererType = 'array' | 'graph' | 'tree' | 'matrix'
+export type RendererType = 'array' | 'graph' | 'tree' | 'matrix' | 'linked_list'
 
 export type ActionType = 'highlight' | 'swap' | 'compare' | 'move' | 'insert' | 'delete' | 'mark' | 'annotate' | 'edge'
 
@@ -15,6 +15,125 @@ export interface Complexity {
   space: string
 }
 
+// ─── Phase 2 teaching state types ────────────────────────────────────────
+
+export type VisualRole =
+  | 'current'
+  | 'compare'
+  | 'swap'
+  | 'sorted'
+  | 'unsorted'
+  | 'pivot'
+  | 'min'
+  | 'key'
+  | 'visited'
+  | 'queued'
+  | 'stacked'
+  | 'relaxed'
+  | 'candidate'
+  | 'selected'
+  | 'discarded'
+  | 'path'
+  | 'root'
+  | 'parent'
+  | 'child'
+  | 'rotating'
+  | 'balanced'
+  | 'conflict'
+
+export interface VisualAnnotation {
+  id: string
+  label: string
+  value?: string | number
+  target?: number | string
+  color?: ActionColor
+}
+
+export interface RangeState {
+  id: string
+  label: string
+  start: number
+  end: number
+  role: VisualRole
+  color?: ActionColor
+}
+
+export interface AuxiliaryArrayState {
+  id: string
+  label: string
+  data: Array<number | string>
+  activeIndices?: number[]
+  colorMap?: Record<number, ActionColor>
+}
+
+export interface GraphNodeState {
+  id: string
+  role: VisualRole
+  color?: ActionColor
+  distance?: number | string
+  predecessor?: string | null
+  metadata?: Record<string, string | number | boolean | null>
+}
+
+export interface GraphEdgeState {
+  id?: string
+  source: string
+  target: string
+  role: VisualRole
+  color?: ActionColor
+  weight?: number
+  directed?: boolean
+  metadata?: Record<string, string | number | boolean | null>
+}
+
+export interface TreeNodeState {
+  id: string | number
+  role: VisualRole
+  color?: ActionColor
+  height?: number
+  balanceFactor?: number
+  rbColor?: 'red' | 'black'
+  metadata?: Record<string, string | number | boolean | null>
+}
+
+export interface TreeInitialNode {
+  id: string | number
+  value: string | number
+  label?: string
+  x?: number
+  y?: number
+  metadata?: Record<string, string | number | boolean | null>
+}
+
+export interface TeachingState {
+  variables?: Record<string, string | number | boolean | null>
+  ranges?: RangeState[]
+  auxiliaryArrays?: AuxiliaryArrayState[]
+  graph?: {
+    nodeStates?: GraphNodeState[]
+    edgeStates?: GraphEdgeState[]
+    queue?: string[]
+    stack?: string[]
+    distances?: Record<string, number | string>
+    predecessors?: Record<string, string | null>
+    output?: string[]
+    sets?: Record<string, string[]>
+  }
+  tree?: {
+    nodeStates?: TreeNodeState[]
+    edgeStates?: GraphEdgeState[]
+    traversalPath?: Array<string | number>
+    rotation?: {
+      type: 'left' | 'right' | 'left-right' | 'right-left'
+      pivot: string | number
+      child?: string | number
+    }
+  }
+  annotations?: VisualAnnotation[]
+}
+
+// ─── Core animation types ─────────────────────────────────────────────────
+
 export interface InitialState {
   type: RendererType
   data: number[]
@@ -23,8 +142,9 @@ export interface InitialState {
   nodes?: { id: string; label?: string; x?: number; y?: number }[]
   edges?: { source: string; target: string; weight?: number }[]
   // For tree renderer
-  root?: number
-  children?: Record<number, number[]>
+  root?: number | string
+  children?: Record<string, Array<string | number>>
+  treeNodes?: TreeInitialNode[]
 }
 
 export interface StepDescription {
@@ -53,6 +173,7 @@ export interface AnimationStep {
   description: StepDescription
   action: StepAction
   stats: StepStats
+  teachingState?: TeachingState
 }
 
 export interface AnimationScript {

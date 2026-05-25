@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import type { AnimationScript, ActionColor } from '@/types/animation'
+import type { AnimationScript, ActionColor, TeachingState, VisualRole, TreeInitialNode } from '@/types/animation'
 
 export interface VisualState {
   arrayData: number[]
@@ -7,8 +7,15 @@ export interface VisualState {
   elementIds: number[]
   currentStep: number
   totalSteps: number
-  nodes?: { id: string; label?: string }[]
+  nodes?: { id: string; label?: string; x?: number; y?: number }[]
   edges?: { source: string; target: string; weight?: number }[]
+  root?: string | number
+  children?: Record<string, Array<string | number>>
+  treeNodes?: TreeInitialNode[]
+  // Phase 2 teaching state
+  teachingState?: TeachingState
+  edgeColorMap?: Map<string, ActionColor>
+  nodeRoleMap?: Map<string, VisualRole>
 }
 
 export function useAnimationEngine(script: AnimationScript | null) {
@@ -26,28 +33,69 @@ export function useAnimationEngine(script: AnimationScript | null) {
     }
 
     let arr = [...script.initialState.data]
+    const shouldReplayLinearData = script.initialState.type === 'array' || script.initialState.type === 'linked_list'
     const elementIds = arr.map((_, i) => i)
     const persistentMarked = new Map<number, ActionColor>()
+    const persistentEdgeColors = new Map<string, ActionColor>()
 
-    for (let i = 0; i < currentStep; i++) {
+    const replayLimit = Math.min(currentStep, script.steps.length)
+    for (let i = 0; i < replayLimit; i++) {
       const step = script.steps[i]
-      if (step.action.type === 'swap') {
+      if (shouldReplayLinearData && step.action.type === 'swap') {
         const [a, b] = step.action.targets
         ;[arr[a], arr[b]] = [arr[b], arr[a]]
         ;[elementIds[a], elementIds[b]] = [elementIds[b], elementIds[a]]
+      }
+      if (shouldReplayLinearData && step.action.type === 'move') {
+        const [from, to] = step.action.targets
+        arr[to] = typeof step.action.value === 'number' ? step.action.value : arr[from]
+      }
+      if (shouldReplayLinearData && step.action.type !== 'insert' && typeof step.action.value === 'number' && step.action.to !== undefined) {
+        arr[step.action.to] = step.action.value
+      }
+      if (shouldReplayLinearData && step.action.type === 'delete') {
+        const [idx] = step.action.targets
+        arr.splice(idx, 1)
+        elementIds.splice(idx, 1)
+      }
+      if (shouldReplayLinearData && step.action.type === 'insert' && typeof step.action.value === 'number') {
+        const pos = step.action.to ?? step.action.targets[0]
+        const val = step.action.value
+        elementIds.splice(pos, 0, elementIds.length)
+        arr.splice(pos, 0, val)
       }
       if (step.action.type === 'mark') {
         for (const t of step.action.targets) {
           persistentMarked.set(t, step.action.color)
         }
       }
+      if (step.action.type === 'edge') {
+        const edgeKey = step.action.from !== undefined && step.action.to !== undefined
+          ? `${step.action.from}->${step.action.to}`
+          : step.action.targets.map(String).join('->')
+        persistentEdgeColors.set(edgeKey, step.action.color)
+      }
     }
 
     // Current step action overrides colors on its targets
-    if (currentStep > 0 && currentStep <= script.steps.length) {
-      const currentAction = script.steps[currentStep - 1].action
+    if (replayLimit > 0) {
+      const currentAction = script.steps[replayLimit - 1].action
       for (const t of currentAction.targets) {
         persistentMarked.set(t, currentAction.color)
+      }
+    }
+
+    // Derive node role map from teachingState if present
+    const nodeRoleMap = new Map<string, VisualRole>()
+    const stepData = replayLimit > 0 ? script.steps[replayLimit - 1] : null
+    if (stepData?.teachingState?.graph?.nodeStates) {
+      for (const ns of stepData.teachingState.graph.nodeStates) {
+        nodeRoleMap.set(ns.id, ns.role)
+      }
+    }
+    if (stepData?.teachingState?.tree?.nodeStates) {
+      for (const ns of stepData.teachingState.tree.nodeStates) {
+        nodeRoleMap.set(String(ns.id), ns.role)
       }
     }
 
@@ -55,15 +103,28 @@ export function useAnimationEngine(script: AnimationScript | null) {
       arrayData: arr,
       colorMap: persistentMarked,
       elementIds,
-      currentStep,
+      currentStep: replayLimit,
       totalSteps,
       nodes: script.initialState.nodes,
       edges: script.initialState.edges,
+      root: script.initialState.root,
+      children: script.initialState.children,
+      treeNodes: script.initialState.treeNodes,
+      teachingState: stepData?.teachingState,
+      edgeColorMap: persistentEdgeColors.size > 0 ? persistentEdgeColors : undefined,
+      nodeRoleMap: nodeRoleMap.size > 0 ? nodeRoleMap : undefined,
     }
   }, [script, currentStep])
 
   // Current step details
-  const currentStepData = script?.steps[currentStep - 1] ?? null
+  const currentStepData = script
+    ? script.steps[Math.min(currentStep, script.steps.length) - 1] ?? null
+    : null
+
+  useEffect(() => {
+    setIsPlaying(false)
+    setCurrentStep(0)
+  }, [script])
 
   // Clear interval helper
   const clearTimer = useCallback(() => {
