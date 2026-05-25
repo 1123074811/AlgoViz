@@ -1,6 +1,9 @@
 import type { AnimationScript } from '@/types/animation'
 import type { VisualState } from '@/hooks/useAnimationEngine'
 import ArrayRenderer from './renderers/ArrayRenderer'
+import GraphRenderer from './renderers/GraphRenderer'
+import TreeRenderer from './renderers/TreeRenderer'
+import MatrixRenderer from './renderers/MatrixRenderer'
 
 interface VisualizationCanvasProps {
   script: AnimationScript | null
@@ -31,11 +34,20 @@ export default function VisualizationCanvas({ script, visualState }: Visualizati
 
   const rendererType = script.initialState.type
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rendererMap: Record<string, React.ComponentType<any>> = {
+    array: ArrayRenderer,
+    graph: GraphRenderer,
+    tree: TreeRenderer,
+    matrix: MatrixRenderer,
+  }
+
+  const Renderer = rendererMap[rendererType] || ArrayRenderer
+
   return (
     <div className="h-full p-6 bg-slate-50">
       <div className="h-full bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-        {rendererType === 'array' && <ArrayRenderer visualState={visualState} />}
-        {/* Future renderers: graph, tree, matrix */}
+        <Renderer visualState={visualState} />
       </div>
     </div>
   )
