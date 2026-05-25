@@ -7,6 +7,7 @@ import { useAnimationEngine } from '@/hooks/useAnimationEngine'
 import { analyzeCode, getApiConfig, type AIResult } from '@/ai'
 import type { AnimationScript } from '@/types/animation'
 import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
+import Header from '@/components/Layout/Header'
 
 const DEFAULT_CODE = `def bubble_sort(arr):
     n = len(arr)
@@ -67,6 +68,7 @@ export default function Playground() {
 
   return (
     <div className="h-full flex flex-col bg-white">
+      <Header />
       {/* Header bar */}
       <div className="h-10 border-b border-border flex items-center justify-between px-4 shrink-0 bg-surface">
         <div className="flex items-center gap-3">
