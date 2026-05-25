@@ -7,11 +7,13 @@ export interface VisualState {
   elementIds: number[]
   currentStep: number
   totalSteps: number
+  labels?: string[]
   nodes?: { id: string; label?: string; x?: number; y?: number }[]
   edges?: { source: string; target: string; weight?: number }[]
   root?: string | number
   children?: Record<string, Array<string | number>>
   treeNodes?: TreeInitialNode[]
+  matrix?: number[][]
   // Phase 2 teaching state
   teachingState?: TeachingState
   edgeColorMap?: Map<string, ActionColor>
@@ -105,11 +107,13 @@ export function useAnimationEngine(script: AnimationScript | null) {
       elementIds,
       currentStep: replayLimit,
       totalSteps,
+      labels: script.initialState.labels,
       nodes: script.initialState.nodes,
       edges: script.initialState.edges,
       root: script.initialState.root,
       children: script.initialState.children,
       treeNodes: script.initialState.treeNodes,
+      matrix: script.initialState.matrix,
       teachingState: stepData?.teachingState,
       edgeColorMap: persistentEdgeColors.size > 0 ? persistentEdgeColors : undefined,
       nodeRoleMap: nodeRoleMap.size > 0 ? nodeRoleMap : undefined,

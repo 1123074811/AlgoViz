@@ -338,7 +338,7 @@ export default function ArrayRenderer({ visualState, currentStepData }: ArrayRen
                 fill="var(--color-muted)"
                 fontFamily="var(--font-code)"
               >
-                {bar.index}
+                {visualState.labels?.[bar.index] ?? bar.index}
               </text>
             </g>
           )

@@ -727,51 +727,103 @@ import { generateACM } from './acm'
 import { generateRadixSort } from './radixSort'
 import { generateBucketSort } from './bucketSort'
 
-// Helper: convert number array to string (each number = char code)
-const arrToStr = (arr: number[]) => arr.map(n => String.fromCharCode(n)).join('')
+// ─── Input parsing helpers for natural types ───
 
-const slidingWindowWrapper = (arr: number[]) => generateSlidingWindow(arr, Math.min(3, arr.length))
-const monotonicStackWrapper = (arr: number[]) => generateMonotonicStack(arr)
-const knapsackWrapper = (arr: number[]) => generateKnapsack(arr.slice(0, 4), arr.slice(0, 4).map((_, i) => (arr[i] || 1) * 2), Math.max(...arr.slice(0, 4)) + 3)
-const lcsWrapper = (arr: number[]) => generateLCS(arrToStr(arr.slice(0, 7)), arrToStr(arr.slice(0, 6)).split('').reverse().join(''))
-const nQueensWrapper = (arr: number[]) => generateNQueens(Math.max(4, Math.min(8, arr[0] || 4)))
-const lisWrapper = (arr: number[]) => generateLIS(arr)
-const editDistanceWrapper = (arr: number[]) => generateEditDistance(arrToStr(arr.slice(0, 5)), arrToStr(arr.slice(2, 7)))
-const kmpWrapper = (arr: number[]) => {
-  const text = arrToStr(arr.map(n => ((n % 26) + 65))) // A-Z
-  const pattern = text.slice(0, Math.min(3, text.length))
+/** Wrap a (number[]) => AnimationScript fn to accept (unknown) => AnimationScript */
+function numGen(fn: (arr: number[]) => AnimationScript): (input: unknown) => AnimationScript {
+  return (input: unknown) => fn(parseArr(input))
+}
+
+function parseArr(input: unknown): number[] {
+  if (Array.isArray(input) && input.every(v => typeof v === 'number')) return input
+  if (Array.isArray(input)) return input.map(Number).filter(v => !isNaN(v))
+  if (typeof input === 'number') return [input]
+  return [5, 3, 8, 1, 9, 2]
+}
+
+function parseNum(input: unknown, fallback: number): number {
+  if (typeof input === 'number' && input > 0) return Math.floor(input)
+  if (Array.isArray(input) && input.length > 0 && typeof input[0] === 'number') return Math.floor(input[0])
+  return fallback
+}
+
+function parseStr(input: unknown, fallback: string): string {
+  if (typeof input === 'string' && input.length > 0) return input
+  if (typeof input === 'object' && input !== null) {
+    const o = input as Record<string, unknown>
+    if (typeof o.text === 'string') return o.text
+    if (typeof o.s === 'string') return o.s
+    if (typeof o.str === 'string') return o.str
+  }
+  return fallback
+}
+
+function parseStrs(input: unknown, d1: string, d2?: string): [string, string] {
+  if (Array.isArray(input) && input.length >= 2 && typeof input[0] === 'string' && typeof input[1] === 'string') return [input[0], input[1]]
+  if (typeof input === 'object' && input !== null) {
+    const o = input as Record<string, unknown>
+    const s1 = typeof o.text1 === 'string' ? o.text1 : typeof o.s1 === 'string' ? o.s1 : (typeof o.text === 'string' ? o.text : null)
+    const s2 = typeof o.text2 === 'string' ? o.text2 : typeof o.s2 === 'string' ? o.s2 : (typeof o.pattern === 'string' ? o.pattern : null)
+    if (s1) return [s1, s2 ?? d2 ?? d1]
+  }
+  return [parseStr(input, d1), d2 ?? d1]
+}
+
+// ─── Wrappers with natural input types ───
+
+const slidingWindowWrapper = (input: unknown) => generateSlidingWindow(parseArr(input), Math.min(3, parseArr(input).length))
+const monotonicStackWrapper = (input: unknown) => generateMonotonicStack(parseArr(input))
+const knapsackWrapper = (input: unknown) => {
+  const arr = parseArr(input)
+  return generateKnapsack(arr.slice(0, 4), arr.slice(0, 4).map((_, i) => (arr[i] || 1) * 2), Math.max(...arr.slice(0, 4)) + 3)
+}
+const lcsWrapper = (input: unknown) => {
+  const [s1, s2] = parseStrs(input, 'ABCBDAB', 'BDCABA')
+  return generateLCS(s1, s2)
+}
+const nQueensWrapper = (input: unknown) => generateNQueens(Math.max(4, Math.min(8, parseNum(input, 4))))
+const lisWrapper = (input: unknown) => generateLIS(parseArr(input))
+const editDistanceWrapper = (input: unknown) => {
+  const [s1, s2] = parseStrs(input, 'horse', 'ros')
+  return generateEditDistance(s1, s2)
+}
+const kmpWrapper = (input: unknown) => {
+  const [text, pattern] = parseStrs(input, 'ABABABCABABABCABAB', 'ABABC')
   return generateKMP(text, pattern)
 }
-const fenwickWrapper = (arr: number[]) => generateFenwick(arr.slice(0, 8))
-const unboundedKnapsackWrapper = (arr: number[]) => generateUnboundedKnapsack(arr.slice(0, 3), arr.slice(0, 3).map(v => v * 2), Math.max(...arr.slice(0, 3)) + 2)
-const matrixChainWrapper = (arr: number[]) => generateMatrixChain(arr.slice(0, 5).map(n => Math.max(5, n)))
-const sudokuWrapper = (_arr: number[]) => generateSudoku()
-const manacherWrapper = (arr: number[]) => generateManacher(arrToStr(arr.map(n => ((n % 26) + 97)).slice(0, 6)))
-const segmentTreeWrapper = (arr: number[]) => generateSegmentTree(arr.slice(0, 6))
-const intervalDPWrapper = (arr: number[]) => generateIntervalDP(arr.slice(0, 5))
-const stackWrapper = (arr: number[]) => generateStack()
-const queueWrapper = (arr: number[]) => generateQueue()
-const heapWrapper = (arr: number[]) => generateHeapOperations(arr.slice(0, 6))
-const unionFindWrapper = (_arr: number[]) => generateUnionFind()
-const linkedListWrapper = (arr: number[]) => generateLinkedList()
-const doublyLinkedListWrapper = (_arr: number[]) => generateDoublyLinkedList()
-const binaryTreeWrapper = (_arr: number[]) => generateBinaryTree()
-const bstWrapper = (_arr: number[]) => generateBST()
-const avlTreeWrapper = (_arr: number[]) => generateAVLTree()
-const redBlackTreeWrapper = (_arr: number[]) => generateRedBlackTree()
-const trieWrapper = (_arr: number[]) => generateTrie()
-const hashTableWrapper = (_arr: number[]) => generateHashTable()
-const backtrackingWrapper = (arr: number[]) => generateBacktracking()
-const arrayDSWrapper = (arr: number[]) => generateArray()
-const leetcodeWrapper = (arr: number[]) => generateLeetCode()
-const acmWrapper = (_arr: number[]) => generateACM()
+const fenwickWrapper = (input: unknown) => generateFenwick(parseArr(input).slice(0, 8))
+const unboundedKnapsackWrapper = (input: unknown) => {
+  const arr = parseArr(input)
+  return generateUnboundedKnapsack(arr.slice(0, 3), arr.slice(0, 3).map(v => v * 2), Math.max(...arr.slice(0, 3)) + 2)
+}
+const matrixChainWrapper = (input: unknown) => generateMatrixChain(parseArr(input).slice(0, 5).map(n => Math.max(5, n)))
+const sudokuWrapper = (_input: unknown) => generateSudoku()
+const manacherWrapper = (input: unknown) => generateManacher(parseStr(input, 'babad'))
+const segmentTreeWrapper = (input: unknown) => generateSegmentTree(parseArr(input).slice(0, 6))
+const intervalDPWrapper = (input: unknown) => generateIntervalDP(parseArr(input).slice(0, 5))
+const stackWrapper = (_input: unknown) => generateStack()
+const queueWrapper = (_input: unknown) => generateQueue()
+const heapWrapper = (input: unknown) => generateHeapOperations(parseArr(input).slice(0, 6))
+const unionFindWrapper = (_input: unknown) => generateUnionFind()
+const linkedListWrapper = (_input: unknown) => generateLinkedList()
+const doublyLinkedListWrapper = (_input: unknown) => generateDoublyLinkedList()
+const binaryTreeWrapper = (_input: unknown) => generateBinaryTree()
+const bstWrapper = (_input: unknown) => generateBST()
+const avlTreeWrapper = (_input: unknown) => generateAVLTree()
+const redBlackTreeWrapper = (_input: unknown) => generateRedBlackTree()
+const trieWrapper = (_input: unknown) => generateTrie()
+const hashTableWrapper = (_input: unknown) => generateHashTable()
+const backtrackingWrapper = (_input: unknown) => generateBacktracking()
+const arrayDSWrapper = (_input: unknown) => generateArray()
+const leetcodeWrapper = (_input: unknown) => generateLeetCode()
+const acmWrapper = (_input: unknown) => generateACM()
 
-const GENERATORS: Record<string, (arr: number[]) => AnimationScript> = {
-  bubble_sort: generateBubbleSort, selection_sort: generateSelectionSort,
-  insertion_sort: generateInsertionSort, merge_sort: generateMergeSort,
-  quick_sort: generateQuickSort, heap_sort: generateHeapSort,
-  shell_sort: generateShellSort, counting_sort: generateCountingSort,
-  binary_search: generateBinarySearch, sliding_window: slidingWindowWrapper,
+const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
+  bubble_sort: numGen(generateBubbleSort), selection_sort: numGen(generateSelectionSort),
+  insertion_sort: numGen(generateInsertionSort), merge_sort: numGen(generateMergeSort),
+  quick_sort: numGen(generateQuickSort), heap_sort: numGen(generateHeapSort),
+  shell_sort: numGen(generateShellSort), counting_sort: numGen(generateCountingSort),
+  binary_search: numGen(generateBinarySearch), sliding_window: slidingWindowWrapper,
   monotonic_stack: monotonicStackWrapper, knapsack_01: knapsackWrapper,
   lcs: lcsWrapper, n_queens: nQueensWrapper, lis: lisWrapper,
   edit_distance: editDistanceWrapper, kmp: kmpWrapper,
@@ -785,11 +837,11 @@ const GENERATORS: Record<string, (arr: number[]) => AnimationScript> = {
   avl_tree: avlTreeWrapper, red_black_tree: redBlackTreeWrapper,
   trie: trieWrapper, hash_table: hashTableWrapper,
   array: arrayDSWrapper, backtracking: backtrackingWrapper,
-  radix_sort: generateRadixSort, bucket_sort: generateBucketSort,
+  radix_sort: numGen(generateRadixSort), bucket_sort: numGen(generateBucketSort),
   leetcode_hot100: leetcodeWrapper, acm_templates: acmWrapper,
 }
 
-export function generatePreset(algoId: string, inputData: number[]): AnimationScript | undefined {
+export function generatePreset(algoId: string, inputData: unknown): AnimationScript | undefined {
   const gen = GENERATORS[algoId]
   if (gen) return gen(inputData)
   return undefined

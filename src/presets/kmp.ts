@@ -111,7 +111,11 @@ export function generateKMP(text?: string, pattern?: string): AnimationScript {
   return {
     algorithm: 'kmp',
     complexity: { time: { best: 'O(n+m)', average: 'O(n+m)', worst: 'O(n+m)' }, space: 'O(m)' },
-    initialState: { type: 'array', data: T.split('').map((c, idx) => idx < n ? c.charCodeAt(0) : 0) },
+    initialState: {
+      type: 'array',
+      data: T.split('').map(c => c.charCodeAt(0) - 64), // A=1, B=2, ...
+      labels: T.split(''), // Show characters as labels
+    },
     steps: steps as AnimationScript['steps'],
   }
 }

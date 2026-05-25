@@ -137,6 +137,7 @@ export interface TeachingState {
 export interface InitialState {
   type: RendererType
   data: number[]
+  matrix?: number[][]
   labels?: string[]
   // For graph renderer
   nodes?: { id: string; label?: string; x?: number; y?: number }[]

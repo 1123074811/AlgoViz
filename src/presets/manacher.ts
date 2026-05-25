@@ -51,7 +51,11 @@ export function generateManacher(s?: string): AnimationScript {
   return {
     algorithm: 'manacher',
     complexity: { time: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' }, space: 'O(n)' },
-    initialState: { type: 'array', data: P },
+    initialState: {
+      type: 'array',
+      data: P,
+      labels: T.split(''), // Show transformed string characters
+    },
     steps: steps as AnimationScript['steps'],
   }
 }

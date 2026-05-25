@@ -5,7 +5,7 @@ import { Icon } from '@/icons'
 import { useAlgorithmStore } from '@/store/algorithmStore'
 import { getPreset, generatePreset, hasGenerator } from '@/presets'
 import { useAnimationEngine } from '@/hooks/useAnimationEngine'
-import { analyzeCode, getApiConfig, type AIResult } from '@/ai'
+import { analyzeCode, getApiConfig, parseInputData, type AIResult } from '@/ai'
 import { ALGORITHM_DEFS, type AlgorithmDefinition } from '@/data/algorithmDefs'
 import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
@@ -1367,6 +1367,7 @@ export default function Visualizer() {
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
   const decorationsRef = useRef<string[]>([])
   const internalInputUpdate = useRef(false)
+  const prevAlgoId = useRef<string | null>(null)
 
   const {
     visualState,
@@ -1386,22 +1387,78 @@ export default function Visualizer() {
 
   const hasApiConfig = getApiConfig() !== null
 
-  // Parse input data from text
-  const parsedInput = useCallback((): number[] => {
+  // Map algorithm → default input + type hint
+  const DEFAULT_INPUTS: Record<string, { value: string; hint: string }> = {
+    // 排序 — 经典乱序数组
+    bubble_sort:     { value: '[5, 3, 8, 1, 9, 2, 7, 4]', hint: '整数数组，元素互不相等' },
+    selection_sort:  { value: '[5, 3, 8, 1, 9, 2, 7, 4]', hint: '整数数组，元素互不相等' },
+    insertion_sort:  { value: '[5, 3, 8, 1, 9, 2, 7, 4]', hint: '整数数组' },
+    merge_sort:      { value: '[5, 3, 8, 1, 9, 2, 7, 4]', hint: '整数数组' },
+    quick_sort:      { value: '[5, 3, 8, 1, 9, 2, 7, 4]', hint: '整数数组' },
+    heap_sort:       { value: '[5, 3, 8, 1, 9, 2, 7, 4]', hint: '整数数组' },
+    shell_sort:      { value: '[5, 3, 8, 1, 9, 2, 7, 4]', hint: '整数数组，观察 gap 递减过程' },
+    counting_sort:   { value: '[5, 3, 8, 1, 9, 2, 7, 4]', hint: '正整数数组，值域不宜过大' },
+    radix_sort:      { value: '[53, 38, 101, 12, 99, 2, 77]', hint: '整数数组，逐位比较效果更明显' },
+    bucket_sort:     { value: '[53, 38, 101, 12, 99, 2, 77]', hint: '整数数组，值域均匀时效果好' },
+    // 搜索与滑动
+    binary_search:   { value: '[1, 3, 5, 7, 9, 11, 13, 15]', hint: '有序整数数组（必须已排序）' },
+    sliding_window:  { value: '[2, 1, 5, 1, 3, 2]', hint: '整数数组，窗口 k=3' },
+    monotonic_stack: { value: '[2, 1, 5, 6, 2, 3]', hint: '整数数组，找下一个更大的元素' },
+    // DP 类
+    knapsack_01:       { value: '[3, 4, 5, 2]', hint: '物品重量数组，价值=2×重量' },
+    unbounded_knapsack:{ value: '[3, 4, 5, 2]', hint: '物品重量数组，价值=2×重量' },
+    lis:               { value: '[10, 9, 2, 5, 3, 7, 101, 18]', hint: '整数数组，LCS 经典用例' },
+    matrix_chain:      { value: '[40, 20, 30, 10, 30]', hint: '矩阵维度数组 [p0,p1,...,pn]' },
+    interval_dp:       { value: '[3, 1, 5, 8]', hint: '整数数组，戳气球问题' },
+    // 字符串 — 自然字符串输入
+    lcs:           { value: '["ABCBDAB", "BDCABA"]', hint: '两个字符串 [串1, 串2]' },
+    edit_distance: { value: '["horse", "ros"]', hint: '两个字符串 [word1, word2]' },
+    kmp:           { value: '["ABABABCABABABCABAB", "ABABC"]', hint: '字符串数组 [text, pattern]' },
+    manacher:      { value: '"babad"', hint: '回文字符串，最长回文=aba/bab' },
+    // 图/树/回溯 — 用数字表示
+    n_queens:      { value: '4', hint: '整数 N，推荐 4~8' },
+    backtracking:  { value: '[1, 2, 3]', hint: '整数数组，全排列/子集输入' },
+    // 高级数据结构
+    segment_tree:  { value: '[1, 3, 5, 7, 9, 11]', hint: '整数数组，支持区间查询' },
+    fenwick_tree:  { value: '[3, 2, -1, 6, 5, 4, -3, 3]', hint: '整数数组，可含负数' },
+  }
+
+  // Parse input data from text — returns the natural type for the algorithm
+  const parsedInput = useCallback((): unknown => {
     try {
       const parsed = JSON.parse(inputData)
+      // String type: KMP, Manacher, etc.
+      if (typeof parsed === 'string' && selectedAlgorithm?.id) {
+        return parsed
+      }
+      // Array of strings: LCS, edit_distance, KMP
+      if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'string') {
+        return parsed
+      }
+      // Number: n-queens
+      if (typeof parsed === 'number') {
+        return parsed
+      }
+      // Object: graph, tree, etc.
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        return parsed
+      }
+      // Number array (default)
       if (Array.isArray(parsed) && parsed.length > 0 && parsed.every((v) => typeof v === 'number')) {
         return parsed
       }
     } catch { /* ignore */ }
+    // Fallback to default for this algorithm
+    const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
+    if (def) {
+      try { return JSON.parse(def.value) } catch { /* ignore */ }
+    }
     return [5, 3, 8, 1, 9, 2]
-  }, [inputData])
+  }, [inputData, selectedAlgorithm?.id])
 
   // Load preset or regenerate when algorithm or input changes
   useEffect(() => {
     // Skip regeneration when we're just syncing inputData back to textarea.
-    // Prevents infinite loop for algorithms whose initialState.data differs
-    // from parsed input (KMP char-code conversion, Fenwick tree array, etc.)
     if (internalInputUpdate.current) {
       internalInputUpdate.current = false
       return
@@ -1415,21 +1472,34 @@ export default function Visualizer() {
     setAiError('')
     setAiRawResponse('')
 
+    // Set default input when switching to a different algorithm
+    const algoChanged = prevAlgoId.current !== selectedAlgorithm.id
+    if (algoChanged) {
+      prevAlgoId.current = selectedAlgorithm.id
+      const defInput = DEFAULT_INPUTS[selectedAlgorithm.id]
+      if (defInput) {
+        setInputData(defInput.value)
+      }
+    }
+
     if (selectedAlgorithm.hasPreset) {
       // Try generator first (dynamic, responds to input changes)
       if (hasGenerator(selectedAlgorithm.id)) {
-        const data = parsedInput()
+        // Use default input directly when algorithm just changed (before inputData state updates)
+        const data = algoChanged && DEFAULT_INPUTS[selectedAlgorithm.id]
+          ? JSON.parse(DEFAULT_INPUTS[selectedAlgorithm.id].value)
+          : parsedInput()
         const script = generatePreset(selectedAlgorithm.id, data)
         if (script) {
           setAnimationScript(script)
-          // Sync input textarea with actual data used
-          if (script.initialState.data.length > 0) {
+          // Sync input textarea: only for number arrays (sorting etc.), not for string/graph/tree inputs
+          if (Array.isArray(data) && data.every(v => typeof v === 'number') && script.initialState.data.length > 0) {
             const newVal = JSON.stringify(script.initialState.data)
             if (newVal !== inputData) {
               internalInputUpdate.current = true
               setInputData(newVal)
             }
-          } else if (script.initialState.nodes) {
+          } else if (script.initialState.nodes && !Array.isArray(data)) {
             const newVal = JSON.stringify({ nodes: script.initialState.nodes.length, edges: script.initialState.edges?.length })
             if (newVal !== inputData) {
               internalInputUpdate.current = true
@@ -1475,8 +1545,9 @@ export default function Visualizer() {
 
     // Visited lines (before current)
     const visitedLines = new Set<number>()
-    for (let i = 0; i < currentStep - 1; i++) {
-      visitedLines.add(steps[i].codeLine)
+    const maxIdx = Math.min(currentStep - 1, steps.length)
+    for (let i = 0; i < maxIdx; i++) {
+      if (steps[i]) visitedLines.add(steps[i].codeLine)
     }
 
     for (const line of visitedLines) {
@@ -1606,8 +1677,16 @@ export default function Visualizer() {
             value={inputData}
             onChange={setInputData}
             title={t('visualizer.inputData')}
-            helperText="JSON 数组格式，如 [5,3,8,1,9,2]"
-            placeholder="[5, 3, 8, 1, 9, 2]"
+            helperText={(() => {
+              const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
+              if (def) return def.hint
+              const info = parseInputData(inputData)
+              return info.valid ? `类型: ${info.kind} · ${info.summary}` : '支持数组、字符串、JSON 对象'
+            })()}
+            placeholder={(() => {
+              const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
+              return def?.value ?? '[5, 3, 8, 1, 9, 2]'
+            })()}
             disabled={aiStatus === 'analyzing'}
             className="h-28 xl:h-32"
           />
