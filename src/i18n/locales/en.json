@@ -1,0 +1,57 @@
+{
+  "app": {
+    "name": "AlgoViz",
+    "tagline": "AI-Powered Algorithm Visualization Platform"
+  },
+  "nav": {
+    "home": "Home",
+    "visualizer": "Visualizer",
+    "settings": "API Config",
+    "language": "Language"
+  },
+  "sidebar": {
+    "search": "Search algorithms...",
+    "all": "All",
+    "sorting": "Sorting",
+    "graph": "Graph",
+    "dataStructure": "Data Structures",
+    "dp": "Dynamic Programming",
+    "searchBacktrack": "Search & Backtrack",
+    "advanced": "Advanced Topics",
+    "interview": "Interview Hot 100",
+    "contest": "Contest Templates"
+  },
+  "difficulty": {
+    "easy": "Basic",
+    "medium": "Medium",
+    "hard": "Hard"
+  },
+  "controls": {
+    "reset": "Reset",
+    "prevStep": "Previous",
+    "play": "Play",
+    "pause": "Pause",
+    "nextStep": "Next",
+    "end": "End",
+    "speed": "Speed"
+  },
+  "settings": {
+    "title": "AI API Configuration",
+    "apiKey": "API Key",
+    "apiKeyPlaceholder": "Enter your OpenAI API Key",
+    "baseUrl": "Base URL",
+    "model": "Model Name",
+    "modelPlaceholder": "e.g. gpt-4o",
+    "testConnection": "Test Connection",
+    "testing": "Testing...",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "encryptionNote": "API Key is stored locally in your browser only, never uploaded to any server"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "loading": "Loading..."
+  }
+}
