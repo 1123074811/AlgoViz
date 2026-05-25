@@ -180,7 +180,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           })}
           {filteredAlgos.length === 0 && (
             <p className="text-xs text-muted text-center py-6">
-              {searchQuery ? '无匹配算法' : '暂无算法'}
+              {searchQuery ? t('sidebar.noResults') : t('sidebar.noAlgorithms')}
             </p>
           )}
         </div>

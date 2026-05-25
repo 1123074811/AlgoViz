@@ -14,12 +14,16 @@
     "all": "All",
     "sorting": "Sorting",
     "graph": "Graph",
-    "dataStructure": "Data Structures",
+    "data-structure": "Data Structures",
     "dp": "Dynamic Programming",
-    "searchBacktrack": "Search & Backtrack",
+    "search-backtrack": "Search & Backtrack",
     "advanced": "Advanced Topics",
     "interview": "Interview Hot 100",
-    "contest": "Contest Templates"
+    "contest": "Contest Templates",
+    "noResults": "No matching algorithms",
+    "noAlgorithms": "No algorithms",
+    "collapseHint": "Click to start learning",
+    "presetBadge": "Preset"
   },
   "difficulty": {
     "easy": "Basic",
@@ -33,10 +37,38 @@
     "pause": "Pause",
     "nextStep": "Next",
     "end": "End",
-    "speed": "Speed"
+    "speed": "Speed",
+    "aiAnalyze": "AI Analyze",
+    "aiAnalyzing": "AI Analyzing...",
+    "aiSuccess": "AI Analysis Complete",
+    "aiFailed": "AI Analysis Failed",
+    "aiConfigureHint": "Please configure API Key in Settings"
+  },
+  "visualizer": {
+    "emptyTitle": "Select an algorithm from the sidebar",
+    "emptySubtitle": "Start your visual learning journey",
+    "codeEditor": "Code Editor",
+    "inputData": "Input Data",
+    "inputPlaceholder": "[5, 3, 8, 1, 9, 2]",
+    "algorithmInfo": "Algorithm Info",
+    "stepLabel": "Step",
+    "liveStats": "Live Statistics",
+    "comparisons": "Comparisons",
+    "swaps": "Swaps",
+    "accesses": "Accesses",
+    "complexity": "Complexity",
+    "timeComplexity": "Time Complexity",
+    "spaceComplexity": "Space Complexity",
+    "best": "Best",
+    "average": "Average",
+    "worst": "Worst",
+    "space": "Space",
+    "canvasPlaceholder": "Select an algorithm to visualize",
+    "noDataToRender": "No data to render"
   },
   "settings": {
     "title": "AI API Configuration",
+    "subtitle": "Configure your OpenAI-compatible API to enable AI-powered algorithm visualization",
     "apiKey": "API Key",
     "apiKeyPlaceholder": "Enter your OpenAI API Key",
     "baseUrl": "Base URL",
@@ -46,12 +78,50 @@
     "testing": "Testing...",
     "connected": "Connected",
     "disconnected": "Disconnected",
-    "encryptionNote": "API Key is stored locally in your browser only, never uploaded to any server"
+    "encryptionNote": "API Key is stored locally in your browser only, never uploaded to any server",
+    "tokenEstimate": "Token Usage Estimate",
+    "inputTokens": "Input Tokens",
+    "outputTokens": "Output Tokens",
+    "estimatedCost": "Estimated cost per analysis",
+    "unrecognizedModel": "Unrecognized model. Reference: GPT-4o ~$0.003/req",
+    "responseTime": "Response Time"
+  },
+  "home": {
+    "startLearning": "Start Learning",
+    "configureAI": "Configure AI",
+    "algorithmCategories": "Algorithm Categories",
+    "keyFeatures": "Key Features",
+    "features": {
+      "ai": {
+        "title": "AI-Powered Animation",
+        "desc": "AI analyzes code in real-time, generating structured animation data instead of pre-made animations"
+      },
+      "editor": {
+        "title": "Multi-language Editor",
+        "desc": "Supports Python, JavaScript, C++, Java with Monaco Editor real-time highlighting"
+      },
+      "visualization": {
+        "title": "WYSIWYG Rendering",
+        "desc": "Bar charts, force-directed graphs, hierarchical trees — smooth 300ms animations"
+      }
+    },
+    "categories": {
+      "sorting": { "name": "Sorting Algorithms", "desc": "Bubble, Selection, Quick Sort and more" },
+      "graph": { "name": "Graph Algorithms", "desc": "BFS, DFS, Dijkstra, Topological Sort" },
+      "data-structure": { "name": "Data Structures", "desc": "Linked Lists, Trees, Heaps, Hash Tables" },
+      "dp": { "name": "Dynamic Programming", "desc": "Knapsack, LCS, Edit Distance and more" },
+      "search-backtrack": { "name": "Search & Backtracking", "desc": "Binary Search, Backtracking, N-Queens" },
+      "advanced": { "name": "Advanced Topics", "desc": "KMP, Segment Tree, Fenwick Tree" },
+      "interview": { "name": "Interview Hot 100", "desc": "Curated LeetCode Top 100" },
+      "contest": { "name": "Contest Templates", "desc": "ACM common algorithm templates" }
+    }
   },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry"
   }
 }

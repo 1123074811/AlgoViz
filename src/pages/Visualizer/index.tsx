@@ -10,6 +10,105 @@ import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
 
 type AIStatus = 'idle' | 'analyzing' | 'success' | 'error'
 
+const ALGO_DESC_ZH: Record<string, string> = {
+  bubble_sort: '重复遍历数列，依次比较相邻元素，如果顺序错误则交换位置。每轮将最大值"冒泡"到末尾。',
+  selection_sort: '每次从未排序区间选择最小的元素，放到已排序区间的末尾。',
+  insertion_sort: '将未排序元素依次插入到已排序序列的合适位置，类似整理扑克牌。',
+  merge_sort: '分治法：将数组递归二分，排序后合并两个有序子数组。',
+  quick_sort: '选取基准元素，将数组分为小于和大于基准的两部分，递归排序。',
+  shell_sort: '插入排序的改进版，通过比较相隔一定间隔的元素，逐步缩小间隔直到1。',
+  heap_sort: '利用二叉堆数据结构，每次将最大值移到堆顶，再与末尾交换。',
+  counting_sort: '非比较排序，统计每个元素的出现次数，再按顺序重建数组。',
+  radix_sort: '按位排序，从最低位到最高位，每位用稳定的计数排序。',
+  bucket_sort: '将元素分布到多个桶中，每个桶内排序后合并。',
+  bfs_graph: '从起点开始逐层遍历图的节点，使用队列实现。',
+  dfs_graph: '从起点开始沿一条路径深入直到无法继续，然后回溯。',
+  dijkstra: '贪心算法，每次选择距离起点最近的未访问节点，更新其邻居的距离。',
+  bellman_ford: '动态规划算法，对所有边进行 n-1 轮松弛操作，可处理负权边。',
+  a_star: '启发式搜索，结合实际距离和预估距离，用优先队列选择最优路径。',
+  floyd: '动态规划算法，考虑所有节点作为中间节点，更新最短路径。',
+  prim: '从任意节点开始，每次选择权重最小的边连接未访问节点。',
+  kruskal: '将所有边按权重排序，依次选择不形成环的边。',
+  topological_sort: '对有向无环图进行线性排序，使得所有边方向一致。',
+  binary_tree: '每个节点最多有两个子节点，左子节点 < 右子节点。',
+  bst: '二叉搜索树：左子树所有节点 < 根 < 右子树所有节点。',
+  avl_tree: '自平衡二叉搜索树，任意节点左右子树高度差不超过 1。',
+  heap_ds: '完全二叉树，父节点值大于（或小于）子节点值。',
+  trie: '字典树 / 前缀树，用于高效存储和查找字符串。',
+  union_find: '并查集：维护不相交集合的合并与查询操作。',
+  hash_table: '哈希表：通过哈希函数实现 O(1) 平均查找时间。',
+  knapsack_01: '01背包：每件物品只能选一次，求最大总价值。',
+  unbounded_knapsack: '完全背包：每件物品可选无限次，求最大总价值。',
+  lcs: '最长公共子序列：在两个序列中找到最长的公共子序列。',
+  lis: '最长递增子序列：在数组中找到最长的严格递增子序列。',
+  edit_distance: '编辑距离：将一个字符串转换为另一个所需的最少操作次数。',
+  matrix_chain: '矩阵链乘：找到矩阵链乘的最优括号化方案。',
+  interval_dp: '区间DP：通过分割区间来求解最优子结构。',
+  binary_search: '在有序数组中每次取中间值比较，将搜索范围缩小一半。',
+  backtracking: '回溯算法：尝试所有可能的选择，遇到不合法情况立即回退。',
+  n_queens: '在 N×N 棋盘上放置 N 个皇后，使它们互不攻击。',
+  sudoku: '用数字 1-9 填充 9×9 网格，每行每列每宫不重复。',
+  kmp: 'KMP 字符串匹配：利用前缀函数（LPS）避免重复比较。',
+  manacher: 'Manacher 算法：线性时间求最长回文子串。',
+  segment_tree: '线段树：支持区间查询和单点/区间更新。',
+  fenwick_tree: '树状数组 / BIT：支持前缀和查询和单点更新。',
+  monotonic_stack: '单调栈：维护栈内元素单调递增或递减，用于查找下一个更大/更小元素。',
+  sliding_window: '滑动窗口：维护一个大小可变的窗口，在线性时间内扫描数组。',
+}
+
+const ALGO_DESC_EN: Record<string, string> = {
+  bubble_sort: 'Repeatedly steps through the list, compares adjacent elements, and swaps them if they are in the wrong order.',
+  selection_sort: 'Finds the minimum element from the unsorted part and puts it at the beginning.',
+  insertion_sort: 'Builds the sorted array one item at a time, inserting each new item into its correct position.',
+  merge_sort: 'Divide and conquer: recursively splits the array in half, then merges sorted subarrays.',
+  quick_sort: 'Selects a pivot element and partitions the array into elements less than and greater than the pivot.',
+  shell_sort: 'An extension of insertion sort that allows exchange of far apart elements.',
+  heap_sort: 'Uses a binary heap data structure to repeatedly extract the maximum element.',
+  counting_sort: 'Non-comparison sort: counts occurrences of each element and reconstructs in order.',
+  radix_sort: 'Sorts by individual digits, from least to most significant, using stable counting sort.',
+  bucket_sort: 'Distributes elements into buckets, sorts each bucket, then concatenates.',
+  bfs_graph: 'Traverses the graph level by level from the start node using a queue.',
+  dfs_graph: 'Explores a path as far as possible before backtracking to explore other branches.',
+  dijkstra: 'Greedy algorithm: finds the shortest path from a start node to all others.',
+  bellman_ford: 'DP algorithm: relaxes all edges n-1 times, handles negative weights.',
+  a_star: 'Heuristic search combining actual and estimated distances with a priority queue.',
+  floyd: 'DP algorithm: considers all nodes as intermediates to update shortest paths.',
+  prim: 'Grows a MST from any node, selecting minimal weight edges to unvisited nodes.',
+  kruskal: 'Sorts edges by weight and adds them if they connect different components.',
+  topological_sort: 'Linearly orders vertices of a DAG such that all edges go forward.',
+  binary_search: 'Repeatedly divides the search interval in half in a sorted array.',
+  binary_tree: 'A tree where each node has at most two children.',
+  bst: 'Binary Search Tree: left subtree < root < right subtree.',
+  avl_tree: 'Self-balancing BST where heights of subtrees differ by at most 1.',
+  heap_ds: 'Complete binary tree where parent values are greater (or less) than children.',
+  trie: 'Prefix tree for efficient string storage and lookup.',
+  union_find: 'Union-Find / Disjoint Set Union: tracks elements partitioned into disjoint sets.',
+  hash_table: 'Hash table: achieves O(1) average lookup using a hash function.',
+  knapsack_01: '0/1 Knapsack: each item can be taken at most once, maximize total value.',
+  unbounded_knapsack: 'Unbounded knapsack: each item can be taken unlimited times.',
+  lcs: 'Longest Common Subsequence: finds the longest subsequence common to two sequences.',
+  lis: 'Longest Increasing Subsequence: finds the longest strictly increasing subsequence.',
+  edit_distance: 'Edit Distance / Levenshtein: min operations to transform one string into another.',
+  matrix_chain: 'Matrix Chain Multiplication: finds optimal parenthesization to minimize operations.',
+  interval_dp: 'Interval DP: solves optimal substructure by splitting intervals.',
+  n_queens: 'Places N queens on an N×N board so no two attack each other.',
+  sudoku: 'Fills a 9×9 grid with digits 1-9 following constraints.',
+  kmp: 'KMP: avoids redundant character comparisons using prefix function (LPS).',
+  manacher: "Manacher's: finds longest palindromic substring in linear time.",
+  segment_tree: 'Segment Tree: supports range queries and point/range updates.',
+  fenwick_tree: 'Fenwick Tree / BIT: supports prefix sum queries and point updates.',
+  monotonic_stack: 'Monotonic Stack: maintains monotonic stack for next greater/smaller element.',
+  sliding_window: 'Sliding Window: maintains a variable-size window for linear scans.',
+}
+
+function getAlgorithmDesc(id: string): string {
+  return ALGO_DESC_ZH[id] || ''
+}
+
+function getAlgorithmDescEn(id: string): string {
+  return ALGO_DESC_EN[id] || ''
+}
+
 export default function Visualizer() {
   const { t, i18n } = useTranslation()
   const lang = i18n.language as 'zh' | 'en'
@@ -114,7 +213,7 @@ export default function Visualizer() {
 
   const handleAIAnalyze = async () => {
     if (!hasApiConfig) {
-      setAiError('请先在设置页面配置 API Key')
+      setAiError(t('controls.aiConfigureHint'))
       setAiStatus('error')
       return
     }
@@ -136,7 +235,7 @@ export default function Visualizer() {
       loadScript(result.script)
     } else {
       setAiStatus('error')
-      setAiError(result.error || '未知错误')
+      setAiError(result.error || t('common.error'))
       setAiRawResponse(result.rawResponse || '')
     }
   }
@@ -149,10 +248,10 @@ export default function Visualizer() {
             <Icon name="code2" size={28} className="text-muted" />
           </div>
           <h2 className="text-lg font-semibold text-slate-600 mb-2">
-            {t('app.name')}
+            {t('visualizer.emptyTitle')}
           </h2>
           <p className="text-sm text-muted max-w-xs">
-            从左侧边栏选择一个算法，开始你的可视化学习之旅
+            {t('visualizer.emptySubtitle')}
           </p>
         </div>
       </div>
@@ -176,7 +275,7 @@ export default function Visualizer() {
             </span>
             {selectedAlgorithm.hasPreset && (
               <span className="text-[10px] text-green-600 font-medium bg-green-50 px-1.5 py-0.5 rounded">
-                预制动画
+                {t('sidebar.presetBadge')}
               </span>
             )}
           </div>
@@ -208,7 +307,7 @@ export default function Visualizer() {
           </div>
           <div className="h-32 border-t border-border bg-surface p-3 shrink-0">
             <div className="text-xs font-medium text-slate-500 mb-1.5">
-              输入数据
+              {t('visualizer.inputData')}
             </div>
             <textarea
               className="w-full h-[calc(100%-1.5rem)] resize-none rounded-md border border-border
@@ -235,7 +334,7 @@ export default function Visualizer() {
           <div className="h-9 border-b border-border flex items-center px-3 bg-surface shrink-0">
             <span className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
               <Icon name="info" size={14} />
-              算法信息
+              {t('visualizer.algorithmInfo')}
             </span>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-3">
@@ -255,8 +354,8 @@ export default function Visualizer() {
                     aiStatus === 'success' ? 'text-green-600' :
                     'text-red-500'
                   }`}>
-                    {aiStatus === 'analyzing' ? 'AI 分析中...' :
-                     aiStatus === 'success' ? 'AI 分析完成' : 'AI 分析失败'}
+                    {aiStatus === 'analyzing' ? t('controls.aiAnalyzing') :
+                     aiStatus === 'success' ? t('controls.aiSuccess') : t('controls.aiFailed')}
                   </span>
                 </div>
                 {aiError && (
@@ -269,7 +368,7 @@ export default function Visualizer() {
             {currentStepData && (
               <div className="p-3 rounded-lg border border-warning-50 bg-warning-50">
                 <div className="text-[10px] text-warning uppercase tracking-wide font-semibold mb-1">
-                  Step {currentStepData.stepId}
+                  {t('visualizer.stepLabel')} {currentStepData.stepId}
                 </div>
                 <p className="text-xs text-slate-700 leading-relaxed">
                   {lang === 'zh' ? currentStepData.description.zh : currentStepData.description.en}
@@ -279,12 +378,12 @@ export default function Visualizer() {
 
             {/* Stats */}
             <div className="p-3 rounded-lg border border-border bg-surface">
-              <h4 className="text-xs font-semibold text-slate-700 mb-2">实时统计</h4>
+              <h4 className="text-xs font-semibold text-slate-700 mb-2">{t('visualizer.liveStats')}</h4>
               <div className="space-y-1.5">
                 {[
-                  { label: '比较次数', value: currentStepData?.stats.comparisons ?? 0 },
-                  { label: '交换次数', value: currentStepData?.stats.swaps ?? 0 },
-                  { label: '访问次数', value: currentStepData?.stats.accesses ?? 0 },
+                  { label: t('visualizer.comparisons'), value: currentStepData?.stats.comparisons ?? 0 },
+                  { label: t('visualizer.swaps'), value: currentStepData?.stats.swaps ?? 0 },
+                  { label: t('visualizer.accesses'), value: currentStepData?.stats.accesses ?? 0 },
                 ].map((stat) => (
                   <div key={stat.label} className="flex justify-between items-center">
                     <span className="text-[11px] text-slate-400">{stat.label}</span>
@@ -299,22 +398,22 @@ export default function Visualizer() {
             {/* Complexity */}
             {complexity && (
               <div className="p-3 rounded-lg border border-border bg-surface">
-                <h4 className="text-xs font-semibold text-slate-700 mb-2">复杂度</h4>
+                <h4 className="text-xs font-semibold text-slate-700 mb-2">{t('visualizer.complexity')}</h4>
                 <div className="space-y-1 text-[11px]">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">最好</span>
+                    <span className="text-slate-400">{t('visualizer.best')}</span>
                     <span className="font-code text-green-600">{complexity.time.best}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">平均</span>
+                    <span className="text-slate-400">{t('visualizer.average')}</span>
                     <span className="font-code text-yellow-600">{complexity.time.average}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">最坏</span>
+                    <span className="text-slate-400">{t('visualizer.worst')}</span>
                     <span className="font-code text-red-500">{complexity.time.worst}</span>
                   </div>
                   <div className="border-t border-border pt-1.5 mt-1.5 flex justify-between">
-                    <span className="text-slate-400">空间</span>
+                    <span className="text-slate-400">{t('visualizer.space')}</span>
                     <span className="font-code text-slate-600">{complexity.space}</span>
                   </div>
                 </div>
@@ -327,19 +426,7 @@ export default function Visualizer() {
                 {selectedAlgorithm.name}
               </h4>
               <p className="text-[11px] text-slate-500 leading-relaxed">
-                {selectedAlgorithm.name === '冒泡排序'
-                  ? '重复遍历数列，依次比较相邻元素，如果顺序错误则交换位置。每轮将最大值"冒泡"到末尾。'
-                  : selectedAlgorithm.name === '选择排序'
-                  ? '每次从未排序区间选择最小的元素，放到已排序区间的末尾。'
-                  : selectedAlgorithm.name === '插入排序'
-                  ? '将未排序元素依次插入到已排序序列的合适位置，类似整理扑克牌。'
-                  : selectedAlgorithm.name === '归并排序'
-                  ? '分治法：将数组递归二分，排序后合并两个有序子数组。'
-                  : selectedAlgorithm.name === '快速排序'
-                  ? '选取基准元素，将数组分为小于和大于基准的两部分，递归排序。'
-                  : selectedAlgorithm.name === '二分查找'
-                  ? '在有序数组中每次取中间值比较，将搜索范围缩小一半。'
-                  : ''}
+                {lang === 'zh' ? getAlgorithmDesc(selectedAlgorithm.id) : getAlgorithmDescEn(selectedAlgorithm.id)}
               </p>
             </div>
           </div>
@@ -382,14 +469,14 @@ export default function Visualizer() {
                        hover:from-violet-600 hover:to-purple-700
                        disabled:opacity-50 disabled:cursor-not-allowed
                        transition-all cursor-pointer border-none shadow-sm"
-            title={!hasApiConfig ? '请先在设置页面配置 API Key' : 'AI 分析当前代码'}
+            title={!hasApiConfig ? t('controls.aiConfigureHint') : t('controls.aiAnalyze')}
           >
             {aiStatus === 'analyzing' ? (
               <Icon name="loader2" size={14} className="animate-spin" />
             ) : (
               <Icon name="brain" size={14} />
             )}
-            AI 分析
+            {t('controls.aiAnalyze')}
           </button>
         </div>
 

@@ -14,12 +14,16 @@
     "all": "全部",
     "sorting": "排序算法",
     "graph": "图算法",
-    "dataStructure": "数据结构",
+    "data-structure": "数据结构",
     "dp": "动态规划",
-    "searchBacktrack": "搜索与回溯",
+    "search-backtrack": "搜索与回溯",
     "advanced": "进阶专题",
     "interview": "面试高频",
-    "contest": "竞赛专题"
+    "contest": "竞赛专题",
+    "noResults": "无匹配算法",
+    "noAlgorithms": "暂无算法",
+    "collapseHint": "点击算法开始学习",
+    "presetBadge": "预制动画"
   },
   "difficulty": {
     "easy": "基础",
@@ -33,10 +37,38 @@
     "pause": "暂停",
     "nextStep": "下一步",
     "end": "末尾",
-    "speed": "速度"
+    "speed": "速度",
+    "aiAnalyze": "AI 分析",
+    "aiAnalyzing": "AI 分析中...",
+    "aiSuccess": "AI 分析完成",
+    "aiFailed": "AI 分析失败",
+    "aiConfigureHint": "请先在设置页面配置 API Key"
+  },
+  "visualizer": {
+    "emptyTitle": "从左侧边栏选择一个算法",
+    "emptySubtitle": "开始你的可视化学习之旅",
+    "codeEditor": "代码编辑器",
+    "inputData": "输入数据",
+    "inputPlaceholder": "[5, 3, 8, 1, 9, 2]",
+    "algorithmInfo": "算法信息",
+    "stepLabel": "步骤",
+    "liveStats": "实时统计",
+    "comparisons": "比较次数",
+    "swaps": "交换次数",
+    "accesses": "访问次数",
+    "complexity": "复杂度",
+    "timeComplexity": "时间复杂度",
+    "spaceComplexity": "空间复杂度",
+    "best": "最好",
+    "average": "平均",
+    "worst": "最坏",
+    "space": "空间",
+    "canvasPlaceholder": "选择算法以开始可视化",
+    "noDataToRender": "无数据可渲染"
   },
   "settings": {
     "title": "AI API 配置",
+    "subtitle": "配置你的 OpenAI 兼容 API，即可启用 AI 驱动的算法可视化分析",
     "apiKey": "API Key",
     "apiKeyPlaceholder": "输入你的 OpenAI API Key",
     "baseUrl": "Base URL",
@@ -46,12 +78,50 @@
     "testing": "测试中...",
     "connected": "已连接",
     "disconnected": "未连接",
-    "encryptionNote": "API Key 仅存储在本地浏览器中，不会上传至任何服务器"
+    "encryptionNote": "API Key 仅存储在本地浏览器中，不会上传至任何服务器",
+    "tokenEstimate": "Token 用量预估",
+    "inputTokens": "输入 Token",
+    "outputTokens": "输出 Token",
+    "estimatedCost": "预估单次分析费用",
+    "unrecognizedModel": "未识别模型，无法预估费用。参考：GPT-4o 约 $0.003/次",
+    "responseTime": "响应时间"
+  },
+  "home": {
+    "startLearning": "开始学习",
+    "configureAI": "配置 AI",
+    "algorithmCategories": "算法分类",
+    "keyFeatures": "核心特性",
+    "features": {
+      "ai": {
+        "title": "AI 驱动的动画",
+        "desc": "AI 实时分析用户代码，生成结构化动画数据，而非预置动画"
+      },
+      "editor": {
+        "title": "多语言代码编辑",
+        "desc": "支持 Python、JavaScript、C++、Java，Monaco Editor 实时高亮"
+      },
+      "visualization": {
+        "title": "所见即所得",
+        "desc": "条形图、力导向图、层次树等多种渲染器，动画流畅 300ms"
+      }
+    },
+    "categories": {
+      "sorting": { "name": "排序算法", "desc": "冒泡、选择、插入、快排等经典排序" },
+      "graph": { "name": "图算法", "desc": "BFS、DFS、Dijkstra、拓扑排序等" },
+      "data-structure": { "name": "数据结构", "desc": "链表、树、堆、哈希表等基础结构" },
+      "dp": { "name": "动态规划", "desc": "背包、LCS、编辑距离等经典DP" },
+      "search-backtrack": { "name": "搜索与回溯", "desc": "二分查找、回溯、N皇后" },
+      "advanced": { "name": "进阶专题", "desc": "KMP、线段树、树状数组等" },
+      "interview": { "name": "面试高频", "desc": "LeetCode Hot 100 精选" },
+      "contest": { "name": "竞赛专题", "desc": "ACM 常用算法模板" }
+    }
   },
   "common": {
     "save": "保存",
     "cancel": "取消",
     "confirm": "确认",
-    "loading": "加载中..."
+    "loading": "加载中...",
+    "error": "出错了",
+    "retry": "重试"
   }
 }

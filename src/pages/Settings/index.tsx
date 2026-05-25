@@ -124,7 +124,7 @@ export default function Settings() {
           {t('settings.title')}
         </h1>
         <p className="text-sm text-slate-500 mb-8">
-          配置你的 OpenAI 兼容 API，即可启用 AI 驱动的算法可视化分析
+          {t('settings.subtitle')}
         </p>
 
         <div className="space-y-6">
@@ -246,17 +246,17 @@ export default function Settings() {
           {/* Token Usage Estimate */}
           <div className="bg-white rounded-xl border border-border p-5">
             <label className="block text-sm font-semibold text-slate-700 mb-3">
-              Token 用量预估
+              {t('settings.tokenEstimate')}
             </label>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 rounded-lg bg-surface text-center">
-                <div className="text-[10px] text-slate-400 mb-0.5">输入 Token</div>
+                <div className="text-[10px] text-slate-400 mb-0.5">{t('settings.inputTokens')}</div>
                 <div className="text-lg font-code font-semibold text-slate-700">
                   ~{tokenEstimate.inputTokens.toLocaleString()}
                 </div>
               </div>
               <div className="p-3 rounded-lg bg-surface text-center">
-                <div className="text-[10px] text-slate-400 mb-0.5">输出 Token</div>
+                <div className="text-[10px] text-slate-400 mb-0.5">{t('settings.outputTokens')}</div>
                 <div className="text-lg font-code font-semibold text-slate-700">
                   ~{tokenEstimate.outputTokens.toLocaleString()}
                 </div>
@@ -265,7 +265,7 @@ export default function Settings() {
             {tokenEstimate.cost !== null && (
               <div className="mt-3 p-3 rounded-lg bg-primary-50 text-center">
                 <span className="text-[10px] text-slate-500">
-                  {tokenEstimate.label} · 预估单次分析费用
+                  {tokenEstimate.label} · {t('settings.estimatedCost')}
                 </span>
                 <div className="text-sm font-code font-semibold text-primary">
                   ${tokenEstimate.cost.toFixed(4)}
@@ -274,7 +274,7 @@ export default function Settings() {
             )}
             {tokenEstimate.cost === null && (
               <div className="mt-3 text-[10px] text-slate-400 text-center">
-                未识别模型，无法预估费用。参考：GPT-4o 约 $0.003/次
+                {t('settings.unrecognizedModel')}
               </div>
             )}
           </div>
