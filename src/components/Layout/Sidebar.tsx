@@ -47,9 +47,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       result = result.filter(
-        (a) =>
-          a.name.toLowerCase().includes(q) ||
-          a.nameEn.toLowerCase().includes(q)
+        (a) => {
+          const globalIdx = algorithms.findIndex((x) => x.id === a.id) + 1
+          return a.name.toLowerCase().includes(q) ||
+            a.nameEn.toLowerCase().includes(q) ||
+            String(globalIdx) === q
+        }
       )
     }
     return result

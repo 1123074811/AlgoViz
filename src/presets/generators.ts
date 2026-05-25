@@ -324,6 +324,17 @@ import { generateLIS } from './lis'
 import { generateEditDistance } from './editDistance'
 import { generateKMP } from './kmp'
 import { generateFenwick } from './fenwick'
+import { generateUnboundedKnapsack } from './unboundedKnapsack'
+import { generateMatrixChain } from './matrixChain'
+import { generateSudoku } from './sudoku'
+import { generateManacher } from './manacher'
+import { generateSegmentTree } from './segmentTree'
+import { generateIntervalDP } from './intervalDP'
+import { generateStack } from './stack'
+import { generateQueue } from './queue'
+import { generateHeapOperations } from './heap'
+import { generateUnionFind } from './unionFind'
+
 const slidingWindowWrapper = (arr: number[]) => generateSlidingWindow(arr, 3)
 const monotonicStackWrapper = (arr: number[]) => generateMonotonicStack(arr)
 const knapsackWrapper = (arr: number[]) => generateKnapsack(undefined, undefined, undefined)
@@ -333,26 +344,31 @@ const lisWrapper = (arr: number[]) => generateLIS(arr)
 const editDistanceWrapper = (_arr: number[]) => generateEditDistance(undefined, undefined)
 const kmpWrapper = (_arr: number[]) => generateKMP(undefined, undefined)
 const fenwickWrapper = (arr: number[]) => generateFenwick(arr)
+const unboundedKnapsackWrapper = (arr: number[]) => generateUnboundedKnapsack(undefined, undefined, undefined)
+const matrixChainWrapper = (_arr: number[]) => generateMatrixChain(undefined)
+const sudokuWrapper = (_arr: number[]) => generateSudoku()
+const manacherWrapper = (_arr: number[]) => generateManacher(undefined)
+const segmentTreeWrapper = (arr: number[]) => generateSegmentTree(arr)
+const intervalDPWrapper = (_arr: number[]) => generateIntervalDP(undefined)
+const stackWrapper = (_arr: number[]) => generateStack()
+const queueWrapper = (_arr: number[]) => generateQueue()
+const heapWrapper = (arr: number[]) => generateHeapOperations(arr)
+const unionFindWrapper = (_arr: number[]) => generateUnionFind()
 
 const GENERATORS: Record<string, (arr: number[]) => AnimationScript> = {
-  bubble_sort: generateBubbleSort,
-  selection_sort: generateSelectionSort,
-  insertion_sort: generateInsertionSort,
-  merge_sort: generateMergeSort,
-  quick_sort: generateQuickSort,
-  heap_sort: generateHeapSort,
-  shell_sort: generateShellSort,
-  counting_sort: generateCountingSort,
-  binary_search: generateBinarySearch,
-  sliding_window: slidingWindowWrapper,
-  monotonic_stack: monotonicStackWrapper,
-  knapsack_01: knapsackWrapper,
-  lcs: lcsWrapper,
-  n_queens: nQueensWrapper,
-  lis: lisWrapper,
-  edit_distance: editDistanceWrapper,
-  kmp: kmpWrapper,
-  fenwick_tree: fenwickWrapper,
+  bubble_sort: generateBubbleSort, selection_sort: generateSelectionSort,
+  insertion_sort: generateInsertionSort, merge_sort: generateMergeSort,
+  quick_sort: generateQuickSort, heap_sort: generateHeapSort,
+  shell_sort: generateShellSort, counting_sort: generateCountingSort,
+  binary_search: generateBinarySearch, sliding_window: slidingWindowWrapper,
+  monotonic_stack: monotonicStackWrapper, knapsack_01: knapsackWrapper,
+  lcs: lcsWrapper, n_queens: nQueensWrapper, lis: lisWrapper,
+  edit_distance: editDistanceWrapper, kmp: kmpWrapper,
+  fenwick_tree: fenwickWrapper, unbounded_knapsack: unboundedKnapsackWrapper,
+  matrix_chain: matrixChainWrapper, sudoku: sudokuWrapper,
+  manacher: manacherWrapper, segment_tree: segmentTreeWrapper,
+  interval_dp: intervalDPWrapper, stack: stackWrapper,
+  queue: queueWrapper, heap_ds: heapWrapper, union_find: unionFindWrapper,
 }
 
 export function generatePreset(algoId: string, inputData: number[]): AnimationScript | undefined {

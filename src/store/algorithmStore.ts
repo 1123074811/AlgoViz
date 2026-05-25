@@ -239,7 +239,7 @@ def dijkstra(graph, start):
   },
   {
     id: 'bellman_ford', name: 'Bellman-Ford', nameEn: 'Bellman-Ford', category: 'graph', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def bellman_ford(edges, n, start):
     dist = [float('inf')] * n
     dist[start] = 0
@@ -251,7 +251,7 @@ def dijkstra(graph, start):
   },
   {
     id: 'a_star', name: 'A* 搜索', nameEn: 'A* Search', category: 'graph', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `import heapq
 
 def heuristic(a, b):
@@ -378,11 +378,11 @@ def traverse(head):
   },
   {
     id: 'stack', name: '栈', nameEn: 'Stack', category: 'data-structure', difficulty: 'easy',
-    hasPreset: false, defaultLanguage: 'python', defaultCode: '# Stack operations\nstack = []\nstack.append(1)  # push\nstack.append(2)\nstack.pop()     # 2\nstack[-1]      # peek',
+    hasPreset: true, defaultLanguage: 'python', defaultCode: '# Stack operations\nstack = []\nstack.append(1)  # push\nstack.append(2)\nstack.pop()     # 2\nstack[-1]      # peek',
   },
   {
     id: 'queue', name: '队列', nameEn: 'Queue', category: 'data-structure', difficulty: 'easy',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `from collections import deque
 q = deque()
 q.append(1)    # enqueue
@@ -450,7 +450,7 @@ def get_balance(node):
   },
   {
     id: 'heap_ds', name: '堆', nameEn: 'Heap', category: 'data-structure', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `import heapq
 # 最小堆
 heap = []
@@ -487,7 +487,7 @@ class Trie:
   },
   {
     id: 'union_find', name: '并查集', nameEn: 'Union-Find', category: 'data-structure', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `class UnionFind:
     def __init__(self, n):
         self.parent = list(range(n))
@@ -529,7 +529,7 @@ class Trie:
   },
   {
     id: 'unbounded_knapsack', name: '完全背包', nameEn: 'Unbounded Knapsack', category: 'dp', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def unbounded_knapsack(weights, values, capacity):
     n = len(weights)
     dp = [0] * (capacity + 1)
@@ -584,7 +584,7 @@ class Trie:
   },
   {
     id: 'matrix_chain', name: '矩阵链乘', nameEn: 'Matrix Chain', category: 'dp', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def matrix_chain_order(dims):
     n = len(dims) - 1
     dp = [[0] * n for _ in range(n)]
@@ -599,7 +599,7 @@ class Trie:
   },
   {
     id: 'interval_dp', name: '区间 DP', nameEn: 'Interval DP', category: 'dp', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `# 区间动态规划模板
 # 典型问题：石子合并、戳气球等
 def interval_dp(nums):
@@ -665,7 +665,7 @@ def interval_dp(nums):
   },
   {
     id: 'sudoku', name: '数独求解', nameEn: 'Sudoku Solver', category: 'search-backtrack', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def solve_sudoku(board):
     def is_valid(row, col, num):
         for i in range(9):
@@ -715,7 +715,7 @@ def interval_dp(nums):
   },
   {
     id: 'manacher', name: 'Manacher 回文', nameEn: "Manacher's Algorithm", category: 'advanced', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def longest_palindrome(s):
     T = '#' + '#'.join(s) + '#'
     n = len(T)
@@ -735,7 +735,7 @@ def interval_dp(nums):
   },
   {
     id: 'segment_tree', name: '线段树', nameEn: 'Segment Tree', category: 'advanced', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `class SegmentTree:
     def __init__(self, arr):
         self.n = len(arr)
