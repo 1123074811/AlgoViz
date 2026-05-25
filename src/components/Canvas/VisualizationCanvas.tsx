@@ -13,7 +13,7 @@ interface VisualizationCanvasProps {
 }
 
 export default function VisualizationCanvas({ script, visualState, currentStepData }: VisualizationCanvasProps) {
-  if (!script || visualState.arrayData.length === 0) {
+  if (!script) {
     return (
       <div className="h-full flex items-center justify-center bg-slate-50">
         <div className="text-center">
@@ -26,15 +26,23 @@ export default function VisualizationCanvas({ script, visualState, currentStepDa
               <line x1="15" y1="3" x2="15" y2="21" />
             </svg>
           </div>
-          <p className="text-sm text-muted">
-            {script ? 'No data to render' : 'Select an algorithm to visualize'}
-          </p>
+          <p className="text-sm text-muted">Select an algorithm to visualize</p>
         </div>
       </div>
     )
   }
 
   const rendererType = script.initialState.type
+  // Only check arrayData for array-type renderers; graph/tree/matrix use different data
+  if (rendererType === 'array' && visualState.arrayData.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <p className="text-sm text-muted">No data to render</p>
+        </div>
+      </div>
+    )
+  }
 
   if (rendererType === 'array') {
     return (
