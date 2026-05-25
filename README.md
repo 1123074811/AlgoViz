@@ -869,6 +869,7 @@ tailwind.config.js
 
 ### Phase 3：AI 动画引擎增强
 
+- 详细实施计划：[docs/phase-3-implementation-plan.md](docs/phase-3-implementation-plan.md)
 - 增强 AI 输出 JSON Schema 校验。
 - 增加更明确的错误提示和修复建议。
 - 支持更多输入数据结构，例如图、树、矩阵对象。
