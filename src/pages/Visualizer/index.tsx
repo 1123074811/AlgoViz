@@ -1610,6 +1610,17 @@ export default function Visualizer() {
               disabled={aiStatus === 'analyzing'}
             />
           </div>
+          {/* Output result */}
+          {currentStep >= totalSteps && totalSteps > 0 && visualState.arrayData.length > 0 && (
+            <div className="h-20 border-t border-border bg-green-50 p-2.5 shrink-0">
+              <div className="text-xs font-semibold text-green-700 mb-1">
+                {lang === 'zh' ? '输出结果' : 'Output'}
+              </div>
+              <div className="text-xs font-code text-green-600 leading-relaxed break-all overflow-auto max-h-12">
+                [{visualState.arrayData.join(', ')}]
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Center: Canvas (45%) */}
@@ -1723,18 +1734,6 @@ export default function Visualizer() {
                     <span className="text-slate-400">{t('visualizer.space')}</span>
                     <span className="font-code text-slate-600">{complexity.space}</span>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Output / Result */}
-            {currentStep >= totalSteps && totalSteps > 0 && visualState.arrayData.length > 0 && (
-              <div className="p-3 rounded-lg border border-green-200 bg-green-50">
-                <h4 className="text-xs font-semibold text-green-700 mb-1.5">
-                  {lang === 'zh' ? '输出结果' : 'Output'}
-                </h4>
-                <div className="text-[11px] text-green-600 font-code leading-relaxed break-all">
-                  [{visualState.arrayData.join(', ')}]
                 </div>
               </div>
             )}
