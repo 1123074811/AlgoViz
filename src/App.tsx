@@ -27,8 +27,8 @@ export default function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<Suspense fallback={<LoadingFallback />}><Home /></Suspense>} />
           <Route path="/visualizer" element={<Suspense fallback={<LoadingFallback />}><Visualizer /></Suspense>} />
-          <Route path="/settings" element={<Suspense fallback={<LoadingFallback />}><Settings /></Suspense>} />
         </Route>
+        <Route path="/settings" element={<Suspense fallback={<LoadingFallback />}><Settings /></Suspense>} />
         <Route path="/playground" element={<Suspense fallback={<LoadingFallback />}><Playground /></Suspense>} />
       </Routes>
     </BrowserRouter>

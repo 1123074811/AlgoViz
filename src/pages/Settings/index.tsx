@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icon } from '@/icons'
+import Header from '@/components/Layout/Header'
 
 type ConnectionStatus = 'idle' | 'testing' | 'connected' | 'failed'
 
@@ -118,7 +119,9 @@ export default function Settings() {
   const current = statusIndicator[status]
 
   return (
-    <div className="h-full overflow-y-auto bg-surface">
+    <div className="h-full flex flex-col bg-surface">
+      <Header />
+      <div className="flex-1 overflow-y-auto">
       <div className="max-w-2xl mx-auto px-8 py-12">
         <h1 className="text-2xl font-bold text-slate-900 mb-2">
           {t('settings.title')}
@@ -319,6 +322,7 @@ export default function Settings() {
             <span>{t('settings.encryptionNote')}</span>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )
