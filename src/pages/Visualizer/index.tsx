@@ -263,6 +263,188 @@ int binarySearch(vector<int>& arr, int target) {
     }
 }`,
   },
+  insertion_sort: {
+    python: `def insertion_sort(arr):
+    for i in range(1, len(arr)):
+        key = arr[i]
+        j = i - 1
+        while j >= 0 and arr[j] > key:
+            arr[j + 1] = arr[j]
+            j -= 1
+        arr[j + 1] = key
+    return arr`,
+    javascript: `function insertionSort(arr) {
+    for (let i = 1; i < arr.length; i++) {
+        const key = arr[i];
+        let j = i - 1;
+        while (j >= 0 && arr[j] > key) {
+            arr[j + 1] = arr[j];
+            j--;
+        }
+        arr[j + 1] = key;
+    }
+    return arr;
+}`,
+    cpp: `#include <vector>
+using namespace std;
+
+vector<int> insertionSort(vector<int>& arr) {
+    for (int i = 1; i < arr.size(); i++) {
+        int key = arr[i];
+        int j = i - 1;
+        while (j >= 0 && arr[j] > key) {
+            arr[j + 1] = arr[j];
+            j--;
+        }
+        arr[j + 1] = key;
+    }
+    return arr;
+}`,
+    java: `public class InsertionSort {
+    public static int[] insertionSort(int[] arr) {
+        for (int i = 1; i < arr.length; i++) {
+            int key = arr[i];
+            int j = i - 1;
+            while (j >= 0 && arr[j] > key) {
+                arr[j + 1] = arr[j];
+                j--;
+            }
+            arr[j + 1] = key;
+        }
+        return arr;
+    }
+}`,
+  },
+  merge_sort: {
+    python: `def merge_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    mid = len(arr) // 2
+    left = merge_sort(arr[:mid])
+    right = merge_sort(arr[mid:])
+    return merge(left, right)
+
+def merge(left, right):
+    result, i, j = [], 0, 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i]); i += 1
+        else:
+            result.append(right[j]); j += 1
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result`,
+    javascript: `function mergeSort(arr) {
+    if (arr.length <= 1) return arr;
+    const mid = Math.floor(arr.length / 2);
+    const left = mergeSort(arr.slice(0, mid));
+    const right = mergeSort(arr.slice(mid));
+    return merge(left, right);
+}
+function merge(left, right) {
+    const result = [];
+    let i = 0, j = 0;
+    while (i < left.length && j < right.length) {
+        if (left[i] <= right[j]) result.push(left[i++]);
+        else result.push(right[j++]);
+    }
+    return [...result, ...left.slice(i), ...right.slice(j)];
+}`,
+    cpp: `#include <vector>
+using namespace std;
+
+vector<int> merge(vector<int>& left, vector<int>& right) {
+    vector<int> result;
+    int i = 0, j = 0;
+    while (i < left.size() && j < right.size()) {
+        if (left[i] <= right[j]) result.push_back(left[i++]);
+        else result.push_back(right[j++]);
+    }
+    while (i < left.size()) result.push_back(left[i++]);
+    while (j < right.size()) result.push_back(right[j++]);
+    return result;
+}
+vector<int> mergeSort(vector<int>& arr) {
+    if (arr.size() <= 1) return arr;
+    int mid = arr.size() / 2;
+    vector<int> left(arr.begin(), arr.begin() + mid);
+    vector<int> right(arr.begin() + mid, arr.end());
+    left = mergeSort(left);
+    right = mergeSort(right);
+    return merge(left, right);
+}`,
+    java: `public class MergeSort {
+    public static int[] mergeSort(int[] arr) {
+        if (arr.length <= 1) return arr;
+        int mid = arr.length / 2;
+        int[] left = java.util.Arrays.copyOfRange(arr, 0, mid);
+        int[] right = java.util.Arrays.copyOfRange(arr, mid, arr.length);
+        return merge(mergeSort(left), mergeSort(right));
+    }
+    private static int[] merge(int[] left, int[] right) {
+        int[] result = new int[left.length + right.length];
+        int i = 0, j = 0, k = 0;
+        while (i < left.length && j < right.length) {
+            if (left[i] <= right[j]) result[k++] = left[i++];
+            else result[k++] = right[j++];
+        }
+        while (i < left.length) result[k++] = left[i++];
+        while (j < right.length) result[k++] = right[j++];
+        return result;
+    }
+}`,
+  },
+  quick_sort: {
+    python: `def quick_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    pivot = arr[0]
+    left = [x for x in arr[1:] if x <= pivot]
+    right = [x for x in arr[1:] if x > pivot]
+    return quick_sort(left) + [pivot] + quick_sort(right)`,
+    javascript: `function quickSort(arr) {
+    if (arr.length <= 1) return arr;
+    const pivot = arr[0];
+    const left = arr.slice(1).filter(x => x <= pivot);
+    const right = arr.slice(1).filter(x => x > pivot);
+    return [...quickSort(left), pivot, ...quickSort(right)];
+}`,
+    cpp: `#include <vector>
+using namespace std;
+
+vector<int> quickSort(vector<int>& arr) {
+    if (arr.size() <= 1) return arr;
+    int pivot = arr[0];
+    vector<int> left, right;
+    for (int i = 1; i < arr.size(); i++) {
+        if (arr[i] <= pivot) left.push_back(arr[i]);
+        else right.push_back(arr[i]);
+    }
+    left = quickSort(left);
+    right = quickSort(right);
+    left.push_back(pivot);
+    left.insert(left.end(), right.begin(), right.end());
+    return left;
+}`,
+    java: `public class QuickSort {
+    public static java.util.List<Integer> quickSort(java.util.List<Integer> arr) {
+        if (arr.size() <= 1) return arr;
+        int pivot = arr.get(0);
+        java.util.List<Integer> left = new java.util.ArrayList<>();
+        java.util.List<Integer> right = new java.util.ArrayList<>();
+        for (int i = 1; i < arr.size(); i++) {
+            if (arr.get(i) <= pivot) left.add(arr.get(i));
+            else right.add(arr.get(i));
+        }
+        left = quickSort(left);
+        right = quickSort(right);
+        java.util.List<Integer> result = new java.util.ArrayList<>(left);
+        result.add(pivot);
+        result.addAll(right);
+        return result;
+    }
+}`,
+  },
 }
 
 function getCodeTemplate(algoId: string, lang: CodeLang): string {

@@ -52,7 +52,7 @@ const DEFAULT_ALGORITHMS: AlgorithmType[] = [
   },
   {
     id: 'insertion_sort', name: '插入排序', nameEn: 'Insertion Sort', category: 'sorting', difficulty: 'easy',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def insertion_sort(arr):
     for i in range(1, len(arr)):
         key = arr[i]
@@ -82,7 +82,7 @@ const DEFAULT_ALGORITHMS: AlgorithmType[] = [
   },
   {
     id: 'merge_sort', name: '归并排序', nameEn: 'Merge Sort', category: 'sorting', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def merge_sort(arr):
     if len(arr) <= 1:
         return arr
@@ -104,7 +104,7 @@ def merge(left, right):
   },
   {
     id: 'quick_sort', name: '快速排序', nameEn: 'Quick Sort', category: 'sorting', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def quick_sort(arr):
     if len(arr) <= 1:
         return arr

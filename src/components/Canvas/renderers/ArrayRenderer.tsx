@@ -190,41 +190,6 @@ export default function ArrayRenderer({ visualState, currentStepData }: ArrayRen
         )
       })}
 
-      {/* Text annotation overlay */}
-      {currentStepData && (
-        <motion.g
-          key={`annotation-${currentStepData.stepId}`}
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-        >
-          {/* Background pill */}
-          <rect
-            x="15"
-            y="2"
-            width="70"
-            height="7"
-            rx="3.5"
-            fill="rgba(30, 41, 59, 0.85)"
-          />
-          {/* Annotation text */}
-          <text
-            x="50"
-            y="5.5"
-            textAnchor="middle"
-            fontSize="2.3"
-            fontWeight="500"
-            fill="white"
-            fontFamily="var(--font-body)"
-          >
-            {currentStepData.description.zh.length > 40
-              ? currentStepData.description.zh.slice(0, 38) + '…'
-              : currentStepData.description.zh}
-          </text>
-        </motion.g>
-      )}
-
       {/* Stats bar at bottom */}
       {currentStepData && (
         <motion.g
