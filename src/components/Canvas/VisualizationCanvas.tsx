@@ -1,4 +1,4 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 import type { VisualState } from '@/hooks/useAnimationEngine'
 import ArrayRenderer from './renderers/ArrayRenderer'
 import GraphRenderer from './renderers/GraphRenderer'
@@ -8,9 +8,10 @@ import MatrixRenderer from './renderers/MatrixRenderer'
 interface VisualizationCanvasProps {
   script: AnimationScript | null
   visualState: VisualState
+  currentStepData: AnimationStep | null
 }
 
-export default function VisualizationCanvas({ script, visualState }: VisualizationCanvasProps) {
+export default function VisualizationCanvas({ script, visualState, currentStepData }: VisualizationCanvasProps) {
   if (!script || visualState.arrayData.length === 0) {
     return (
       <div className="h-full flex items-center justify-center bg-slate-50">
@@ -34,9 +35,18 @@ export default function VisualizationCanvas({ script, visualState }: Visualizati
 
   const rendererType = script.initialState.type
 
+  if (rendererType === 'array') {
+    return (
+      <div className="h-full p-6 bg-slate-50">
+        <div className="h-full bg-white rounded-xl border border-border shadow-sm overflow-hidden">
+          <ArrayRenderer visualState={visualState} currentStepData={currentStepData} />
+        </div>
+      </div>
+    )
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rendererMap: Record<string, React.ComponentType<any>> = {
-    array: ArrayRenderer,
     graph: GraphRenderer,
     tree: TreeRenderer,
     matrix: MatrixRenderer,

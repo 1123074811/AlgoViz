@@ -109,6 +109,169 @@ function getAlgorithmDescEn(id: string): string {
   return ALGO_DESC_EN[id] || ''
 }
 
+type CodeLang = 'python' | 'javascript' | 'cpp' | 'java'
+
+const CODE_TEMPLATES: Record<string, Record<CodeLang, string>> = {
+  bubble_sort: {
+    python: `def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n):
+        for j in range(n - 1 - i):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr`,
+    javascript: `function bubbleSort(arr) {
+    const n = arr.length;
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n - 1 - i; j++) {
+            if (arr[j] > arr[j + 1]) {
+                [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+            }
+        }
+    }
+    return arr;
+}`,
+    cpp: `#include <vector>
+using namespace std;
+
+vector<int> bubbleSort(vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n - 1 - i; j++) {
+            if (arr[j] > arr[j + 1]) {
+                swap(arr[j], arr[j + 1]);
+            }
+        }
+    }
+    return arr;
+}`,
+    java: `public class BubbleSort {
+    public static int[] bubbleSort(int[] arr) {
+        int n = arr.length;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n - 1 - i; j++) {
+                if (arr[j] > arr[j + 1]) {
+                    int temp = arr[j];
+                    arr[j] = arr[j + 1];
+                    arr[j + 1] = temp;
+                }
+            }
+        }
+        return arr;
+    }
+}`,
+  },
+  selection_sort: {
+    python: `def selection_sort(arr):
+    n = len(arr)
+    for i in range(n):
+        min_idx = i
+        for j in range(i + 1, n):
+            if arr[j] < arr[min_idx]:
+                min_idx = j
+        arr[i], arr[min_idx] = arr[min_idx], arr[i]
+    return arr`,
+    javascript: `function selectionSort(arr) {
+    const n = arr.length;
+    for (let i = 0; i < n; i++) {
+        let minIdx = i;
+        for (let j = i + 1; j < n; j++) {
+            if (arr[j] < arr[minIdx]) {
+                minIdx = j;
+            }
+        }
+        [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];
+    }
+    return arr;
+}`,
+    cpp: `#include <vector>
+using namespace std;
+
+vector<int> selectionSort(vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 0; i < n; i++) {
+        int minIdx = i;
+        for (int j = i + 1; j < n; j++) {
+            if (arr[j] < arr[minIdx]) {
+                minIdx = j;
+            }
+        }
+        swap(arr[i], arr[minIdx]);
+    }
+    return arr;
+}`,
+    java: `public class SelectionSort {
+    public static int[] selectionSort(int[] arr) {
+        int n = arr.length;
+        for (int i = 0; i < n; i++) {
+            int minIdx = i;
+            for (int j = i + 1; j < n; j++) {
+                if (arr[j] < arr[minIdx]) {
+                    minIdx = j;
+                }
+            }
+            int temp = arr[i];
+            arr[i] = arr[minIdx];
+            arr[minIdx] = temp;
+        }
+        return arr;
+    }
+}`,
+  },
+  binary_search: {
+    python: `def binary_search(arr, target):
+    left, right = 0, len(arr) - 1
+    while left <= right:
+        mid = left + (right - left) // 2
+        if arr[mid] == target: return mid
+        elif arr[mid] < target: left = mid + 1
+        else: right = mid - 1
+    return -1`,
+    javascript: `function binarySearch(arr, target) {
+    let left = 0, right = arr.length - 1;
+    while (left <= right) {
+        const mid = left + Math.floor((right - left) / 2);
+        if (arr[mid] === target) return mid;
+        else if (arr[mid] < target) left = mid + 1;
+        else right = mid - 1;
+    }
+    return -1;
+}`,
+    cpp: `#include <vector>
+using namespace std;
+
+int binarySearch(vector<int>& arr, int target) {
+    int left = 0, right = arr.size() - 1;
+    while (left <= right) {
+        int mid = left + (right - left) / 2;
+        if (arr[mid] == target) return mid;
+        else if (arr[mid] < target) left = mid + 1;
+        else right = mid - 1;
+    }
+    return -1;
+}`,
+    java: `public class BinarySearch {
+    public static int binarySearch(int[] arr, int target) {
+        int left = 0, right = arr.length - 1;
+        while (left <= right) {
+            int mid = left + (right - left) / 2;
+            if (arr[mid] == target) return mid;
+            else if (arr[mid] < target) left = mid + 1;
+            else right = mid - 1;
+        }
+        return -1;
+    }
+}`,
+  },
+}
+
+function getCodeTemplate(algoId: string, lang: CodeLang): string {
+  const templates = CODE_TEMPLATES[algoId]
+  if (templates && templates[lang]) return templates[lang]
+  // Fallback: return Python code
+  return templates?.python || `# ${lang} code template not available\n# Please write your own implementation`
+}
+
 export default function Visualizer() {
   const { t, i18n } = useTranslation()
   const lang = i18n.language as 'zh' | 'en'
@@ -118,6 +281,7 @@ export default function Visualizer() {
   const setAnimationScript = useAlgorithmStore((s) => s.setAnimationScript)
 
   const [code, setCode] = useState('')
+  const [codeLanguage, setCodeLanguage] = useState<'python' | 'javascript' | 'cpp' | 'java'>('python')
   const [inputData, setInputData] = useState('[5, 3, 8, 1, 9, 2]')
   const [aiStatus, setAiStatus] = useState<AIStatus>('idle')
   const [aiError, setAiError] = useState('')
@@ -147,7 +311,9 @@ export default function Visualizer() {
   // Load preset or reset when algorithm is selected
   useEffect(() => {
     if (!selectedAlgorithm) return
-    setCode(selectedAlgorithm.defaultCode)
+    const lang = selectedAlgorithm.defaultLanguage as 'python' | 'javascript' | 'cpp' | 'java'
+    setCodeLanguage(lang)
+    setCode(getCodeTemplate(selectedAlgorithm.id, lang))
     setAiStatus('idle')
     setAiError('')
     setAiRawResponse('')
@@ -271,18 +437,37 @@ export default function Visualizer() {
           <div className="h-9 border-b border-border flex items-center justify-between px-3 bg-surface shrink-0">
             <span className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
               <Icon name="code2" size={14} />
-              {selectedAlgorithm.name} — {selectedAlgorithm.defaultLanguage === 'python' ? 'Python' : selectedAlgorithm.defaultLanguage}
+              {selectedAlgorithm.name}
             </span>
-            {selectedAlgorithm.hasPreset && (
-              <span className="text-[10px] text-green-600 font-medium bg-green-50 px-1.5 py-0.5 rounded">
-                {t('sidebar.presetBadge')}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {/* Language selector */}
+              <select
+                value={codeLanguage}
+                onChange={(e) => {
+                  const lang = e.target.value as 'python' | 'javascript' | 'cpp' | 'java'
+                  setCodeLanguage(lang)
+                  setCode(getCodeTemplate(selectedAlgorithm.id, lang))
+                }}
+                className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-border
+                           bg-white text-slate-600 outline-none cursor-pointer
+                           focus:border-primary"
+              >
+                <option value="python">Python</option>
+                <option value="javascript">JavaScript</option>
+                <option value="cpp">C++</option>
+                <option value="java">Java</option>
+              </select>
+              {selectedAlgorithm.hasPreset && (
+                <span className="text-[10px] text-green-600 font-medium bg-green-50 px-1.5 py-0.5 rounded">
+                  {t('sidebar.presetBadge')}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex-1 overflow-hidden">
             <Editor
               height="100%"
-              language={selectedAlgorithm.defaultLanguage === 'cpp' ? 'cpp' : selectedAlgorithm.defaultLanguage}
+              language={codeLanguage === 'cpp' ? 'cpp' : codeLanguage === 'javascript' ? 'javascript' : codeLanguage === 'java' ? 'java' : 'python'}
               value={code}
               onChange={(val) => setCode(val ?? '')}
               onMount={handleEditorMount}
@@ -326,6 +511,7 @@ export default function Visualizer() {
           <VisualizationCanvas
             script={animationScript}
             visualState={visualState}
+            currentStepData={currentStepData}
           />
         </div>
 

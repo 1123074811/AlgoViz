@@ -4,6 +4,7 @@ import type { AnimationScript, ActionColor } from '@/types/animation'
 export interface VisualState {
   arrayData: number[]
   colorMap: Map<number, ActionColor>
+  elementIds: number[]
   currentStep: number
   totalSteps: number
 }
@@ -19,10 +20,11 @@ export function useAnimationEngine(script: AnimationScript | null) {
   // Replay all steps up to currentStep to derive array state and persistent colors
   const visualState = useMemo<VisualState>(() => {
     if (!script) {
-      return { arrayData: [], colorMap: new Map(), currentStep: 0, totalSteps: 0 }
+      return { arrayData: [], colorMap: new Map(), elementIds: [], currentStep: 0, totalSteps: 0 }
     }
 
     let arr = [...script.initialState.data]
+    const elementIds = arr.map((_, i) => i)
     const persistentMarked = new Map<number, ActionColor>()
 
     for (let i = 0; i < currentStep; i++) {
@@ -30,6 +32,7 @@ export function useAnimationEngine(script: AnimationScript | null) {
       if (step.action.type === 'swap') {
         const [a, b] = step.action.targets
         ;[arr[a], arr[b]] = [arr[b], arr[a]]
+        ;[elementIds[a], elementIds[b]] = [elementIds[b], elementIds[a]]
       }
       if (step.action.type === 'mark') {
         for (const t of step.action.targets) {
@@ -49,6 +52,7 @@ export function useAnimationEngine(script: AnimationScript | null) {
     return {
       arrayData: arr,
       colorMap: persistentMarked,
+      elementIds,
       currentStep,
       totalSteps,
     }
