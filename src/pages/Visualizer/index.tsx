@@ -493,9 +493,6 @@ function DefinitionCard({ def, lang, expanded, onToggle }: { def: AlgorithmDefin
             <span className="font-semibold">{lang === 'zh' ? '适用场景：' : 'Use Cases: '}</span>
             {lang === 'zh' ? def.useCases : def.useCasesEn}
           </div>
-          <div className="border-t border-border pt-2 text-[9px] text-slate-400 italic">
-            {lang === 'zh' ? '参考文献：' : 'Reference: '}{def.reference}
-          </div>
         </div>
       )}
     </div>
