@@ -5,6 +5,8 @@ import insertionSortPreset from './insertionSort'
 import mergeSortPreset from './mergeSort'
 import quickSortPreset from './quickSort'
 import binarySearchPreset from './binarySearch'
+import bfsGraphPreset from './bfsGraph'
+import dfsGraphPreset from './dfsGraph'
 
 const presetRegistry: Record<string, AnimationScript> = {
   bubble_sort: bubbleSortPreset,
@@ -13,6 +15,8 @@ const presetRegistry: Record<string, AnimationScript> = {
   merge_sort: mergeSortPreset,
   quick_sort: quickSortPreset,
   binary_search: binarySearchPreset,
+  bfs_graph: bfsGraphPreset,
+  dfs_graph: dfsGraphPreset,
 }
 
 export function getPreset(algoId: string): AnimationScript | undefined {
@@ -30,4 +34,6 @@ export {
   mergeSortPreset,
   quickSortPreset,
   binarySearchPreset,
+  bfsGraphPreset,
+  dfsGraphPreset,
 }

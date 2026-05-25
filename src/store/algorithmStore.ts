@@ -191,7 +191,7 @@ def radix_sort(arr):
   // ============ 图算法 ============
   {
     id: 'bfs_graph', name: '广度优先搜索', nameEn: 'BFS (Graph)', category: 'graph', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `from collections import deque
 
 def bfs(graph, start):
@@ -208,7 +208,7 @@ def bfs(graph, start):
   },
   {
     id: 'dfs_graph', name: '深度优先搜索', nameEn: 'DFS (Graph)', category: 'graph', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def dfs(graph, node, visited=None):
     if visited is None:
         visited = set()

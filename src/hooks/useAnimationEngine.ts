@@ -7,6 +7,8 @@ export interface VisualState {
   elementIds: number[]
   currentStep: number
   totalSteps: number
+  nodes?: { id: string; label?: string }[]
+  edges?: { source: string; target: string; weight?: number }[]
 }
 
 export function useAnimationEngine(script: AnimationScript | null) {
@@ -20,7 +22,7 @@ export function useAnimationEngine(script: AnimationScript | null) {
   // Replay all steps up to currentStep to derive array state and persistent colors
   const visualState = useMemo<VisualState>(() => {
     if (!script) {
-      return { arrayData: [], colorMap: new Map(), elementIds: [], currentStep: 0, totalSteps: 0 }
+      return { arrayData: [], colorMap: new Map(), elementIds: [], currentStep: 0, totalSteps: 0, nodes: [], edges: [] }
     }
 
     let arr = [...script.initialState.data]
@@ -55,6 +57,8 @@ export function useAnimationEngine(script: AnimationScript | null) {
       elementIds,
       currentStep,
       totalSteps,
+      nodes: script.initialState.nodes,
+      edges: script.initialState.edges,
     }
   }, [script, currentStep])
 
