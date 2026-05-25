@@ -563,6 +563,37 @@ void dfs(vector<vector<int>>& graph, int node, unordered_set<int>& visited) {
             arr[j] = temp
         gap //= 2
     return arr`,
+    javascript: `function shellSort(arr) {
+    const n = arr.length;
+    for (let gap = Math.floor(n/2); gap > 0; gap = Math.floor(gap/2)) {
+        for (let i = gap; i < n; i++) {
+            const temp = arr[i]; let j = i;
+            while (j >= gap && arr[j-gap] > temp) { arr[j] = arr[j-gap]; j -= gap; }
+            arr[j] = temp;
+        }
+    }
+    return arr;
+}`,
+    cpp: `vector<int> shellSort(vector<int> arr) {
+    int n = arr.size();
+    for (int gap = n/2; gap > 0; gap /= 2)
+        for (int i = gap; i < n; i++) {
+            int temp = arr[i], j = i;
+            while (j >= gap && arr[j-gap] > temp) { arr[j] = arr[j-gap]; j -= gap; }
+            arr[j] = temp;
+        }
+    return arr;
+}`,
+    java: `public static int[] shellSort(int[] arr) {
+    int n = arr.length;
+    for (int gap = n/2; gap > 0; gap /= 2)
+        for (int i = gap; i < n; i++) {
+            int temp = arr[i], j = i;
+            while (j >= gap && arr[j-gap] > temp) { arr[j] = arr[j-gap]; j -= gap; }
+            arr[j] = temp;
+        }
+    return arr;
+}`,
   },
   heap_sort: {
     python: `def heapify(arr, n, i):
@@ -582,6 +613,12 @@ def heap_sort(arr):
         arr[i], arr[0] = arr[0], arr[i]
         heapify(arr, i, 0)
     return arr`,
+    javascript: `function heapify(arr, n, i) { let largest = i, l = 2*i+1, r = 2*i+2; if (l < n && arr[l] > arr[largest]) largest = l; if (r < n && arr[r] > arr[largest]) largest = r; if (largest !== i) { [arr[i], arr[largest]] = [arr[largest], arr[i]]; heapify(arr, n, largest); } }
+function heapSort(arr) { const n = arr.length; for (let i = Math.floor(n/2)-1; i >= 0; i--) heapify(arr, n, i); for (let i = n-1; i > 0; i--) { [arr[0], arr[i]] = [arr[i], arr[0]]; heapify(arr, i, 0); } return arr; }`,
+    cpp: `void heapify(vector<int>& arr, int n, int i) { int largest = i, l = 2*i+1, r = 2*i+2; if (l < n && arr[l] > arr[largest]) largest = l; if (r < n && arr[r] > arr[largest]) largest = r; if (largest != i) { swap(arr[i], arr[largest]); heapify(arr, n, largest); } }
+vector<int> heapSort(vector<int> arr) { int n = arr.size(); for (int i = n/2-1; i >= 0; i--) heapify(arr, n, i); for (int i = n-1; i > 0; i--) { swap(arr[0], arr[i]); heapify(arr, i, 0); } return arr; }`,
+    java: `static void heapify(int[] arr, int n, int i) { int largest = i, l = 2*i+1, r = 2*i+2; if (l < n && arr[l] > arr[largest]) largest = l; if (r < n && arr[r] > arr[largest]) largest = r; if (largest != i) { int t = arr[i]; arr[i] = arr[largest]; arr[largest] = t; heapify(arr, n, largest); } }
+static int[] heapSort(int[] arr) { int n = arr.length; for (int i = n/2-1; i >= 0; i--) heapify(arr, n, i); for (int i = n-1; i > 0; i--) { int t = arr[0]; arr[0] = arr[i]; arr[i] = t; heapify(arr, i, 0); } return arr; }`,
   },
   counting_sort: {
     python: `def counting_sort(arr):
@@ -593,6 +630,9 @@ def heap_sort(arr):
     for i, c in enumerate(count):
         result.extend([i] * c)
     return result`,
+    javascript: `function countingSort(arr) { if (!arr.length) return arr; const max = Math.max(...arr); const count = new Array(max+1).fill(0); for (const n of arr) count[n]++; const res = []; for (let i = 0; i <= max; i++) while (count[i]-- > 0) res.push(i); return res; }`,
+    cpp: `vector<int> countingSort(vector<int>& arr) { if (arr.empty()) return arr; int mx = *max_element(arr.begin(), arr.end()); vector<int> count(mx+1), res; for (int x : arr) count[x]++; for (int i = 0; i <= mx; i++) while (count[i]--) res.push_back(i); return res; }`,
+    java: `static int[] countingSort(int[] arr) { if (arr.length == 0) return arr; int max = Arrays.stream(arr).max().getAsInt(); int[] count = new int[max+1]; for (int x : arr) count[x]++; int[] res = new int[arr.length]; int idx = 0; for (int i = 0; i <= max; i++) while (count[i]-- > 0) res[idx++] = i; return res; }`,
   },
   radix_sort: {
     python: `def counting_sort_for_radix(arr, exp):
@@ -610,6 +650,9 @@ def radix_sort(arr):
     while max_val // exp > 0:
         arr = counting_sort_for_radix(arr, exp); exp *= 10
     return arr`,
+    javascript: `function radixSort(arr) { const max = Math.max(...arr); for (let exp = 1; Math.floor(max/exp) > 0; exp *= 10) { const out = new Array(arr.length); const cnt = new Array(10).fill(0); for (let i = 0; i < arr.length; i++) cnt[Math.floor(arr[i]/exp)%10]++; for (let i = 1; i < 10; i++) cnt[i] += cnt[i-1]; for (let i = arr.length-1; i >= 0; i--) { const d = Math.floor(arr[i]/exp)%10; out[--cnt[d]] = arr[i]; } arr = [...out]; } return arr; }`,
+    cpp: `vector<int> radixSort(vector<int> arr) { int mx = *max_element(arr.begin(), arr.end()); for (int exp = 1; mx/exp > 0; exp *= 10) { vector<int> out(arr.size()); int cnt[10] = {0}; for (int x : arr) cnt[(x/exp)%10]++; for (int i = 1; i < 10; i++) cnt[i] += cnt[i-1]; for (int i = arr.size()-1; i >= 0; i--) out[--cnt[(arr[i]/exp)%10]] = arr[i]; arr = out; } return arr; }`,
+    java: `static int[] radixSort(int[] arr) { int max = Arrays.stream(arr).max().getAsInt(); for (int exp = 1; max/exp > 0; exp *= 10) { int[] out = new int[arr.length]; int[] cnt = new int[10]; for (int x : arr) cnt[(x/exp)%10]++; for (int i = 1; i < 10; i++) cnt[i] += cnt[i-1]; for (int i = arr.length-1; i >= 0; i--) out[--cnt[(arr[i]/exp)%10]] = arr[i]; arr = out; } return arr; }`,
   },
   bucket_sort: {
     python: `def bucket_sort(arr):
@@ -620,6 +663,9 @@ def radix_sort(arr):
         buckets[idx].append(num)
     for b in buckets: b.sort()
     return [x for b in buckets for x in b]`,
+    javascript: `function bucketSort(arr) { if (!arr.length) return arr; const n = arr.length, max = Math.max(...arr); const buckets = Array.from({length:n}, () => []); for (const num of arr) { const idx = Math.min(Math.floor(n*num/(max+1)), n-1); buckets[idx].push(num); } for (const b of buckets) b.sort((a,b) => a-b); return buckets.flat(); }`,
+    cpp: `vector<int> bucketSort(vector<int> arr) { if (arr.empty()) return arr; int n = arr.size(), mx = *max_element(arr.begin(), arr.end()); vector<vector<int>> buckets(n); for (int x : arr) buckets[min((int)(n*1.0*x/(mx+1)), n-1)].push_back(x); vector<int> res; for (auto& b : buckets) { sort(b.begin(), b.end()); res.insert(res.end(), b.begin(), b.end()); } return res; }`,
+    java: `static int[] bucketSort(int[] arr) { if (arr.length == 0) return arr; int n = arr.length, max = Arrays.stream(arr).max().getAsInt(); List<Integer>[] buckets = new List[n]; for (int i = 0; i < n; i++) buckets[i] = new ArrayList<>(); for (int x : arr) buckets[Math.min((int)(n*1.0*x/(max+1)), n-1)].add(x); List<Integer> res = new ArrayList<>(); for (List<Integer> b : buckets) { Collections.sort(b); res.addAll(b); } return res.stream().mapToInt(i->i).toArray(); }`,
   },
   dijkstra: {
     python: `import heapq
@@ -635,6 +681,9 @@ def dijkstra(graph, start):
                 dist[neighbor] = nd
                 heapq.heappush(pq, (nd, neighbor))
     return dist`,
+    javascript: `function dijkstra(graph, start) { const dist = {}; for (const n in graph) dist[n] = Infinity; dist[start] = 0; const pq = [[0,start]]; while (pq.length) { pq.sort((a,b)=>a[0]-b[0]); const [d,node] = pq.shift(); if (d > dist[node]) continue; for (const [nbr,w] of graph[node]) { const nd = d + w; if (nd < dist[nbr]) { dist[nbr] = nd; pq.push([nd,nbr]); } } } return dist; }`,
+    cpp: `// Dijkstra with adjacency list + min-heap (priority_queue)`,
+    java: `// Dijkstra with PriorityQueue<Pair>`,
   },
   bellman_ford: {
     python: `def bellman_ford(edges, n, start):
@@ -647,6 +696,9 @@ def dijkstra(graph, start):
         if dist[u] != float('inf') and dist[u] + w < dist[v]:
             return None  # negative cycle detected
     return dist`,
+    javascript: `function bellmanFord(edges, n, start) { const dist = new Array(n).fill(Infinity); dist[start] = 0; for (let i = 0; i < n-1; i++) for (const [u,v,w] of edges) if (dist[u] !== Infinity && dist[u]+w < dist[v]) dist[v] = dist[u]+w; return dist; }`,
+    cpp: `vector<int> bellmanFord(vector<tuple<int,int,int>>& edges, int n, int s) { vector<int> dist(n, INT_MAX); dist[s]=0; for (int i=0;i<n-1;i++) for (auto& [u,v,w] : edges) if (dist[u]!=INT_MAX && dist[u]+w<dist[v]) dist[v]=dist[u]+w; return dist; }`,
+    java: `static int[] bellmanFord(List<int[]> edges, int n, int s) { int[] dist = new int[n]; Arrays.fill(dist, Integer.MAX_VALUE); dist[s]=0; for(int i=0;i<n-1;i++) for(int[] e:edges) if(dist[e[0]]!=Integer.MAX_VALUE && dist[e[0]]+e[2]<dist[e[1]]) dist[e[1]]=dist[e[0]]+e[2]; return dist; }`,
   },
   a_star: {
     python: `import heapq
@@ -665,6 +717,9 @@ def a_star(grid, start, goal):
                     g_score[nb] = tg
                     heapq.heappush(open_set, (tg + heuristic(nb, goal), nb))
     return -1`,
+    javascript: `function aStar(grid, start, goal) { const h=(a,b)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1]); const R=grid.length,C=grid[0].length; const open=[[0,start[0],start[1]]]; const g={}; g[start]=0; while(open.length){open.sort((a,b)=>a[0]-b[0]);const[,r,c]=open.shift();if(r===goal[0]&&c===goal[1])return g[[r,c]];for(const[dr,dc]of[[0,1],[0,-1],[1,0],[-1,0]]){const nr=r+dr,nc=c+dc;if(nr>=0&&nr<R&&nc>=0&&nc<C){const tg=(g[[r,c]]||0)+1,k=[nr,nc];if(tg<(g[k]??Infinity)){g[k]=tg;open.push([tg+h([nr,nc],goal),nr,nc]);}}}}return -1;}`,
+    cpp: `# A* with Manhattan heuristic on grid`,
+    java: `// A* pathfinding with priority queue`,
   },
   floyd: {
     python: `def floyd_warshall(graph):
@@ -676,6 +731,9 @@ def a_star(grid, start, goal):
                 if dist[i][k] + dist[k][j] < dist[i][j]:
                     dist[i][j] = dist[i][k] + dist[k][j]
     return dist`,
+    javascript: `function floydWarshall(graph) { const n = graph.length; const dist = graph.map(r => [...r]); for (let k = 0; k < n; k++) for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if (dist[i][k] + dist[k][j] < dist[i][j]) dist[i][j] = dist[i][k] + dist[k][j]; return dist; }`,
+    cpp: `vector<vector<int>> floydWarshall(vector<vector<int>> g) { int n=g.size(); for(int k=0;k<n;k++) for(int i=0;i<n;i++) for(int j=0;j<n;j++) if(g[i][k]+g[k][j]<g[i][j]) g[i][j]=g[i][k]+g[k][j]; return g; }`,
+    java: `static int[][] floydWarshall(int[][] g) { int n=g.length; int[][] d=new int[n][n]; for(int i=0;i<n;i++)d[i]=g[i].clone(); for(int k=0;k<n;k++) for(int i=0;i<n;i++) for(int j=0;j<n;j++) if(d[i][k]+d[k][j]<d[i][j]) d[i][j]=d[i][k]+d[k][j]; return d; }`,
   },
   prim: {
     python: `import heapq
@@ -689,6 +747,9 @@ def prim(graph, n):
         for v, weight in graph[u]:
             if not visited[v]: heapq.heappush(pq, (weight, v, u))
     return mst`,
+    javascript: `function prim(graph, n) { const vis=new Array(n).fill(false), pq=[[0,0,-1]], mst=[]; while(pq.length&&mst.length<n-1){pq.sort((a,b)=>a[0]-b[0]);const[w,u,p]=pq.shift();if(vis[u])continue;vis[u]=true;if(p!==-1)mst.push([p,u,w]);for(const[v,wt]of graph[u])if(!vis[v])pq.push([wt,v,u]);}return mst;}`,
+    cpp: `# Prim with adjacency list + min-heap`,
+    java: `// Prim with PriorityQueue`,
   },
   kruskal: {
     python: `def find(parent, x):
@@ -702,6 +763,9 @@ def kruskal(edges, n):
         pu, pv = find(parent, u), find(parent, v)
         if pu != pv: parent[pu] = pv; mst.append((u, v, w))
     return mst`,
+    javascript: `function kruskal(edges, n) { edges.sort((a,b)=>a[2]-b[2]); const p=Array.from({length:n},(_,i)=>i); const find=x=>p[x]===x?x:p[x]=find(p[x]); const mst=[]; for(const[u,v,w]of edges){const pu=find(u),pv=find(v);if(pu!==pv){p[pu]=pv;mst.push([u,v,w]);}}return mst;}`,
+    cpp: `# Kruskal with DSU`,
+    java: `// Kruskal with Union-Find`,
   },
   topological_sort: {
     python: `from collections import deque
@@ -716,6 +780,9 @@ def topological_sort(n, edges):
             indegree[v] -= 1
             if indegree[v] == 0: q.append(v)
     return result`,
+    javascript: `function topologicalSort(n, edges) { const indeg=new Array(n).fill(0), g=Array.from({length:n},()=>[]); for(const[u,v]of edges){g[u].push(v);indeg[v]++;} const q=[],res=[]; for(let i=0;i<n;i++)if(indeg[i]===0)q.push(i); while(q.length){const u=q.shift();res.push(u);for(const v of g[u])if(--indeg[v]===0)q.push(v);}return res;}`,
+    cpp: `# Topological sort (Kahn)`,
+    java: `// Kahn: indegree + BFS`,
   },
   array: {
     python: `# Array operations
@@ -724,6 +791,9 @@ arr.append(6)          # O(1) amortized
 arr.insert(0, 0)       # O(n) - shift elements
 arr.pop()              # O(1)
 arr[2] = 10            # O(1) random access`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   linked_list: {
     python: `class Node:
@@ -740,6 +810,9 @@ def traverse(head):
 def insert_head(head, val):
     node = Node(val); node.next = head
     return node`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   doubly_linked_list: {
     python: `class Node:
@@ -751,6 +824,9 @@ def insert_after(node, val):
     new_node.prev = node; new_node.next = node.next
     if node.next: node.next.prev = new_node
     node.next = new_node`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   stack: {
     python: `# Stack - LIFO
@@ -759,6 +835,9 @@ stack.append(1)   # push
 stack.append(2)
 stack[-1]          # peek -> 2
 stack.pop()        # pop -> 2`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   queue: {
     python: `from collections import deque
@@ -768,6 +847,9 @@ q.append(1)        # enqueue
 q.append(2)
 q[0]               # front -> 1
 q.popleft()        # dequeue -> 1`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   binary_tree: {
     python: `class TreeNode:
@@ -785,6 +867,9 @@ def preorder(root):
 def postorder(root):
     if not root: return
     postorder(root.left); postorder(root.right); print(root.val, end=' ')`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   bst: {
     python: `class TreeNode:
@@ -800,6 +885,9 @@ def insert(root, val):
 def search(root, val):
     if not root or root.val == val: return root
     return search(root.left, val) if val < root.val else search(root.right, val)`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   avl_tree: {
     python: `class Node:
@@ -822,6 +910,9 @@ def left_rotate(x):
     x.height = 1 + max(height(x.left), height(x.right))
     y.height = 1 + max(height(y.left), height(y.right))
     return y`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   red_black_tree: {
     python: `# Red-Black Tree - 5 invariants:
@@ -831,6 +922,9 @@ def left_rotate(x):
 # 4) RED node's children must be BLACK
 # 5) Every path from node to descendant leaves has same number of BLACK nodes
 # Java: java.util.TreeMap is a Red-Black Tree`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   heap_ds: {
     python: `import heapq
@@ -846,6 +940,9 @@ print(heap[0])              # 2 (peek)
 max_heap = []
 heapq.heappush(max_heap, -3)
 print(-heapq.heappop(max_heap))  # 3`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   trie: {
     python: `class TrieNode:
@@ -873,6 +970,9 @@ class Trie:
             if ch not in node.children: return False
             node = node.children[ch]
         return True`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   union_find: {
     python: `class UnionFind:
@@ -888,6 +988,9 @@ class Trie:
         if self.rank[px] < self.rank[py]: self.parent[px] = py
         elif self.rank[px] > self.rank[py]: self.parent[py] = px
         else: self.parent[py] = px; self.rank[px] += 1`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   hash_table: {
     python: `# Python dict = Hash Table
@@ -896,6 +999,9 @@ hash_map["key"] = "value"
 print(hash_map.get("key"))          # "value"
 print(hash_map.get("miss", "def"))  # "def"
 # Custom: hash(key) % size`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   knapsack_01: {
     python: `def knapsack_01(weights, values, capacity):
@@ -907,6 +1013,9 @@ print(hash_map.get("miss", "def"))  # "def"
                 dp[i][w] = max(dp[i-1][w], dp[i-1][w-weights[i-1]] + values[i-1])
             else: dp[i][w] = dp[i-1][w]
     return dp[n][capacity]`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   unbounded_knapsack: {
     python: `def unbounded_knapsack(weights, values, capacity):
@@ -916,6 +1025,9 @@ print(hash_map.get("miss", "def"))  # "def"
             if weights[i] <= w:
                 dp[w] = max(dp[w], dp[w - weights[i]] + values[i])
     return dp[capacity]`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   lcs: {
     python: `def lcs(text1, text2):
@@ -927,6 +1039,9 @@ print(hash_map.get("miss", "def"))  # "def"
                 dp[i][j] = dp[i-1][j-1] + 1
             else: dp[i][j] = max(dp[i-1][j], dp[i][j-1])
     return dp[m][n]`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   lis: {
     python: `def lis(nums):
@@ -937,6 +1052,9 @@ print(hash_map.get("miss", "def"))  # "def"
             if nums[j] < nums[i]:
                 dp[i] = max(dp[i], dp[j] + 1)
     return max(dp)`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   edit_distance: {
     python: `def edit_distance(word1, word2):
@@ -951,6 +1069,9 @@ print(hash_map.get("miss", "def"))  # "def"
             else:
                 dp[i][j] = 1 + min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1])
     return dp[m][n]`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   matrix_chain: {
     python: `def matrix_chain_order(dims):
@@ -963,6 +1084,9 @@ print(hash_map.get("miss", "def"))  # "def"
                 cost = dp[i][k] + dp[k+1][j] + dims[i]*dims[k+1]*dims[j+1]
                 dp[i][j] = min(dp[i][j], cost)
     return dp[0][n-1]`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   interval_dp: {
     python: `def stone_merge(stones):
@@ -977,6 +1101,9 @@ print(hash_map.get("miss", "def"))  # "def"
             for k in range(i, j):
                 dp[i][j] = min(dp[i][j], dp[i][k] + dp[k+1][j] + total)
     return dp[0][n-1]`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   backtracking: {
     python: `def backtrack(choices, path, result):
@@ -987,6 +1114,9 @@ print(hash_map.get("miss", "def"))  # "def"
         path.append(choice)  # make choice
         backtrack(choices, path, result)
         path.pop()           # undo choice`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   n_queens: {
     python: `def solve_n_queens(n):
@@ -1004,6 +1134,9 @@ print(hash_map.get("miss", "def"))  # "def"
             if is_safe(row, col):
                 board[row][col] = 'Q'; solve(row + 1); board[row][col] = '.'
     solve(0); return result`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   sudoku: {
     python: `def solve_sudoku(board):
@@ -1023,6 +1156,9 @@ print(hash_map.get("miss", "def"))  # "def"
                         board[i][j] = '.'
                 return False
     return True`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   kmp: {
     python: `def kmp_search(text, pattern):
@@ -1041,6 +1177,9 @@ print(hash_map.get("miss", "def"))  # "def"
             if j: j = lps[j - 1]
             else: i += 1
     return -1`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   manacher: {
     python: `def longest_palindrome(s):
@@ -1055,6 +1194,9 @@ print(hash_map.get("miss", "def"))  # "def"
     center = P.index(max(P))
     start = (center - max(P)) // 2
     return s[start:start + max(P)]`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   segment_tree: {
     python: `class SegmentTree:
@@ -1068,6 +1210,9 @@ print(hash_map.get("miss", "def"))  # "def"
             self.build(arr, 2*node+1, start, mid)
             self.build(arr, 2*node+2, mid+1, end)
             self.tree[node] = self.tree[2*node+1] + self.tree[2*node+2]`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   fenwick_tree: {
     python: `class FenwickTree:
@@ -1082,6 +1227,9 @@ print(hash_map.get("miss", "def"))  # "def"
         return s
     def range_sum(self, l, r):
         return self.query(r) - self.query(l - 1)`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   monotonic_stack: {
     python: `def next_greater_element(nums):
@@ -1091,6 +1239,9 @@ print(hash_map.get("miss", "def"))  # "def"
             result[stack.pop()] = nums[i]
         stack.append(i)
     return result`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   sliding_window: {
     python: `def max_sum_subarray(arr, k):
@@ -1101,6 +1252,9 @@ print(hash_map.get("miss", "def"))  # "def"
         window_sum += arr[i] - arr[i - k]
         max_sum = max(max_sum, window_sum)
     return max_sum`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   leetcode_hot100: {
     python: `# LeetCode Hot 100 - Two Sum
@@ -1111,6 +1265,9 @@ def two_sum(nums, target):
         if complement in seen: return [seen[complement], i]
         seen[num] = i
     return []`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
   acm_templates: {
     python: `# ACM Common Templates
@@ -1130,6 +1287,9 @@ def sieve(n):
             primes.append(i)
             for j in range(i * i, n + 1, i): is_prime[j] = False
     return primes`,
+    javascript: `// JavaScript version: see Python implementation above`,
+    cpp: `// C++ version: see Python implementation above`,
+    java: `// Java version: see Python implementation above`,
   },
 };
 
