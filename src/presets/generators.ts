@@ -315,9 +315,13 @@ export function generateBinarySearch(arr: number[], target?: number): AnimationS
 }
 
 // ============ Generator registry ============
-// Sliding window needs default k
+// Wrappers for generators with extra params
 import { generateSlidingWindow } from './slidingWindow'
+import { generateMonotonicStack } from './monotonicStack'
+import { generateKnapsack } from './knapsack'
 const slidingWindowWrapper = (arr: number[]) => generateSlidingWindow(arr, 3)
+const monotonicStackWrapper = (arr: number[]) => generateMonotonicStack(arr)
+const knapsackWrapper = (arr: number[]) => generateKnapsack(undefined, undefined, undefined)
 
 const GENERATORS: Record<string, (arr: number[]) => AnimationScript> = {
   bubble_sort: generateBubbleSort,
@@ -330,6 +334,8 @@ const GENERATORS: Record<string, (arr: number[]) => AnimationScript> = {
   counting_sort: generateCountingSort,
   binary_search: generateBinarySearch,
   sliding_window: slidingWindowWrapper,
+  monotonic_stack: monotonicStackWrapper,
+  knapsack_01: knapsackWrapper,
 }
 
 export function generatePreset(algoId: string, inputData: number[]): AnimationScript | undefined {

@@ -276,7 +276,7 @@ def a_star(grid, start, goal):
   },
   {
     id: 'floyd', name: 'Floyd-Warshall', nameEn: 'Floyd-Warshall', category: 'graph', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def floyd_warshall(graph):
     n = len(graph)
     dist = [row[:] for row in graph]
@@ -289,7 +289,7 @@ def a_star(grid, start, goal):
   },
   {
     id: 'prim', name: 'Prim 最小生成树', nameEn: "Prim's Algorithm", category: 'graph', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `import heapq
 
 def prim(graph, n):
@@ -308,7 +308,7 @@ def prim(graph, n):
   },
   {
     id: 'kruskal', name: 'Kruskal 最小生成树', nameEn: "Kruskal's Algorithm", category: 'graph', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def find(parent, x):
     if parent[x] != x:
         parent[x] = find(parent, parent[x])
@@ -327,7 +327,7 @@ def kruskal(edges, n):
   },
   {
     id: 'topological_sort', name: '拓扑排序', nameEn: 'Topological Sort', category: 'graph', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `from collections import deque
 
 def topological_sort(n, edges):
@@ -515,7 +515,7 @@ class Trie:
   // ============ 动态规划 ============
   {
     id: 'knapsack_01', name: '0/1 背包', nameEn: '0/1 Knapsack', category: 'dp', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def knapsack_01(weights, values, capacity):
     n = len(weights)
     dp = [[0] * (capacity + 1) for _ in range(n + 1)]
@@ -772,7 +772,7 @@ def interval_dp(nums):
   },
   {
     id: 'monotonic_stack', name: '单调栈', nameEn: 'Monotonic Stack', category: 'advanced', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def next_greater_element(nums):
     n = len(nums)
     result = [-1] * n
