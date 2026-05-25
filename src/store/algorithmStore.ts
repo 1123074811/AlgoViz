@@ -150,7 +150,7 @@ def heap_sort(arr):
   },
   {
     id: 'radix_sort', name: '基数排序', nameEn: 'Radix Sort', category: 'sorting', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def counting_sort_for_radix(arr, exp):
     n = len(arr)
     output = [0] * n
@@ -175,7 +175,7 @@ def radix_sort(arr):
   },
   {
     id: 'bucket_sort', name: '桶排序', nameEn: 'Bucket Sort', category: 'sorting', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def bucket_sort(arr):
     if not arr: return arr
     n = len(arr)
@@ -351,11 +351,11 @@ def topological_sort(n, edges):
   // ============ 数据结构 ============
   {
     id: 'array', name: '数组', nameEn: 'Array', category: 'data-structure', difficulty: 'easy',
-    hasPreset: false, defaultLanguage: 'python', defaultCode: '# Array operations\narr = [1, 2, 3, 4, 5]\narr.append(6)\narr.insert(0, 0)\narr.pop()\narr[2] = 10',
+    hasPreset: true, defaultLanguage: 'python', defaultCode: '# Array operations\narr = [1, 2, 3, 4, 5]\narr.append(6)\narr.insert(0, 0)\narr.pop()\narr[2] = 10',
   },
   {
     id: 'linked_list', name: '单向链表', nameEn: 'Singly Linked List', category: 'data-structure', difficulty: 'easy',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `class Node:
     def __init__(self, val):
         self.val = val
@@ -369,7 +369,7 @@ def traverse(head):
   },
   {
     id: 'doubly_linked_list', name: '双向链表', nameEn: 'Doubly Linked List', category: 'data-structure', difficulty: 'easy',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `class Node:
     def __init__(self, val):
         self.val = val
@@ -391,7 +391,7 @@ q.popleft()    # dequeue -> 1`,
   },
   {
     id: 'binary_tree', name: '二叉树', nameEn: 'Binary Tree', category: 'data-structure', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `class TreeNode:
     def __init__(self, val=0):
         self.val = val
@@ -406,7 +406,7 @@ def inorder(root):
   },
   {
     id: 'bst', name: '二叉搜索树', nameEn: 'BST', category: 'data-structure', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `class TreeNode:
     def __init__(self, val=0):
         self.val = val
@@ -430,7 +430,7 @@ def search(root, val):
   },
   {
     id: 'avl_tree', name: 'AVL 树', nameEn: 'AVL Tree', category: 'data-structure', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `class TreeNode:
     def __init__(self, val=0):
         self.val = val
@@ -446,7 +446,7 @@ def get_balance(node):
   },
   {
     id: 'red_black_tree', name: '红黑树', nameEn: 'Red-Black Tree', category: 'data-structure', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python', defaultCode: '# Red-Black Tree\n# 自平衡二叉搜索树，节点分为红色和黑色\n# 插入/删除后通过旋转和变色维持平衡',
+    hasPreset: true, defaultLanguage: 'python', defaultCode: '# Red-Black Tree\n# 自平衡二叉搜索树，节点分为红色和黑色\n# 插入/删除后通过旋转和变色维持平衡',
   },
   {
     id: 'heap_ds', name: '堆', nameEn: 'Heap', category: 'data-structure', difficulty: 'medium',
@@ -461,7 +461,7 @@ print(heapq.heappop(heap))  # 1`,
   },
   {
     id: 'trie', name: 'Trie 字典树', nameEn: 'Trie', category: 'data-structure', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `class TrieNode:
     def __init__(self):
         self.children = {}
@@ -509,7 +509,7 @@ class Trie:
   },
   {
     id: 'hash_table', name: '哈希表', nameEn: 'Hash Table', category: 'data-structure', difficulty: 'easy',
-    hasPreset: false, defaultLanguage: 'python', defaultCode: '# Python dict = Hash Table\nhash_map = {}\nhash_map["key1"] = "value1"\nprint(hash_map.get("key1"))\nprint(hash_map.get("key2", "default"))',
+    hasPreset: true, defaultLanguage: 'python', defaultCode: '# Python dict = Hash Table\nhash_map = {}\nhash_map["key1"] = "value1"\nprint(hash_map.get("key1"))\nprint(hash_map.get("key2", "default"))',
   },
 
   // ============ 动态规划 ============
@@ -628,7 +628,7 @@ def interval_dp(nums):
   },
   {
     id: 'backtracking', name: '回溯算法', nameEn: 'Backtracking', category: 'search-backtrack', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def backtrack(choices, path, result):
     if 满足结束条件:
         result.append(path[:])
@@ -801,13 +801,13 @@ def interval_dp(nums):
   // ============ 面试高频 ============
   {
     id: 'leetcode_hot100', name: 'LeetCode Hot 100', nameEn: 'LeetCode Top 100', category: 'interview', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python', defaultCode: '# LeetCode Hot 100 精选题目\n# 覆盖数组、字符串、链表、树、DP 等核心题型\n# 请选择具体题目后在编辑器中编写代码',
+    hasPreset: true, defaultLanguage: 'python', defaultCode: '# LeetCode Hot 100 精选题目\n# 覆盖数组、字符串、链表、树、DP 等核心题型\n# 请选择具体题目后在编辑器中编写代码',
   },
 
   // ============ 竞赛专题 ============
   {
     id: 'acm_templates', name: 'ACM 算法模板', nameEn: 'ACM Templates', category: 'contest', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python', defaultCode: `# ACM 常用算法模板
+    hasPreset: true, defaultLanguage: 'python', defaultCode: `# ACM 常用算法模板
 # 快速幂、组合数、素数筛、二分答案等
 MOD = 10**9 + 7
 

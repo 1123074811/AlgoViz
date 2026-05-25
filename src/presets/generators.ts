@@ -346,6 +346,8 @@ import { generateBacktracking } from './backtracking'
 import { generateArray } from './arrayDS'
 import { generateLeetCode } from './leetcode'
 import { generateACM } from './acm'
+import { generateRadixSort } from './radixSort'
+import { generateBucketSort } from './bucketSort'
 
 const slidingWindowWrapper = (arr: number[]) => generateSlidingWindow(arr, 3)
 const monotonicStackWrapper = (arr: number[]) => generateMonotonicStack(arr)
@@ -398,6 +400,7 @@ const GENERATORS: Record<string, (arr: number[]) => AnimationScript> = {
   avl_tree: avlTreeWrapper, red_black_tree: redBlackTreeWrapper,
   trie: trieWrapper, hash_table: hashTableWrapper,
   array: arrayDSWrapper, backtracking: backtrackingWrapper,
+  radix_sort: generateRadixSort, bucket_sort: generateBucketSort,
   leetcode_hot100: leetcodeWrapper, acm_templates: acmWrapper,
 }
 
