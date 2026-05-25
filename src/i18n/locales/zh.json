@@ -88,8 +88,10 @@
     "responseTime": "响应时间"
   },
   "home": {
-    "startLearning": "开始学习",
+    "startLearning": "浏览算法库",
     "configureAI": "配置 AI",
+    "aiLab": "AI 代码实验室",
+    "coreInnovation": "核心创新：AI 驱动代码 → 动画",
     "algorithmCategories": "算法分类",
     "keyFeatures": "核心特性",
     "features": {

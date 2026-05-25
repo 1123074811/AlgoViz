@@ -88,8 +88,10 @@
     "responseTime": "Response Time"
   },
   "home": {
-    "startLearning": "Start Learning",
+    "startLearning": "Browse Algorithms",
     "configureAI": "Configure AI",
+    "aiLab": "AI Lab",
+    "coreInnovation": "Core Innovation: AI-Powered Code → Animation",
     "algorithmCategories": "Algorithm Categories",
     "keyFeatures": "Key Features",
     "features": {
