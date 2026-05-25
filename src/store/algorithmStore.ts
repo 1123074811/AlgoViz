@@ -555,7 +555,7 @@ class Trie:
   },
   {
     id: 'lis', name: '最长递增子序列', nameEn: 'LIS', category: 'dp', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def lis(nums):
     if not nums: return 0
     n = len(nums)
@@ -568,7 +568,7 @@ class Trie:
   },
   {
     id: 'edit_distance', name: '编辑距离', nameEn: 'Edit Distance', category: 'dp', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def edit_distance(word1, word2):
     m, n = len(word1), len(word2)
     dp = [[0] * (n + 1) for _ in range(m + 1)]
@@ -688,7 +688,7 @@ def interval_dp(nums):
   // ============ 进阶专题 ============
   {
     id: 'kmp', name: 'KMP 字符串匹配', nameEn: 'KMP', category: 'advanced', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def kmp_search(text, pattern):
     def build_lps(p):
         lps = [0] * len(p)
@@ -752,7 +752,7 @@ def interval_dp(nums):
   },
   {
     id: 'fenwick_tree', name: '树状数组', nameEn: 'Fenwick Tree', category: 'advanced', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `class FenwickTree:
     def __init__(self, n):
         self.n = n

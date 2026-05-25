@@ -320,11 +320,19 @@ import { generateMonotonicStack } from './monotonicStack'
 import { generateKnapsack } from './knapsack'
 import { generateLCS } from './lcs'
 import { generateNQueens } from './nQueens'
+import { generateLIS } from './lis'
+import { generateEditDistance } from './editDistance'
+import { generateKMP } from './kmp'
+import { generateFenwick } from './fenwick'
 const slidingWindowWrapper = (arr: number[]) => generateSlidingWindow(arr, 3)
 const monotonicStackWrapper = (arr: number[]) => generateMonotonicStack(arr)
 const knapsackWrapper = (arr: number[]) => generateKnapsack(undefined, undefined, undefined)
 const lcsWrapper = (arr: number[]) => generateLCS(undefined, undefined)
 const nQueensWrapper = (_arr: number[]) => generateNQueens(4)
+const lisWrapper = (arr: number[]) => generateLIS(arr)
+const editDistanceWrapper = (_arr: number[]) => generateEditDistance(undefined, undefined)
+const kmpWrapper = (_arr: number[]) => generateKMP(undefined, undefined)
+const fenwickWrapper = (arr: number[]) => generateFenwick(arr)
 
 const GENERATORS: Record<string, (arr: number[]) => AnimationScript> = {
   bubble_sort: generateBubbleSort,
@@ -341,6 +349,10 @@ const GENERATORS: Record<string, (arr: number[]) => AnimationScript> = {
   knapsack_01: knapsackWrapper,
   lcs: lcsWrapper,
   n_queens: nQueensWrapper,
+  lis: lisWrapper,
+  edit_distance: editDistanceWrapper,
+  kmp: kmpWrapper,
+  fenwick_tree: fenwickWrapper,
 }
 
 export function generatePreset(algoId: string, inputData: number[]): AnimationScript | undefined {
