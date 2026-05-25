@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react'
+
 interface InputDataPanelProps {
   value: string
   onChange: (value: string) => void
   disabled?: boolean
-  title?: string
+  title?: ReactNode
   helperText?: string
   placeholder?: string
   error?: string | null

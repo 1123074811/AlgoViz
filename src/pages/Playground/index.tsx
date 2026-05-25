@@ -1,10 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import type { OnMount } from '@monaco-editor/react'
 import { Icon } from '@/icons'
 import { useAnimationEngine } from '@/hooks/useAnimationEngine'
-import { analyzeCode, getApiConfig, type AIResult } from '@/ai'
+import { analyzeCode, getApiConfig, parseInputData, type AIResult, type AIErrorReport, type AIRepairAttempt } from '@/ai'
 import type { AnimationScript } from '@/types/animation'
 import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
 import Header from '@/components/Layout/Header'
@@ -54,11 +54,17 @@ export default function Playground() {
   const [animationScript, setAnimationScript] = useState<AnimationScript | null>(null)
   const [aiStatus, setAiStatus] = useState<'idle' | 'analyzing' | 'success' | 'error'>('idle')
   const [aiError, setAiError] = useState('')
+  const [aiErrorReport, setAiErrorReport] = useState<AIErrorReport | null>(null)
+  const [aiRawResponse, setAiRawResponse] = useState('')
+  const [aiRepairHistory, setAiRepairHistory] = useState<AIRepairAttempt[] | null>(null)
+  const [showRawResponse, setShowRawResponse] = useState(false)
   const [history, setHistory] = useState<HistoryEntry[]>(loadHistory)
   const [showHistory, setShowHistory] = useState(true)
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
 
   const hasApiConfig = getApiConfig() !== null
+
+  const inputInfo = useMemo(() => parseInputData(inputData), [inputData])
 
   const {
     visualState, currentStepData,
@@ -70,14 +76,15 @@ export default function Playground() {
 
   const handleAnalyze = async () => {
     if (!hasApiConfig) { navigate('/settings'); return }
-    setAiStatus('analyzing'); setAiError('')
+    setAiStatus('analyzing'); setAiError(''); setAiErrorReport(null)
+    setAiRawResponse(''); setAiRepairHistory(null); setShowRawResponse(false)
     const result: AIResult = await analyzeCode({
       code, language: codeLanguage, inputData,
       algorithmName: '用户自定义代码',
     })
     if (result.success && result.script) {
       setAnimationScript(result.script); setAiStatus('success')
-      // Save to history
+      if (result.repaired) setAiRepairHistory(result.repairHistory ?? null)
       const entry: HistoryEntry = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         code, language: codeLanguage, inputData,
@@ -88,7 +95,11 @@ export default function Playground() {
       setHistory(updated)
       saveHistory(updated)
     } else {
-      setAiError(result.error || '分析失败'); setAiStatus('error')
+      setAiError(result.error || '分析失败')
+      setAiErrorReport(result.errorReport ?? null)
+      setAiRawResponse(result.rawResponse ?? '')
+      setAiRepairHistory(result.repairHistory ?? null)
+      setAiStatus('error')
     }
   }
 
@@ -109,6 +120,33 @@ export default function Playground() {
   const formatTime = (ts: number) => {
     const d = new Date(ts)
     return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
+  }
+
+  const copyErrorDetails = () => {
+    if (!aiErrorReport) return
+    const md = [
+      '## AI Error Report',
+      `- Stage: ${aiErrorReport.stage}`,
+      `- Title: ${aiErrorReport.title}`,
+      '',
+      '### Issues',
+      ...aiErrorReport.issues.map(i => `1. \`${i.path}\`\n   - Code: ${i.code}\n   - Message: ${i.message}${i.suggestion ? `\n   - Suggestion: ${i.suggestion}` : ''}`),
+      aiRawResponse ? `\n\n### Raw Response\n\`\`\`json\n${aiRawResponse.slice(0, 2000)}${aiRawResponse.length > 2000 ? '\n...(truncated)' : ''}\n\`\`\`` : '',
+    ].join('\n')
+    navigator.clipboard.writeText(md).catch(() => {})
+  }
+
+  const insertExample = (kind: string) => {
+    const examples: Record<string, string> = {
+      array: '[5, 3, 8, 1, 9, 2]',
+      graph: '{"nodes":[{"id":"A"},{"id":"B"},{"id":"C"}],"edges":[{"source":"A","target":"B","weight":1},{"source":"B","target":"C","weight":2}],"start":"A"}',
+      tree: '{"root":"8","children":{"8":["3","10"],"3":["1","6"],"10":[],"1":[],"6":[]}}',
+      matrix: '[[1, 2, 3], [4, 5, 6], [7, 8, 9]]',
+      linked_list: '{"values":[1,2,3,4],"head":0}',
+    }
+    if (examples[kind]) {
+      setInputData(examples[kind])
+    }
   }
 
   const complexity = animationScript?.complexity
@@ -208,8 +246,26 @@ export default function Playground() {
           <InputDataPanel
             value={inputData}
             onChange={setInputData}
-            title="输入数据"
-            helperText="JSON 数组格式，如 [5,3,8,1,9,2]"
+            title={(
+              <div className="flex items-center justify-between w-full">
+                <span>输入数据{inputInfo.valid ? ` · ${inputInfo.summary}` : ''}</span>
+                <select
+                  className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-white text-slate-500 outline-none cursor-pointer"
+                  value=""
+                  onChange={(e) => { if (e.target.value) insertExample(e.target.value) }}
+                  disabled={aiStatus === 'analyzing'}
+                  title="加载示例数据"
+                >
+                  <option value="" disabled>▼ 示例数据</option>
+                  <option value="array">数组: [5,3,8,1]</option>
+                  <option value="graph">图: nodes + edges</option>
+                  <option value="tree">树: root + children</option>
+                  <option value="matrix">矩阵: 二维数组</option>
+                  <option value="linked_list">链表: values + head</option>
+                </select>
+              </div>
+            )}
+            helperText={inputInfo.valid ? `类型: ${inputInfo.kind} · 支持数组、图(nodes+edges)、树(root+children)、矩阵` : inputInfo.message ?? 'JSON 解析错误'}
             placeholder="[5, 3, 8, 1, 9, 2]"
             disabled={aiStatus === 'analyzing'}
             className="h-28"
@@ -237,16 +293,94 @@ export default function Playground() {
         </div>
       </div>
 
-      {/* AI Error overlay */}
+      {/* Enhanced Error overlay */}
       {aiStatus === 'error' && (
-        <div className="absolute bottom-14 right-4 max-w-sm p-3 rounded-lg border border-red-100 bg-red-50 shadow-lg z-50">
-          <div className="flex items-start gap-2">
-            <Icon name="alert-circle" size={14} className="text-red-500 mt-0.5" />
-            <div>
-              <p className="text-xs font-semibold text-red-600">AI 分析失败</p>
-              <p className="text-[11px] text-red-500 mt-0.5">{aiError}</p>
-              <button onClick={() => setAiStatus('idle')} className="text-[10px] text-red-400 underline cursor-pointer border-none bg-transparent mt-1">关闭</button>
+        <div className="absolute bottom-4 right-4 max-w-md p-4 rounded-xl border border-red-200 bg-red-50 shadow-xl z-50 text-xs space-y-2 max-h-[60%] overflow-y-auto">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              <Icon name="alert-circle" size={14} className="text-red-500" />
+              <span className="font-bold text-red-700">
+                {aiErrorReport?.title || 'AI 分析失败'}
+              </span>
             </div>
+            <button onClick={() => { setAiStatus('idle'); setAiErrorReport(null); }} className="text-slate-400 hover:text-slate-600 cursor-pointer border-none bg-transparent">
+              <Icon name="x" size={12} />
+            </button>
+          </div>
+
+          <p className="text-[11px] text-red-600">{aiErrorReport?.message || aiError}</p>
+
+          {/* Repair history */}
+          {aiRepairHistory && aiRepairHistory.length > 0 && (
+            <div className="p-2 rounded bg-white border border-red-100 text-[10px]">
+              <span className="font-semibold text-slate-500">修复记录: </span>
+              {aiRepairHistory.map((h, i) => (
+                <span key={i} className={h.success ? 'text-green-600' : 'text-red-500'}>
+                  {h.type === 'local' ? '本地修复' : 'AI修复'}
+                  {h.success ? ' ✓' : ' ✗'}
+                  {i < aiRepairHistory.length - 1 ? ' → ' : ''}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Issues list */}
+          {aiErrorReport?.issues && aiErrorReport.issues.length > 0 && (
+            <div className="space-y-1">
+              <div className="font-semibold text-slate-600">问题详情 ({aiErrorReport.issues.length}):</div>
+              {aiErrorReport.issues.slice(0, 8).map((issue, i) => (
+                <div key={i} className={`p-1.5 rounded ${issue.severity === 'error' ? 'bg-red-100' : 'bg-yellow-50'} text-[10px]`}>
+                  <span className="font-mono text-slate-500">{issue.path}</span>
+                  <span className={`ml-1 font-semibold ${issue.severity === 'error' ? 'text-red-600' : 'text-yellow-600'}`}>
+                    [{issue.severity === 'error' ? '错误' : '警告'}]
+                  </span>
+                  <div className="text-slate-600 mt-0.5">{issue.message}</div>
+                  {issue.suggestion && <div className="text-slate-400 mt-0.5">💡 {issue.suggestion}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Suggestions */}
+          {aiErrorReport?.suggestions && aiErrorReport.suggestions.length > 0 && (
+            <div className="space-y-0.5">
+              <div className="font-semibold text-slate-600">可尝试:</div>
+              {aiErrorReport.suggestions.map((s, i) => (
+                <div key={i} className="text-[10px] text-slate-500">• {s}</div>
+              ))}
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex gap-2 pt-1 flex-wrap">
+            <button onClick={handleAnalyze} className="px-3 py-1.5 rounded-md text-xs font-medium bg-violet-500 text-white hover:bg-violet-600 cursor-pointer border-none">重新分析</button>
+            {aiRawResponse && (
+              <button onClick={() => setShowRawResponse(!showRawResponse)}
+                className="px-3 py-1.5 rounded-md text-xs font-medium bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 cursor-pointer">
+                {showRawResponse ? '隐藏原始响应' : '查看原始响应'}
+              </button>
+            )}
+            <button onClick={copyErrorDetails}
+              className="px-3 py-1.5 rounded-md text-xs font-medium bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 cursor-pointer">
+              复制错误详情
+            </button>
+          </div>
+
+          {/* Raw response */}
+          {showRawResponse && aiRawResponse && (
+            <div className="p-2 rounded bg-white border border-slate-200 max-h-32 overflow-y-auto">
+              <pre className="text-[10px] text-slate-500 whitespace-pre-wrap font-mono break-all">{aiRawResponse}</pre>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Repair success toast */}
+      {aiRepairHistory && aiStatus === 'success' && (
+        <div className="absolute bottom-4 left-4 max-w-xs p-2 rounded-lg border border-green-200 bg-green-50 shadow z-50 text-xs text-green-700">
+          <div className="flex items-center gap-1.5">
+            <Icon name="check" size={12} className="text-green-500" />
+            <span>已自动修复格式并生成动画</span>
           </div>
         </div>
       )}
