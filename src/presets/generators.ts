@@ -334,6 +334,18 @@ import { generateStack } from './stack'
 import { generateQueue } from './queue'
 import { generateHeapOperations } from './heap'
 import { generateUnionFind } from './unionFind'
+import { generateLinkedList } from './linkedList'
+import { generateDoublyLinkedList } from './doublyLinkedList'
+import { generateBinaryTree } from './binaryTree'
+import { generateBST } from './bst'
+import { generateAVLTree } from './avlTree'
+import { generateRedBlackTree } from './redBlackTree'
+import { generateTrie } from './trie'
+import { generateHashTable } from './hashTable'
+import { generateBacktracking } from './backtracking'
+import { generateArray } from './arrayDS'
+import { generateLeetCode } from './leetcode'
+import { generateACM } from './acm'
 
 const slidingWindowWrapper = (arr: number[]) => generateSlidingWindow(arr, 3)
 const monotonicStackWrapper = (arr: number[]) => generateMonotonicStack(arr)
@@ -354,6 +366,18 @@ const stackWrapper = (_arr: number[]) => generateStack()
 const queueWrapper = (_arr: number[]) => generateQueue()
 const heapWrapper = (arr: number[]) => generateHeapOperations(arr)
 const unionFindWrapper = (_arr: number[]) => generateUnionFind()
+const linkedListWrapper = (_arr: number[]) => generateLinkedList()
+const doublyLinkedListWrapper = (_arr: number[]) => generateDoublyLinkedList()
+const binaryTreeWrapper = (_arr: number[]) => generateBinaryTree()
+const bstWrapper = (_arr: number[]) => generateBST()
+const avlTreeWrapper = (_arr: number[]) => generateAVLTree()
+const redBlackTreeWrapper = (_arr: number[]) => generateRedBlackTree()
+const trieWrapper = (_arr: number[]) => generateTrie()
+const hashTableWrapper = (_arr: number[]) => generateHashTable()
+const backtrackingWrapper = (_arr: number[]) => generateBacktracking()
+const arrayDSWrapper = (_arr: number[]) => generateArray()
+const leetcodeWrapper = (_arr: number[]) => generateLeetCode()
+const acmWrapper = (_arr: number[]) => generateACM()
 
 const GENERATORS: Record<string, (arr: number[]) => AnimationScript> = {
   bubble_sort: generateBubbleSort, selection_sort: generateSelectionSort,
@@ -369,6 +393,12 @@ const GENERATORS: Record<string, (arr: number[]) => AnimationScript> = {
   manacher: manacherWrapper, segment_tree: segmentTreeWrapper,
   interval_dp: intervalDPWrapper, stack: stackWrapper,
   queue: queueWrapper, heap_ds: heapWrapper, union_find: unionFindWrapper,
+  linked_list: linkedListWrapper, doubly_linked_list: doublyLinkedListWrapper,
+  binary_tree: binaryTreeWrapper, bst: bstWrapper,
+  avl_tree: avlTreeWrapper, red_black_tree: redBlackTreeWrapper,
+  trie: trieWrapper, hash_table: hashTableWrapper,
+  array: arrayDSWrapper, backtracking: backtrackingWrapper,
+  leetcode_hot100: leetcodeWrapper, acm_templates: acmWrapper,
 }
 
 export function generatePreset(algoId: string, inputData: number[]): AnimationScript | undefined {

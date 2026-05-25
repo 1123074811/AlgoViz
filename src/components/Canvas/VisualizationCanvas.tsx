@@ -4,6 +4,7 @@ import ArrayRenderer from './renderers/ArrayRenderer'
 import GraphRenderer from './renderers/GraphRenderer'
 import TreeRenderer from './renderers/TreeRenderer'
 import MatrixRenderer from './renderers/MatrixRenderer'
+import LinkedListRenderer from './renderers/LinkedListRenderer'
 
 interface VisualizationCanvasProps {
   script: AnimationScript | null
@@ -50,14 +51,15 @@ export default function VisualizationCanvas({ script, visualState, currentStepDa
     graph: GraphRenderer,
     tree: TreeRenderer,
     matrix: MatrixRenderer,
+    linked_list: LinkedListRenderer,
   }
 
-  const Renderer = rendererMap[rendererType] || ArrayRenderer
+  const Renderer = rendererMap[rendererType] === undefined ? ArrayRenderer : rendererMap[rendererType]
 
   return (
     <div className="h-full p-6 bg-slate-50">
       <div className="h-full bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-        <Renderer visualState={visualState} />
+        <Renderer visualState={visualState} currentStepData={currentStepData} />
       </div>
     </div>
   )
