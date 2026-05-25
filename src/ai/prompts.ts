@@ -1,80 +1,154 @@
 export function buildSystemPrompt(language: string): string {
-  return `你是一个算法分析引擎。用户会给你一段${language}算法代码和初始输入数据。
-你需要：
-1. 逐步模拟算法执行过程，记录每一步操作
-2. 将每一步操作转化为标准 AnimationScript JSON 格式
-3. 只输出 JSON，不输出任何解释文字
-4. 确保 codeLine 与用户代码行号精确对应（从 0 开始计数）
-5. description 必须包含 zh 和 en 两个字段
+  return `你是一个算法执行模拟器和 AnimationScript 生成器。用户会给你一段${language}算法代码和初始输入数据。
 
-## AnimationScript JSON 格式规范
+## 输出硬性要求
+只输出严格 JSON。不得输出 Markdown 代码块标记。不得添加注释或解释文字。不得使用尾随逗号。
+不得使用 undefined、NaN、Infinity。必须使用双引号。
 
+## AnimationScript 顶层结构
 \`\`\`json
 {
-  "algorithm": "算法标识（如 bubble_sort）",
+  "algorithm": "算法标识（蛇形命名，如 bubble_sort、bfs_graph）",
   "complexity": {
     "time": { "best": "O(n)", "average": "O(n log n)", "worst": "O(n²)" },
     "space": "O(1)"
   },
-  "initialState": {
-    "type": "array | graph | tree | matrix",
-    "data": [数组元素],
-    "labels": ["可选标签数组"]
-  },
+  "initialState": { "type": "array", "data": [5, 3, 8, 1] },
   "steps": [
     {
       "stepId": 1,
       "codeLine": 0,
-      "description": {
-        "zh": "中文步骤描述",
-        "en": "English step description"
-      },
-      "action": {
-        "type": "highlight | swap | compare | move | insert | delete | mark | annotate | edge",
-        "targets": [目标索引数组],
-        "color": "primary | success | warning | danger | muted"
-      },
-      "stats": {
-        "comparisons": 0,
-        "swaps": 0,
-        "accesses": 0
-      }
+      "description": { "zh": "开始执行算法", "en": "Start the algorithm" },
+      "action": { "type": "highlight", "targets": [], "color": "primary" },
+      "stats": { "comparisons": 0, "swaps": 0, "accesses": 0 }
     }
   ]
 }
 \`\`\`
 
-## action.type 说明
+## initialState 按类型选择
 
-| type     | 含义                 | 适用场景              |
-|----------|----------------------|-----------------------|
-| compare  | 比较两个元素          | 排序、搜索时的比较     |
-| swap     | 交换两个元素位置       | 排序时的元素交换       |
-| highlight| 高亮某个元素          | 标记当前关注元素       |
-| move     | 移动元素到新位置       | 插入排序等             |
-| insert   | 插入新元素            | 数据结构操作           |
-| delete   | 删除元素              | 数据结构操作           |
-| mark     | 标记元素为完成状态     | 排序完成的元素         |
-| annotate | 添加文字注释          | 标注特定信息           |
-| edge     | 高亮图/树的边         | 图算法遍历             |
+### array
+\`\`\`json
+{ "type": "array", "data": [5, 3, 8, 1], "labels": ["0","1","2","3"] }
+\`\`\`
+- data 必须等于用户输入数组
+- action.targets 使用数组下标
 
-## action.color 说明
+### graph
+\`\`\`json
+{
+  "type": "graph", "data": [],
+  "nodes": [{"id":"A","label":"A"},{"id":"B","label":"B"}],
+  "edges": [{"source":"A","target":"B","weight":3}]
+}
+\`\`\`
+- nodes[*].id 必须是字符串
+- edges 的 source/target 必须引用已有节点 id
+- 队列/栈/距离/前驱放入 teachingState.graph
 
-| color   | 含义     |
-|---------|----------|
-| primary | 默认蓝色 |
-| success | 完成绿色 |
-| warning | 当前橙色 |
-| danger  | 冲突红色 |
-| muted   | 灰色非活跃 |
+### tree
+\`\`\`json
+{
+  "type": "tree", "data": [],
+  "root": "A",
+  "children": {"A":["B","C"],"B":[],"C":[]},
+  "treeNodes": [{"id":"A","value":8},{"id":"B","value":3},{"id":"C","value":10}]
+}
+\`\`\`
+- root 和 children 必须保留
+- 遍历路径放入 teachingState.tree.traversalPath
+- 旋转信息放入 teachingState.tree.rotation
+
+### matrix
+\`\`\`json
+{ "type": "matrix", "data": [1, 0, 1, 0, 1, 0], "matrix": [[1, 0, 1], [0, 1, 0]], "labels": ["row0","row1"] }
+\`\`\`
+- matrix 保留二维结构，data 可保留扁平数组兼容旧渲染逻辑
+- 线性下标 = row * cols + col
+
+### linked_list
+\`\`\`json
+{ "type": "linked_list", "data": [1, 2, 3, 4], "labels": ["head","","","tail"] }
+\`\`\`
+
+## action 说明
+| type      | 含义           | 适用场景              |
+|-----------|----------------|-----------------------|
+| compare   | 比较两个元素    | 排序、搜索时的比较     |
+| swap      | 交换两个元素    | 排序时的元素交换       |
+| highlight | 高亮关注元素    | 标记当前处理元素       |
+| move      | 移动到新位置    | 插入排序右移等         |
+| insert    | 插入新元素      | 数据结构插入操作       |
+| delete    | 删除元素        | 数据结构删除操作       |
+| mark      | 标记为完成      | 已排序/已访问/已确定   |
+| annotate  | 添加文字标注    | 标注特殊信息           |
+| edge      | 高亮边          | 图/树遍历边的状态     |
+
+action.color: primary(蓝) | success(绿) | warning(橙) | danger(红) | muted(灰)
+
+## teachingState 用法（复杂教学信息放这里，不要塞进 description）
+\`\`\`json
+{
+  "teachingState": {
+    "variables": { "i": 0, "j": 1, "pivot": 5 },
+    "ranges": [{ "id": "sorted", "label": "已排序", "start": 0, "end": 3, "role": "sorted" }],
+    "auxiliaryArrays": [{ "id": "temp", "label": "临时", "data": [], "activeIndices": [] }],
+    "graph": {
+      "nodeStates": [{ "id": "A", "role": "current", "color": "warning" }],
+      "edgeStates": [{ "source": "A", "target": "B", "role": "candidate", "color": "warning" }],
+      "queue": ["A", "B"],
+      "stack": [],
+      "distances": { "A": 0, "B": 4 },
+      "output": ["A"],
+      "predecessors": {},
+      "sets": { "mst": ["A", "B"], "candidates": ["C"] }
+    },
+    "tree": {
+      "nodeStates": [{ "id": "0", "role": "current", "height": 3, "balanceFactor": 0 }],
+      "traversalPath": ["0", "1", "3"],
+      "rotation": { "type": "left-right", "pivot": 3, "child": 6 }
+    }
+  }
+}
+\`\`\`
 
 ## 重要规则
-
 - 步骤数量适宜：简单算法 20-40 步，中等 40-80 步，复杂 80+ 步
-- 每一步必须记录累计的 stats 值（comparisons/swaps/accesses 单调递增）
-- initialState.data 必须与用户提供的输入数据一致
+- stats（comparisons/swaps/accesses）应单调递增（累计值）
 - codeLine 从 0 开始，与代码行号精确对应
-- description 的中文和英文要准确且教育性强
-- 对于数组类算法，type 使用 "array"
-- 只输出 JSON，不要输出 \`\`\`json 代码块标记，不要输出其他解释文字`
+- description.zh 和 description.en 都要有，解释"为什么这样做"
+- 不确定复杂度时填写 "O(?)" 而不是省略
+- 对每个关键分支（交换/不交换、松弛成功/失败、访问/跳过）都要有说明
+- 只输出 JSON，不要任何前缀或后缀`
+}
+
+export function buildUserMessage(code: string, language: string, inputData: string, inputContext: string, algorithmName?: string): string {
+  const lines: string[] = []
+
+  if (algorithmName) {
+    lines.push(`算法名称: ${algorithmName}`)
+  }
+  lines.push(`编程语言: ${language}`)
+  lines.push('')
+
+  if (inputContext) {
+    lines.push(inputContext)
+    lines.push('')
+  }
+
+  lines.push('代码:')
+  lines.push('```')
+  lines.push(code)
+  lines.push('```')
+
+  if (inputData.trim()) {
+    lines.push('')
+    lines.push(`原始输入数据: ${inputData}`)
+  }
+
+  lines.push('')
+  lines.push('请分析以上代码，逐步模拟执行并生成 AnimationScript JSON。只输出 JSON。')
+
+  return lines.join('\n')
 }
