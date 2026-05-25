@@ -1843,22 +1843,37 @@ export default function Visualizer() {
           background: transparent;
         }
         .active-line {
-          background: rgba(245, 158, 11, 0.15) !important;
+          background: rgba(245, 158, 11, 0.12) !important;
           border-left: 3px solid #F59E0B;
         }
         .visited-line {
-          background: rgba(37, 99, 235, 0.06) !important;
+          background: rgba(37, 99, 235, 0.04) !important;
           border-left: 3px solid #93C5FD;
         }
         .active-glyph {
-          background: #F59E0B;
-          width: 4px !important;
-          margin-left: 3px;
+          background: transparent !important;
+          width: 18px !important;
+          margin-left: 2px;
+        }
+        .active-glyph::after {
+          content: '▶';
+          position: absolute;
+          left: 1px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #F59E0B;
+          font-size: 10px;
+          animation: arrow-blink 0.8s ease-in-out infinite alternate;
         }
         .visited-glyph {
           background: #93C5FD;
-          width: 4px !important;
-          margin-left: 3px;
+          width: 3px !important;
+          margin-left: 4px;
+          border-radius: 2px;
+        }
+        @keyframes arrow-blink {
+          from { opacity: 1; transform: translateY(-50%) scale(1); }
+          to { opacity: 0.6; transform: translateY(-50%) scale(1.1); }
         }
         @keyframes pulse-glow {
           from { opacity: 0.8; r: 1; }
