@@ -27,6 +27,8 @@ export function hasPreset(algoId: string): boolean {
   return algoId in presetRegistry
 }
 
+export { generatePreset, hasGenerator } from './generators'
+
 export {
   bubbleSortPreset,
   selectionSortPreset,

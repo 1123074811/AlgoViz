@@ -80,7 +80,7 @@ export function useAnimationEngine(script: AnimationScript | null) {
       return
     }
 
-    const ms = 1000 / speed
+    const ms = 1500 / speed
     intervalRef.current = setInterval(() => {
       setCurrentStep((prev) => {
         if (prev >= script.steps.length) {

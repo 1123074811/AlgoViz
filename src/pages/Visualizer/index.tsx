@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import Editor, { type OnMount } from '@monaco-editor/react'
 import { Icon } from '@/icons'
 import { useAlgorithmStore } from '@/store/algorithmStore'
-import { getPreset } from '@/presets'
+import { getPreset, generatePreset, hasGenerator } from '@/presets'
 import { useAnimationEngine } from '@/hooks/useAnimationEngine'
 import { analyzeCode, getApiConfig, type AIResult } from '@/ai'
 import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
@@ -490,7 +490,18 @@ export default function Visualizer() {
 
   const hasApiConfig = getApiConfig() !== null
 
-  // Load preset or reset when algorithm is selected
+  // Parse input data from text
+  const parsedInput = useCallback((): number[] => {
+    try {
+      const parsed = JSON.parse(inputData)
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed.every((v) => typeof v === 'number')) {
+        return parsed
+      }
+    } catch { /* ignore */ }
+    return [5, 3, 8, 1, 9, 2]
+  }, [inputData])
+
+  // Load preset or regenerate when algorithm or input changes
   useEffect(() => {
     if (!selectedAlgorithm) return
     const lang = selectedAlgorithm.defaultLanguage as 'python' | 'javascript' | 'cpp' | 'java'
@@ -501,15 +512,27 @@ export default function Visualizer() {
     setAiRawResponse('')
 
     if (selectedAlgorithm.hasPreset) {
+      // Try generator first (dynamic, responds to input changes)
+      if (hasGenerator(selectedAlgorithm.id)) {
+        const data = parsedInput()
+        const script = generatePreset(selectedAlgorithm.id, data)
+        if (script) {
+          setAnimationScript(script)
+          return
+        }
+      }
+      // Fallback to static preset
       const preset = getPreset(selectedAlgorithm.id)
       if (preset) {
         setAnimationScript(preset)
-        setInputData(JSON.stringify(preset.initialState.data))
+        if (inputData === '[5, 3, 8, 1, 9, 2]') {
+          setInputData(JSON.stringify(preset.initialState.data))
+        }
         return
       }
     }
     setAnimationScript(null)
-  }, [selectedAlgorithm, setAnimationScript])
+  }, [selectedAlgorithm, inputData, setAnimationScript, parsedInput])
 
   // Update Monaco editor decorations based on current step
   useEffect(() => {
@@ -919,6 +942,10 @@ export default function Visualizer() {
           background: #93C5FD;
           width: 4px !important;
           margin-left: 3px;
+        }
+        @keyframes pulse-glow {
+          from { opacity: 0.8; r: 1; }
+          to { opacity: 0.1; r: 1.2; }
         }
       `}</style>
     </div>

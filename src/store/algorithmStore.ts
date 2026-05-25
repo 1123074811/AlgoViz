@@ -65,7 +65,7 @@ const DEFAULT_ALGORITHMS: AlgorithmType[] = [
   },
   {
     id: 'shell_sort', name: '希尔排序', nameEn: 'Shell Sort', category: 'sorting', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def shell_sort(arr):
     n = len(arr)
     gap = n // 2
@@ -115,7 +115,7 @@ def merge(left, right):
   },
   {
     id: 'heap_sort', name: '堆排序', nameEn: 'Heap Sort', category: 'sorting', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def heapify(arr, n, i):
     largest = i
     l, r = 2 * i + 1, 2 * i + 2
@@ -136,7 +136,7 @@ def heap_sort(arr):
   },
   {
     id: 'counting_sort', name: '计数排序', nameEn: 'Counting Sort', category: 'sorting', difficulty: 'easy',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def counting_sort(arr):
     if not arr: return arr
     max_val = max(arr)
