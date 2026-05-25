@@ -1,10 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import Editor, { type OnMount } from '@monaco-editor/react'
 import { Icon } from '@/icons'
 import { useAlgorithmStore } from '@/store/algorithmStore'
 import { getPreset } from '@/presets'
 import { useAnimationEngine } from '@/hooks/useAnimationEngine'
+import { analyzeCode, getApiConfig, type AIResult } from '@/ai'
 import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
+
+type AIStatus = 'idle' | 'analyzing' | 'success' | 'error'
 
 export default function Visualizer() {
   const { t, i18n } = useTranslation()
@@ -13,6 +17,15 @@ export default function Visualizer() {
   const selectedAlgorithm = useAlgorithmStore((s) => s.selectedAlgorithm)
   const animationScript = useAlgorithmStore((s) => s.animationScript)
   const setAnimationScript = useAlgorithmStore((s) => s.setAnimationScript)
+
+  const [code, setCode] = useState('')
+  const [inputData, setInputData] = useState('[5, 3, 8, 1, 9, 2]')
+  const [aiStatus, setAiStatus] = useState<AIStatus>('idle')
+  const [aiError, setAiError] = useState('')
+  const [aiRawResponse, setAiRawResponse] = useState('')
+
+  const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
+  const decorationsRef = useRef<string[]>([])
 
   const {
     visualState,
@@ -27,17 +40,106 @@ export default function Visualizer() {
     reset,
     goToEnd,
     togglePlay,
+    loadScript,
   } = useAnimationEngine(animationScript)
 
-  // Load preset when algorithm is selected
+  const hasApiConfig = getApiConfig() !== null
+
+  // Load preset or reset when algorithm is selected
   useEffect(() => {
-    if (selectedAlgorithm?.hasPreset) {
+    if (!selectedAlgorithm) return
+    setCode(selectedAlgorithm.defaultCode)
+    setAiStatus('idle')
+    setAiError('')
+    setAiRawResponse('')
+
+    if (selectedAlgorithm.hasPreset) {
       const preset = getPreset(selectedAlgorithm.id)
-      setAnimationScript(preset ?? null)
-    } else {
-      setAnimationScript(null)
+      if (preset) {
+        setAnimationScript(preset)
+        setInputData(JSON.stringify(preset.initialState.data))
+        return
+      }
     }
+    setAnimationScript(null)
   }, [selectedAlgorithm, setAnimationScript])
+
+  // Update Monaco editor decorations based on current step
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor || !animationScript) return
+
+    const steps = animationScript.steps
+    const currentCodeLine = steps[currentStep - 1]?.codeLine ?? -1
+
+    const newDecorations: Parameters<typeof editor.deltaDecorations>[1] = []
+
+    // Visited lines (before current)
+    const visitedLines = new Set<number>()
+    for (let i = 0; i < currentStep - 1; i++) {
+      visitedLines.add(steps[i].codeLine)
+    }
+
+    for (const line of visitedLines) {
+      if (line !== currentCodeLine) {
+        newDecorations.push({
+          range: { startLineNumber: line + 1, startColumn: 1, endLineNumber: line + 1, endColumn: 1 },
+          options: {
+            isWholeLine: true,
+            className: 'visited-line',
+            glyphMarginClassName: 'visited-glyph',
+          },
+        })
+      }
+    }
+
+    // Current active line
+    if (currentCodeLine >= 0) {
+      newDecorations.push({
+        range: { startLineNumber: currentCodeLine + 1, startColumn: 1, endLineNumber: currentCodeLine + 1, endColumn: 1 },
+        options: {
+          isWholeLine: true,
+          className: 'active-line',
+          glyphMarginClassName: 'active-glyph',
+        },
+      })
+    }
+
+    decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations)
+  }, [currentStep, animationScript])
+
+  const handleEditorMount: OnMount = useCallback((editor) => {
+    editorRef.current = editor
+  }, [])
+
+  const handleAIAnalyze = async () => {
+    if (!hasApiConfig) {
+      setAiError('请先在设置页面配置 API Key')
+      setAiStatus('error')
+      return
+    }
+
+    setAiStatus('analyzing')
+    setAiError('')
+    setAiRawResponse('')
+
+    const result: AIResult = await analyzeCode({
+      code,
+      language: selectedAlgorithm?.defaultLanguage || 'python',
+      inputData,
+      algorithmName: selectedAlgorithm?.name,
+    })
+
+    if (result.success && result.script) {
+      setAiStatus('success')
+      setAnimationScript(result.script)
+      loadScript(result.script)
+    } else {
+      setAiStatus('error')
+      setAiError(result.error || '未知错误')
+      setAiRawResponse(result.rawResponse || '')
+    }
+  }
 
   if (!selectedAlgorithm) {
     return (
@@ -67,46 +169,42 @@ export default function Visualizer() {
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Code Editor (35%) */}
         <div className="w-[35%] border-r border-border flex flex-col bg-white min-w-0">
-          <div className="h-9 border-b border-border flex items-center px-3 bg-surface shrink-0">
+          <div className="h-9 border-b border-border flex items-center justify-between px-3 bg-surface shrink-0">
             <span className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
               <Icon name="code2" size={14} />
-              {selectedAlgorithm.name} — Python
+              {selectedAlgorithm.name} — {selectedAlgorithm.defaultLanguage === 'python' ? 'Python' : selectedAlgorithm.defaultLanguage}
             </span>
+            {selectedAlgorithm.hasPreset && (
+              <span className="text-[10px] text-green-600 font-medium bg-green-50 px-1.5 py-0.5 rounded">
+                预制动画
+              </span>
+            )}
           </div>
-          <div className="flex-1 overflow-auto p-4">
-            <pre className="font-code text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-              <code>
-                {selectedAlgorithm.defaultCode.split('\n').map((line, idx) => {
-                  const currentCodeLine = steps[currentStep - 1]?.codeLine ?? -1
-                  const visitedLines = new Set(
-                    steps
-                      .filter((s) => s.stepId <= currentStep)
-                      .map((s) => s.codeLine)
-                  )
-                  const isActive = currentCodeLine === idx
-                  const isVisited = visitedLines.has(idx) && !isActive
-
-                  let lineClass = ''
-                  if (isActive) {
-                    lineClass = 'bg-warning-50 border-l-2 border-warning'
-                  } else if (isVisited) {
-                    lineClass = 'bg-primary-50 border-l-2 border-primary-200'
-                  }
-
-                  return (
-                    <div
-                      key={idx}
-                      className={`flex ${lineClass} transition-colors duration-200`}
-                    >
-                      <span className="text-muted text-xs w-8 text-right pr-3 select-none shrink-0 py-0.5">
-                        {idx + 1}
-                      </span>
-                      <span className="flex-1 py-0.5">{line}</span>
-                    </div>
-                  )
-                })}
-              </code>
-            </pre>
+          <div className="flex-1 overflow-hidden">
+            <Editor
+              height="100%"
+              language={selectedAlgorithm.defaultLanguage === 'cpp' ? 'cpp' : selectedAlgorithm.defaultLanguage}
+              value={code}
+              onChange={(val) => setCode(val ?? '')}
+              onMount={handleEditorMount}
+              theme="light"
+              options={{
+                fontSize: 13,
+                fontFamily: 'var(--font-code)',
+                lineNumbers: 'on',
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                wordWrap: 'on',
+                padding: { top: 8 },
+                glyphMargin: true,
+                folding: false,
+                lineDecorationsWidth: 4,
+                lineNumbersMinChars: 3,
+                renderLineHighlight: 'none',
+                overviewRulerBorder: false,
+                hideCursorInOverviewRuler: true,
+              }}
+            />
           </div>
           <div className="h-32 border-t border-border bg-surface p-3 shrink-0">
             <div className="text-xs font-medium text-slate-500 mb-1.5">
@@ -116,9 +214,10 @@ export default function Visualizer() {
               className="w-full h-[calc(100%-1.5rem)] resize-none rounded-md border border-border
                          bg-white p-2 text-sm font-code outline-none focus:border-primary
                          focus:ring-1 focus:ring-primary-200 transition-colors"
-              value={animationScript ? JSON.stringify(animationScript.initialState.data) : ''}
-              readOnly
+              value={inputData}
+              onChange={(e) => setInputData(e.target.value)}
               placeholder="[5, 3, 8, 1, 9, 2]"
+              disabled={aiStatus === 'analyzing'}
             />
           </div>
         </div>
@@ -140,6 +239,32 @@ export default function Visualizer() {
             </span>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-3">
+            {/* AI Status Banner */}
+            {aiStatus !== 'idle' && (
+              <div className={`p-3 rounded-lg border ${
+                aiStatus === 'analyzing' ? 'border-warning-50 bg-warning-50' :
+                aiStatus === 'success' ? 'border-green-100 bg-green-50' :
+                'border-red-100 bg-red-50'
+              }`}>
+                <div className="flex items-center gap-2 mb-1">
+                  {aiStatus === 'analyzing' && (
+                    <Icon name="loader2" size={14} className="text-warning animate-spin" />
+                  )}
+                  <span className={`text-xs font-semibold ${
+                    aiStatus === 'analyzing' ? 'text-warning' :
+                    aiStatus === 'success' ? 'text-green-600' :
+                    'text-red-500'
+                  }`}>
+                    {aiStatus === 'analyzing' ? 'AI 分析中...' :
+                     aiStatus === 'success' ? 'AI 分析完成' : 'AI 分析失败'}
+                  </span>
+                </div>
+                {aiError && (
+                  <p className="text-[11px] text-red-500 leading-relaxed">{aiError}</p>
+                )}
+              </div>
+            )}
+
             {/* Current Step Description */}
             {currentStepData && (
               <div className="p-3 rounded-lg border border-warning-50 bg-warning-50">
@@ -204,6 +329,16 @@ export default function Visualizer() {
               <p className="text-[11px] text-slate-500 leading-relaxed">
                 {selectedAlgorithm.name === '冒泡排序'
                   ? '重复遍历数列，依次比较相邻元素，如果顺序错误则交换位置。每轮将最大值"冒泡"到末尾。'
+                  : selectedAlgorithm.name === '选择排序'
+                  ? '每次从未排序区间选择最小的元素，放到已排序区间的末尾。'
+                  : selectedAlgorithm.name === '插入排序'
+                  ? '将未排序元素依次插入到已排序序列的合适位置，类似整理扑克牌。'
+                  : selectedAlgorithm.name === '归并排序'
+                  ? '分治法：将数组递归二分，排序后合并两个有序子数组。'
+                  : selectedAlgorithm.name === '快速排序'
+                  ? '选取基准元素，将数组分为小于和大于基准的两部分，递归排序。'
+                  : selectedAlgorithm.name === '二分查找'
+                  ? '在有序数组中每次取中间值比较，将搜索范围缩小一半。'
                   : ''}
               </p>
             </div>
@@ -213,7 +348,7 @@ export default function Visualizer() {
 
       {/* Bottom: Control Bar */}
       <div className="h-14 border-t border-border bg-white flex items-center justify-between px-4 shrink-0">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button className="control-btn" onClick={reset} title={t('controls.reset')}>
             <Icon name="rotate-ccw" size={18} />
           </button>
@@ -234,14 +369,34 @@ export default function Visualizer() {
           <button className="control-btn" onClick={goToEnd} title={t('controls.end')}>
             <Icon name="fast-forward" size={18} />
           </button>
+
+          {/* Separator */}
+          <div className="w-px h-5 bg-border mx-1" />
+
+          {/* AI Analysis Button */}
+          <button
+            onClick={handleAIAnalyze}
+            disabled={aiStatus === 'analyzing' || !hasApiConfig}
+            className="flex items-center gap-1.5 px-3 h-8 rounded-lg text-sm font-medium
+                       bg-gradient-to-r from-violet-500 to-purple-600 text-white
+                       hover:from-violet-600 hover:to-purple-700
+                       disabled:opacity-50 disabled:cursor-not-allowed
+                       transition-all cursor-pointer border-none shadow-sm"
+            title={!hasApiConfig ? '请先在设置页面配置 API Key' : 'AI 分析当前代码'}
+          >
+            {aiStatus === 'analyzing' ? (
+              <Icon name="loader2" size={14} className="animate-spin" />
+            ) : (
+              <Icon name="brain" size={14} />
+            )}
+            AI 分析
+          </button>
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Step Counter */}
           <span className="text-xs text-slate-400 font-code w-[72px] text-right">
             {currentStep} / {totalSteps}
           </span>
-          {/* Progress Bar */}
           <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-primary rounded-full transition-all duration-300"
@@ -250,7 +405,6 @@ export default function Visualizer() {
           </div>
         </div>
 
-        {/* Speed Control */}
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-slate-400 uppercase tracking-wide">
             {t('controls.speed')}
@@ -292,6 +446,24 @@ export default function Visualizer() {
           opacity: 0.4;
           cursor: not-allowed;
           background: transparent;
+        }
+        .active-line {
+          background: rgba(245, 158, 11, 0.15) !important;
+          border-left: 3px solid #F59E0B;
+        }
+        .visited-line {
+          background: rgba(37, 99, 235, 0.06) !important;
+          border-left: 3px solid #93C5FD;
+        }
+        .active-glyph {
+          background: #F59E0B;
+          width: 4px !important;
+          margin-left: 3px;
+        }
+        .visited-glyph {
+          background: #93C5FD;
+          width: 4px !important;
+          margin-left: 3px;
         }
       `}</style>
     </div>
