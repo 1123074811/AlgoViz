@@ -220,7 +220,7 @@ def bfs(graph, start):
   },
   {
     id: 'dijkstra', name: 'Dijkstra 最短路径', nameEn: "Dijkstra's Algorithm", category: 'graph', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `import heapq
 
 def dijkstra(graph, start):
@@ -786,7 +786,7 @@ def interval_dp(nums):
   },
   {
     id: 'sliding_window', name: '滑动窗口', nameEn: 'Sliding Window', category: 'advanced', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def max_sum_subarray(arr, k):
     n = len(arr)
     if n < k: return -1

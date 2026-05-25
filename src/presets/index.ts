@@ -7,6 +7,7 @@ import quickSortPreset from './quickSort'
 import binarySearchPreset from './binarySearch'
 import bfsGraphPreset from './bfsGraph'
 import dfsGraphPreset from './dfsGraph'
+import dijkstraPreset from './dijkstra'
 
 const presetRegistry: Record<string, AnimationScript> = {
   bubble_sort: bubbleSortPreset,
@@ -17,6 +18,7 @@ const presetRegistry: Record<string, AnimationScript> = {
   binary_search: binarySearchPreset,
   bfs_graph: bfsGraphPreset,
   dfs_graph: dfsGraphPreset,
+  dijkstra: dijkstraPreset,
 }
 
 export function getPreset(algoId: string): AnimationScript | undefined {
@@ -28,6 +30,7 @@ export function hasPreset(algoId: string): boolean {
 }
 
 export { generatePreset, hasGenerator } from './generators'
+export { generateSlidingWindow } from './slidingWindow'
 
 export {
   bubbleSortPreset,
@@ -38,4 +41,5 @@ export {
   binarySearchPreset,
   bfsGraphPreset,
   dfsGraphPreset,
+  dijkstraPreset,
 }

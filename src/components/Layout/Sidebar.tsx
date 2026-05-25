@@ -152,20 +152,25 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           {filteredAlgos.map((algo) => {
             const diff = difficultyConfig[algo.difficulty]
             const isSelected = selectedAlgorithm?.id === algo.id
+            // Find global index for numbering
+            const globalIdx = algorithms.findIndex((a) => a.id === algo.id) + 1
             return (
               <button
                 key={algo.id}
                 onClick={() => handleSelect(algo)}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-left
+                className={`w-full flex items-center gap-2 px-2 py-2 rounded-md text-left
                   transition-colors cursor-pointer border-none text-sm
                   ${isSelected
                     ? 'bg-primary-50 text-primary'
                     : 'hover:bg-slate-100 text-slate-700'
                   }`}
               >
+                <span className="text-[10px] text-muted font-code w-5 text-right shrink-0">
+                  {globalIdx}
+                </span>
                 <Icon
                   name={categoryIcons[algo.category] || 'code2'}
-                  size={16}
+                  size={14}
                 />
                 <span className="flex-1 truncate font-medium">
                   {i18n.language === 'zh' ? algo.name : algo.nameEn}

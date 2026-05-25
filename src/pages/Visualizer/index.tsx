@@ -468,6 +468,7 @@ export default function Visualizer() {
   const [aiStatus, setAiStatus] = useState<AIStatus>('idle')
   const [aiError, setAiError] = useState('')
   const [aiRawResponse, setAiRawResponse] = useState('')
+  const [showRawResponse, setShowRawResponse] = useState(false)
 
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
   const decorationsRef = useRef<string[]>([])
@@ -750,7 +751,22 @@ export default function Visualizer() {
                   </span>
                 </div>
                 {aiError && (
-                  <p className="text-[11px] text-red-500 leading-relaxed">{aiError}</p>
+                  <>
+                    <p className="text-[11px] text-red-500 leading-relaxed mt-1">{aiError}</p>
+                    {aiRawResponse && (
+                      <button
+                        onClick={() => setShowRawResponse(!showRawResponse)}
+                        className="text-[10px] text-slate-400 underline cursor-pointer border-none bg-transparent mt-1"
+                      >
+                        {showRawResponse ? '隐藏原始响应' : '查看原始响应'}
+                      </button>
+                    )}
+                    {showRawResponse && aiRawResponse && (
+                      <pre className="text-[10px] text-slate-500 mt-1 p-2 bg-slate-100 rounded max-h-32 overflow-auto whitespace-pre-wrap">
+                        {aiRawResponse.slice(0, 2000)}
+                      </pre>
+                    )}
+                  </>
                 )}
               </div>
             )}

@@ -43,8 +43,13 @@ export async function analyzeCode(params: AIRequestParams): Promise<AIResult> {
   const systemPrompt = buildSystemPrompt(params.language)
   const userMessage = buildUserMessage(params)
 
+  // Build request URL
+  let apiUrl = `${config.baseUrl}/chat/completions`
+  // Ensure no double slashes
+  apiUrl = apiUrl.replace(/([^:]\/)\/+/g, '$1')
+
   try {
-    const response = await fetch(`${config.baseUrl}/chat/completions`, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -62,9 +67,17 @@ export async function analyzeCode(params: AIRequestParams): Promise<AIResult> {
     })
 
     if (!response.ok) {
-      const errBody = await response.json().catch(() => ({}))
-      const errMsg = (errBody as { error?: { message?: string } })?.error?.message
-        || `HTTP ${response.status}`
+      const errBody = await response.json().catch(() => null)
+      const errMsg = errBody?.error?.message || `HTTP ${response.status} ${response.statusText}`
+      if (response.status === 401 || response.status === 403) {
+        return { success: false, error: `认证失败: API Key 无效或已过期 (${errMsg})` }
+      }
+      if (response.status === 404) {
+        return { success: false, error: `接口不存在 (404): 请检查 Base URL 是否正确` }
+      }
+      if (response.status === 429) {
+        return { success: false, error: '请求频率超限 (429)，请稍后重试' }
+      }
       return { success: false, error: `API 请求失败: ${errMsg}` }
     }
 
@@ -87,6 +100,13 @@ export async function analyzeCode(params: AIRequestParams): Promise<AIResult> {
     return { success: true, script: parsed }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
+    if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+      return {
+        success: false,
+        error: `网络请求被阻止 (CORS/网络错误): 浏览器安全策略可能阻止了跨域请求。请检查: 1) API 服务是否允许浏览器跨域 2) Base URL 是否正确 3) 网络连接是否正常`,
+        rawResponse: message,
+      }
+    }
     return { success: false, error: `网络请求失败: ${message}` }
   }
 }
