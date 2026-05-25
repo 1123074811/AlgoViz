@@ -541,7 +541,7 @@ class Trie:
   },
   {
     id: 'lcs', name: '最长公共子序列', nameEn: 'LCS', category: 'dp', difficulty: 'medium',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def lcs(text1, text2):
     m, n = len(text1), len(text2)
     dp = [[0] * (n + 1) for _ in range(m + 1)]
@@ -641,7 +641,7 @@ def interval_dp(nums):
   },
   {
     id: 'n_queens', name: 'N 皇后', nameEn: 'N-Queens', category: 'search-backtrack', difficulty: 'hard',
-    hasPreset: false, defaultLanguage: 'python',
+    hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def solve_n_queens(n):
     board = [['.'] * n for _ in range(n)]
     result = []

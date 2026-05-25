@@ -170,7 +170,7 @@ export function generateHeapSort(arr: number[]): AnimationScript {
   return { algorithm: 'heap_sort', complexity: { time: { best: 'O(n log n)', average: 'O(n log n)', worst: 'O(n log n)' }, space: 'O(1)' }, initialState: { type: 'array', data: [...arr] }, steps }
 }
 
-// ============ Shell Sort Generator ============
+// ============ Shell Sort Generator (using real swaps) ============
 export function generateShellSort(arr: number[]): AnimationScript {
   const data = [...arr]
   const steps: AnimationStep[] = []
@@ -178,20 +178,19 @@ export function generateShellSort(arr: number[]): AnimationScript {
   const n = data.length
 
   for (let gap = Math.floor(n / 2); gap > 0; gap = Math.floor(gap / 2)) {
-    steps.push(makeStep(sid++, 2, `gap=${gap}：按间隔 ${gap} 进行插入排序`, `gap=${gap}: insertion sort with gap ${gap}`, 'highlight', [], 'primary', comps, sw, acc))
+    steps.push(makeStep(sid++, 2, `gap=${gap}：按间隔 ${gap} 进行排序`, `gap=${gap}: sort with gap ${gap}`, 'highlight', [0, gap], 'primary', comps, sw, acc))
     for (let i = gap; i < n; i++) {
-      const temp = data[i]
-      let j = i
-      steps.push(makeStep(sid++, 4, `比较 arr[${j - gap}]=${data[j - gap]} > key=${temp}？`, `Compare arr[${j - gap}]=${data[j - gap]} > key=${temp}?`, 'compare', [j - gap, j], 'warning', ++comps, sw, acc += 2))
-      while (j >= gap && data[j - gap] > temp) {
-        steps.push(makeStep(sid++, 5, `${data[j - gap]} > ${temp}，右移`, `${data[j - gap]} > ${temp}, shift`, 'swap', [j - gap, j], 'danger', comps, sw, acc))
-        data[j] = data[j - gap]; sw++; acc++
-        j -= gap
-        if (j >= gap && data[j - gap] > temp) {
-          steps.push(makeStep(sid++, 4, `继续比较 arr[${j - gap}]=${data[j - gap]} > key=${temp}？`, `Continue: arr[${j - gap}]=${data[j - gap]} > key=${temp}?`, 'compare', [j - gap, j], 'warning', ++comps, sw, acc))
+      for (let j = i; j >= gap; j -= gap) {
+        steps.push(makeStep(sid++, 4, `比较 arr[${j - gap}]=${data[j - gap]} > arr[${j}]=${data[j]}？`, `Compare arr[${j - gap}]=${data[j - gap]} > arr[${j}]=${data[j]}?`, 'compare', [j - gap, j], 'warning', ++comps, sw, acc += 2))
+        if (data[j - gap] > data[j]) {
+          steps.push(makeStep(sid++, 5, `${data[j - gap]} > ${data[j]}，交换`, `${data[j - gap]} > ${data[j]}, swap`, 'swap', [j - gap, j], 'danger', comps, sw, acc))
+          ;[data[j - gap], data[j]] = [data[j], data[j - gap]]
+          sw++; acc += 2
+        } else {
+          steps.push(makeStep(sid++, 5, `${data[j - gap]} ≤ ${data[j]}，不交换`, `${data[j - gap]} ≤ ${data[j]}, no swap`, 'highlight', [j - gap, j], 'success', comps, sw, acc))
+          break
         }
       }
-      data[j] = temp
     }
   }
   steps.push(makeStep(sid++, 8, `排序完成！[${data.join(', ')}]`, `Sorted! [${data.join(', ')}]`, 'mark', data.map((_, k) => k), 'success', comps, sw, acc))
@@ -220,7 +219,7 @@ export function generateCountingSort(arr: number[]): AnimationScript {
   for (let v = 0; v <= maxVal; v++) {
     while (count[v]-- > 0) {
       data[idx] = v
-      steps.push(makeStep(sid++, 5, `输出 ${v} 到位置 ${idx}`, `Output ${v} to position ${idx}`, 'swap', [idx], 'success', 0, 0, acc += 1))
+      steps.push(makeStep(sid++, 5, `输出 ${v} 到位置 ${idx}`, `Output ${v} to position ${idx}`, 'highlight', [idx], 'success', 0, 0, acc += 1))
       idx++
     }
   }
@@ -246,23 +245,23 @@ export function generateMergeSort(arr: number[]): AnimationScript {
       steps.push(makeStep(sid++, 13, `比较 left[${i}]=${left[i]} ≤ right[${j}]=${right[j]}？`, `Compare left[${i}]=${left[i]} <= right[${j}]=${right[j]}?`, 'compare', [start + i, mid + 1 + j], 'warning', ++comps, 0, 0))
       if (left[i] <= right[j]) {
         data[k] = left[i]
-        steps.push(makeStep(sid++, 14, `放入 ${left[i]} 到位置 ${k}`, `Place ${left[i]} at position ${k}`, 'swap', [k], 'success', comps, 0, 0))
+        steps.push(makeStep(sid++, 14, `放入 ${left[i]} 到位置 ${k}`, `Place ${left[i]} at position ${k}`, 'highlight', [k], 'success', comps, 0, 0))
         i++
       } else {
         data[k] = right[j]
-        steps.push(makeStep(sid++, 14, `放入 ${right[j]} 到位置 ${k}`, `Place ${right[j]} at position ${k}`, 'swap', [k], 'success', comps, 0, 0))
+        steps.push(makeStep(sid++, 14, `放入 ${right[j]} 到位置 ${k}`, `Place ${right[j]} at position ${k}`, 'highlight', [k], 'success', comps, 0, 0))
         j++
       }
       k++
     }
     while (i < left.length) {
       data[k] = left[i]
-      steps.push(makeStep(sid++, 16, `剩余 ${left[i]} 放入位置 ${k}`, `Remaining ${left[i]} to position ${k}`, 'swap', [k], 'muted', comps, 0, 0))
+      steps.push(makeStep(sid++, 16, `剩余 ${left[i]} 放入位置 ${k}`, `Remaining ${left[i]} to position ${k}`, 'highlight', [k], 'muted', comps, 0, 0))
       i++; k++
     }
     while (j < right.length) {
       data[k] = right[j]
-      steps.push(makeStep(sid++, 16, `剩余 ${right[j]} 放入位置 ${k}`, `Remaining ${right[j]} to position ${k}`, 'swap', [k], 'muted', comps, 0, 0))
+      steps.push(makeStep(sid++, 16, `剩余 ${right[j]} 放入位置 ${k}`, `Remaining ${right[j]} to position ${k}`, 'highlight', [k], 'muted', comps, 0, 0))
       j++; k++
     }
   }
@@ -319,9 +318,13 @@ export function generateBinarySearch(arr: number[], target?: number): AnimationS
 import { generateSlidingWindow } from './slidingWindow'
 import { generateMonotonicStack } from './monotonicStack'
 import { generateKnapsack } from './knapsack'
+import { generateLCS } from './lcs'
+import { generateNQueens } from './nQueens'
 const slidingWindowWrapper = (arr: number[]) => generateSlidingWindow(arr, 3)
 const monotonicStackWrapper = (arr: number[]) => generateMonotonicStack(arr)
 const knapsackWrapper = (arr: number[]) => generateKnapsack(undefined, undefined, undefined)
+const lcsWrapper = (arr: number[]) => generateLCS(undefined, undefined)
+const nQueensWrapper = (_arr: number[]) => generateNQueens(4)
 
 const GENERATORS: Record<string, (arr: number[]) => AnimationScript> = {
   bubble_sort: generateBubbleSort,
@@ -336,6 +339,8 @@ const GENERATORS: Record<string, (arr: number[]) => AnimationScript> = {
   sliding_window: slidingWindowWrapper,
   monotonic_stack: monotonicStackWrapper,
   knapsack_01: knapsackWrapper,
+  lcs: lcsWrapper,
+  n_queens: nQueensWrapper,
 }
 
 export function generatePreset(algoId: string, inputData: number[]): AnimationScript | undefined {
