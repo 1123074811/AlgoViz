@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Icon, categoryIcons } from '@/icons'
 import { useAlgorithmStore, type AlgorithmCategory } from '@/store/algorithmStore'
+import Header from '@/components/Layout/Header'
 
 export default function Home() {
   const { t } = useTranslation()
@@ -24,7 +25,9 @@ export default function Home() {
   ]
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full flex flex-col bg-white">
+      <Header />
+      <div className="flex-1 overflow-y-auto">
       <div className="max-w-6xl mx-auto px-6 py-8">
 
         {/* Hero */}
@@ -127,6 +130,7 @@ export default function Home() {
             51 个算法 · 4 种语言 · AI 驱动 · 开源项目
           </p>
         </section>
+      </div>
       </div>
     </div>
   )

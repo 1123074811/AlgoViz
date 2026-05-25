@@ -24,8 +24,8 @@ export default function App() {
       future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
     >
       <Routes>
+        <Route path="/" element={<Suspense fallback={<LoadingFallback />}><Home /></Suspense>} />
         <Route element={<MainLayout />}>
-          <Route path="/" element={<Suspense fallback={<LoadingFallback />}><Home /></Suspense>} />
           <Route path="/visualizer" element={<Suspense fallback={<LoadingFallback />}><Visualizer /></Suspense>} />
         </Route>
         <Route path="/settings" element={<Suspense fallback={<LoadingFallback />}><Settings /></Suspense>} />
