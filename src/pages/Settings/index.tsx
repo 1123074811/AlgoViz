@@ -5,18 +5,26 @@ import Header from '@/components/Layout/Header'
 
 type ConnectionStatus = 'idle' | 'testing' | 'connected' | 'failed'
 
+/** Latest model pricing (USD per 1M tokens), updated May 2026 */
 const MODEL_PRICING: Record<string, { input: number; output: number; label: string }> = {
-  'gpt-4o': { input: 2.5, output: 10, label: 'GPT-4o' },
-  'gpt-4o-mini': { input: 0.15, output: 0.6, label: 'GPT-4o Mini' },
-  'gpt-4-turbo': { input: 10, output: 30, label: 'GPT-4 Turbo' },
-  'gpt-3.5-turbo': { input: 0.5, output: 1.5, label: 'GPT-3.5 Turbo' },
-  'claude-3-opus': { input: 15, output: 75, label: 'Claude 3 Opus' },
-  'claude-3.5-sonnet': { input: 3, output: 15, label: 'Claude 3.5 Sonnet' },
-  'claude-3-haiku': { input: 0.25, output: 1.25, label: 'Claude 3 Haiku' },
-  'deepseek-chat': { input: 0.14, output: 0.28, label: 'DeepSeek V3' },
+  // OpenAI — GPT-5.5 系列
+  'gpt-5.5':         { input: 5.0,  output: 30,  label: 'GPT-5.5' },
+  'gpt-5.4':         { input: 2.5,  output: 15,  label: 'GPT-5.4' },
+  'gpt-5.4-mini':    { input: 0.75, output: 4.5, label: 'GPT-5.4 Mini' },
+  'gpt-5.4-nano':    { input: 0.20, output: 1.25,label: 'GPT-5.4 Nano' },
+  // Anthropic — Claude 4 系列
+  'claude-opus-4-7':   { input: 5.0,  output: 25,  label: 'Claude Opus 4.7' },
+  'claude-sonnet-4-6': { input: 3.0,  output: 15,  label: 'Claude Sonnet 4.6' },
+  'claude-haiku-4-5':  { input: 1.0,  output: 5.0, label: 'Claude Haiku 4.5' },
+  // Google — Gemini 3 系列
+  'gemini-3.1-pro':  { input: 2.0,  output: 12,  label: 'Gemini 3.1 Pro' },
+  'gemini-2.5-flash':{ input: 0.30, output: 2.5, label: 'Gemini 2.5 Flash' },
+  // DeepSeek — V4 系列
+  'deepseek-v4-pro':   { input: 0.44, output: 0.87, label: 'DeepSeek V4 Pro' },
+  'deepseek-v4-flash': { input: 0.14, output: 0.28, label: 'DeepSeek V4 Flash' },
+  'deepseek-chat':     { input: 0.26, output: 0.38, label: 'DeepSeek V3.2' },
 }
 
-// Rough token estimation: ~4 chars per token for English, ~1.5 for Chinese
 const ESTIMATED_SYSTEM_PROMPT_TOKENS = 800
 const ESTIMATED_PER_STEP_TOKENS = 80
 const ESTIMATED_OVERHEAD_TOKENS = 200
@@ -25,7 +33,7 @@ export default function Settings() {
   const { t } = useTranslation()
   const [apiKey, setApiKey] = useState('')
   const [baseUrl, setBaseUrl] = useState('https://api.openai.com/v1')
-  const [model, setModel] = useState('gpt-4o')
+  const [model, setModel] = useState('deepseek-v4-pro')
   const [status, setStatus] = useState<ConnectionStatus>('idle')
   const [showKey, setShowKey] = useState(false)
   const [responseTime, setResponseTime] = useState<number | null>(null)
@@ -184,8 +192,9 @@ export default function Settings() {
             <div className="mt-2 flex flex-wrap gap-2">
               {[
                 { url: 'https://api.openai.com/v1', label: 'OpenAI' },
+                { url: 'https://api.anthropic.com/v1', label: 'Anthropic' },
+                { url: 'https://generativelanguage.googleapis.com/v1beta/openai', label: 'Gemini' },
                 { url: 'https://api.deepseek.com/v1', label: 'DeepSeek' },
-                { url: 'https://api.moonshot.cn/v1', label: 'Moonshot' },
               ].map((preset) => (
                 <button
                   key={preset.url}
