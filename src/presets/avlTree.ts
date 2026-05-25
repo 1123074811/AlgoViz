@@ -1,23 +1,97 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, TeachingState, ActionColor } from '@/types/animation'
+import { makeStep } from './utils'
+
+function avlTeaching(nodeId: string, role: 'current' | 'rotating' | 'balanced' | 'path', height?: number, bf?: number): TeachingState {
+  return {
+    tree: {
+      nodeStates: [{
+        id: nodeId,
+        role,
+        color: (role === 'rotating' ? 'danger' : role === 'balanced' ? 'success' : 'warning') as ActionColor,
+        height,
+        balanceFactor: bf,
+      }],
+    },
+    variables: height !== undefined ? { height, bf: bf ?? 0 } : undefined,
+  }
+}
 
 export function generateAVLTree(): AnimationScript {
-  const tree = [8, 3, 10, 1, 6, '', 14, '', '', 4]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const tree = [8, 3, 10, 1, 6, 0, 14, 0, 0, 4]
+  const steps: AnimationScript['steps'] = []
   let sid = 1
 
-  steps.push({ stepId: sid++, codeLine: 0, description: { zh: 'AVL 树 (自平衡二叉搜索树) — 平衡因子≤1', en: 'AVL Tree — balance factor ≤1' }, action: { type: 'highlight', targets: [], color: 'primary' }, stats: { comparisons: 0, swaps: 0, accesses: 0 } })
+  steps.push(makeStep(sid++, 0,
+    'AVL 树（自平衡二叉搜索树）演示。AVL 要求任意节点的左右子树高度差（平衡因子）不超过 1，插入后若失衡则通过旋转修复',
+    'AVL Tree (self-balancing BST) demo. AVL requires |balanceFactor| ≤ 1 for every node, rebalance via rotation after insertion',
+    'highlight', [], 'primary', 0, 0, 0,
+    { tree: { nodeStates: [{ id: '0', role: 'root', height: 3, balanceFactor: 0, color: 'primary' }] } },
+  ))
 
-  steps.push({ stepId: sid++, codeLine: 1, description: { zh: `插入序列: [8,3,10,1,6,14,4]`, en: `Insert sequence: [8,3,10,1,6,14,4]` }, action: { type: 'highlight', targets: [0], color: 'primary' }, stats: { comparisons: 0, swaps: 0, accesses: 7 } })
+  steps.push(makeStep(sid++, 1,
+    '依次插入 [8,3,10,1,6,14,4]。插入 4 后节点 3 的平衡因子变为 -2（左子树高 0，右子树高 2），触发失衡',
+    'Insert [8,3,10,1,6,14,4]. After inserting 4, node 3 gets bf=-2 (left h=0, right h=2), triggering imbalance',
+    'highlight', [0, 1, 2, 3, 4, 5, 6], 'warning', 0, 0, 7,
+    {
+      tree: {
+        nodeStates: [
+          { id: '0', role: 'path', height: 3, balanceFactor: 0, color: 'primary' },
+          { id: '1', role: 'current', height: 2, balanceFactor: -2, color: 'warning' },
+          { id: '4', role: 'child', height: 1, balanceFactor: 1, color: 'warning' },
+          { id: '9', role: 'child', height: 0, balanceFactor: 0, color: 'warning' },
+        ],
+      },
+    },
+  ))
 
-  steps.push({ stepId: sid++, codeLine: 3, description: { zh: '节点8(根) h=3, 节点3(L) h=2, 节点10(R) h=2 → 平衡', en: 'Node8 h=3, 3 h=2, 10 h=2 → balanced' }, action: { type: 'mark', targets: [0, 1, 2], color: 'success' }, stats: { comparisons: 0, swaps: 0, accesses: 3 } })
+  steps.push(makeStep(sid++, 5,
+    '检测到 RL 型失衡：节点 3 的右孩子 6 有左孩子 4。RL 旋转 = 先对 6 做右旋，再对 3 做左旋',
+    'RL-case detected: right child 6 of node 3 has left child 4. RL rotation = right-rotate 6 first, then left-rotate 3',
+    'compare', [1, 4, 9], 'warning', 1, 0, 4,
+    {
+      tree: {
+        nodeStates: [
+          { id: '1', role: 'rotating', height: 2, balanceFactor: -2, color: 'danger' },
+          { id: '4', role: 'rotating', height: 1, balanceFactor: 1, color: 'danger' },
+          { id: '9', role: 'rotating', height: 0, color: 'danger' },
+        ],
+        rotation: { type: 'right-left', pivot: 3, child: 6 },
+      },
+    },
+  ))
 
-  steps.push({ stepId: sid++, codeLine: 5, description: { zh: '插入 4 → 节点6(R) 高度变2，平衡 |3-1|=2 → 需要旋转', en: 'Insert 4 → height(6)=2, |h(1)-h(6)|=2 → need rotation' }, action: { type: 'compare', targets: [1, 6], color: 'warning' }, stats: { comparisons: 1, swaps: 0, accesses: 4 } })
+  steps.push(makeStep(sid++, 7,
+    'RL 旋转完成：先对 6 右旋（4 上移，6 下降为 4 的右孩子），再对 3 左旋（4 上移到 3 的位置）。所有节点平衡因子恢复 |bf|≤1',
+    'RL rotation done: right-rotate 6 (4 moves up, 6 becomes 4\'s right child), then left-rotate 3 (4 replaces 3). All |bf|≤1 restored',
+    'swap', [1, 4, 6, 9], 'danger', 1, 1, 6,
+    {
+      tree: {
+        nodeStates: [
+          { id: '0', role: 'balanced', height: 3, balanceFactor: 0, color: 'success' },
+          { id: '2', role: 'balanced', height: 1, balanceFactor: 0, color: 'success' },
+          { id: '6', role: 'balanced', height: 0, balanceFactor: 0, color: 'success' },
+        ],
+        rotation: { type: 'right-left', pivot: 3, child: 6 },
+      },
+    },
+  ))
 
-  steps.push({ stepId: sid++, codeLine: 7, description: { zh: 'RL 旋转：先对 6 右旋，再对 3 左旋。AVL 平衡恢复', en: 'RL rotation: right-rotate 6, left-rotate 3. AVL rebalanced' }, action: { type: 'swap', targets: [1, 3, 6], color: 'danger' }, stats: { comparisons: 1, swaps: 1, accesses: 6 } })
+  steps.push(makeStep(sid++, 8,
+    'AVL 树保持平衡！高度=3，所有 |bf|≤1。AVL 通过旋转保证 O(log n) 的查找/插入/删除时间',
+    'AVL balanced! Height=3, all |bf|≤1. AVL guarantees O(log n) operations via rotations',
+    'mark', [0, 1, 2, 3, 4, 5, 6, 9], 'success', 2, 1, 8,
+    {
+      tree: {
+        nodeStates: [
+          { id: '0', role: 'balanced', height: 3, balanceFactor: 0, color: 'success' },
+          { id: '1', role: 'balanced', height: 1, balanceFactor: 0, color: 'success' },
+          { id: '2', role: 'balanced', height: 1, balanceFactor: 0, color: 'success' },
+          { id: '4', role: 'balanced', height: 1, balanceFactor: 1, color: 'success' },
+          { id: '6', role: 'balanced', height: 1, balanceFactor: 1, color: 'success' },
+        ],
+      },
+    },
+  ))
 
-  steps.push({ stepId: sid++, codeLine: 8, description: { zh: 'AVL 树保持平衡，高度=3，所有 |bf|≤1', en: 'AVL balanced, height=3, all |bf|≤1' }, action: { type: 'mark', targets: [0, 1, 2, 3, 4, 5, 6], color: 'success' }, stats: { comparisons: 2, swaps: 1, accesses: 8 } })
-
-  const nums = tree.filter(v => v !== '').map(Number)
-  return { algorithm: 'avl_tree', complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' }, initialState: { type: 'tree', data: nums }, steps: steps as AnimationScript['steps'] }
+  return { algorithm: 'avl_tree', complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' }, initialState: { type: 'tree', data: tree }, steps }
 }

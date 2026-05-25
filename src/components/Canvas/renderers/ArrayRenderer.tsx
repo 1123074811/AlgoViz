@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useRef, useLayoutEffect } from 'react'
 import type { VisualState } from '@/hooks/useAnimationEngine'
-import type { AnimationStep } from '@/types/animation'
+import type { AnimationStep, VisualRole, ActionColor } from '@/types/animation'
 
 const COLOR_MAP: Record<string, string> = {
   primary: 'var(--color-primary)',
@@ -8,6 +8,15 @@ const COLOR_MAP: Record<string, string> = {
   warning: 'var(--color-warning)',
   danger: 'var(--color-danger)',
   muted: 'var(--color-muted)',
+}
+
+const ROLE_COLORS: Record<VisualRole, ActionColor> = {
+  current: 'warning', compare: 'warning', swap: 'danger', sorted: 'success',
+  unsorted: 'muted', pivot: 'primary', min: 'danger', key: 'primary',
+  visited: 'success', queued: 'primary', stacked: 'primary', relaxed: 'success',
+  candidate: 'warning', selected: 'success', discarded: 'muted', path: 'primary',
+  root: 'primary', parent: 'warning', child: 'primary', rotating: 'danger',
+  balanced: 'success', conflict: 'danger',
 }
 
 interface BarLayout {
@@ -27,10 +36,20 @@ interface ArrayRendererProps {
 }
 
 export default function ArrayRenderer({ visualState, currentStepData }: ArrayRendererProps) {
-  const { arrayData, colorMap, elementIds } = visualState
+  const { arrayData, colorMap, elementIds, teachingState } = visualState
   const barRefs = useRef<Map<number, SVGGElement>>(new Map())
   const prevLayout = useRef<Map<number, BarLayout>>(new Map())
   const animFrameRef = useRef(0)
+
+  const hasVars = !!(teachingState?.variables && Object.keys(teachingState.variables).length > 0)
+  const hasRanges = !!(teachingState?.ranges && teachingState.ranges.length > 0)
+  const hasAux = !!(teachingState?.auxiliaryArrays && teachingState.auxiliaryArrays.length > 0)
+  const auxCount = teachingState?.auxiliaryArrays?.length ?? 0
+  // Reserve space: top=variables(6), bottom=ranges(5)+aux(3*count)+stats(3)
+  const topReserve = hasVars ? 6 : 1
+  const bottomReserve = (hasRanges ? 5 : 0) + (hasAux ? 3 * auxCount : 0) + 4
+  const barArea = 100 - topReserve - bottomReserve
+  const baseline = 100 - bottomReserve
 
   const bars = useMemo((): BarLayout[] | null => {
     if (arrayData.length === 0) return null
@@ -38,20 +57,20 @@ export default function ArrayRenderer({ visualState, currentStepData }: ArrayRen
     const maxVal = Math.max(...arrayData, 1)
     const barCount = arrayData.length
     const totalWidth = 90
-    const gutter = 3
+    const gutter = Math.max(1, 3 - Math.max(0, barCount - 12) * 0.2) // tighter gutter for many bars
     const availWidth = totalWidth - gutter * (barCount + 1)
-    const barWidth = Math.max(Math.min(availWidth / barCount, 20), 3)
-    const maxBarHeight = 83
+    const barWidth = Math.max(Math.min(availWidth / barCount, 20), 1.5)
+    const maxBarHeight = Math.max(barArea * 0.85, 10)
 
     return arrayData.map((value, index) => {
       const elementId = elementIds[index] ?? index
       const color = COLOR_MAP[colorMap.get(index) ?? 'primary'] ?? COLOR_MAP.primary
-      const heightPct = Math.max((value / maxVal) * maxBarHeight, maxBarHeight * 0.05)
+      const heightPct = Math.max((value / maxVal) * maxBarHeight, maxBarHeight * 0.04)
       const left = 5 + gutter + index * (barWidth + gutter)
 
-      return { key: elementId, left, width: barWidth, y: 88 - heightPct, height: heightPct, color, value, index }
+      return { key: elementId, left, width: barWidth, y: baseline - heightPct, height: heightPct, color, value, index }
     })
-  }, [arrayData, colorMap, elementIds])
+  }, [arrayData, colorMap, elementIds, topReserve, bottomReserve, barArea, baseline])
 
   // Interpolation-based animation from prev to current layout
   useLayoutEffect(() => {
@@ -189,21 +208,45 @@ export default function ArrayRenderer({ visualState, currentStepData }: ArrayRen
     )
   }
 
+  const rangeY = baseline + 0.3
+  const auxStartY = rangeY + (hasRanges ? 3 : 0)
+  const statsY = baseline + (hasRanges ? 3 : 0) + auxCount * 3.2
+  const noWrap = hasVars || hasRanges || hasAux || (currentStepData !== null)
+
   return (
     <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
       <defs>
         <clipPath id="barClip">
-          <rect x="0" y="0" width="100" height="96" />
+          <rect x="0" y={topReserve} width="100" height={barArea} />
         </clipPath>
       </defs>
 
-      <line x1="3" y1="88" x2="97" y2="88" stroke="var(--color-border)" strokeWidth="0.3" />
+      {/* Baseline */}
+      <line x1="3" y1={baseline} x2="97" y2={baseline} stroke="var(--color-border)" strokeWidth="0.25" />
 
-      <g clipPath="url(#barClip)" style={{ willChange: 'transform' }}>
+      {/* Variables bar */}
+      {hasVars && (
+        <g>
+          <rect x="2" y="0.5" width="96" height="4" rx="1" fill="var(--color-surface)" />
+          {Object.entries(teachingState!.variables!).slice(0, 5).map(([name, val], i) => (
+            <text key={name} x={5 + i * 19} y="3.5" fontSize="2.1" fontFamily="var(--font-code)" fill="var(--color-muted)">
+              <tspan fontWeight="600" fill="var(--color-primary)">{name}</tspan>
+              <tspan dx="0.8">={String(val)}</tspan>
+            </text>
+          ))}
+        </g>
+      )}
+
+      <g clipPath={noWrap ? 'url(#barClip)' : undefined} style={{ willChange: 'transform' }}>
         {bars.map((bar) => {
           const isTarget = targetIndices.includes(bar.index)
           const isCompareTarget = isComparing && isTarget
           const isSwapTarget = isSwapping && isTarget
+
+          const nodeRole = teachingState?.tree?.nodeStates?.find(n => n.id === bar.index)
+            ?? teachingState?.graph?.nodeStates?.find(n => n.id === String(bar.index))
+          const roleColor = nodeRole ? COLOR_MAP[ROLE_COLORS[nodeRole.role]] ?? COLOR_MAP.primary : undefined
+          const roleLabel = nodeRole ? nodeRole.role.toUpperCase().slice(0, 4) : undefined
 
           return (
             <g key={bar.key} ref={setBarRef(bar.key)}>
@@ -212,59 +255,86 @@ export default function ArrayRenderer({ visualState, currentStepData }: ArrayRen
                 y={`${bar.y}%`}
                 width={`${bar.width}%`}
                 height={`${bar.height}%`}
-                rx="2"
+                rx={Math.min(1.5, bar.width * 0.3)}
                 fill={bar.color}
                 style={{ transition: 'fill 0.3s ease' }}
               />
 
-              {isCompareTarget && (
+              {isCompareTarget && bar.width > 3 && (
                 <rect
                   x={`${-0.5}%`}
                   y={`${bar.y - 1}%`}
                   width={`${bar.width + 1}%`}
                   height={`${bar.height + 2}%`}
-                  rx="3"
+                  rx="2"
                   fill="none"
                   stroke={bar.color}
-                  strokeWidth="0.6"
-                  opacity="0.8"
+                  strokeWidth="0.5"
+                  opacity="0.7"
                   className="compare-glow"
                 />
               )}
 
-              {isSwapTarget && (
+              {isSwapTarget && bar.width > 3 && (
                 <rect
                   x={`${-0.3}%`}
                   y={`${bar.y - 0.5}%`}
                   width={`${bar.width + 0.6}%`}
                   height={`${bar.height + 1}%`}
-                  rx="3"
+                  rx="2"
                   fill={bar.color}
-                  fillOpacity="0.2"
+                  fillOpacity="0.15"
                 />
+              )}
+
+              {/* Role badge — only on bars wide enough and tall enough */}
+              {roleColor && roleLabel && bar.width > 6 && bar.height > 10 && (
+                <g>
+                  <rect
+                    x={`${-1}%`}
+                    y={`${bar.y - 4}%`}
+                    width={`${bar.width + 2}%`}
+                    height="3"
+                    rx="0.6"
+                    fill={roleColor}
+                    opacity="0.12"
+                  />
+                  <text
+                    x={`${bar.width / 2}%`}
+                    y={`${bar.y - 2}%`}
+                    textAnchor="middle"
+                    fontSize="1.6"
+                    fontWeight="700"
+                    fill={roleColor}
+                    fontFamily="var(--font-code)"
+                  >
+                    {roleLabel}
+                  </text>
+                </g>
               )}
 
               <text
                 className="val-label"
                 x={`${bar.width / 2}%`}
-                y={bar.height > 14 ? `${bar.y + bar.height / 2 + 0.5}%` : `${bar.y - 1}%`}
+                y={bar.height > 12 ? `${bar.y + bar.height / 2 + 0.4}%` : `${bar.y - 0.8}%`}
                 textAnchor="middle"
-                dominantBaseline={bar.height > 14 ? 'central' : undefined}
-                fontSize={bar.width > 8 ? '3.3' : '2.6'}
+                dominantBaseline={bar.height > 12 ? 'central' : undefined}
+                fontSize={bar.width > 10 ? '3.2' : bar.width > 5 ? '2.4' : '1.8'}
                 fontWeight="600"
-                fill={bar.height > 14 ? 'white' : bar.color}
+                fill={bar.height > 12 ? 'white' : bar.color}
                 fontFamily="var(--font-code)"
                 style={{ transition: 'fill 0.3s ease' }}
               >
-                {bar.value}
+                {bar.width > 7 ? bar.value : (bar.width > 3 ? String(bar.value)[0] : '')}
               </text>
 
+              {/* Index label below baseline */}
               <text
                 className="index-label"
                 x={`${bar.width / 2}%`}
-                y="93%"
+                y={`${baseline + 1.5}%`}
                 textAnchor="middle"
-                fontSize="2.2"
+                fontSize={bar.width > 5 ? '2' : '1.5'}
                 fill="var(--color-muted)"
                 fontFamily="var(--font-code)"
               >
@@ -274,12 +344,12 @@ export default function ArrayRenderer({ visualState, currentStepData }: ArrayRen
           )
         })}
 
-        {hasPair && (isComparing || isSwapping) && (
+        {hasPair && (isComparing || isSwapping) && bars[targetIndices[0]] && bars[targetIndices[1]] && (
           <text
             x={`${(bars[targetIndices[0]].left + bars[targetIndices[0]].width / 2 + bars[targetIndices[1]].left + bars[targetIndices[1]].width / 2) / 2}%`}
-            y="3.5%"
+            y={`${topReserve + 2}%`}
             textAnchor="middle"
-            fontSize="3.5"
+            fontSize="3"
             fontWeight="bold"
             fill="var(--color-warning)"
           >
@@ -288,23 +358,79 @@ export default function ArrayRenderer({ visualState, currentStepData }: ArrayRen
         )}
       </g>
 
+      {/* Range indicators */}
+      {hasRanges && (
+        <g>
+          {teachingState!.ranges!.slice(0, 2).map((r, ri) => {
+            if (r.start >= arrayData.length || r.end < r.start) return null
+            const startBar = bars[r.start]
+            const endBar = bars[Math.min(r.end - 1, arrayData.length - 1)]
+            if (!startBar || !endBar) return null
+            const left = startBar.left
+            const right = endBar.left + endBar.width
+            const rc = COLOR_MAP[r.color ?? 'muted'] ?? COLOR_MAP.muted
+            const yOff = ri * 1.5
+            return (
+              <g key={r.id}>
+                <rect x={`${left}%`} y={`${rangeY + yOff}%`} width={`${right - left}%`} height="1.2" rx="0.4" fill={rc} opacity="0.25" />
+                <text x={`${(left + right) / 2}%`} y={`${rangeY + yOff + 1}%`} textAnchor="middle" fontSize="1.3" fill={rc} fontFamily="var(--font-code)" opacity="0.8">
+                  {r.label}
+                </text>
+              </g>
+            )
+          }).filter(Boolean)}
+        </g>
+      )}
+
+      {/* Auxiliary arrays */}
+      {hasAux && (
+        <g>
+          {teachingState!.auxiliaryArrays!.slice(0, 3).map((aux, ai) => {
+            const ay = auxStartY + ai * 3.2
+            const cellW = Math.min(4, 70 / Math.max(aux.data.length, 1))
+            const maxCells = Math.min(aux.data.length, 18)
+            const showData = aux.data.slice(0, maxCells)
+            return (
+              <g key={aux.id}>
+                <text x="2.5" y={ay + 1} fontSize="1.4" fill="var(--color-muted)" fontFamily="var(--font-code)">{aux.label}</text>
+                {showData.map((val, vi) => {
+                  const cx = 9 + vi * (cellW + 0.4)
+                  const isActive = aux.activeIndices?.includes(vi)
+                  const cellColor = aux.colorMap?.[vi] ? COLOR_MAP[aux.colorMap[vi]] ?? COLOR_MAP.primary : undefined
+                  return (
+                    <g key={vi}>
+                      <rect x={cx} y={ay + 0.2} width={cellW} height="2.2" rx="0.4"
+                        fill={cellColor ?? (isActive ? COLOR_MAP.warning : 'var(--color-surface)')}
+                        stroke={isActive ? COLOR_MAP.warning : 'var(--color-border)'} strokeWidth="0.2"
+                        opacity={cellColor ? 1 : 0.7} />
+                      <text x={cx + cellW / 2} y={ay + 1.5} textAnchor="middle" fontSize="1.2" fill="var(--color-muted)" fontFamily="var(--font-code)">{String(val).slice(0, 3)}</text>
+                    </g>
+                  )
+                })}
+              </g>
+            )
+          })}
+        </g>
+      )}
+
+      {/* Stats bar */}
       {currentStepData && (
         <g>
-          <rect x="2" y="95.5" width="96" height="4.5" rx="1.5" fill="var(--color-surface)" />
-          <text x="50" y="98.5" textAnchor="middle" fontSize="1.8" fill="var(--color-muted)" fontFamily="var(--font-code)">
-            <tspan fontWeight="600" fill="var(--color-warning)">比 {currentStepData.stats.comparisons}</tspan>
-            <tspan dx="4" fill="var(--color-border)">|</tspan>
-            <tspan dx="4" fontWeight="600" fill="var(--color-danger)">换 {currentStepData.stats.swaps}</tspan>
-            <tspan dx="4" fill="var(--color-border)">|</tspan>
-            <tspan dx="4">访 {currentStepData.stats.accesses}</tspan>
+          <rect x="2" y={statsY} width="96" height={100 - statsY} rx="1.2" fill="var(--color-surface)" />
+          <text x="50" y={statsY + 1.8} textAnchor="middle" fontSize="1.7" fill="var(--color-muted)" fontFamily="var(--font-code)">
+            <tspan fontWeight="600" fill="var(--color-warning)">比{currentStepData.stats.comparisons}</tspan>
+            <tspan dx="3" fill="var(--color-border)">|</tspan>
+            <tspan dx="3" fontWeight="600" fill="var(--color-danger)">换{currentStepData.stats.swaps}</tspan>
+            <tspan dx="3" fill="var(--color-border)">|</tspan>
+            <tspan dx="3">访{currentStepData.stats.accesses}</tspan>
           </text>
         </g>
       )}
 
       <style>{`
         @keyframes pulse-glow {
-          from { opacity: 0.8; }
-          to { opacity: 0.15; }
+          from { opacity: 0.7; }
+          to { opacity: 0.1; }
         }
         .compare-glow {
           animation: pulse-glow 0.6s ease-in-out infinite alternate;
