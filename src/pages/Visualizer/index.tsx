@@ -112,7 +112,7 @@ function getAlgorithmDescEn(id: string): string {
 
 type CodeLang = 'python' | 'javascript' | 'cpp' | 'java'
 
-const CODE_TEMPLATES: Record<string, Record<CodeLang, string>> = {
+const CODE_TEMPLATES: Record<string, Partial<Record<CodeLang, string>>> = {
   bubble_sort: {
     python: `def bubble_sort(arr):
     n = len(arr)
@@ -446,7 +446,692 @@ vector<int> quickSort(vector<int>& arr) {
     }
 }`,
   },
-}
+  bfs_graph: {
+    python: `from collections import deque
+
+def bfs(graph, start):
+    visited = set()
+    queue = deque([start])
+    visited.add(start)
+    while queue:
+        node = queue.popleft()
+        for neighbor in graph[node]:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)
+    return visited`,
+    javascript: `function bfs(graph, start) {
+    const visited = new Set();
+    const queue = [start];
+    visited.add(start);
+    while (queue.length) {
+        const node = queue.shift();
+        for (const neighbor of graph[node]) {
+            if (!visited.has(neighbor)) {
+                visited.add(neighbor);
+                queue.push(neighbor);
+            }
+        }
+    }
+    return visited;
+}`,
+    cpp: `#include <queue>
+#include <unordered_set>
+using namespace std;
+
+void bfs(vector<vector<int>>& graph, int start) {
+    unordered_set<int> visited;
+    queue<int> q;
+    q.push(start);
+    visited.insert(start);
+    while (!q.empty()) {
+        int node = q.front(); q.pop();
+        for (int neighbor : graph[node]) {
+            if (!visited.count(neighbor)) {
+                visited.insert(neighbor);
+                q.push(neighbor);
+            }
+        }
+    }
+}`,
+    java: `public static void bfs(List<List<Integer>> graph, int start) {
+    Set<Integer> visited = new HashSet<>();
+    Queue<Integer> queue = new LinkedList<>();
+    queue.add(start);
+    visited.add(start);
+    while (!queue.isEmpty()) {
+        int node = queue.poll();
+        for (int neighbor : graph.get(node)) {
+            if (!visited.contains(neighbor)) {
+                visited.add(neighbor);
+                queue.add(neighbor);
+            }
+        }
+    }
+}`,
+  },
+  dfs_graph: {
+    python: `def dfs(graph, node, visited=None):
+    if visited is None:
+        visited = set()
+    visited.add(node)
+    for neighbor in graph[node]:
+        if neighbor not in visited:
+            dfs(graph, neighbor, visited)
+    return visited`,
+    javascript: `function dfs(graph, node, visited = new Set()) {
+    visited.add(node);
+    for (const neighbor of graph[node]) {
+        if (!visited.has(neighbor)) {
+            dfs(graph, neighbor, visited);
+        }
+    }
+    return visited;
+}`,
+    cpp: `#include <vector>
+#include <unordered_set>
+using namespace std;
+
+void dfs(vector<vector<int>>& graph, int node, unordered_set<int>& visited) {
+    visited.insert(node);
+    for (int neighbor : graph[node]) {
+        if (!visited.count(neighbor)) {
+            dfs(graph, neighbor, visited);
+        }
+    }
+}`,
+    java: `public static void dfs(List<List<Integer>> graph, int node, Set<Integer> visited) {
+    visited.add(node);
+    for (int neighbor : graph.get(node)) {
+        if (!visited.contains(neighbor)) {
+            dfs(graph, neighbor, visited);
+        }
+    }
+}`,
+  },
+  shell_sort: {
+    python: `def shell_sort(arr):
+    n = len(arr)
+    gap = n // 2
+    while gap > 0:
+        for i in range(gap, n):
+            temp = arr[i]
+            j = i
+            while j >= gap and arr[j - gap] > temp:
+                arr[j] = arr[j - gap]
+                j -= gap
+            arr[j] = temp
+        gap //= 2
+    return arr`,
+  },
+  heap_sort: {
+    python: `def heapify(arr, n, i):
+    largest = i
+    l, r = 2 * i + 1, 2 * i + 2
+    if l < n and arr[l] > arr[largest]: largest = l
+    if r < n and arr[r] > arr[largest]: largest = r
+    if largest != i:
+        arr[i], arr[largest] = arr[largest], arr[i]
+        heapify(arr, n, largest)
+
+def heap_sort(arr):
+    n = len(arr)
+    for i in range(n // 2 - 1, -1, -1):
+        heapify(arr, n, i)
+    for i in range(n - 1, 0, -1):
+        arr[i], arr[0] = arr[0], arr[i]
+        heapify(arr, i, 0)
+    return arr`,
+  },
+  counting_sort: {
+    python: `def counting_sort(arr):
+    if not arr: return arr
+    max_val = max(arr)
+    count = [0] * (max_val + 1)
+    for num in arr: count[num] += 1
+    result = []
+    for i, c in enumerate(count):
+        result.extend([i] * c)
+    return result`,
+  },
+  radix_sort: {
+    python: `def counting_sort_for_radix(arr, exp):
+    n = len(arr); output = [0] * n; count = [0] * 10
+    for i in range(n): count[(arr[i] // exp) % 10] += 1
+    for i in range(1, 10): count[i] += count[i - 1]
+    for i in range(n - 1, -1, -1):
+        digit = (arr[i] // exp) % 10
+        output[count[digit] - 1] = arr[i]; count[digit] -= 1
+    return output
+
+def radix_sort(arr):
+    if not arr: return arr
+    max_val = max(arr); exp = 1
+    while max_val // exp > 0:
+        arr = counting_sort_for_radix(arr, exp); exp *= 10
+    return arr`,
+  },
+  bucket_sort: {
+    python: `def bucket_sort(arr):
+    if not arr: return arr
+    n = len(arr); buckets = [[] for _ in range(n)]
+    for num in arr:
+        idx = min(int(n * num / (max(arr) + 1)), n - 1)
+        buckets[idx].append(num)
+    for b in buckets: b.sort()
+    return [x for b in buckets for x in b]`,
+  },
+  dijkstra: {
+    python: `import heapq
+def dijkstra(graph, start):
+    dist = {node: float('inf') for node in graph}
+    dist[start] = 0; pq = [(0, start)]
+    while pq:
+        d, node = heapq.heappop(pq)
+        if d > dist[node]: continue
+        for neighbor, weight in graph[node]:
+            nd = d + weight
+            if nd < dist[neighbor]:
+                dist[neighbor] = nd
+                heapq.heappush(pq, (nd, neighbor))
+    return dist`,
+  },
+  bellman_ford: {
+    python: `def bellman_ford(edges, n, start):
+    dist = [float('inf')] * n; dist[start] = 0
+    for _ in range(n - 1):
+        for u, v, w in edges:
+            if dist[u] != float('inf') and dist[u] + w < dist[v]:
+                dist[v] = dist[u] + w
+    for u, v, w in edges:
+        if dist[u] != float('inf') and dist[u] + w < dist[v]:
+            return None  # negative cycle detected
+    return dist`,
+  },
+  a_star: {
+    python: `import heapq
+def heuristic(a, b): return abs(a[0]-b[0]) + abs(a[1]-b[1])
+def a_star(grid, start, goal):
+    rows, cols = len(grid), len(grid[0])
+    open_set = [(0, start)]; g_score = {start: 0}
+    while open_set:
+        _, cur = heapq.heappop(open_set)
+        if cur == goal: return g_score[cur]
+        for dx, dy in [(0,1),(0,-1),(1,0),(-1,0)]:
+            nb = (cur[0]+dx, cur[1]+dy)
+            if 0<=nb[0]<rows and 0<=nb[1]<cols:
+                tg = g_score[cur] + 1
+                if nb not in g_score or tg < g_score[nb]:
+                    g_score[nb] = tg
+                    heapq.heappush(open_set, (tg + heuristic(nb, goal), nb))
+    return -1`,
+  },
+  floyd: {
+    python: `def floyd_warshall(graph):
+    n = len(graph)
+    dist = [row[:] for row in graph]
+    for k in range(n):
+        for i in range(n):
+            for j in range(n):
+                if dist[i][k] + dist[k][j] < dist[i][j]:
+                    dist[i][j] = dist[i][k] + dist[k][j]
+    return dist`,
+  },
+  prim: {
+    python: `import heapq
+def prim(graph, n):
+    visited = [False] * n; pq = [(0, 0, -1)]; mst = []
+    while pq and len(mst) < n - 1:
+        w, u, prev = heapq.heappop(pq)
+        if visited[u]: continue
+        visited[u] = True
+        if prev != -1: mst.append((prev, u, w))
+        for v, weight in graph[u]:
+            if not visited[v]: heapq.heappush(pq, (weight, v, u))
+    return mst`,
+  },
+  kruskal: {
+    python: `def find(parent, x):
+    if parent[x] != x: parent[x] = find(parent, parent[x])
+    return parent[x]
+
+def kruskal(edges, n):
+    edges.sort(key=lambda x: x[2])
+    parent = list(range(n)); mst = []
+    for u, v, w in edges:
+        pu, pv = find(parent, u), find(parent, v)
+        if pu != pv: parent[pu] = pv; mst.append((u, v, w))
+    return mst`,
+  },
+  topological_sort: {
+    python: `from collections import deque
+def topological_sort(n, edges):
+    indegree = [0] * n; graph = [[] for _ in range(n)]
+    for u, v in edges: graph[u].append(v); indegree[v] += 1
+    q = deque([i for i in range(n) if indegree[i] == 0])
+    result = []
+    while q:
+        u = q.popleft(); result.append(u)
+        for v in graph[u]:
+            indegree[v] -= 1
+            if indegree[v] == 0: q.append(v)
+    return result`,
+  },
+  array: {
+    python: `# Array operations
+arr = [1, 2, 3, 4, 5]
+arr.append(6)          # O(1) amortized
+arr.insert(0, 0)       # O(n) - shift elements
+arr.pop()              # O(1)
+arr[2] = 10            # O(1) random access`,
+  },
+  linked_list: {
+    python: `class Node:
+    def __init__(self, val):
+        self.val = val; self.next = None
+
+def traverse(head):
+    cur = head
+    while cur:
+        print(cur.val, end=' -> ')
+        cur = cur.next
+    print('null')
+
+def insert_head(head, val):
+    node = Node(val); node.next = head
+    return node`,
+  },
+  doubly_linked_list: {
+    python: `class Node:
+    def __init__(self, val):
+        self.val = val; self.prev = None; self.next = None
+
+def insert_after(node, val):
+    new_node = Node(val)
+    new_node.prev = node; new_node.next = node.next
+    if node.next: node.next.prev = new_node
+    node.next = new_node`,
+  },
+  stack: {
+    python: `# Stack - LIFO
+stack = []
+stack.append(1)   # push
+stack.append(2)
+stack[-1]          # peek -> 2
+stack.pop()        # pop -> 2`,
+  },
+  queue: {
+    python: `from collections import deque
+# Queue - FIFO
+q = deque()
+q.append(1)        # enqueue
+q.append(2)
+q[0]               # front -> 1
+q.popleft()        # dequeue -> 1`,
+  },
+  binary_tree: {
+    python: `class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val; self.left = left; self.right = right
+
+def inorder(root):
+    if not root: return
+    inorder(root.left); print(root.val, end=' '); inorder(root.right)
+
+def preorder(root):
+    if not root: return
+    print(root.val, end=' '); preorder(root.left); preorder(root.right)
+
+def postorder(root):
+    if not root: return
+    postorder(root.left); postorder(root.right); print(root.val, end=' ')`,
+  },
+  bst: {
+    python: `class TreeNode:
+    def __init__(self, val=0):
+        self.val = val; self.left = None; self.right = None
+
+def insert(root, val):
+    if not root: return TreeNode(val)
+    if val < root.val: root.left = insert(root.left, val)
+    else: root.right = insert(root.right, val)
+    return root
+
+def search(root, val):
+    if not root or root.val == val: return root
+    return search(root.left, val) if val < root.val else search(root.right, val)`,
+  },
+  avl_tree: {
+    python: `class Node:
+    def __init__(self, val):
+        self.val = val; self.left = None; self.right = None; self.height = 1
+
+def height(n): return n.height if n else 0
+def balance(n): return height(n.left) - height(n.right) if n else 0
+
+def right_rotate(y):
+    x = y.left; T2 = x.right
+    x.right = y; y.left = T2
+    y.height = 1 + max(height(y.left), height(y.right))
+    x.height = 1 + max(height(x.left), height(x.right))
+    return x
+
+def left_rotate(x):
+    y = x.right; T2 = y.left
+    y.left = x; x.right = T2
+    x.height = 1 + max(height(x.left), height(x.right))
+    y.height = 1 + max(height(y.left), height(y.right))
+    return y`,
+  },
+  red_black_tree: {
+    python: `# Red-Black Tree - 5 invariants:
+# 1) Nodes are RED or BLACK
+# 2) Root is BLACK
+# 3) Leaves (NIL) are BLACK
+# 4) RED node's children must be BLACK
+# 5) Every path from node to descendant leaves has same number of BLACK nodes
+# Java: java.util.TreeMap is a Red-Black Tree`,
+  },
+  heap_ds: {
+    python: `import heapq
+# Min-Heap
+heap = []
+heapq.heappush(heap, 3)  # insert
+heapq.heappush(heap, 1)
+heapq.heappush(heap, 2)
+print(heapq.heappop(heap))  # 1 (pop min)
+print(heap[0])              # 2 (peek)
+
+# Max-Heap (negate values)
+max_heap = []
+heapq.heappush(max_heap, -3)
+print(-heapq.heappop(max_heap))  # 3`,
+  },
+  trie: {
+    python: `class TrieNode:
+    def __init__(self):
+        self.children = {}; self.is_end = False
+
+class Trie:
+    def __init__(self): self.root = TrieNode()
+    def insert(self, word):
+        node = self.root
+        for ch in word:
+            if ch not in node.children:
+                node.children[ch] = TrieNode()
+            node = node.children[ch]
+        node.is_end = True
+    def search(self, word):
+        node = self.root
+        for ch in word:
+            if ch not in node.children: return False
+            node = node.children[ch]
+        return node.is_end
+    def starts_with(self, prefix):
+        node = self.root
+        for ch in prefix:
+            if ch not in node.children: return False
+            node = node.children[ch]
+        return True`,
+  },
+  union_find: {
+    python: `class UnionFind:
+    def __init__(self, n):
+        self.parent = list(range(n)); self.rank = [0] * n
+    def find(self, x):
+        if self.parent[x] != x:
+            self.parent[x] = self.find(self.parent[x])
+        return self.parent[x]
+    def union(self, x, y):
+        px, py = self.find(x), self.find(y)
+        if px == py: return
+        if self.rank[px] < self.rank[py]: self.parent[px] = py
+        elif self.rank[px] > self.rank[py]: self.parent[py] = px
+        else: self.parent[py] = px; self.rank[px] += 1`,
+  },
+  hash_table: {
+    python: `# Python dict = Hash Table
+hash_map = {}
+hash_map["key"] = "value"
+print(hash_map.get("key"))          # "value"
+print(hash_map.get("miss", "def"))  # "def"
+# Custom: hash(key) % size`,
+  },
+  knapsack_01: {
+    python: `def knapsack_01(weights, values, capacity):
+    n = len(weights)
+    dp = [[0] * (capacity + 1) for _ in range(n + 1)]
+    for i in range(1, n + 1):
+        for w in range(capacity + 1):
+            if weights[i-1] <= w:
+                dp[i][w] = max(dp[i-1][w], dp[i-1][w-weights[i-1]] + values[i-1])
+            else: dp[i][w] = dp[i-1][w]
+    return dp[n][capacity]`,
+  },
+  unbounded_knapsack: {
+    python: `def unbounded_knapsack(weights, values, capacity):
+    dp = [0] * (capacity + 1)
+    for w in range(capacity + 1):
+        for i in range(len(weights)):
+            if weights[i] <= w:
+                dp[w] = max(dp[w], dp[w - weights[i]] + values[i])
+    return dp[capacity]`,
+  },
+  lcs: {
+    python: `def lcs(text1, text2):
+    m, n = len(text1), len(text2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if text1[i-1] == text2[j-1]:
+                dp[i][j] = dp[i-1][j-1] + 1
+            else: dp[i][j] = max(dp[i-1][j], dp[i][j-1])
+    return dp[m][n]`,
+  },
+  lis: {
+    python: `def lis(nums):
+    if not nums: return 0
+    n = len(nums); dp = [1] * n
+    for i in range(n):
+        for j in range(i):
+            if nums[j] < nums[i]:
+                dp[i] = max(dp[i], dp[j] + 1)
+    return max(dp)`,
+  },
+  edit_distance: {
+    python: `def edit_distance(word1, word2):
+    m, n = len(word1), len(word2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for i in range(m + 1): dp[i][0] = i
+    for j in range(n + 1): dp[0][j] = j
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if word1[i-1] == word2[j-1]:
+                dp[i][j] = dp[i-1][j-1]
+            else:
+                dp[i][j] = 1 + min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1])
+    return dp[m][n]`,
+  },
+  matrix_chain: {
+    python: `def matrix_chain_order(dims):
+    n = len(dims) - 1
+    dp = [[0] * n for _ in range(n)]
+    for length in range(2, n + 1):
+        for i in range(n - length + 1):
+            j = i + length - 1; dp[i][j] = float('inf')
+            for k in range(i, j):
+                cost = dp[i][k] + dp[k+1][j] + dims[i]*dims[k+1]*dims[j+1]
+                dp[i][j] = min(dp[i][j], cost)
+    return dp[0][n-1]`,
+  },
+  interval_dp: {
+    python: `def stone_merge(stones):
+    n = len(stones)
+    prefix = [0]
+    for s in stones: prefix.append(prefix[-1] + s)
+    dp = [[0] * n for _ in range(n)]
+    for length in range(2, n + 1):
+        for i in range(n - length + 1):
+            j = i + length - 1; dp[i][j] = float('inf')
+            total = prefix[j+1] - prefix[i]
+            for k in range(i, j):
+                dp[i][j] = min(dp[i][j], dp[i][k] + dp[k+1][j] + total)
+    return dp[0][n-1]`,
+  },
+  backtracking: {
+    python: `def backtrack(choices, path, result):
+    if satisfied:          # terminal condition
+        result.append(path[:]); return
+    for choice in choices:
+        if not valid(choice): continue
+        path.append(choice)  # make choice
+        backtrack(choices, path, result)
+        path.pop()           # undo choice`,
+  },
+  n_queens: {
+    python: `def solve_n_queens(n):
+    board = [['.'] * n for _ in range(n)]; result = []
+    def is_safe(row, col):
+        for i in range(row):
+            if board[i][col] == 'Q': return False
+            d = row - i
+            if col-d>=0 and board[i][col-d]=='Q': return False
+            if col+d<n and board[i][col+d]=='Q': return False
+        return True
+    def solve(row):
+        if row == n: result.append([''.join(r) for r in board]); return
+        for col in range(n):
+            if is_safe(row, col):
+                board[row][col] = 'Q'; solve(row + 1); board[row][col] = '.'
+    solve(0); return result`,
+  },
+  sudoku: {
+    python: `def solve_sudoku(board):
+    def is_valid(row, col, num):
+        for i in range(9):
+            if board[row][i] == num: return False
+            if board[i][col] == num: return False
+            if board[3*(row//3)+i//3][3*(col//3)+i%3] == num: return False
+        return True
+    for i in range(9):
+        for j in range(9):
+            if board[i][j] == '.':
+                for num in '123456789':
+                    if is_valid(i, j, num):
+                        board[i][j] = num
+                        if solve_sudoku(board): return True
+                        board[i][j] = '.'
+                return False
+    return True`,
+  },
+  kmp: {
+    python: `def kmp_search(text, pattern):
+    def build_lps(p):
+        lps = [0] * len(p); length = 0; i = 1
+        while i < len(p):
+            if p[i] == p[length]: length += 1; lps[i] = length; i += 1
+            elif length: length = lps[length - 1]
+            else: lps[i] = 0; i += 1
+        return lps
+    lps = build_lps(pattern); i = j = 0
+    while i < len(text):
+        if text[i] == pattern[j]: i += 1; j += 1
+        if j == len(pattern): return i - j
+        elif i < len(text) and text[i] != pattern[j]:
+            if j: j = lps[j - 1]
+            else: i += 1
+    return -1`,
+  },
+  manacher: {
+    python: `def longest_palindrome(s):
+    T = '#' + '#'.join(s) + '#'
+    n = len(T); P = [0] * n; C = R = 0
+    for i in range(n):
+        mirror = 2 * C - i
+        if i < R: P[i] = min(R - i, P[mirror])
+        while i+P[i]+1<n and i-P[i]-1>=0 and T[i+P[i]+1]==T[i-P[i]-1]:
+            P[i] += 1
+        if i + P[i] > R: C, R = i, i + P[i]
+    center = P.index(max(P))
+    start = (center - max(P)) // 2
+    return s[start:start + max(P)]`,
+  },
+  segment_tree: {
+    python: `class SegmentTree:
+    def __init__(self, arr):
+        self.n = len(arr); self.tree = [0] * (4 * self.n)
+        self.build(arr, 0, 0, self.n - 1)
+    def build(self, arr, node, start, end):
+        if start == end: self.tree[node] = arr[start]
+        else:
+            mid = (start + end) // 2
+            self.build(arr, 2*node+1, start, mid)
+            self.build(arr, 2*node+2, mid+1, end)
+            self.tree[node] = self.tree[2*node+1] + self.tree[2*node+2]`,
+  },
+  fenwick_tree: {
+    python: `class FenwickTree:
+    def __init__(self, n):
+        self.n = n; self.tree = [0] * (n + 1)
+    def update(self, i, delta):
+        i += 1
+        while i <= self.n: self.tree[i] += delta; i += i & -i
+    def query(self, i):
+        s = 0; i += 1
+        while i > 0: s += self.tree[i]; i -= i & -i
+        return s
+    def range_sum(self, l, r):
+        return self.query(r) - self.query(l - 1)`,
+  },
+  monotonic_stack: {
+    python: `def next_greater_element(nums):
+    n = len(nums); result = [-1] * n; stack = []
+    for i in range(n):
+        while stack and nums[stack[-1]] < nums[i]:
+            result[stack.pop()] = nums[i]
+        stack.append(i)
+    return result`,
+  },
+  sliding_window: {
+    python: `def max_sum_subarray(arr, k):
+    n = len(arr)
+    if n < k: return -1
+    window_sum = sum(arr[:k]); max_sum = window_sum
+    for i in range(k, n):
+        window_sum += arr[i] - arr[i - k]
+        max_sum = max(max_sum, window_sum)
+    return max_sum`,
+  },
+  leetcode_hot100: {
+    python: `# LeetCode Hot 100 - Two Sum
+def two_sum(nums, target):
+    seen = {}
+    for i, num in enumerate(nums):
+        complement = target - num
+        if complement in seen: return [seen[complement], i]
+        seen[num] = i
+    return []`,
+  },
+  acm_templates: {
+    python: `# ACM Common Templates
+MOD = 10**9 + 7
+
+def pow_mod(a, b, mod=MOD):
+    result = 1
+    while b:
+        if b & 1: result = result * a % mod
+        a = a * a % mod; b >>= 1
+    return result
+
+def sieve(n):
+    is_prime = [True] * (n + 1); primes = []
+    for i in range(2, n + 1):
+        if is_prime[i]:
+            primes.append(i)
+            for j in range(i * i, n + 1, i): is_prime[j] = False
+    return primes`,
+  },
+};
 
 function getCodeTemplate(algoId: string, lang: CodeLang): string {
   const templates = CODE_TEMPLATES[algoId]
