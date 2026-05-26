@@ -27,7 +27,7 @@ AlgoViz 是一个面向算法学习、课堂演示与代码理解的纯前端算
 - [状态管理与数据流](#状态管理与数据流)
 - [开发脚本](#开发脚本)
 - [当前实现状态](#当前实现状态)
-- [后续规划](#后续规划)
+- [阶段成果](#阶段成果)
 
 ---
 
@@ -147,9 +147,13 @@ VisualizationCanvas 选择对应渲染器
 
 | 分层 | 代码位置 | 作用 |
 |---|---|---|
-| AI 客户端 | `src/ai/client.ts` | 读取 API 配置，调用 OpenAI 兼容接口 |
-| Prompt 模板 | `src/ai/prompts.ts` | 约束 AI 只输出标准 JSON |
-| JSON 解析器 | `src/ai/parser.ts` | 提取、校验、清洗 AI 返回内容 |
+| AI 客户端 | `src/ai/client.ts` | 读取 API 配置，调用 OpenAI 兼容接口，编排解析、错误处理与修复流程 |
+| Prompt 模板 | `src/ai/prompts.ts` | 约束 AI 输出严格 AnimationScript JSON |
+| JSON 解析器 | `src/ai/parser.ts` | 提取 AI 返回内容，调用 Schema 校验并返回结构化解析结果 |
+| Schema 校验 | `src/ai/schema.ts` | 校验并规范化 AnimationScript，保留图、树、矩阵、链表和教学状态字段 |
+| 输入解析 | `src/ai/input.ts` | 识别数组、图、树、矩阵、链表等输入数据结构并生成 Prompt 上下文 |
+| 错误模型 | `src/ai/errors.ts` | 定义结构化 AI 错误报告、校验问题和修复记录 |
+| 自动修复 | `src/ai/repair.ts` | 执行本地 JSON 修复，并构造 AI 二次修复请求 |
 | 类型定义 | `src/types/animation.ts` | 定义 AnimationScript、Step、Action 等类型 |
 | 动画引擎 Hook | `src/hooks/useAnimationEngine.ts` | 根据当前步骤派生可视状态，控制播放 |
 | 渲染入口 | `src/components/Canvas/VisualizationCanvas.tsx` | 根据状态类型选择渲染器 |
@@ -172,7 +176,7 @@ src/types/animation.ts
 主要结构：
 
 ```ts
-export type RendererType = 'array' | 'graph' | 'tree' | 'matrix'
+export type RendererType = 'array' | 'graph' | 'tree' | 'matrix' | 'linked_list'
 
 export type ActionType =
   | 'highlight'
@@ -830,8 +834,9 @@ tailwind.config.js
 - i18next 中英双语。
 - Lucide 图标封装。
 - OpenAI 兼容接口调用。
-- AI System Prompt 模板。
-- AI 返回 JSON 提取、解析和校验。
+- AI System Prompt 模板与多输入结构 Prompt 上下文。
+- AI 返回 JSON 提取、Schema 校验、规范化和自动修复。
+- 结构化 AI 错误报告、修复建议、原始响应查看和修复历史展示。
 - AnimationScript 类型系统。
 - 数组、图、树、矩阵、链表渲染器入口。
 - 播放控制 Hook。
@@ -846,48 +851,33 @@ tailwind.config.js
 
 - 项目是纯前端应用，AI 调用受浏览器 CORS 策略影响。
 - 当前 API Key 保存在浏览器 `localStorage`，没有后端转发；生产级安全可进一步接入本地加密或代理层。
-- AI 输出质量依赖模型能力，复杂代码可能返回格式不稳定或步骤不完整。
-- `parser.ts` 会尽量清洗 AI 返回内容，但不保证所有非标准输出都能恢复。
+- AI 输出质量仍依赖模型能力，复杂代码可能出现步骤不完整或语义不精确。
+- 系统已提供本地修复和 AI 二次修复，但不保证所有非标准输出都能恢复。
 - 当前动画状态主要通过逐步回放 `AnimationScript.steps` 派生，复杂图形结构和高级操作可继续扩展。
-- 类型定义中的 `RendererType` 当前包含 `array | graph | tree | matrix`，渲染入口额外支持 `linked_list`，后续可统一类型定义。
 
 ---
 
-## 后续规划
+## 阶段成果
 
-### Phase 1：项目基础能力完善
+### Phase 1：项目基础能力完善（已完成）
 
 - 完善图标规范和分类图标覆盖。
 - 优化响应式布局，增强平板端体验。
 - 统一代码编辑器、输入数据区和控制栏交互。
 
-### Phase 2：预制动画引擎增强
+### Phase 2：预制动画引擎增强（已完成）
 
 - 优化排序算法动画细节。
 - 增强图算法和树结构的状态表达。
 - 为更多算法补充稳定、教学友好的步骤说明。
 
-### Phase 3：AI 动画引擎增强
+### Phase 3：AI 动画引擎增强（已完成）
 
 - 详细实施计划：[docs/phase-3-implementation-plan.md](docs/phase-3-implementation-plan.md)
 - 增强 AI 输出 JSON Schema 校验。
 - 增加更明确的错误提示和修复建议。
 - 支持更多输入数据结构，例如图、树、矩阵对象。
 - 支持 AI 失败后自动重试或请求格式修复。
-
-### Phase 4：完整算法学习内容
-
-- 完善每个算法的定义、步骤、复杂度、适用场景。
-- 增加代码行高亮与动画步骤的更精确同步。
-- 增加算法对比视图，例如排序算法复杂度对比。
-
-### Phase 5：产品化打磨
-
-- 加强本地密钥安全策略。
-- 增加导出 AnimationScript 功能。
-- 增加分享链接或本地导入导出。
-- 增加测试覆盖。
-- 增加部署文档。
 
 ---
 
