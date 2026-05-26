@@ -78,8 +78,13 @@ export async function analyzeCode(params: AIRequestParams, options: AnalyzeOptio
   }
 
   try {
-    // Phase 1: Original analysis request
-    const result = await requestChatCompletion(config, buildSystemPrompt(params.language), buildUserMessage(params.code, params.language, params.inputData, parsedInput.promptContext, params.algorithmName), 0.3)
+    // Phase 1: Direct API request
+    let result = await requestChatCompletion(config, buildSystemPrompt(params.language), buildUserMessage(params.code, params.language, params.inputData, parsedInput.promptContext, params.algorithmName), 0.3)
+
+    // Phase 1b: If CORS/connection error, retry via local proxy (dev: Vite middleware, prod: server/proxy.cjs)
+    if (!result.success && result.errorReport?.stage === 'request') {
+      result = await requestViaProxy(config, buildSystemPrompt(params.language), buildUserMessage(params.code, params.language, params.inputData, parsedInput.promptContext, params.algorithmName))
+    }
 
     if (!result.success) {
       return { success: false, error: result.error, errorReport: result.errorReport, rawResponse: result.content }
@@ -144,6 +149,24 @@ export async function analyzeCode(params: AIRequestParams, options: AnalyzeOptio
     return { success: true, script: parseResult.script }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e)
+    // Connection reset (ERR_CONNECTION_RESET) — not a CORS issue
+    if (message.includes('Connection reset') || message.includes('RESET')) {
+      return {
+        success: false, error: `连接被重置: ${message}`,
+        errorReport: {
+          stage: 'request', title: '网络连接被重置',
+          message: '与 API 服务的连接在数据传输过程中被中断。这通常由代理/VPN/防火墙引起，而非 CORS 问题。',
+          issues: [{ path: 'request', code: 'connection_reset', message, severity: 'error', recoverable: true }],
+          suggestions: [
+            '关闭代理/VPN 软件后重试（这是最常见的原因）。',
+            '尝试用手机热点或其他网络环境测试。',
+            '如使用公司/学校网络，可能被防火墙拦截，联系网络管理员。',
+            '确认 Base URL 域名解析正确（ping api.deepseek.com）。',
+          ],
+          canRetry: true, rawResponse: message,
+        },
+      }
+    }
     if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
       const template = ERROR_TEMPLATES.corsError
       return { success: false, error: template.message, errorReport: { ...template, issues: [], rawResponse: message } }
@@ -169,6 +192,40 @@ interface RequestResult {
   content: string
   error?: string
   errorReport?: AIErrorReport
+}
+
+/** Fallback: send request through Vite dev proxy to bypass CORS/network issues */
+async function requestViaProxy(config: ApiConfig, systemPrompt: string, userMessage: string): Promise<RequestResult> {
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Proxy-Target': config.baseUrl.includes('://') ? config.baseUrl : `https://${config.baseUrl}/v1`,
+        ...(config.apiKey ? { 'X-Proxy-Key': config.apiKey } : {}),
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+        temperature: 0.3,
+        max_tokens: 4096,
+      }),
+    })
+
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => null)
+      return { success: false, content: '', error: errBody?.error?.message || `代理返回 ${response.status}` }
+    }
+
+    const data = await response.json()
+    const content: string = data.choices?.[0]?.message?.content ?? ''
+    return content.trim() ? { success: true, content } : { success: false, content: '', error: 'AI 返回了空响应（通过代理）' }
+  } catch (e) {
+    return { success: false, content: '', error: `代理请求失败: ${(e as Error).message}` }
+  }
 }
 
 async function requestChatCompletion(
@@ -265,6 +322,8 @@ async function requestChatCompletion(
 
   if (!content.trim()) {
     const template = ERROR_TEMPLATES.emptyResponse
+    // Include raw response for debugging
+    const rawStr = JSON.stringify(data).slice(0, 1000)
     return {
       success: false,
       content: '',
@@ -272,7 +331,12 @@ async function requestChatCompletion(
       errorReport: {
         ...template,
         issues: [{ path: 'choices[0].message.content', code: 'empty_response', message: template.message, severity: 'error', recoverable: true }],
-        rawResponse: '',
+        rawResponse: rawStr,
+        suggestions: [
+          `模型返回了空内容。API 原始响应前 1000 字符: ${rawStr}`,
+          '检查模型名称是否正确（如 deepseek-chat 而非 deepseek-v4-pro）。',
+          '确认 API Key 对应账号有该模型的调用权限。',
+        ],
       },
     }
   }

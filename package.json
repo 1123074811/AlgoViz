@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "proxy": "node server/proxy.cjs",
+    "start": "node server/proxy.cjs",
     "preview": "vite preview"
   },
   "keywords": ["algorithm", "visualization", "AI", "education"],
