@@ -7,22 +7,18 @@ type ConnectionStatus = 'idle' | 'testing' | 'connected' | 'failed'
 
 /** Latest model pricing (USD per 1M tokens), updated May 2026 */
 const MODEL_PRICING: Record<string, { input: number; output: number; label: string }> = {
-  // OpenAI — GPT-5.5 系列
   'gpt-5.5':         { input: 5.0,  output: 30,  label: 'GPT-5.5' },
   'gpt-5.4':         { input: 2.5,  output: 15,  label: 'GPT-5.4' },
   'gpt-5.4-mini':    { input: 0.75, output: 4.5, label: 'GPT-5.4 Mini' },
   'gpt-5.4-nano':    { input: 0.20, output: 1.25,label: 'GPT-5.4 Nano' },
-  // Anthropic — Claude 4 系列
   'claude-opus-4-7':   { input: 5.0,  output: 25,  label: 'Claude Opus 4.7' },
   'claude-sonnet-4-6': { input: 3.0,  output: 15,  label: 'Claude Sonnet 4.6' },
   'claude-haiku-4-5':  { input: 1.0,  output: 5.0, label: 'Claude Haiku 4.5' },
-  // Google — Gemini 3 系列
   'gemini-3.1-pro':  { input: 2.0,  output: 12,  label: 'Gemini 3.1 Pro' },
   'gemini-2.5-flash':{ input: 0.30, output: 2.5, label: 'Gemini 2.5 Flash' },
-  // DeepSeek — V4 系列
   'deepseek-v4-pro':   { input: 0.44, output: 0.87, label: 'DeepSeek V4 Pro' },
   'deepseek-v4-flash': { input: 0.14, output: 0.28, label: 'DeepSeek V4 Flash' },
-  'deepseek-chat':     { input: 0.26, output: 0.38, label: 'DeepSeek V3.2' },
+  'deepseek-v3.2':     { input: 0.26, output: 0.38, label: 'DeepSeek V3.2' },
 }
 
 const ESTIMATED_SYSTEM_PROMPT_TOKENS = 800
