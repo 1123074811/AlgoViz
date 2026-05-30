@@ -21,6 +21,7 @@ export function generateSudoku(): AnimationScript {
     stepId: sid++, codeLine: 0,
     description: { zh: '数独初始盘面（0=空格）', en: 'Sudoku initial board (0=empty)' },
     action: { type: 'highlight', targets: [], color: 'primary' },
+    events: [{ type: 'matrix.create', rows: 9, cols: 9, values: flatInit }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
 
@@ -44,6 +45,7 @@ export function generateSudoku(): AnimationScript {
       stepId: sid++, codeLine: 6,
       description: { zh: f.zh, en: f.en },
       action: { type: 'insert', targets: [idx], color: 'success' },
+      events: [{ type: 'matrix.update_cell', row: f.r, col: f.c, value: f.v }],
       stats: { comparisons: sid, swaps: 0, accesses: 0 },
     })
   }
@@ -52,12 +54,14 @@ export function generateSudoku(): AnimationScript {
     stepId: sid++, codeLine: 12,
     description: { zh: '回溯法继续求解...数独求解算法演示', en: 'Backtracking continues... Sudoku solver demo' },
     action: { type: 'mark', targets: [], color: 'success' },
+    events: [{ type: 'matrix.visit_cell', row: 0, col: 0 }],
     stats: { comparisons: sid, swaps: 0, accesses: 0 },
   })
 
   return {
     algorithm: 'sudoku',
     complexity: { time: { best: 'O(1)', average: 'O(9^m)', worst: 'O(9^m)' }, space: 'O(m)' },
+    presentation: { engine: 'scene', module: 'matrix', variant: 'sudoku' },
     initialState: { type: 'matrix', data: flatInit },
     steps: steps as AnimationScript['steps'],
   }
