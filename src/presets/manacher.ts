@@ -13,6 +13,7 @@ export function generateManacher(s?: string): AnimationScript {
     stepId: sid++, codeLine: 0,
     description: { zh: `字符串: "${str}"，预处理: "${T}"`, en: `String: "${str}", transformed: "${T}"` },
     action: { type: 'highlight', targets: [], color: 'primary' },
+    events: [{ type: 'array.create', values: P }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
 
@@ -31,6 +32,7 @@ export function generateManacher(s?: string): AnimationScript {
       stepId: sid++, codeLine: 5,
       description: { zh: `i=${i}('${T[i]}'), C=${C}, R=${R}, 回文半径 P[${i}]=${P[i]}${expanded ? ' (扩展)' : ''}`, en: `i=${i}('${T[i]}'), C=${C}, R=${R}, radius P[${i}]=${P[i]}${expanded ? ' (expanded)' : ''}` },
       action: { type: 'compare', targets: [i], color: 'warning' },
+      events: [{ type: 'array.compare', indices: [i] }],
       stats: { comparisons: sid, swaps: 0, accesses: 0 },
     })
 
@@ -45,12 +47,14 @@ export function generateManacher(s?: string): AnimationScript {
     stepId: sid++, codeLine: 10,
     description: { zh: `最长回文子串: "${result}" (长度=${P[maxIdx]})`, en: `Longest palindrome: "${result}" (len=${P[maxIdx]})` },
     action: { type: 'mark', targets: [], color: 'success' },
+    events: [{ type: 'array.mark_sorted', indices: [maxIdx] }],
     stats: { comparisons: sid, swaps: 0, accesses: 0 },
   })
 
   return {
     algorithm: 'manacher',
     complexity: { time: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' }, space: 'O(n)' },
+    presentation: { engine: 'scene', module: 'array', variant: 'string' },
     initialState: {
       type: 'array',
       data: P,
