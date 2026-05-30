@@ -15,7 +15,7 @@ function compileArrayEvent(event: ArrayAlgorithmEvent, context: CompileContext):
         type: 'create_cell',
         cell: DataUnit.arrayCell({
           id: cellId(index), value, index,
-          x: 140 + index * 76, y: 300,
+          x: 140 + index * 44, y: 300,
         }),
       }))
     case 'array.compare': {

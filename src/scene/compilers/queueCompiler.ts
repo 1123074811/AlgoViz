@@ -5,7 +5,7 @@ import { AuxiliaryUnit, DataUnit } from '../primitives/DataUnits'
 
 const START_X = 140
 const START_Y = 300
-const CELL_GAP = 68
+const CELL_GAP = 44
 
 export const queueCompiler: EventCompiler = {
   supports: (event): event is QueueAlgorithmEvent => event.type.startsWith('queue.'),

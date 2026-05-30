@@ -5,7 +5,7 @@ import { AuxiliaryUnit, DataUnit } from '../primitives/DataUnits'
 
 const CX = 500
 const START_Y = 200
-const CELL_GAP = 60
+const CELL_GAP = 44
 
 export const stackCompiler: EventCompiler = {
   supports: (event): event is StackAlgorithmEvent => event.type.startsWith('stack.'),
