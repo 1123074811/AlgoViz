@@ -26,7 +26,7 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
     const firstStepEvents = script.steps[0].events ?? []
     const createEvents = firstStepEvents.filter((event) =>
       event.type.endsWith('.create') ||
-      event.type === 'matrix.create' ||
+      event.type.endsWith('_double') ||
       event.type === 'linked_list.create' ||
       event.type === 'tree.create' ||
       event.type === 'graph.create'
