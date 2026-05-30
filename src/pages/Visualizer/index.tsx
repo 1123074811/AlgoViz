@@ -834,27 +834,220 @@ def insert_after(node, val):
     java: `// Java version: see Python implementation above`,
   },
   stack: {
-    python: `# Stack - LIFO
-stack = []
-stack.append(1)   # push
-stack.append(2)
-stack[-1]          # peek -> 2
-stack.pop()        # pop -> 2`,
-    javascript: `// JavaScript version: see Python implementation above`,
-    cpp: `// C++ version: see Python implementation above`,
-    java: `// Java version: see Python implementation above`,
+    python: `class Stack:
+    def __init__(self):
+        self.items = []
+        
+    def push(self, item):
+        self.items.append(item)
+        
+    def pop(self):
+        if not self.is_empty():
+            return self.items.pop()
+        return None
+        
+    def peek(self):
+        if not self.is_empty():
+            return self.items[-1]
+        return None
+        
+    def is_empty(self):
+        return len(self.items) == 0`,
+    javascript: `class Stack {
+    constructor() {
+        this.items = [];
+    }
+    
+    push(item) {
+        this.items.push(item);
+    }
+    
+    pop() {
+        if (!this.isEmpty()) {
+            return this.items.pop();
+        }
+        return null;
+    }
+    
+    peek() {
+        if (!this.isEmpty()) {
+            return this.items[this.items.length - 1];
+        }
+        return null;
+    }
+    
+    isEmpty() {
+        return this.items.length === 0;
+    }
+}`,
+    cpp: `#include <vector>
+#include <stdexcept>
+using namespace std;
+
+class Stack {
+private:
+    vector<int> items;
+public:
+    void push(int item) {
+        items.push_back(item);
+    }
+    
+    int pop() {
+        if (!isEmpty()) {
+            int val = items.back();
+            items.pop_back();
+            return val;
+        }
+        throw runtime_error("Stack is empty");
+    }
+    
+    int peek() {
+        if (!isEmpty()) {
+            return items.back();
+        }
+        throw runtime_error("Stack is empty");
+    }
+    
+    bool isEmpty() {
+        return items.empty();
+    }
+};`,
+    java: `import java.util.ArrayList;
+
+public class Stack {
+    private ArrayList<Integer> items = new ArrayList<>();
+    
+    public void push(int item) {
+        items.add(item);
+    }
+    
+    public int pop() {
+        if (!isEmpty()) {
+            return items.remove(items.size() - 1);
+        }
+        throw new IllegalStateException("Stack is empty");
+    }
+    
+    public int peek() {
+        if (!isEmpty()) {
+            return items.get(items.size() - 1);
+        }
+        throw new IllegalStateException("Stack is empty");
+    }
+    
+    public boolean isEmpty() {
+        return items.isEmpty();
+    }
+}`,
   },
   queue: {
     python: `from collections import deque
-# Queue - FIFO
-q = deque()
-q.append(1)        # enqueue
-q.append(2)
-q[0]               # front -> 1
-q.popleft()        # dequeue -> 1`,
-    javascript: `// JavaScript version: see Python implementation above`,
-    cpp: `// C++ version: see Python implementation above`,
-    java: `// Java version: see Python implementation above`,
+
+class Queue:
+    def __init__(self):
+        self.items = deque()
+        
+    def enqueue(self, item):
+        self.items.append(item)
+        
+    def dequeue(self):
+        if not self.is_empty():
+            return self.items.popleft()
+        return None
+        
+    def peek_front(self):
+        if not self.is_empty():
+            return self.items[0]
+        return None
+        
+    def is_empty(self):
+        return len(self.items) == 0`,
+    javascript: `class Queue {
+    constructor() {
+        this.items = [];
+    }
+    
+    enqueue(item) {
+        this.items.push(item);
+    }
+    
+    dequeue() {
+        if (!this.isEmpty()) {
+            return this.items.shift();
+        }
+        return null;
+    }
+    
+    peekFront() {
+        if (!this.isEmpty()) {
+            return this.items[0];
+        }
+        return null;
+    }
+    
+    isEmpty() {
+        return this.items.length === 0;
+    }
+}`,
+    cpp: `#include <queue>
+#include <stdexcept>
+using namespace std;
+
+class Queue {
+private:
+    queue<int> items;
+public:
+    void enqueue(int item) {
+        items.push(item);
+    }
+    
+    int dequeue() {
+        if (!isEmpty()) {
+            int val = items.front();
+            items.pop();
+            return val;
+        }
+        throw runtime_error("Queue is empty");
+    }
+    
+    int peekFront() {
+        if (!isEmpty()) {
+            return items.front();
+        }
+        throw runtime_error("Queue is empty");
+    }
+    
+    bool isEmpty() {
+        return items.empty();
+    }
+};`,
+    java: `import java.util.LinkedList;
+
+public class QueueDemo {
+    private java.util.Queue<Integer> items = new LinkedList<>();
+    
+    public void enqueue(int item) {
+        items.offer(item);
+    }
+    
+    public int dequeue() {
+        if (!isEmpty()) {
+            return items.poll();
+        }
+        throw new IllegalStateException("Queue is empty");
+    }
+    
+    public int peekFront() {
+        if (!isEmpty()) {
+            return items.peek();
+        }
+        throw new IllegalStateException("Queue is empty");
+    }
+    
+    public boolean isEmpty() {
+        return items.isEmpty();
+    }
+}`,
   },
   binary_tree: {
     python: `class TreeNode:
