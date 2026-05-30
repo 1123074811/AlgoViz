@@ -26,3 +26,9 @@ npm-debug.log*
 
 # Temp
 *.tmp
+
+# Superpowers (visual companion cache)
+.superpowers/
+
+# Demo assets
+demo/
