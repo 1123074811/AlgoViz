@@ -49,7 +49,9 @@ export default function Playground() {
   const navigate = useNavigate()
 
   const [code, setCode] = useState(DEFAULT_CODE)
-  const [codeLanguage, setCodeLanguage] = useState('python')
+  const [codeLanguage, setCodeLanguage] = useState(() => {
+    return localStorage.getItem('algoviz-editor-code-lang') || 'python'
+  })
   const [inputData, setInputData] = useState('[5, 3, 8, 1, 9, 2]')
   const [animationScript, setAnimationScript] = useState<AnimationScript | null>(null)
   const [aiStatus, setAiStatus] = useState<'idle' | 'analyzing' | 'success' | 'error'>('idle')
@@ -167,7 +169,11 @@ export default function Playground() {
           <span className="text-[10px] text-muted hidden sm:inline">粘贴或编写代码，AI 分析并生成可视化动画</span>
         </div>
         <div className="flex items-center gap-2">
-          <select value={codeLanguage} onChange={(e) => setCodeLanguage(e.target.value)} className="text-[11px] font-medium px-2 py-1 rounded border border-border bg-white text-slate-600 outline-none cursor-pointer">
+          <select value={codeLanguage} onChange={(e) => {
+            const lang = e.target.value
+            setCodeLanguage(lang)
+            localStorage.setItem('algoviz-editor-code-lang', lang)
+          }} className="text-[11px] font-medium px-2 py-1 rounded border border-border bg-white text-slate-600 outline-none cursor-pointer">
             {LANGUAGE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
           <button onClick={handleAnalyze} disabled={aiStatus === 'analyzing'}

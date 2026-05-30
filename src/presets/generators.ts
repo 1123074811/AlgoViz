@@ -867,6 +867,7 @@ import { generateLeetCode } from './leetcode'
 import { generateACM } from './acm'
 import { generateRadixSort } from './radixSort'
 import { generateBucketSort } from './bucketSort'
+import { generateDynamicLinkedListOp, generateDynamicBSTOp } from './dynamicOperations'
 
 // ─── Input parsing helpers for natural types ───
 
@@ -956,13 +957,37 @@ const backtrackingWrapper = (_input: unknown) => generateBacktracking()
 const leetcodeWrapper = (_input: unknown) => generateLeetCode()
 const acmWrapper = (_input: unknown) => generateACM()
 
-const linkedListInsertWrapper = (_input: unknown) => DATA_STRUCTURE_OPERATIONS.linked_list.find(o => o.id === 'insert')!.script
-const linkedListDeleteWrapper = (_input: unknown) => DATA_STRUCTURE_OPERATIONS.linked_list.find(o => o.id === 'delete')!.script
-const linkedListSearchWrapper = (_input: unknown) => DATA_STRUCTURE_OPERATIONS.linked_list.find(o => o.id === 'search')!.script
+const linkedListInsertWrapper = (input: any) => {
+  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
+  const param = typeof input?.param === 'number' ? input.param : 5
+  return generateDynamicLinkedListOp('insert', arr, param)
+}
+const linkedListDeleteWrapper = (input: any) => {
+  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
+  const param = typeof input?.param === 'number' ? input.param : 3
+  return generateDynamicLinkedListOp('delete', arr, param)
+}
+const linkedListSearchWrapper = (input: any) => {
+  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
+  const param = typeof input?.param === 'number' ? input.param : 3
+  return generateDynamicLinkedListOp('search', arr, param)
+}
 
-const bstInsertWrapper = (_input: unknown) => DATA_STRUCTURE_OPERATIONS.bst.find(o => o.id === 'insert')!.script
-const bstDeleteWrapper = (_input: unknown) => DATA_STRUCTURE_OPERATIONS.bst.find(o => o.id === 'delete')!.script
-const bstSearchWrapper = (_input: unknown) => DATA_STRUCTURE_OPERATIONS.bst.find(o => o.id === 'search')!.script
+const bstInsertWrapper = (input: any) => {
+  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
+  const param = typeof input?.param === 'number' ? input.param : 5
+  return generateDynamicBSTOp('insert', arr, param)
+}
+const bstDeleteWrapper = (input: any) => {
+  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
+  const param = typeof input?.param === 'number' ? input.param : 14
+  return generateDynamicBSTOp('delete', arr, param)
+}
+const bstSearchWrapper = (input: any) => {
+  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
+  const param = typeof input?.param === 'number' ? input.param : 10
+  return generateDynamicBSTOp('search', arr, param)
+}
 
 const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   bubble_sort: numGen(generateBubbleSort), selection_sort: numGen(generateSelectionSort),

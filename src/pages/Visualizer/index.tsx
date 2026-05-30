@@ -1358,7 +1358,9 @@ export default function Visualizer() {
   const setAnimationScript = useAlgorithmStore((s) => s.setAnimationScript)
 
   const [code, setCode] = useState('')
-  const [codeLanguage, setCodeLanguage] = useState<'python' | 'javascript' | 'cpp' | 'java'>('python')
+  const [codeLanguage, setCodeLanguage] = useState<'python' | 'javascript' | 'cpp' | 'java'>(() => {
+    return (localStorage.getItem('algoviz-editor-code-lang') as any) || 'python'
+  })
   const [inputData, setInputData] = useState('[5, 3, 8, 1, 9, 2]')
   const [aiStatus, setAiStatus] = useState<AIStatus>('idle')
   const [aiError, setAiError] = useState('')
@@ -1485,8 +1487,6 @@ export default function Visualizer() {
     }
 
     if (!selectedAlgorithm) return
-    const lang = selectedAlgorithm.defaultLanguage as 'python' | 'javascript' | 'cpp' | 'java'
-    setCodeLanguage(lang)
     setAiStatus('idle')
     setAiError('')
     setAiRawResponse('')
@@ -1525,7 +1525,7 @@ export default function Visualizer() {
       }
     }
 
-    setCode(getCodeTemplate(selectedAlgorithm.id, lang))
+    setCode(getCodeTemplate(selectedAlgorithm.id, codeLanguage))
 
     if (selectedAlgorithm.hasPreset) {
       // Try generator first (dynamic, responds to input changes)
@@ -1576,7 +1576,7 @@ export default function Visualizer() {
       }
     }
     setAnimationScript(null)
-  }, [selectedAlgorithm, inputData, setAnimationScript, parsedInput])
+  }, [selectedAlgorithm, inputData, setAnimationScript, parsedInput, codeLanguage, currentOperationId, operations])
 
   // Update Monaco editor decorations based on current step
   useEffect(() => {
@@ -1640,7 +1640,7 @@ export default function Visualizer() {
 
     const result: AIResult = await analyzeCode({
       code,
-      language: selectedAlgorithm?.defaultLanguage || 'python',
+      language: codeLanguage,
       inputData,
       algorithmName: selectedAlgorithm?.name,
     })
@@ -1702,6 +1702,7 @@ export default function Visualizer() {
                 onChange={(e) => {
                   const lang = e.target.value as 'python' | 'javascript' | 'cpp' | 'java'
                   setCodeLanguage(lang)
+                  localStorage.setItem('algoviz-editor-code-lang', lang)
                   if (currentOperationId) {
                     const op = operations?.find((o) => o.id === currentOperationId)
                     if (op) {
