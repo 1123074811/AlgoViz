@@ -1,8 +1,13 @@
 import type { SceneCommand } from '../commandTypes'
 import type { LinkedListAlgorithmEvent } from '../eventTypes'
 import type { CompileContext, EventCompiler } from '../SceneEngine'
+import type { SceneState } from '../types'
 import { createEdge } from '../variants/edgeVariants'
 import { createLinkedListNode } from '../variants/nodeVariants'
+
+function listLayout(scene: SceneState): 'linked_list' | 'stack' {
+  return scene.pointers.top ? 'stack' : 'linked_list'
+}
 
 export const linkedListCompiler: EventCompiler = {
   supports: (event): event is LinkedListAlgorithmEvent => event.type.startsWith('linked_list.'),
@@ -10,9 +15,10 @@ export const linkedListCompiler: EventCompiler = {
 }
 
 function compileLinkedListEvent(event: LinkedListAlgorithmEvent, context: CompileContext): SceneCommand[] {
+  const layout = listLayout(context.scene)
   switch (event.type) {
     case 'linked_list.create':
-      return compileCreate(event)
+      return compileCreate(event, layout)
     case 'linked_list.visit':
       return [
         { type: 'set_state', entityId: event.nodeId, state: { role: 'visited', color: 'warning', pulse: true }, merge: true },
@@ -21,21 +27,21 @@ function compileLinkedListEvent(event: LinkedListAlgorithmEvent, context: Compil
     case 'linked_list.move_pointer':
       return [{ type: 'move_pointer', pointerId: event.pointerId, target: event.toNodeId ? { entityId: event.toNodeId } : null, label: event.pointerId }]
     case 'linked_list.insert_after':
-      return compileInsertAfter(event, context)
+      return compileInsertAfter(event, context, layout)
     case 'linked_list.insert_before':
-      return compileInsertBefore(event, context)
+      return compileInsertBefore(event, context, layout)
     case 'linked_list.delete':
-      return [{ type: 'set_state', entityId: event.nodeId, state: { role: 'deleted', color: 'danger', opacity: 0.45 }, merge: true }, { type: 'remove_entity', entityId: event.nodeId }, { type: 'relayout', layout: 'linked_list' }]
+      return [{ type: 'set_state', entityId: event.nodeId, state: { role: 'deleted', color: 'danger', opacity: 0.45 }, merge: true }, { type: 'remove_entity', entityId: event.nodeId }, { type: 'relayout', layout }]
     case 'linked_list.reverse_link':
-      return compileReverseLink(event, context)
+      return compileReverseLink(event, context, layout)
     case 'linked_list.set_head':
-      return [{ type: 'move_pointer', pointerId: 'head', target: event.nodeId ? { entityId: event.nodeId } : null, label: 'head' }, { type: 'relayout', layout: 'linked_list' }]
+      return [{ type: 'move_pointer', pointerId: 'head', target: event.nodeId ? { entityId: event.nodeId } : null, label: 'head' }, { type: 'relayout', layout }]
     case 'linked_list.set_tail':
       return [{ type: 'move_pointer', pointerId: 'tail', target: event.nodeId ? { entityId: event.nodeId } : null, label: 'tail' }]
   }
 }
 
-function compileCreate(event: Extract<LinkedListAlgorithmEvent, { type: 'linked_list.create' }>): SceneCommand[] {
+function compileCreate(event: Extract<LinkedListAlgorithmEvent, { type: 'linked_list.create' }>, layout: 'linked_list' | 'stack'): SceneCommand[] {
   const commands: SceneCommand[] = []
 
   event.nodes.forEach((node, index) => {
@@ -57,11 +63,11 @@ function compileCreate(event: Extract<LinkedListAlgorithmEvent, { type: 'linked_
 
   if (event.headId) commands.push({ type: 'move_pointer', pointerId: 'head', target: { entityId: event.headId }, label: 'head' })
   if (event.tailId) commands.push({ type: 'move_pointer', pointerId: 'tail', target: { entityId: event.tailId }, label: 'tail' })
-  commands.push({ type: 'relayout', layout: 'linked_list' })
+  commands.push({ type: 'relayout', layout })
   return commands
 }
 
-function compileInsertAfter(event: Extract<LinkedListAlgorithmEvent, { type: 'linked_list.insert_after' }>, context: CompileContext): SceneCommand[] {
+function compileInsertAfter(event: Extract<LinkedListAlgorithmEvent, { type: 'linked_list.insert_after' }>, context: CompileContext, layout: 'linked_list' | 'stack'): SceneCommand[] {
   const oldNextEdge = Object.values(context.scene.edges).find((edge) => edge.from.entityId === event.targetNodeId && edge.from.portId === 'next')
   const oldNextId = oldNextEdge?.to.entityId
   const target = context.scene.entities[event.targetNodeId]
@@ -83,30 +89,30 @@ function compileInsertAfter(event: Extract<LinkedListAlgorithmEvent, { type: 'li
     if (oldNextId) commands.push({ type: 'connect', edge: createEdge(edgeId(oldNextId, 'prev', event.newNode.id), oldNextId, 'prev', event.newNode.id, 'next', 'muted', true) })
   }
 
-  commands.push({ type: 'relayout', layout: 'linked_list' })
+  commands.push({ type: 'relayout', layout })
   commands.push({ type: 'set_state', entityId: event.newNode.id, state: { role: 'inserted', color: 'success', pulse: true }, merge: true })
   return commands
 }
 
-function compileInsertBefore(event: Extract<LinkedListAlgorithmEvent, { type: 'linked_list.insert_before' }>, context: CompileContext): SceneCommand[] {
+function compileInsertBefore(event: Extract<LinkedListAlgorithmEvent, { type: 'linked_list.insert_before' }>, context: CompileContext, layout: 'linked_list' | 'stack'): SceneCommand[] {
   const prevEdge = Object.values(context.scene.edges).find((edge) => edge.to.entityId === event.targetNodeId && edge.from.portId === 'next')
   if (!prevEdge) {
     return [
       { type: 'create_node', node: createLinkedListNode(event.newNode.id, event.newNode.value) },
       { type: 'connect', edge: createEdge(edgeId(event.newNode.id, 'next', event.targetNodeId), event.newNode.id, 'next', event.targetNodeId) },
       { type: 'move_pointer', pointerId: 'head', target: { entityId: event.newNode.id }, label: 'head' },
-      { type: 'relayout', layout: 'linked_list' },
+      { type: 'relayout', layout },
     ]
   }
-  return compileInsertAfter({ type: 'linked_list.insert_after', targetNodeId: prevEdge.from.entityId, newNode: event.newNode }, context)
+  return compileInsertAfter({ type: 'linked_list.insert_after', targetNodeId: prevEdge.from.entityId, newNode: event.newNode }, context, layout)
 }
 
-function compileReverseLink(event: Extract<LinkedListAlgorithmEvent, { type: 'linked_list.reverse_link' }>, context: CompileContext): SceneCommand[] {
+function compileReverseLink(event: Extract<LinkedListAlgorithmEvent, { type: 'linked_list.reverse_link' }>, context: CompileContext, layout: 'linked_list' | 'stack'): SceneCommand[] {
   const oldEdge = Object.values(context.scene.edges).find((edge) => edge.from.entityId === event.fromNodeId && edge.from.portId === 'next')
   const commands: SceneCommand[] = [{ type: 'set_state', entityId: event.fromNodeId, state: { role: 'active', color: 'warning' }, merge: true }]
   if (oldEdge) commands.push({ type: 'disconnect', edgeId: oldEdge.id })
   if (event.toNodeId) commands.push({ type: 'connect', edge: createEdge(edgeId(event.fromNodeId, 'next', event.toNodeId), event.fromNodeId, 'next', event.toNodeId) })
-  commands.push({ type: 'relayout', layout: 'linked_list' })
+  commands.push({ type: 'relayout', layout })
   return commands
 }
 

@@ -6,6 +6,7 @@ import { createEmptyScene } from './types'
 import { compileEvent } from './eventCompiler'
 import { layoutGraph } from './layouts/graphLayout'
 import { layoutLinkedList } from './layouts/linkedListLayout'
+import { layoutStack } from './layouts/stackLayout'
 import { layoutTree } from './layouts/treeLayout'
 
 export function deriveSceneState(script: AnimationScript, currentStep: number): SceneState {
@@ -138,7 +139,7 @@ function removeEntity(scene: SceneState, entityId: string) {
 }
 
 function relayout(scene: SceneState, layout: RelayoutCommand['layout'], scope?: string[]) {
-  const positions = layout === 'linked_list' ? layoutLinkedList(scene) : layout === 'tree' ? layoutTree(scene) : layout === 'graph' ? layoutGraph(scene) : {}
+  const positions = layout === 'linked_list' ? layoutLinkedList(scene) : layout === 'stack' ? layoutStack(scene) : layout === 'tree' ? layoutTree(scene) : layout === 'graph' ? layoutGraph(scene) : {}
   Object.entries(positions).forEach(([entityId, position]) => {
     if (!scope || scope.includes(entityId)) {
       const entity = scene.entities[entityId]

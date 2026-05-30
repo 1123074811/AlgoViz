@@ -102,7 +102,7 @@ export interface MovePointerCommand {
 
 export interface RelayoutCommand {
   type: 'relayout'
-  layout: 'linked_list' | 'tree' | 'graph' | 'matrix' | 'array'
+  layout: 'linked_list' | 'tree' | 'graph' | 'matrix' | 'array' | 'stack'
   scope?: string[]
   duration?: number
 }
