@@ -41,7 +41,7 @@ function renderCircle(
           <circle cx={0} cy={0} r={r + 4} fill={palette.stroke} opacity="0.08" className="node-active-ring" />
         )}
         <circle cx={0} cy={0} r={r} fill={palette.fill} stroke={palette.stroke} strokeWidth={1.5} />
-        <text x={0} y={4} textAnchor="middle" fontSize="15" fontFamily="monospace" fill="#1E293B">{value}</text>
+        <text x={0} y={4} textAnchor="middle" fontSize="14" fontFamily="monospace" fill="#1E293B" fontWeight="bold">{value}</text>
         {node.fields.length > 1 && node.fields.slice(1).map((field, i) => (
           <text key={field.id} x={0} y={r + 14 + i * 12} textAnchor="middle" fontSize="10" fill="#94A3B8">
             {field.label}:{field.value ?? ''}
@@ -82,7 +82,7 @@ function renderRect(
               )}
               <text x={x + fieldWidth / 2} y={isData ? -2 : 0}
                 textAnchor="middle" fontSize={isData ? 14 : 11} fontFamily="monospace"
-                fill={isData ? '#1E293B' : '#94A3B8'} fontWeight={isData ? 600 : 400}>
+                fill={isData ? '#1E293B' : '#94A3B8'} fontWeight={isData ? 700 : 400}>
                 {field.value ?? field.label ?? field.id}
               </text>
               {field.label && isData && (
