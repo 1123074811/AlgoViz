@@ -42,7 +42,7 @@ export default function CellView({ cell }: CellViewProps) {
         {cell.col !== undefined && (
           <text x={0} y={height / 2 + 14} textAnchor="middle" fontSize="10"
             fill="#94A3B8" fontFamily="monospace">
-            {cell.col}
+            {cell.row !== undefined ? `${cell.row},${cell.col}` : cell.col}
           </text>
         )}
       </g>

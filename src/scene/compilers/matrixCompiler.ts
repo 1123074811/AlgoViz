@@ -48,23 +48,60 @@ function compileMatrixEvent(event: MatrixAlgorithmEvent | NQueensAlgorithmEvent,
 }
 
 function createMatrix(rows: number, cols: number, values?: Array<Array<number | string>>): SceneCommand[] {
-  const cellSize = Math.min(58, Math.max(36, Math.floor(360 / Math.max(rows, cols))))
-  const startX = 500 - ((cols - 1) * (cellSize + 8)) / 2
+  const cellSize = Math.min(52, Math.max(38, Math.floor(420 / Math.max(rows, cols))))
+  const labelPad = 24
+  const startX = 500 - ((cols - 1) * cellSize) / 2
   const startY = 120
   const commands: SceneCommand[] = []
 
+  // Row headers (0, 1, 2, ...) on the left
+  for (let row = 0; row < rows; row++) {
+    commands.push({
+      type: 'create_cell',
+      cell: {
+        id: `m_rhead_${row}`, type: 'cell',
+        position: { x: startX - cellSize / 2 - labelPad, y: startY + row * cellSize },
+        size: { width: labelPad * 2, height: cellSize },
+        value: row, state: { role: 'idle', color: 'muted' },
+      },
+    })
+  }
+
+  // Column headers (0, 1, 2, ...) on top
+  for (let col = 0; col < cols; col++) {
+    commands.push({
+      type: 'create_cell',
+      cell: {
+        id: `m_chead_${col}`, type: 'cell',
+        position: { x: startX + col * cellSize, y: startY - cellSize / 2 - labelPad },
+        size: { width: cellSize, height: labelPad * 2 },
+        value: col, state: { role: 'idle', color: 'muted' },
+      },
+    })
+  }
+
+  // Top-left corner
+  commands.push({
+    type: 'create_cell',
+    cell: {
+      id: 'm_corner', type: 'cell',
+      position: { x: startX - cellSize / 2 - labelPad, y: startY - cellSize / 2 - labelPad },
+      size: { width: labelPad * 2, height: labelPad * 2 },
+      value: '', state: { role: 'idle', color: 'muted' },
+    },
+  })
+
+  // Main cells (tight grid, zero gap)
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       commands.push({
         type: 'create_cell',
         cell: DataUnit.matrixCell({
-          id: cellId(row, col),
-          row,
-          col,
+          id: cellId(row, col), row, col,
           value: values?.[row]?.[col] ?? '',
           size: cellSize,
-          x: startX + col * (cellSize + 8),
-          y: startY + row * (cellSize + 8),
+          x: startX + col * cellSize,
+          y: startY + row * cellSize,
         }),
       })
     }
