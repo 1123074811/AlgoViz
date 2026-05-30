@@ -2,11 +2,12 @@ import { useState, useRef, useEffect } from 'react'
 import type { AnimationScript } from '@/types/animation'
 import { deriveSceneState } from './SceneEngine'
 import CellView from './primitives/CellView'
+import ContainerView from './primitives/ContainerView'
 import EdgeView from './primitives/EdgeView'
 import LabelView from './primitives/LabelView'
 import NodeView, { NodeStyles } from './primitives/NodeView'
 import PointerView from './primitives/PointerView'
-import type { SceneEntity } from './types'
+import type { SceneCell, SceneEntity } from './types'
 
 interface SceneCanvasProps {
   script: AnimationScript
@@ -124,6 +125,7 @@ export default function SceneCanvas({ script, currentStep }: SceneCanvasProps) {
           </marker>
         </defs>
         <NodeStyles />
+        {renderContainers(entities)}
         <g className="pointer-events-auto">
           {edges.map((edge) => <EdgeView key={edge.id} edge={edge} scene={scene} />)}
           {entities.map((entity) => entity.type === 'cell' ? <CellView key={entity.id} cell={entity} /> : null)}
@@ -189,6 +191,20 @@ export default function SceneCanvas({ script, currentStep }: SceneCanvasProps) {
         </div>
       )}
     </div>
+  )
+}
+
+function renderContainers(entities: SceneEntity[]) {
+  const cells = entities.filter(e => e.type === 'cell') as SceneCell[]
+  const stackCells = cells.filter(c => c.id.startsWith('stack_'))
+    .sort((a, b) => parseInt(a.id.split('_')[1]) - parseInt(b.id.split('_')[1]))
+  const queueCells = cells.filter(c => c.id.startsWith('queue_'))
+    .sort((a, b) => parseInt(a.id.split('_')[1]) - parseInt(b.id.split('_')[1]))
+  return (
+    <>
+      {stackCells.length > 0 && <ContainerView type="stack" cells={stackCells} />}
+      {queueCells.length > 0 && <ContainerView type="queue" cells={queueCells} />}
+    </>
   )
 }
 

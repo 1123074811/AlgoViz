@@ -57,4 +57,16 @@ export type NQueensAlgorithmEvent =
   | { type: 'n_queens.backtrack'; row: number; col: number }
   | { type: 'n_queens.solution'; queens: Array<{ row: number; col: number }> }
 
-export type AlgorithmEvent = CommonAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent
+export type StackAlgorithmEvent =
+  | { type: 'stack.create'; values: Array<number | string> }
+  | { type: 'stack.push'; value: number | string }
+  | { type: 'stack.pop' }
+  | { type: 'stack.peek'; index: number }
+
+export type QueueAlgorithmEvent =
+  | { type: 'queue.create'; values: Array<number | string> }
+  | { type: 'queue.enqueue'; value: number | string }
+  | { type: 'queue.dequeue' }
+  | { type: 'queue.peek_front'; index: number }
+
+export type AlgorithmEvent = CommonAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent
