@@ -1296,6 +1296,242 @@ def sieve(n):
     cpp: `// C++ version: see Python implementation above`,
     java: `// Java version: see Python implementation above`,
   },
+  linked_list_insert: {
+    python: `def insert_after(prev_node, new_val):
+    if prev_node is None: return
+    new_node = ListNode(new_val)
+    new_node.next = prev_node.next
+    prev_node.next = new_node`,
+    javascript: `function insertAfter(prevNode, newVal) {
+    if (!prevNode) return;
+    const newNode = new ListNode(newVal);
+    newNode.next = prevNode.next;
+    prevNode.next = newNode;
+}`,
+    cpp: `void insertAfter(ListNode* prevNode, int newVal) {
+    if (!prevNode) return;
+    ListNode* newNode = new ListNode(newVal);
+    newNode->next = prevNode->next;
+    prevNode->next = newNode;
+}`,
+    java: `public void insertAfter(ListNode prevNode, int newVal) {
+    if (prevNode == null) return;
+    ListNode newNode = new ListNode(newVal);
+    newNode.next = prevNode.next;
+    prevNode.next = newNode;
+}`,
+  },
+  linked_list_delete: {
+    python: `def delete_node(prev_node):
+    if prev_node is None or prev_node.next is None: return
+    target = prev_node.next
+    prev_node.next = target.next`,
+    javascript: `function deleteNode(prevNode) {
+    if (!prevNode || !prevNode.next) return;
+    const target = prevNode.next;
+    prevNode.next = target.next;
+}`,
+    cpp: `void deleteNode(ListNode* prevNode) {
+    if (!prevNode || !prevNode->next) return;
+    ListNode* target = prevNode->next;
+    prevNode->next = target->next;
+    delete target;
+}`,
+    java: `public void deleteNode(ListNode prevNode) {
+    if (prevNode == null || prevNode.next == null) return;
+    ListNode target = prevNode.next;
+    prevNode.next = target.next;
+}`,
+  },
+  linked_list_search: {
+    python: `def search_list(head, target):
+    cur = head
+    while cur is not None:
+        if cur.value == target: return cur
+        cur = cur.next
+    return None`,
+    javascript: `function searchList(head, target) {
+    let cur = head;
+    while (cur !== null) {
+        if (cur.value === target) return cur;
+        cur = cur.next;
+    }
+    return null;
+}`,
+    cpp: `ListNode* searchList(ListNode* head, int target) {
+    ListNode* cur = head;
+    while (cur != nullptr) {
+        if (cur->value == target) return cur;
+        cur = cur->next;
+    }
+    return nullptr;
+}`,
+    java: `public ListNode searchList(ListNode head, int target) {
+    ListNode cur = head;
+    while (cur != null) {
+        if (cur.value == target) return cur;
+        cur = cur.next;
+    }
+    return null;
+}`,
+  },
+  bst_insert: {
+    python: `def insert(root, val):
+    if root is None:
+        return TreeNode(val)
+    if val < root.val:
+        root.left = insert(root.left, val)
+    else:
+        root.right = insert(root.right, val)
+    return root`,
+    javascript: `function insert(root, val) {
+    if (root === null) return new TreeNode(val);
+    if (val < root.val) {
+        root.left = insert(root.left, val);
+    } else {
+        root.right = insert(root.right, val);
+    }
+    return root;
+}`,
+    cpp: `TreeNode* insert(TreeNode* root, int val) {
+    if (root == nullptr) return new TreeNode(val);
+    if (val < root->val) root->left = insert(root->left, val);
+    else root->right = insert(root->right, val);
+    return root;
+}`,
+    java: `public TreeNode insert(TreeNode root, int val) {
+    if (root == null) return new TreeNode(val);
+    if (val < root.val) root.left = insert(root.left, val);
+    else root.right = insert(root.right, val);
+    return root;
+}`,
+  },
+  bst_delete: {
+    python: `def delete_node(root, key):
+    if root is None: return root
+    if key < root.val:
+        root.left = delete_node(root.left, key)
+    elif key > root.val:
+        root.right = delete_node(root.right, key)
+    else:
+        if root.left is None: return root.right
+        if root.right is None: return root.left
+        temp = min_value_node(root.right)
+        root.val = temp.val
+        root.right = delete_node(root.right, temp.val)
+    return root`,
+    javascript: `function deleteNode(root, key) {
+    if (root === null) return null;
+    if (key < root.val) root.left = deleteNode(root.left, key);
+    else if (key > root.val) root.right = deleteNode(root.right, key);
+    else {
+        if (root.left === null) return root.right;
+        if (root.right === null) return root.left;
+        let temp = minValueNode(root.right);
+        root.val = temp.val;
+        root.right = deleteNode(root.right, temp.val);
+    }
+    return root;
+}`,
+    cpp: `TreeNode* deleteNode(TreeNode* root, int key) {
+    if (root == nullptr) return root;
+    if (key < root->val) root->left = deleteNode(root->left, key);
+    else if (key > root->val) root->right = deleteNode(root->right, key);
+    else {
+        if (root->left == nullptr) return root->right;
+        if (root->right == nullptr) return root->left;
+        TreeNode* temp = minValueNode(root->right);
+        root->val = temp->val;
+        root->right = deleteNode(root->right, temp->val);
+    }
+    return root;
+}`,
+    java: `public TreeNode deleteNode(TreeNode root, int key) {
+    if (root == null) return null;
+    if (key < root.val) root.left = deleteNode(root.left, key);
+    else if (key > root.val) root.right = deleteNode(root.right, key);
+    else {
+        if (root.left == null) return root.right;
+        if (root.right == null) return root.left;
+        TreeNode temp = minValueNode(root.right);
+        root.val = temp.val;
+        root.right = deleteNode(root.right, temp.val);
+    }
+    return root;
+}`,
+  },
+  bst_search: {
+    python: `def search(root, key):
+    if root is None or root.val == key: return root
+    if key < root.val: return search(root.left, key)
+    return search(root.right, key)`,
+    javascript: `function search(root, key) {
+    if (root === null || root.val === key) return root;
+    if (key < root.val) return search(root.left, key);
+    return search(root.right, key);
+}`,
+    cpp: `TreeNode* search(TreeNode* root, int key) {
+    if (root == nullptr || root->val == key) return root;
+    if (key < root->val) return search(root->left, key);
+    return search(root->right, key);
+}`,
+    java: `public TreeNode search(TreeNode root, int key) {
+    if (root == null || root.val == key) return root;
+    if (key < root.val) root.left = search(root.left, key);
+    else root.right = search(root.right, key);
+    return root;
+}`,
+  },
+  avl_insert: {
+    python: `def insert(root, key):
+    if not root: return TreeNode(key)
+    if key < root.val: root.left = insert(root.left, key)
+    else: root.right = insert(root.right, key)
+    return balance(root)`,
+    javascript: `function insert(root, key) {
+    if (!root) return new TreeNode(key);
+    if (key < root.val) root.left = insert(root.left, key);
+    else root.right = insert(root.right, key);
+    return balance(root);
+}`,
+    cpp: `TreeNode* insert(TreeNode* root, int key) {
+    if (!root) return new TreeNode(key);
+    if (key < root->val) root->left = insert(root->left, key);
+    else root->right = insert(root->right, key);
+    return balance(root);
+}`,
+    java: `public TreeNode insert(TreeNode root, int key) {
+    if (root == null) return new TreeNode(key);
+    if (key < root.val) root.left = insert(root.left, key);
+    else root.right = insert(root.right, key);
+    return balance(root);
+}`,
+  },
+  binary_tree_traverse: {
+    python: `def traverse(root):
+    if root is None: return
+    print(root.val)
+    traverse(root.left)
+    traverse(root.right)`,
+    javascript: `function traverse(root) {
+    if (root === null) return;
+    console.log(root.val);
+    traverse(root.left);
+    traverse(root.right);
+}`,
+    cpp: `void traverse(TreeNode* root) {
+    if (root == nullptr) return;
+    cout << root->val << endl;
+    traverse(root->left);
+    traverse(root->right);
+}`,
+    java: `public void traverse(TreeNode root) {
+    if (root == null) return;
+    System.out.println(root.val);
+    traverse(root.left);
+    traverse(root.right);
+}`,
+  },
 };
 
 function getCodeTemplate(algoId: string, lang: CodeLang): string {
@@ -1349,6 +1585,16 @@ function DefinitionCard({ def, lang, expanded, onToggle }: { def: AlgorithmDefin
   )
 }
 
+function getConcreteAlgoId(algoId: string, opId: string): string {
+  if (algoId.startsWith('linked_list_') || algoId === 'doubly_linked_list' || algoId === 'linked_list') {
+    return `linked_list_${opId}`
+  }
+  if (algoId.startsWith('bst_') || algoId === 'avl_tree' || algoId === 'red_black_tree' || algoId === 'bst' || algoId === 'avl_insert') {
+    return `bst_${opId}`
+  }
+  return algoId
+}
+
 export default function Visualizer() {
   const { t, i18n } = useTranslation()
   const lang = i18n.language as 'zh' | 'en'
@@ -1368,6 +1614,7 @@ export default function Visualizer() {
   const [showRawResponse, setShowRawResponse] = useState(false)
   const [showDefinition, setShowDefinition] = useState(false)
   const [currentOperationId, setCurrentOperationId] = useState<string>('')
+  const [operationParam, setOperationParam] = useState<string>('5')
 
   const operations = selectedAlgorithm ? getOperationsForAlgo(selectedAlgorithm.id) : undefined
   const hasOperations = operations && operations.length > 0
@@ -1515,8 +1762,24 @@ export default function Visualizer() {
       }
     }
 
-    // If a custom operation is selected, load its code and script directly
-    if (currentOperationId) {
+    // If a custom operation is selected, load its code and script dynamically if dynamic generator is available
+    if (currentOperationId && selectedAlgorithm) {
+      const concreteAlgoId = getConcreteAlgoId(selectedAlgorithm.id, currentOperationId)
+      if (hasGenerator(concreteAlgoId)) {
+        const baseData = parsedInput()
+        const paramVal = Number(operationParam) || 5
+        const script = generatePreset(concreteAlgoId, { data: baseData, param: paramVal })
+        if (script) {
+          setAnimationScript(script)
+          const op = operations?.find(o => o.id === currentOperationId)
+          if (op) {
+            setCode(op.code[codeLanguage] || op.code.python || '')
+          }
+          return
+        }
+      }
+
+      // Fallback to static op script if no dynamic generator
       const op = operations?.find(o => o.id === currentOperationId)
       if (op) {
         setAnimationScript(op.script)
@@ -1576,7 +1839,7 @@ export default function Visualizer() {
       }
     }
     setAnimationScript(null)
-  }, [selectedAlgorithm, inputData, setAnimationScript, parsedInput, codeLanguage, currentOperationId, operations])
+  }, [selectedAlgorithm, inputData, operationParam, setAnimationScript, parsedInput, codeLanguage, currentOperationId, operations])
 
   // Update Monaco editor decorations based on current step
   useEffect(() => {
@@ -1729,23 +1992,50 @@ export default function Visualizer() {
               </>
             }
           />
-          <InputDataPanel
-            value={inputData}
-            onChange={setInputData}
-            title={t('visualizer.inputData')}
-            helperText={(() => {
-              const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
-              if (def) return def.hint
-              const info = parseInputData(inputData)
-              return info.valid ? `类型: ${info.kind} · ${info.summary}` : '支持数组、字符串、JSON 对象'
-            })()}
-            placeholder={(() => {
-              const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
-              return def?.value ?? '[5, 3, 8, 1, 9, 2]'
-            })()}
-            disabled={aiStatus === 'analyzing'}
-            className="h-28 xl:h-32"
-          />
+          {hasOperations ? (
+            <div className="flex flex-col gap-2 shrink-0">
+              <InputDataPanel
+                value={inputData}
+                onChange={setInputData}
+                title={lang === 'zh' ? '原始数据 (初始结构)' : 'Original Data (Initial Structure)'}
+                helperText={lang === 'zh' ? '用于构建初始数据结构的数组' : 'Initial elements for building the data structure'}
+                placeholder="[8, 3, 10, 1, 6, 14]"
+                disabled={aiStatus === 'analyzing'}
+                className="h-24 xl:h-28"
+              />
+              <InputDataPanel
+                value={operationParam}
+                onChange={setOperationParam}
+                title={(() => {
+                  if (currentOperationId === 'insert') return lang === 'zh' ? '操作输入 (插入节点的值)' : 'Operation Parameter (Value to Insert)'
+                  if (currentOperationId === 'delete') return lang === 'zh' ? '操作输入 (删除节点的值)' : 'Operation Parameter (Value to Delete)'
+                  return lang === 'zh' ? '操作输入 (查找节点的值)' : 'Operation Parameter (Value to Search)'
+                })()}
+                helperText={lang === 'zh' ? '输入一个具体的数值' : 'Enter a specific numeric value'}
+                placeholder="5"
+                disabled={aiStatus === 'analyzing'}
+                className="h-20 xl:h-24"
+              />
+            </div>
+          ) : (
+            <InputDataPanel
+              value={inputData}
+              onChange={setInputData}
+              title={t('visualizer.inputData')}
+              helperText={(() => {
+                const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
+                if (def) return def.hint
+                const info = parseInputData(inputData)
+                return info.valid ? `类型: ${info.kind} · ${info.summary}` : '支持数组、字符串、JSON 对象'
+              })()}
+              placeholder={(() => {
+                const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
+                return def?.value ?? '[5, 3, 8, 1, 9, 2]'
+              })()}
+              disabled={aiStatus === 'analyzing'}
+              className="h-28 xl:h-32"
+            />
+          )}
           {/* Output result */}
           {currentStep >= totalSteps && totalSteps > 0 && visualState.arrayData.length > 0 && (
             <div className="h-20 border-t border-border bg-green-50 p-2.5 shrink-0">
@@ -1771,7 +2061,12 @@ export default function Visualizer() {
                 {operations.map((op) => (
                   <button
                     key={op.id}
-                    onClick={() => setCurrentOperationId(op.id)}
+                    onClick={() => {
+                      setCurrentOperationId(op.id)
+                      if (op.id === 'insert') setOperationParam('5')
+                      else if (op.id === 'delete') setOperationParam('14')
+                      else if (op.id === 'search') setOperationParam('10')
+                    }}
                     className={`px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition-all border
                       ${currentOperationId === op.id
                         ? 'bg-primary text-white border-primary shadow-sm font-semibold'
