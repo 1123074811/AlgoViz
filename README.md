@@ -879,6 +879,14 @@ tailwind.config.js
 - 支持更多输入数据结构，例如图、树、矩阵对象。
 - 支持 AI 失败后自动重试或请求格式修复。
 
+### 扩展设计：场景化算法动画引擎
+
+- 详细优化方案：[docs/scene-engine-optimization-plan.md](docs/scene-engine-optimization-plan.md)
+- 使用与维护说明：[docs/scene-engine-usage.md](docs/scene-engine-usage.md)
+- 面向链表、树、图、矩阵、回溯等复杂算法，设计可组合的场景图元和事件驱动动画系统。
+- 核心思路是让 AI 输出算法语义事件，由前端 Scene Engine 负责编译为节点、端口、边、指针和布局动画。
+- 该方案不是新的阶段规划，而是后续可按需渐进落地的动画引擎架构设计。
+
 ---
 
 ## 贡献建议
