@@ -38,7 +38,6 @@ export const DataUnit = {
       size: { width: 44, height: 44 },
       value: options.value,
       col: options.index,
-      row: 0,
       state: {
         role: options.role ?? 'idle',
         color: options.color ?? 'muted',

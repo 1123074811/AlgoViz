@@ -37,6 +37,99 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
     }
   }
 
+  // Render auxiliary data structures (Queue/Stack) from teachingState for graph/tree algorithms
+  const activeStepIdx = currentStep > 0 ? currentStep - 1 : 0
+  const activeStep = script.steps[activeStepIdx]
+  const teachingState = activeStep?.teachingState
+
+  if (teachingState?.graph) {
+    const { queue, stack } = teachingState.graph
+
+    // Clear any existing entities with queue_ or stack_ prefix to avoid duplicates
+    Object.keys(scene.entities).forEach(key => {
+      if (key.startsWith('queue_') || key.startsWith('stack_')) {
+        delete scene.entities[key]
+      }
+    })
+    Object.keys(scene.labels).forEach(key => {
+      if (key === 'queue_label' || key === 'stack_label') {
+        delete scene.labels[key]
+      }
+    })
+
+    const getNodeLabel = (nodeId: string) => {
+      const ent = scene.entities[nodeId]
+      if (ent && 'label' in ent && ent.label) return ent.label
+      const initNode = script.initialState.nodes?.find(n => n.id === nodeId)
+      if (initNode && initNode.label) return initNode.label
+      return nodeId
+    }
+
+    // 1. Process Queue
+    if (queue && queue.length > 0) {
+      const CELL_GAP = 44
+      const START_Y = 540 // At the bottom of the canvas
+      const START_X = 500 - (queue.length * CELL_GAP) / 2
+
+      queue.forEach((nodeId, index) => {
+        const value = getNodeLabel(nodeId)
+        const cellId = `queue_${index}`
+        scene.entities[cellId] = {
+          id: cellId,
+          type: 'cell',
+          position: { x: START_X + index * CELL_GAP, y: START_Y },
+          size: { width: 44, height: 44 },
+          value,
+          col: index,
+          state: {
+            role: 'inserted',
+            color: 'primary',
+            pulse: index === queue.length - 1,
+          }
+        }
+      })
+
+      scene.labels['queue_label'] = {
+        id: 'queue_label',
+        type: 'label',
+        text: 'Queue (队列)',
+        position: { x: 500, y: START_Y - 35 },
+      }
+    }
+
+    // 2. Process Stack
+    if (stack && stack.length > 0) {
+      const CELL_GAP = 44
+      const CX = 840 // On the right side of the canvas
+      const START_Y = 160 // Top vertical offset
+
+      stack.forEach((nodeId, index) => {
+        const value = getNodeLabel(nodeId)
+        const cellId = `stack_${index}`
+        scene.entities[cellId] = {
+          id: cellId,
+          type: 'cell',
+          position: { x: CX, y: START_Y + index * CELL_GAP },
+          size: { width: 44, height: 44 },
+          value,
+          col: index,
+          state: {
+            role: 'inserted',
+            color: 'primary',
+            pulse: index === stack.length - 1,
+          }
+        }
+      })
+
+      scene.labels['stack_label'] = {
+        id: 'stack_label',
+        type: 'label',
+        text: 'Stack (递归调用栈)',
+        position: { x: CX, y: START_Y - 35 },
+      }
+    }
+  }
+
   return scene
 }
 
