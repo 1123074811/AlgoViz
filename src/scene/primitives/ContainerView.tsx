@@ -43,7 +43,7 @@ export default function ContainerView({ type, cells }: ContainerViewProps) {
     const lastX = cells[cells.length - 1].position.x + cellW / 2 + pad
     const topY = cells[0].position.y - cellH / 2 - pad - 4
     const bottomY = cells[0].position.y + cellH / 2 + pad + 4
-    const labelY = bottomY + 16
+    const labelY = bottomY + 6
 
     return (
       <g>
@@ -53,8 +53,8 @@ export default function ContainerView({ type, cells }: ContainerViewProps) {
         <line x1={firstX} y1={bottomY} x2={lastX} y2={bottomY}
           stroke={CONTAINER_STROKE} strokeWidth={CONTAINER_STROKE_WIDTH}
           strokeLinecap="round" />
-        <text x={firstX} y={labelY} textAnchor="start" fontSize="10" fill="#64748B" fontFamily="monospace">front</text>
-        <text x={lastX} y={labelY} textAnchor="end" fontSize="10" fill="#64748B" fontFamily="monospace">rear</text>
+        <text x={firstX} y={labelY} textAnchor="start" fontSize="10" fill="#64748B" fontFamily="monospace" dominantBaseline="hanging">front</text>
+        <text x={lastX} y={labelY} textAnchor="end" fontSize="10" fill="#64748B" fontFamily="monospace" dominantBaseline="hanging">rear</text>
       </g>
     )
   }

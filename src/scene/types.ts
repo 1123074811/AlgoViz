@@ -42,6 +42,7 @@ export type SceneEntityRole =
   | 'sorted'
   | 'candidate'
   | 'current'
+  | 'empty_placeholder'
 
 export interface SceneEntityState {
   role?: SceneEntityRole

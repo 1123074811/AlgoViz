@@ -42,8 +42,48 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
   const activeStep = script.steps[activeStepIdx]
   const teachingState = activeStep?.teachingState
 
-  if (teachingState?.graph) {
-    const { queue, stack } = teachingState.graph
+  const isBfsOrTopo = script.algorithm === 'bfs_graph' || script.algorithm === 'topological_sort' || script.algorithm.includes('bfs') || script.algorithm.includes('topological')
+  const isDfs = script.algorithm === 'dfs_graph' || script.algorithm.includes('dfs')
+
+  if (teachingState?.graph || isBfsOrTopo || isDfs) {
+    let queue = teachingState?.graph?.queue
+    let stack = teachingState?.graph?.stack
+
+    // Fallback: Reconstruct queue state from event history if not explicitly provided in teachingState (e.g. custom operations)
+    if (!queue && isBfsOrTopo) {
+      let reconstructedQueue: string[] = []
+      for (let i = 0; i < replayLimit; i++) {
+        const events = script.steps[i].events ?? []
+        for (const event of events) {
+          if (event.type === 'graph.enqueue') {
+            if (!reconstructedQueue.includes(event.nodeId)) {
+              reconstructedQueue.push(event.nodeId)
+            }
+          } else if (event.type === 'graph.dequeue') {
+            reconstructedQueue = reconstructedQueue.filter(id => id !== event.nodeId)
+          }
+        }
+      }
+      queue = reconstructedQueue
+    }
+
+    // Fallback: Reconstruct stack state from event history if not explicitly provided in teachingState
+    if (!stack && isDfs) {
+      let reconstructedStack: string[] = []
+      for (let i = 0; i < replayLimit; i++) {
+        const events = script.steps[i].events ?? []
+        for (const event of events) {
+          if (event.type === 'graph.enqueue') {
+            if (!reconstructedStack.includes(event.nodeId)) {
+              reconstructedStack.push(event.nodeId)
+            }
+          } else if (event.type === 'graph.dequeue') {
+            reconstructedStack = reconstructedStack.filter(id => id !== event.nodeId)
+          }
+        }
+      }
+      stack = reconstructedStack
+    }
 
     // Clear any existing entities with queue_ or stack_ prefix to avoid duplicates
     Object.keys(scene.entities).forEach(key => {
@@ -66,68 +106,106 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
     }
 
     // 1. Process Queue
-    if (queue && queue.length > 0) {
+    if (queue) {
       const CELL_GAP = 44
-      const START_Y = 540 // At the bottom of the canvas
-      const START_X = 500 - (queue.length * CELL_GAP) / 2
+      const START_Y = 550 // Shift downward slightly to prevent overlap with graph
 
-      queue.forEach((nodeId, index) => {
-        const value = getNodeLabel(nodeId)
-        const cellId = `queue_${index}`
+      if (queue.length > 0) {
+        const START_X = 500 - (queue.length * CELL_GAP) / 2
+
+        queue.forEach((nodeId, index) => {
+          const value = getNodeLabel(nodeId)
+          const cellId = `queue_${index}`
+          scene.entities[cellId] = {
+            id: cellId,
+            type: 'cell',
+            position: { x: START_X + index * CELL_GAP, y: START_Y },
+            size: { width: 44, height: 44 },
+            value,
+            col: index,
+            state: {
+              role: 'inserted',
+              color: 'primary',
+              pulse: index === queue.length - 1,
+            }
+          }
+        })
+      } else {
+        // Create an empty placeholder cell so that ContainerView can render an empty Queue container
+        const cellId = 'queue_0'
         scene.entities[cellId] = {
           id: cellId,
           type: 'cell',
-          position: { x: START_X + index * CELL_GAP, y: START_Y },
+          position: { x: 500, y: START_Y },
           size: { width: 44, height: 44 },
-          value,
-          col: index,
+          value: '',
+          col: 0,
           state: {
-            role: 'inserted',
-            color: 'primary',
-            pulse: index === queue.length - 1,
+            role: 'empty_placeholder',
+            color: 'muted',
           }
         }
-      })
+      }
 
       scene.labels['queue_label'] = {
         id: 'queue_label',
         type: 'label',
         text: 'Queue (队列)',
-        position: { x: 500, y: START_Y - 35 },
+        position: { x: 500, y: START_Y - 55 }, // Higher up to avoid overlap with top container line
       }
     }
 
     // 2. Process Stack
-    if (stack && stack.length > 0) {
+    if (stack) {
       const CELL_GAP = 44
       const CX = 840 // On the right side of the canvas
       const START_Y = 160 // Top vertical offset
 
-      stack.forEach((nodeId, index) => {
-        const value = getNodeLabel(nodeId)
-        const cellId = `stack_${index}`
+      if (stack.length > 0) {
+        stack.forEach((nodeId, index) => {
+          const value = getNodeLabel(nodeId)
+          const cellId = `stack_${index}`
+          scene.entities[cellId] = {
+            id: cellId,
+            type: 'cell',
+            position: { x: CX, y: START_Y + index * CELL_GAP },
+            size: { width: 44, height: 44 },
+            value,
+            col: index,
+            state: {
+              role: 'inserted',
+              color: 'primary',
+              pulse: index === stack.length - 1,
+            }
+          }
+        })
+      } else {
+        // Create an empty placeholder cell so that ContainerView can render an empty Stack container
+        const cellId = 'stack_0'
         scene.entities[cellId] = {
           id: cellId,
           type: 'cell',
-          position: { x: CX, y: START_Y + index * CELL_GAP },
+          position: { x: CX, y: START_Y },
           size: { width: 44, height: 44 },
-          value,
-          col: index,
+          value: '',
+          col: 0,
           state: {
-            role: 'inserted',
-            color: 'primary',
-            pulse: index === stack.length - 1,
+            role: 'empty_placeholder',
+            color: 'muted',
           }
         }
-      })
+      }
 
       scene.labels['stack_label'] = {
         id: 'stack_label',
         type: 'label',
         text: 'Stack (递归调用栈)',
-        position: { x: CX, y: START_Y - 35 },
+        position: { x: CX, y: START_Y - 45 }, // Higher up to avoid overlap with top stack border
       }
     }
+
+    // Trigger relayout to adjust graph node centers dynamically based on active queue/stack
+    relayout(scene, 'graph')
   }
 
   return scene

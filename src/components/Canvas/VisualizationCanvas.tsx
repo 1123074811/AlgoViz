@@ -8,7 +8,7 @@ interface VisualizationCanvasProps {
   currentStepData: AnimationStep | null
 }
 
-export default function VisualizationCanvas({ script, visualState }: VisualizationCanvasProps) {
+export default function VisualizationCanvas({ script, visualState, currentStepData }: VisualizationCanvasProps) {
   if (!script) {
     return (
       <div className="h-full flex items-center justify-center bg-slate-50">
@@ -31,7 +31,7 @@ export default function VisualizationCanvas({ script, visualState }: Visualizati
   return (
     <div className="h-full p-6 bg-slate-50">
       <div className="h-full bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-        <SceneCanvas script={script} currentStep={visualState.currentStep} />
+        <SceneCanvas script={script} currentStep={visualState.currentStep} currentStepData={currentStepData} />
       </div>
     </div>
   )

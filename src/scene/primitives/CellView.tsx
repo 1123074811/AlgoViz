@@ -13,6 +13,10 @@ interface CellViewProps {
 }
 
 export default function CellView({ cell }: CellViewProps) {
+  if (cell.state?.role === 'empty_placeholder') {
+    return null
+  }
+
   const width = cell.size?.width ?? 44
   const height = cell.size?.height ?? 44
   const palette = cell.state?.role === 'idle' ? COLOR_MAP.muted
@@ -39,7 +43,7 @@ export default function CellView({ cell }: CellViewProps) {
           fill={textColor} fontWeight={isCurrent ? 600 : 400}>
           {value}
         </text>
-        {cell.col !== undefined && (
+        {cell.col !== undefined && !cell.id.startsWith('queue_') && !cell.id.startsWith('stack_') && (
           <text x={0} y={height / 2 + 14} textAnchor="middle" fontSize="10"
             fill="#94A3B8" fontFamily="monospace">
             {cell.row !== undefined ? `${cell.row},${cell.col}` : cell.col}

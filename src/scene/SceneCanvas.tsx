@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import type { AnimationScript } from '@/types/animation'
+import { useTranslation } from 'react-i18next'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 import { deriveSceneState } from './SceneEngine'
 import CellView from './primitives/CellView'
 import ContainerView from './primitives/ContainerView'
@@ -12,9 +13,13 @@ import type { SceneCell, SceneEntity } from './types'
 interface SceneCanvasProps {
   script: AnimationScript
   currentStep: number
+  currentStepData?: AnimationStep | null
 }
 
-export default function SceneCanvas({ script, currentStep }: SceneCanvasProps) {
+export default function SceneCanvas({ script, currentStep, currentStepData }: SceneCanvasProps) {
+  const { i18n } = useTranslation()
+  const lang = i18n.language as 'zh' | 'en'
+
   const scene = deriveSceneState(script, currentStep)
   const entities = Object.values(scene.entities)
   const edges = Object.values(scene.edges)
@@ -185,11 +190,17 @@ export default function SceneCanvas({ script, currentStep }: SceneCanvasProps) {
           </div>
         </div>
       )}
-      {latestNote && (
-        <div className="absolute bottom-5 left-1/2 max-w-xl -translate-x-1/2 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 text-sm text-slate-700 shadow-lg pointer-events-none">
-          {latestNote}
-        </div>
-      )}
+      {(() => {
+        const descriptionText = currentStepData
+          ? (lang === 'zh' ? currentStepData.description.zh : currentStepData.description.en)
+          : latestNote
+        
+        return descriptionText ? (
+          <div className="absolute bottom-5 left-1/2 max-w-xl w-[90%] md:w-auto -translate-x-1/2 rounded-2xl border border-slate-200 bg-white/95 px-5 py-3 text-sm font-medium text-slate-700 shadow-lg backdrop-blur-sm text-center pointer-events-none transition-all duration-300 z-10">
+            {descriptionText}
+          </div>
+        ) : null
+      })()}
     </div>
   )
 }
