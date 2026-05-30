@@ -96,9 +96,12 @@ export function generateKMP(text?: string, pattern?: string): AnimationScript {
       pi = lps[pi - 1]
       steps.push({
         stepId: sid++, codeLine: 18,
-        description: { zh: `失配！利用 LPS 跳过，pi 回退到 ${pi}`, en: `Mismatch! Skip via LPS, pi → ${pi}` },
+        description: { zh: `失配！利用 LPS 跳过，pi 回退到 ${pi}（跳过了 ${lps[pi]} 个已匹配字符）`, en: `Mismatch! Skip via LPS, pi → ${pi}` },
         action: { type: 'highlight', targets: [ti], color: 'warning' },
-        events: [{ type: 'string.shift_pattern', offset: ti - pi }],
+        events: [
+          { type: 'string.compare', row: 0, indices: [ti, ti] },
+          { type: 'string.compare', row: 1, indices: [pi, pi] },
+        ],
         stats: { comparisons: sid, swaps: 0, accesses: 0 },
       })
     } else {
