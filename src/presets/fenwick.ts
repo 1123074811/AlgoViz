@@ -12,6 +12,7 @@ export function generateFenwick(arr: number[]): AnimationScript {
     stepId: sid++, codeLine: 0,
     description: { zh: `数组 [${data.join(', ')}]，构建树状数组 (Fenwick Tree / BIT)`, en: `Array [${data.join(', ')}], build Fenwick Tree` },
     action: { type: 'highlight', targets: [], color: 'primary' },
+    events: [{ type: 'array.create', values: tree.slice(1) }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
 
@@ -24,6 +25,7 @@ export function generateFenwick(arr: number[]): AnimationScript {
         stepId: sid++, codeLine: 4,
         description: { zh: `update(${i}, ${data[i]}): tree[${idx}] += ${data[i]} → ${tree[idx]}`, en: `update(${i}, ${data[i]}): tree[${idx}] += ${data[i]} → ${tree[idx]}` },
         action: { type: 'highlight', targets: [idx - 1], color: 'warning' },
+        events: [{ type: 'array.compare', indices: [idx - 1, i] }],
         stats: { comparisons: sid, swaps: 0, accesses: 0 },
       })
       idx += idx & -idx
@@ -34,6 +36,7 @@ export function generateFenwick(arr: number[]): AnimationScript {
     stepId: sid++, codeLine: 6,
     description: { zh: `树状数组构建完成: [${tree.slice(1).join(', ')}]`, en: `Fenwick tree built: [${tree.slice(1).join(', ')}]` },
     action: { type: 'mark', targets: [], color: 'success' },
+    events: [{ type: 'array.mark_sorted', indices: Array.from({ length: n }, (_, k) => k) }],
     stats: { comparisons: sid, swaps: 0, accesses: 0 },
   })
 
@@ -44,6 +47,7 @@ export function generateFenwick(arr: number[]): AnimationScript {
     stepId: sid++, codeLine: 9,
     description: { zh: `查询前缀和 prefix(4)`, en: `Query prefix sum(4)` },
     action: { type: 'highlight', targets: [3], color: 'primary' },
+    events: [{ type: 'array.compare', indices: [3] }],
     stats: { comparisons: sid, swaps: 0, accesses: 0 },
   })
   while (idx > 0) {
@@ -52,6 +56,7 @@ export function generateFenwick(arr: number[]): AnimationScript {
       stepId: sid++, codeLine: 11,
       description: { zh: `tree[${idx}]=${tree[idx]}, sum=${sum}, idx -= lowbit → ${idx - (idx & -idx)}`, en: `tree[${idx}]=${tree[idx]}, sum=${sum}` },
       action: { type: 'compare', targets: [idx - 1], color: 'warning' },
+      events: [{ type: 'array.compare', indices: [idx - 1] }],
       stats: { comparisons: sid, swaps: 0, accesses: 0 },
     })
     idx -= idx & -idx
@@ -61,12 +66,14 @@ export function generateFenwick(arr: number[]): AnimationScript {
     stepId: sid++, codeLine: 13,
     description: { zh: `前缀和 = ${sum}`, en: `Prefix sum = ${sum}` },
     action: { type: 'mark', targets: [], color: 'success' },
+    events: [{ type: 'array.mark_sorted', indices: [] }],
     stats: { comparisons: sid, swaps: 0, accesses: 0 },
   })
 
   return {
     algorithm: 'fenwick_tree',
     complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' },
+    presentation: { engine: 'scene', module: 'array', variant: 'fenwick' },
     initialState: { type: 'array', data: tree.slice(1) },
     steps: steps as AnimationScript['steps'],
   }

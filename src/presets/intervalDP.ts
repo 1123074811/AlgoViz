@@ -10,10 +10,12 @@ export function generateIntervalDP(arr?: number[]): AnimationScript {
   const steps: any[] = []
   let sid = 1
 
+  const initialDp = dp.map((row) => [...row])
   steps.push({
     stepId: sid++, codeLine: 0,
     description: { zh: `石子: [${stones.join(', ')}]，求合并的最小代价（区间DP）`, en: `Stones: [${stones.join(', ')}], min merge cost (Interval DP)` },
     action: { type: 'highlight', targets: [], color: 'primary' },
+    events: [{ type: 'matrix.create', rows: n, cols: n, values: initialDp }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
 
@@ -29,6 +31,11 @@ export function generateIntervalDP(arr?: number[]): AnimationScript {
           stepId: sid++, codeLine: 5,
           description: { zh: `区间[${i},${j}], k=${k}: ${dp[i][k]}+${dp[k+1][j]}+sum[${i}..${j}]=${sum} = ${cost}, min=${dp[i][j] === Infinity ? '?' : dp[i][j]}`, en: `Range[${i},${j}], k=${k}: cost=${cost}, min=${dp[i][j]}` },
           action: { type: 'compare', targets: [i * n + j], color: 'warning' },
+          events: [
+            { type: 'scene.clear_highlight' },
+            { type: 'matrix.visit_cell', row: i, col: j },
+            { type: 'matrix.update_cell', row: i, col: j, value: dp[i][j] },
+          ],
           stats: { comparisons: sid, swaps: 0, accesses: 0 },
         })
       }
@@ -39,12 +46,14 @@ export function generateIntervalDP(arr?: number[]): AnimationScript {
     stepId: sid++, codeLine: 8,
     description: { zh: `最小合并代价 = ${dp[0][n-1]}`, en: `Min merge cost = ${dp[0][n-1]}` },
     action: { type: 'mark', targets: [], color: 'success' },
+    events: [{ type: 'matrix.mark_path', cells: [{ row: 0, col: n - 1 }] }],
     stats: { comparisons: sid, swaps: 0, accesses: 0 },
   })
 
   return {
     algorithm: 'interval_dp',
     complexity: { time: { best: 'O(n³)', average: 'O(n³)', worst: 'O(n³)' }, space: 'O(n²)' },
+    presentation: { engine: 'scene', module: 'matrix', variant: 'dp_table' },
     initialState: { type: 'matrix', data: dp.flat() },
     steps: steps as AnimationScript['steps'],
   }

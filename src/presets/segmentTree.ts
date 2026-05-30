@@ -12,6 +12,7 @@ export function generateSegmentTree(arr: number[]): AnimationScript {
     stepId: sid++, codeLine: 0,
     description: { zh: `数组 [${data.join(', ')}]，构建线段树`, en: `Array [${data.join(', ')}], build segment tree` },
     action: { type: 'highlight', targets: [], color: 'primary' },
+    events: [{ type: 'array.create', values: [...data] }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
 
@@ -22,6 +23,7 @@ export function generateSegmentTree(arr: number[]): AnimationScript {
         stepId: sid++, codeLine: 4,
         description: { zh: `叶节点 tree[${node}] = arr[${start}] = ${data[start]}`, en: `Leaf tree[${node}] = arr[${start}] = ${data[start]}` },
         action: { type: 'highlight', targets: [start], color: 'primary' },
+        events: [{ type: 'array.compare', indices: [start] }],
         stats: { comparisons: sid, swaps: 0, accesses: 0 },
       })
       return
@@ -34,6 +36,7 @@ export function generateSegmentTree(arr: number[]): AnimationScript {
       stepId: sid++, codeLine: 7,
       description: { zh: `tree[${node}] = tree[${2*node+1}] + tree[${2*node+2}] = ${tree[2*node+1]} + ${tree[2*node+2]} = ${tree[node]} (区间[${start},${end}])`, en: `tree[${node}] = ${tree[node]} (range [${start},${end}])` },
       action: { type: 'compare', targets: [start, end], color: 'success' },
+      events: [{ type: 'array.compare', indices: [start, end] }],
       stats: { comparisons: sid, swaps: 0, accesses: 0 },
     })
   }
@@ -45,6 +48,7 @@ export function generateSegmentTree(arr: number[]): AnimationScript {
     stepId: sid++, codeLine: 11,
     description: { zh: `查询区间和 sum[1..3]：从根节点递归`, en: `Query range sum[1..3]: recurse from root` },
     action: { type: 'highlight', targets: [1, 2, 3], color: 'warning' },
+    events: [{ type: 'array.compare', indices: [1, 2, 3] }],
     stats: { comparisons: sid, swaps: 0, accesses: 0 },
   })
 
@@ -53,12 +57,14 @@ export function generateSegmentTree(arr: number[]): AnimationScript {
     stepId: sid++, codeLine: 15,
     description: { zh: `sum[1..3] = ${data[1]}+${data[2]}+${data[3]} = ${sum} (O(log n))`, en: `sum[1..3] = ${sum} (O(log n))` },
     action: { type: 'mark', targets: [1, 2, 3], color: 'success' },
+    events: [{ type: 'array.mark_sorted', indices: [1, 2, 3] }],
     stats: { comparisons: sid, swaps: 0, accesses: 0 },
   })
 
   return {
     algorithm: 'segment_tree',
     complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' },
+    presentation: { engine: 'scene', module: 'array', variant: 'segment_tree' },
     initialState: { type: 'array', data },
     steps: steps as AnimationScript['steps'],
   }
