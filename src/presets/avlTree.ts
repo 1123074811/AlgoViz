@@ -93,5 +93,12 @@ export function generateAVLTree(): AnimationScript {
     },
   ))
 
-  return { algorithm: 'avl_tree', complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' }, initialState: { type: 'tree', data: tree }, steps }
+  // Attach events to steps
+  steps[0].events = [{ type: 'tree.create', variant: 'avl', rootId: '0', nodes: tree.map((v, i) => (v !== 0 ? { id: String(i), value: v } : { id: String(i), value: '' })), edges: [] }]
+  steps[1].events = [{ type: 'tree.compare', nodeId: '1', value: 6, result: 'less' }, { type: 'tree.update_metadata', nodeId: '1', height: 2, balanceFactor: -2 }]
+  steps[2].events = [{ type: 'tree.compare', nodeId: '1', value: 4, result: 'less' }, { type: 'tree.rotate', rotation: 'right-left', pivotId: '1' }]
+  steps[3].events = [{ type: 'tree.rotate', rotation: 'right-left', pivotId: '1' }, { type: 'tree.insert', parentId: '0', node: { id: '9', value: 4 }, side: 'right' }]
+  steps[4].events = [{ type: 'tree.update_metadata', nodeId: '0', height: 3, balanceFactor: 0 }]
+
+  return { algorithm: 'avl_tree', complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' }, presentation: { engine: 'scene', module: 'tree', variant: 'avl' }, initialState: { type: 'tree', data: tree }, steps }
 }

@@ -13,6 +13,7 @@ export function generateBinaryTree(): AnimationScript {
     'highlight', [0], 'primary', 0, 0, 0,
     { tree: { nodeStates: [{ id: '0', role: 'root', color: 'primary' as ActionColor }] } },
   ))
+  steps[0].events = [{ type: 'tree.create', variant: 'binary', rootId: '0', nodes: tree.map((v, i) => (v !== 0 ? { id: String(i), value: v } : { id: String(i), value: '' })).filter(n => n.id !== undefined), edges: [] }]
 
   // Inorder traversal
   const inorderPath = [3, 1, 9, 4, 10, 0, 11, 6, 12, 2, 13, 7, 14]
@@ -23,6 +24,7 @@ export function generateBinaryTree(): AnimationScript {
       'mark', [nodeIdx], 'warning', 0, 0, 1,
       { tree: { traversalPath: inorderPath.slice(0, 5).map(String), nodeStates: [{ id: String(nodeIdx), role: 'current', color: 'warning' as ActionColor }] } },
     ))
+    steps[steps.length - 1].events = [{ type: 'tree.visit', nodeId: String(nodeIdx) }]
   }
   steps.push(makeStep(sid++, 3,
     `中序遍历完成：[${inorderPath.map(i => tree[i]).join(', ')}]`,
@@ -30,6 +32,7 @@ export function generateBinaryTree(): AnimationScript {
     'mark', inorderPath, 'success', 0, 0, nums.length,
     { tree: { traversalPath: inorderPath.map(String) } },
   ))
+  steps[steps.length - 1].events = [{ type: 'tree.visit', nodeId: '0' }]
 
   // Preorder
   const preorderPath = [0, 1, 3, 9, 4, 10, 2, 6, 11, 12, 7, 13, 14]
@@ -39,12 +42,14 @@ export function generateBinaryTree(): AnimationScript {
     'highlight', [0], 'primary', 0, 0, 1,
     { tree: { traversalPath: preorderPath.slice(0, 3).map(String) } },
   ))
+  steps[steps.length - 1].events = [{ type: 'tree.visit', nodeId: '0' }]
   steps.push(makeStep(sid++, 4,
     `先序遍历完成：[${preorderPath.map(i => tree[i]).join(', ')}]`,
     `Preorder complete: [${preorderPath.map(i => tree[i]).join(', ')}]`,
     'mark', preorderPath, 'success', 0, 0, nums.length,
     { tree: { traversalPath: preorderPath.map(String) } },
   ))
+  steps[steps.length - 1].events = [{ type: 'tree.compare', nodeId: '0', value: 8, result: 'equal' }]
 
   // Postorder
   const postorderPath = [3, 9, 4, 10, 1, 11, 12, 6, 13, 14, 7, 2, 0]
@@ -54,12 +59,14 @@ export function generateBinaryTree(): AnimationScript {
     'highlight', [1, 2], 'primary', 0, 0, 2,
     { tree: { traversalPath: postorderPath.slice(0, 4).map(String) } },
   ))
+  steps[steps.length - 1].events = [{ type: 'tree.visit', nodeId: '1' }]
   steps.push(makeStep(sid++, 5,
     `后序遍历完成：[${postorderPath.map(i => tree[i]).join(', ')}]`,
     `Postorder complete: [${postorderPath.map(i => tree[i]).join(', ')}]`,
     'mark', postorderPath, 'success', 0, 0, nums.length,
     { tree: { traversalPath: postorderPath.map(String) } },
   ))
+  steps[steps.length - 1].events = [{ type: 'tree.compare', nodeId: '0', value: 8, result: 'equal' }]
 
   // Layer order
   steps.push(makeStep(sid++, 6,
@@ -69,5 +76,5 @@ export function generateBinaryTree(): AnimationScript {
     { tree: { traversalPath: [0, 1, 2, 3, 4, 6, 7, 9, 10, 11, 12, 13, 14].map(String) } },
   ))
 
-  return { algorithm: 'binary_tree', complexity: { time: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' }, space: 'O(h)' }, initialState: { type: 'tree', data: tree }, steps }
+  return { algorithm: 'binary_tree', complexity: { time: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' }, space: 'O(h)' }, presentation: { engine: 'scene', module: 'tree' }, initialState: { type: 'tree', data: tree }, steps }
 }

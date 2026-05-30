@@ -7,19 +7,24 @@ export function generateQueue(): AnimationScript {
   const queue: number[] = []
 
   steps.push({ stepId: sid++, codeLine: 0, description: { zh: '队列 (Queue) — FIFO 先进先出', en: 'Queue — FIFO First In First Out' }, action: { type: 'highlight', targets: [], color: 'primary' }, stats: { comparisons: 0, swaps: 0, accesses: 0 } })
+  steps[0].events = [{ type: 'array.create', values: [2, 3] }]
 
   for (const v of [1, 2, 3]) {
     queue.push(v)
     steps.push({ stepId: sid++, codeLine: 2, description: { zh: `enqueue(${v}) → 队: [${queue.join(', ')}]`, en: `enqueue(${v}) → queue: [${queue.join(', ')}]` }, action: { type: 'insert', targets: [queue.length - 1], color: 'success' }, stats: { comparisons: 0, swaps: 0, accesses: queue.length } })
+    steps[steps.length - 1].events = [{ type: 'array.compare', indices: [queue.length - 1, queue.length - 1] }]
   }
 
   steps.push({ stepId: sid++, codeLine: 3, description: { zh: `队首 front = ${queue[0]}`, en: `Front = ${queue[0]}` }, action: { type: 'highlight', targets: [0], color: 'warning' }, stats: { comparisons: 0, swaps: 0, accesses: 1 } })
+  steps[steps.length - 1].events = [{ type: 'array.compare', indices: [0, 0] }]
 
   const v = queue.shift()!
   steps.push({ stepId: sid++, codeLine: 4, description: { zh: `dequeue() → ${v}，队: [${queue.join(', ')}]`, en: `dequeue() → ${v}, queue: [${queue.join(', ')}]` }, action: { type: 'delete', targets: [0], color: 'danger' }, stats: { comparisons: 0, swaps: 0, accesses: queue.length + 1 } })
+  steps[steps.length - 1].events = [{ type: 'array.mark_sorted', indices: [0] }]
 
   return {
     algorithm: 'queue', complexity: { time: { best: 'O(1)', average: 'O(1)', worst: 'O(1)' }, space: 'O(n)' },
+    presentation: { engine: 'scene', module: 'array' },
     initialState: { type: 'array', data: [2, 3] },
     steps: steps as AnimationScript['steps'],
   }

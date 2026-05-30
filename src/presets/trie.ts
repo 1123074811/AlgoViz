@@ -12,6 +12,7 @@ export function generateTrie(): AnimationScript {
     'highlight', [], 'primary', 0, 0, 0,
     { tree: { nodeStates: [{ id: 'root', role: 'root', color: 'primary' as ActionColor }] } },
   ))
+  steps[0].events = [{ type: 'tree.create', variant: 'trie', rootId: 'root', nodes: [{ id: 'root', value: '∅' }], edges: [] }]
 
   // Insert "cat"
   steps.push(makeStep(sid++, 3,
@@ -30,6 +31,7 @@ export function generateTrie(): AnimationScript {
       },
     },
   ))
+  steps[1].events = [{ type: 'tree.insert', parentId: 'root', node: { id: 'c', value: 'c' } }, { type: 'tree.insert', parentId: 'c', node: { id: 'a', value: 'a' } }, { type: 'tree.insert', parentId: 'a', node: { id: 't', value: 't' } }]
 
   // Insert "car"
   steps.push(makeStep(sid++, 3,
@@ -48,6 +50,7 @@ export function generateTrie(): AnimationScript {
       },
     },
   ))
+  steps[2].events = [{ type: 'tree.insert', parentId: 'a', node: { id: 'r', value: 'r' } }]
 
   // Insert "dog"
   steps.push(makeStep(sid++, 3,
@@ -66,6 +69,7 @@ export function generateTrie(): AnimationScript {
       },
     },
   ))
+  steps[3].events = [{ type: 'tree.insert', parentId: 'root', node: { id: 'd', value: 'd' } }, { type: 'tree.insert', parentId: 'd', node: { id: 'o', value: 'o' } }, { type: 'tree.insert', parentId: 'o', node: { id: 'g', value: 'g' } }]
 
   // Search "cat" — found
   steps.push(makeStep(sid++, 7,
@@ -74,6 +78,7 @@ export function generateTrie(): AnimationScript {
     'compare', [1, 2, 3], 'success', 3, 0, 3,
     { tree: { traversalPath: ['root', 'c', 'a', 't'] } },
   ))
+  steps[4].events = [{ type: 'tree.visit', nodeId: 'c' }, { type: 'tree.visit', nodeId: 'a' }, { type: 'tree.visit', nodeId: 't' }]
 
   // Search "can" — not found
   steps.push(makeStep(sid++, 8,
@@ -82,6 +87,7 @@ export function generateTrie(): AnimationScript {
     'compare', [1, 2], 'danger', 2, 0, 2,
     { tree: { traversalPath: ['root', 'c', 'a'] } },
   ))
+  steps[5].events = [{ type: 'tree.visit', nodeId: 'c' }, { type: 'tree.visit', nodeId: 'a' }]
 
   steps.push(makeStep(sid++, 9,
     `Trie 构建完成。3 个单词共享 ca 前缀，d 分支独立。Trie 广泛应用于自动补全、拼写检查、IP 路由等场景`,
@@ -97,10 +103,12 @@ export function generateTrie(): AnimationScript {
       },
     },
   ))
+  steps[6].events = [{ type: 'tree.visit', nodeId: 'root' }]
 
   return {
     algorithm: 'trie',
     complexity: { time: { best: 'O(k)', average: 'O(k)', worst: 'O(k)' }, space: 'O(n*k)' },
+    presentation: { engine: 'scene', module: 'tree', variant: 'trie' },
     initialState: {
       type: 'tree',
       data: [],
