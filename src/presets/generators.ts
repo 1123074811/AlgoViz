@@ -780,28 +780,56 @@ export function generateBinarySearch(arr: number[], target?: number): AnimationS
   const steps: AnimationStep[] = []
   let comps = 0, sid = 1, acc = 0
 
-  steps.push(makeStep(sid++, 1, `有序数组 [${sorted.join(', ')}]，搜索 target=${t}`, `Sorted array [${sorted.join(', ')}], search target=${t}`, 'highlight', [], 'primary', comps, 0, acc))
+  { const noteZh = `有序数组 [${sorted.join(', ')}]，搜索 target=${t}`
+  steps.push({
+    ...makeStep(sid++, 1, noteZh, `Sorted array [${sorted.join(', ')}], search target=${t}`, 'highlight', [], 'primary', comps, 0, acc),
+    ...evt([{ type: 'array.create', values: sorted }]),
+  })}
 
   let left = 0, right = sorted.length - 1
   while (left <= right) {
     const mid = Math.floor(left + (right - left) / 2)
-    steps.push(makeStep(sid++, 3, `left=${left}, right=${right}，mid=${mid}，arr[${mid}]=${sorted[mid]}`, `left=${left}, right=${right}, mid=${mid}, arr[${mid}]=${sorted[mid]}`, 'highlight', [mid], 'warning', comps, 0, acc += 2))
-    steps.push(makeStep(sid++, 4, `比较 arr[${mid}]=${sorted[mid]} == target=${t}？`, `Compare arr[${mid}]=${sorted[mid]} == target=${t}?`, 'compare', [mid], 'warning', ++comps, 0, acc))
+    { const noteZh = `left=${left}, right=${right}，mid=${mid}，arr[${mid}]=${sorted[mid]}`
+    steps.push({
+      ...makeStep(sid++, 3, noteZh, `left=${left}, right=${right}, mid=${mid}, arr[${mid}]=${sorted[mid]}`, 'highlight', [mid], 'warning', comps, 0, acc += 2),
+      ...evt([{ type: 'scene.note', text: noteZh }]),
+    })}
+    { const noteZh = `比较 arr[${mid}]=${sorted[mid]} == target=${t}？`
+    steps.push({
+      ...makeStep(sid++, 4, noteZh, `Compare arr[${mid}]=${sorted[mid]} == target=${t}?`, 'compare', [mid], 'warning', ++comps, 0, acc),
+      ...evt([{ type: 'array.compare', indices: [mid, mid] }]),
+    })}
 
     if (sorted[mid] === t) {
-      steps.push(makeStep(sid++, 5, `找到 target！arr[${mid}]=${t}`, `Found target! arr[${mid}]=${t}`, 'mark', [mid], 'success', comps, 0, acc))
-      return { algorithm: 'binary_search', complexity: { time: { best: 'O(1)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(1)' }, initialState: { type: 'array', data: sorted }, steps }
+      { const noteZh = `找到 target！arr[${mid}]=${t}`
+      steps.push({
+        ...makeStep(sid++, 5, noteZh, `Found target! arr[${mid}]=${t}`, 'mark', [mid], 'success', comps, 0, acc),
+        ...evt([{ type: 'array.mark_sorted', indices: [mid] }]),
+      })}
+      return { algorithm: 'binary_search', presentation: { engine: 'scene' as const, module: 'array' as const }, complexity: { time: { best: 'O(1)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(1)' }, initialState: { type: 'array', data: sorted }, steps }
     } else if (sorted[mid] < t) {
-      steps.push(makeStep(sid++, 6, `${sorted[mid]} < ${t}，left = ${mid + 1}`, `${sorted[mid]} < ${t}, left = ${mid + 1}`, 'highlight', [mid], 'muted', comps, 0, acc))
+      { const noteZh = `${sorted[mid]} < ${t}，left = ${mid + 1}`
+      steps.push({
+        ...makeStep(sid++, 6, noteZh, `${sorted[mid]} < ${t}, left = ${mid + 1}`, 'highlight', [mid], 'muted', comps, 0, acc),
+        ...evt([{ type: 'scene.note', text: noteZh }]),
+      })}
       left = mid + 1
     } else {
-      steps.push(makeStep(sid++, 6, `${sorted[mid]} > ${t}，right = ${mid - 1}`, `${sorted[mid]} > ${t}, right = ${mid - 1}`, 'highlight', [mid], 'muted', comps, 0, acc))
+      { const noteZh = `${sorted[mid]} > ${t}，right = ${mid - 1}`
+      steps.push({
+        ...makeStep(sid++, 6, noteZh, `${sorted[mid]} > ${t}, right = ${mid - 1}`, 'highlight', [mid], 'muted', comps, 0, acc),
+        ...evt([{ type: 'scene.note', text: noteZh }]),
+      })}
       right = mid - 1
     }
   }
-  steps.push(makeStep(sid++, 7, `未找到 target=${t}，返回 -1`, `Target=${t} not found, return -1`, 'mark', [], 'danger', comps, 0, acc))
+  { const noteZh = `未找到 target=${t}，返回 -1`
+  steps.push({
+    ...makeStep(sid++, 7, noteZh, `Target=${t} not found, return -1`, 'mark', [], 'danger', comps, 0, acc),
+    ...evt([{ type: 'scene.note', text: noteZh }]),
+  })}
 
-  return { algorithm: 'binary_search', complexity: { time: { best: 'O(1)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(1)' }, initialState: { type: 'array', data: sorted }, steps }
+  return { algorithm: 'binary_search', presentation: { engine: 'scene' as const, module: 'array' as const }, complexity: { time: { best: 'O(1)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(1)' }, initialState: { type: 'array', data: sorted }, steps }
 }
 
 // ============ Generator registry ============
