@@ -69,4 +69,13 @@ export type QueueAlgorithmEvent =
   | { type: 'queue.dequeue' }
   | { type: 'queue.peek_front'; index: number }
 
-export type AlgorithmEvent = CommonAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent
+export type StringAlgorithmEvent =
+  | { type: 'string.create'; text: string; row?: number }
+  | { type: 'string.create_double'; text: string; pattern: string }
+  | { type: 'string.compare'; row: number; indices: [number, number] }
+  | { type: 'string.match'; row: number; index: number }
+  | { type: 'string.mismatch'; row: number; index: number }
+  | { type: 'string.mark_range'; row: number; indices: number[] }
+  | { type: 'string.shift_pattern'; offset: number }
+
+export type AlgorithmEvent = CommonAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent

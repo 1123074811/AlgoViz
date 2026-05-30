@@ -7,9 +7,10 @@ import { linkedListCompiler } from './compilers/linkedListCompiler'
 import { matrixCompiler } from './compilers/matrixCompiler'
 import { queueCompiler } from './compilers/queueCompiler'
 import { stackCompiler } from './compilers/stackCompiler'
+import { stringCompiler } from './compilers/stringCompiler'
 import { treeCompiler } from './compilers/treeCompiler'
 
-const compilers = [linkedListCompiler, treeCompiler, arrayCompiler, matrixCompiler, graphCompiler, stackCompiler, queueCompiler]
+const compilers = [linkedListCompiler, treeCompiler, arrayCompiler, matrixCompiler, graphCompiler, stackCompiler, queueCompiler, stringCompiler]
 
 export function compileEvent(event: AlgorithmEvent, context: CompileContext): SceneCommand[] {
   if (event.type === 'scene.note') return [{ type: 'add_note', text: event.text }]
