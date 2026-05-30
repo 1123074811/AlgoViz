@@ -1,7 +1,7 @@
 import type { SceneCommand } from '../commandTypes'
 import type { QueueAlgorithmEvent } from '../eventTypes'
 import type { CompileContext, EventCompiler } from '../SceneEngine'
-import { DataUnit } from '../primitives/DataUnits'
+import { AuxiliaryUnit, DataUnit } from '../primitives/DataUnits'
 
 const START_X = 140
 const START_Y = 300
@@ -20,37 +20,51 @@ function compileQueueEvent(event: QueueAlgorithmEvent, context: CompileContext):
         cell: DataUnit.arrayCell({ id: queueCellId(index), value, index, x: START_X + index * CELL_GAP, y: START_Y }),
       }))
     case 'queue.enqueue': {
-      const existingCount = Object.keys(context.scene.entities).filter(k => k.startsWith('queue_')).length
-      const id = queueCellId(existingCount)
-      const commands: SceneCommand[] = [{
-        type: 'create_cell' as const,
-        cell: DataUnit.arrayCell({ id, value: event.value, index: existingCount, x: START_X + existingCount * CELL_GAP, y: START_Y }),
-      }]
-      commands.push({ type: 'set_state', entityId: id, state: { role: 'inserted', color: 'success', pulse: true }, merge: true })
-      commands.push({ type: 'add_note', text: `enqueue(${event.value})` })
-      return commands
+      const count = Object.keys(context.scene.entities).filter(k => k.startsWith('queue_')).length
+      const phantomId = `phantom_enq_${count}`
+      const arrowId = `enq_arrow_${count}`
+      const id = queueCellId(count)
+      // Phantom cell enters from right, curves into the pipe
+      return [
+        { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: event.value, index: -1, x: START_X + (count + 2) * CELL_GAP, y: START_Y - 80 }) },
+        { type: 'connect', edge: AuxiliaryUnit.arrow({
+          id: arrowId, fromEntity: phantomId, toEntity: queueCellId(count - 1),
+          curved: true, dashed: true, thickness: 2, color: 'success', pulse: true,
+        }) },
+        { type: 'wait', duration: 300 },
+        { type: 'remove_entity', entityId: phantomId },
+        { type: 'create_cell', cell: DataUnit.arrayCell({ id, value: event.value, index: count, x: START_X + count * CELL_GAP, y: START_Y }) },
+        { type: 'set_state', entityId: id, state: { role: 'inserted', color: 'success', pulse: true }, merge: true },
+        { type: 'add_note', text: `enqueue(${event.value})` },
+      ]
     }
     case 'queue.dequeue': {
-      const allIds = Object.keys(context.scene.entities).filter(k => k.startsWith('queue_')).sort((a, b) => {
-        return parseInt(a.split('_')[1]) - parseInt(b.split('_')[1])
-      })
-      const frontId = allIds[0]
+      const ids = Object.keys(context.scene.entities).filter(k => k.startsWith('queue_')).sort((a, b) => parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]))
+      const frontId = ids[0]
       const frontCell = context.scene.entities[frontId]
-      const frontVal = frontCell?.type === 'cell' ? frontCell.value : '?'
+      const frontVal = (frontCell?.type === 'cell' && (typeof frontCell.value === 'string' || typeof frontCell.value === 'number')) ? frontCell.value : '?'
+      const phantomId = 'phantom_deq_0'
+      const arrowId = 'deq_arrow_0'
+      // Phantom cell exits left, showing the dequeue path
       return [
         { type: 'set_state', entityId: frontId, state: { role: 'deleted', color: 'danger', pulse: true }, merge: true },
+        { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: frontVal, index: -1, x: START_X - 100, y: START_Y - 80, color: 'danger' }) },
+        { type: 'connect', edge: AuxiliaryUnit.arrow({
+          id: arrowId, fromEntity: frontId, toEntity: phantomId,
+          curved: true, dashed: true, thickness: 2, color: 'danger', pulse: true,
+        }) },
         { type: 'remove_entity', entityId: frontId },
-        { type: 'add_note', text: `dequeue() → ${frontVal}` },
         // Shift remaining cells left
-        ...allIds.slice(1).map((id, newIndex) => {
-          const cell = context.scene.entities[id]
+        ...ids.slice(1).map((oldId, newIndex) => {
+          const cell = context.scene.entities[oldId]
           if (cell?.type === 'cell') {
             const val = (typeof cell.value === 'number' || typeof cell.value === 'string') ? cell.value : ''
-            return { type: 'create_cell' as const, cell: DataUnit.arrayCell({ id: queueCellId(newIndex), value: val, index: newIndex, x: START_X + newIndex * CELL_GAP, y: START_Y }), }
+            return { type: 'create_cell' as const, cell: DataUnit.arrayCell({ id: queueCellId(newIndex), value: val, index: newIndex, x: START_X + newIndex * CELL_GAP, y: START_Y }) }
           }
           return { type: 'wait' as const, duration: 0 }
         }),
-        ...allIds.slice(1).map((id) => ({ type: 'remove_entity' as const, entityId: id })),
+        ...ids.slice(1).map((oldId) => ({ type: 'remove_entity' as const, entityId: oldId })),
+        { type: 'add_note', text: `dequeue() → ${frontVal}` },
       ]
     }
     case 'queue.peek_front':
@@ -59,11 +73,3 @@ function compileQueueEvent(event: QueueAlgorithmEvent, context: CompileContext):
 }
 
 export function queueCellId(index: number) { return `queue_${index}` }
-
-export function getQueueCells(scene: CompileContext['scene']): import('../types').SceneCell[] {
-  return Object.keys(scene.entities)
-    .filter(k => k.startsWith('queue_'))
-    .sort((a, b) => parseInt(a.split('_')[1]) - parseInt(b.split('_')[1]))
-    .map(k => scene.entities[k])
-    .filter(e => e?.type === 'cell') as import('../types').SceneCell[]
-}
