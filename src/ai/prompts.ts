@@ -13,6 +13,7 @@ export function buildSystemPrompt(language: string): string {
     "time": { "best": "O(n)", "average": "O(n log n)", "worst": "O(n²)" },
     "space": "O(1)"
   },
+  "presentation": { "engine": "classic" },
   "initialState": { "type": "array", "data": [5, 3, 8, 1] },
   "steps": [
     {
@@ -70,6 +71,39 @@ export function buildSystemPrompt(language: string): string {
 ### linked_list
 \`\`\`json
 { "type": "linked_list", "data": [1, 2, 3, 4], "labels": ["head","","","tail"] }
+\`\`\`
+
+## Scene Engine events（动态结构优先使用）
+- 当算法涉及链表插入、删除、反转、指针移动时，设置 \`presentation.engine = "scene"\`
+- events 只描述算法语义，不要输出坐标、CSS、箭头路径、DOM 或动画时长
+- 链表可用事件：\`linked_list.create\`、\`linked_list.visit\`、\`linked_list.move_pointer\`、\`linked_list.insert_after\`、\`linked_list.insert_before\`、\`linked_list.delete\`、\`linked_list.reverse_link\`、\`linked_list.set_head\`、\`linked_list.set_tail\`
+- 树算法涉及节点创建、插入、访问、比较或元数据更新时，也可以设置 \`presentation.engine = "scene"\` 并使用 \`tree.create\`、\`tree.visit\`、\`tree.compare\`、\`tree.insert\`、\`tree.delete\`、\`tree.rotate\`、\`tree.update_metadata\`
+- 图算法可使用 \`graph.create\`、\`graph.visit_node\`、\`graph.visit_edge\`、\`graph.relax_edge\`、\`graph.enqueue\`、\`graph.dequeue\`，节点 id 必须与 initialState.nodes 对齐
+- 矩阵、数组和 N 皇后可以使用 \`matrix.*\`、\`array.*\`、\`n_queens.*\` 事件；如果输出 events，必须使用白名单事件并补齐必填字段
+
+### 链表 events 示例
+\`\`\`json
+{
+  "presentation": { "engine": "scene", "module": "linked_list", "variant": "singly" },
+  "steps": [
+    {
+      "stepId": 1,
+      "codeLine": 0,
+      "description": { "zh": "创建链表", "en": "Create linked list" },
+      "action": { "type": "highlight", "targets": [], "color": "primary" },
+      "events": [
+        {
+          "type": "linked_list.create",
+          "variant": "singly",
+          "nodes": [{ "id": "n1", "value": 1 }, { "id": "n2", "value": 2 }],
+          "headId": "n1",
+          "tailId": "n2"
+        }
+      ],
+      "stats": { "comparisons": 0, "swaps": 0, "accesses": 2 }
+    }
+  ]
+}
 \`\`\`
 
 ## action 说明

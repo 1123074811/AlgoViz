@@ -1,5 +1,7 @@
 /** AnimationScript - the structured JSON format returned by AI or presets */
 
+import type { AlgorithmEvent, PresentationConfig } from '@/scene'
+
 export type RendererType = 'array' | 'graph' | 'tree' | 'matrix' | 'linked_list'
 
 export type ActionType = 'highlight' | 'swap' | 'compare' | 'move' | 'insert' | 'delete' | 'mark' | 'annotate' | 'edge'
@@ -173,6 +175,7 @@ export interface AnimationStep {
   codeLine: number
   description: StepDescription
   action: StepAction
+  events?: AlgorithmEvent[]
   stats: StepStats
   teachingState?: TeachingState
 }
@@ -181,5 +184,6 @@ export interface AnimationScript {
   algorithm: string
   complexity: Complexity
   initialState: InitialState
+  presentation?: PresentationConfig
   steps: AnimationStep[]
 }

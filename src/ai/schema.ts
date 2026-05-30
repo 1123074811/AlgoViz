@@ -1,4 +1,5 @@
 import type { AnimationScript, AnimationStep, ActionColor, RendererType } from '@/types/animation'
+import type { AlgorithmEvent } from '@/scene'
 import type { AIValidationIssue, AIErrorSeverity } from './errors'
 
 const VALID_ACTION_TYPES = new Set([
@@ -6,6 +7,16 @@ const VALID_ACTION_TYPES = new Set([
 ])
 const VALID_COLORS = new Set<ActionColor>(['primary', 'success', 'warning', 'danger', 'muted'])
 const VALID_RENDERER_TYPES: Set<RendererType> = new Set(['array', 'graph', 'tree', 'matrix', 'linked_list'])
+const VALID_PRESENTATION_ENGINES = new Set(['classic', 'scene'])
+const VALID_EVENT_TYPES = new Set([
+  'scene.note', 'scene.highlight', 'scene.clear_highlight', 'scene.wait',
+  'linked_list.create', 'linked_list.visit', 'linked_list.move_pointer', 'linked_list.insert_after', 'linked_list.insert_before', 'linked_list.delete', 'linked_list.reverse_link', 'linked_list.set_head', 'linked_list.set_tail',
+  'tree.create', 'tree.visit', 'tree.compare', 'tree.insert', 'tree.delete', 'tree.rotate', 'tree.update_metadata',
+  'array.create', 'array.compare', 'array.swap', 'array.move', 'array.mark_sorted', 'array.partition',
+  'graph.create', 'graph.visit_node', 'graph.visit_edge', 'graph.relax_edge', 'graph.enqueue', 'graph.dequeue',
+  'matrix.create', 'matrix.visit_cell', 'matrix.update_cell', 'matrix.mark_path', 'matrix.mark_conflict',
+  'n_queens.try_place', 'n_queens.place', 'n_queens.conflict', 'n_queens.backtrack', 'n_queens.solution',
+])
 
 function issue(path: string, code: string, message: string, suggestion?: string, severity: AIErrorSeverity = 'error', recoverable = false): AIValidationIssue {
   return { path, code, message, suggestion, severity, recoverable }
@@ -39,6 +50,16 @@ export function validateAnimationScript(raw: unknown): AIValidationIssue[] {
     issues.push(issue('steps', 'empty', 'steps 不能为空数组'))
   } else {
     issues.push(...validateSteps(obj.steps as unknown[], (obj.initialState as Record<string, unknown>)?.type as string | undefined))
+  }
+  if (obj.presentation !== undefined) {
+    if (!obj.presentation || typeof obj.presentation !== 'object') {
+      issues.push(issue('presentation', 'invalid_type', 'presentation 必须是对象', undefined, 'warning', true))
+    } else {
+      const presentation = obj.presentation as Record<string, unknown>
+      if (presentation.engine !== undefined && !VALID_PRESENTATION_ENGINES.has(String(presentation.engine))) {
+        issues.push(issue('presentation.engine', 'invalid_type', 'presentation.engine 必须是 classic 或 scene'))
+      }
+    }
   }
 
   return issues
@@ -154,6 +175,16 @@ function validateSteps(steps: unknown[], rendererType?: string): AIValidationIss
       issues.push(issue(`steps[${i}].action.targets`, 'invalid_type', `步骤 [${i}] 的 targets 必须是数字数组`))
     }
 
+    if (step.events !== undefined) {
+      if (!Array.isArray(step.events)) {
+        issues.push(issue(`steps[${i}].events`, 'invalid_type', `步骤 [${i}] 的 events 必须是数组`))
+      } else {
+        step.events.forEach((event, eventIndex) => {
+          issues.push(...validateEvent(event, `steps[${i}].events[${eventIndex}]`))
+        })
+      }
+    }
+
     // stats monotonic check
     if (i > 0) {
       const prev = steps[i - 1] as Record<string, unknown>
@@ -185,7 +216,18 @@ export function normalizeAnimationScript(raw: unknown): AnimationScript | null {
   const steps = normalizeSteps(obj.steps as unknown[] | undefined, initialState.type)
   if (steps.length === 0) return null
 
-  return { algorithm, complexity, initialState, steps }
+  const presentation = normalizePresentation(obj.presentation as Record<string, unknown> | undefined)
+  return { algorithm, complexity, initialState, ...(presentation && { presentation }), steps }
+}
+
+function normalizePresentation(p?: Record<string, unknown>): AnimationScript['presentation'] | undefined {
+  if (!p || typeof p !== 'object') return undefined
+  const engine = VALID_PRESENTATION_ENGINES.has(String(p.engine)) ? String(p.engine) as 'classic' | 'scene' : undefined
+  const module = typeof p.module === 'string' ? p.module : undefined
+  const variant = typeof p.variant === 'string' ? p.variant : undefined
+  const layout = typeof p.layout === 'string' ? p.layout : undefined
+  if (!engine && !module && !variant && !layout) return undefined
+  return { ...(engine && { engine }), ...(module && { module }), ...(variant && { variant }), ...(layout && { layout }) }
 }
 
 function normalizeComplexity(c?: Record<string, unknown>): AnimationScript['complexity'] {
@@ -285,11 +327,67 @@ function normalizeStep(raw: unknown, fallbackId: number): AnimationStep | null {
   const value = typeof action.value === 'number' || typeof action.value === 'string' ? action.value : undefined
 
   const teachingState = (s.teachingState && typeof s.teachingState === 'object') ? s.teachingState as AnimationStep['teachingState'] : undefined
+  const events = Array.isArray(s.events) ? normalizeEvents(s.events) : undefined
 
   return {
     stepId, codeLine, description: { zh, en },
     action: { type: actionType, targets, color, from: typeof action.from === 'number' ? action.from : undefined, to: typeof action.to === 'number' ? action.to : undefined, value },
     stats: { comparisons, swaps, accesses },
+    ...(events && { events }),
     ...(teachingState && { teachingState }),
   }
+}
+
+function validateEvent(event: unknown, path: string): AIValidationIssue[] {
+  const issues: AIValidationIssue[] = []
+  if (!event || typeof event !== 'object') {
+    issues.push(issue(path, 'invalid_type', 'event 必须是对象'))
+    return issues
+  }
+  const e = event as Record<string, unknown>
+  const type = String(e.type ?? '')
+  if (!VALID_EVENT_TYPES.has(type)) {
+    issues.push(issue(`${path}.type`, 'invalid_type', `event.type "${type}" 不在白名单中`))
+    return issues
+  }
+
+  if (type === 'linked_list.create') {
+    if (!['singly', 'doubly', 'circular'].includes(String(e.variant))) issues.push(issue(`${path}.variant`, 'required', 'linked_list.create 必须包含 variant'))
+    if (!Array.isArray(e.nodes) || e.nodes.length === 0) issues.push(issue(`${path}.nodes`, 'required', 'linked_list.create 必须包含非空 nodes'))
+  }
+  if (type === 'linked_list.insert_after' || type === 'linked_list.insert_before') {
+    if (typeof e.targetNodeId !== 'string') issues.push(issue(`${path}.targetNodeId`, 'required', `${type} 必须包含 targetNodeId`))
+    if (!e.newNode || typeof e.newNode !== 'object') issues.push(issue(`${path}.newNode`, 'required', `${type} 必须包含 newNode`))
+  }
+  if (type === 'linked_list.delete' && typeof e.nodeId !== 'string') issues.push(issue(`${path}.nodeId`, 'required', 'linked_list.delete 必须包含 nodeId'))
+  if (type === 'linked_list.move_pointer' && typeof e.pointerId !== 'string') issues.push(issue(`${path}.pointerId`, 'required', 'linked_list.move_pointer 必须包含 pointerId'))
+  if (type === 'tree.rotate') {
+    if (!['left', 'right', 'left-right', 'right-left'].includes(String(e.rotation))) issues.push(issue(`${path}.rotation`, 'required', 'tree.rotate 必须包含合法 rotation'))
+    if (typeof e.pivotId !== 'string') issues.push(issue(`${path}.pivotId`, 'required', 'tree.rotate 必须包含 pivotId'))
+  }
+  if (type === 'array.swap' || type === 'array.compare') {
+    if (!Array.isArray(e.indices) || e.indices.length !== 2) issues.push(issue(`${path}.indices`, 'required', `${type} 必须包含长度为 2 的 indices`))
+  }
+  if (type === 'graph.create') {
+    if (!Array.isArray(e.nodes) || e.nodes.length === 0) issues.push(issue(`${path}.nodes`, 'required', 'graph.create 必须包含非空 nodes'))
+    if (!Array.isArray(e.edges)) issues.push(issue(`${path}.edges`, 'required', 'graph.create 必须包含 edges 数组'))
+  }
+  if (type === 'graph.visit_node' || type === 'graph.enqueue' || type === 'graph.dequeue') {
+    if (typeof e.nodeId !== 'string') issues.push(issue(`${path}.nodeId`, 'required', `${type} 必须包含 nodeId`))
+  }
+  if (type === 'graph.visit_edge' || type === 'graph.relax_edge') {
+    if (typeof e.source !== 'string') issues.push(issue(`${path}.source`, 'required', `${type} 必须包含 source`))
+    if (typeof e.target !== 'string') issues.push(issue(`${path}.target`, 'required', `${type} 必须包含 target`))
+  }
+  if (type.startsWith('n_queens.') && (typeof e.row !== 'number' || typeof e.col !== 'number') && type !== 'n_queens.solution') {
+    issues.push(issue(path, 'required', `${type} 必须包含 row 和 col`))
+  }
+  return issues
+}
+
+function normalizeEvents(events: unknown[]): AlgorithmEvent[] {
+  return events.filter((event): event is AlgorithmEvent => {
+    if (!event || typeof event !== 'object') return false
+    return VALID_EVENT_TYPES.has(String((event as Record<string, unknown>).type ?? ''))
+  })
 }

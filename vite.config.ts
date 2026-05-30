@@ -16,7 +16,7 @@ function apiProxyMiddleware() {
         }
 
         // Read the target base URL and API key from custom headers
-        const baseUrl = (req.headers['x-proxy-target'] as string) || 'https://api.deepseek.com/v1'
+        const baseUrl = (req.headers['x-proxy-target'] as string) || 'https://api.deepseek.com'
         const apiKey = (req.headers['x-proxy-key'] as string) || ''
         const apiUrl = `${baseUrl.replace(/\/+$/, '')}/chat/completions`
 

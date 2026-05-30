@@ -66,7 +66,7 @@ const server = http.createServer((req, res) => {
 })
 
 function handleProxy(req, res) {
-  const baseUrl = (req.headers['x-proxy-target'] || 'https://api.deepseek.com/v1').replace(/\/+$/, '')
+  const baseUrl = (req.headers['x-proxy-target'] || 'https://api.deepseek.com').replace(/\/+$/, '')
   const apiKey  = req.headers['x-proxy-key'] || ''
   const apiUrl  = `${baseUrl}/chat/completions`
 
