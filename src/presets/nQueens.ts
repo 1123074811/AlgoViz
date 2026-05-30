@@ -11,6 +11,7 @@ export function generateNQueens(n?: number): AnimationScript {
     stepId: sid++, codeLine: 0,
     description: { zh: `${N} 皇后问题：在 ${N}×${N} 棋盘放置 ${N} 个皇后，互不攻击`, en: `${N}-Queens: place ${N} queens on ${N}x${N} board, no attacks` },
     action: { type: 'highlight', targets: [], color: 'primary' },
+    events: [{ type: 'matrix.create', rows: N, cols: N }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
 
@@ -31,6 +32,7 @@ export function generateNQueens(n?: number): AnimationScript {
         stepId: sid++, codeLine: 3,
         description: { zh: `找到解！皇后位置: ${board.map((r, i) => `(${i},${r.indexOf('Q')})`).join(' ')}`, en: `Solution found! Queens at: ${board.map((r, i) => `(${i},${r.indexOf('Q')})`).join(' ')}` },
         action: { type: 'mark', targets: [], color: 'success' },
+        events: [{ type: 'n_queens.solution', queens: board.map((r, i) => ({ row: i, col: r.indexOf('Q') })).filter((queen) => queen.col >= 0) }],
         stats: { comparisons: sid, swaps: 0, accesses: 0 },
       })
       return true
@@ -44,6 +46,7 @@ export function generateNQueens(n?: number): AnimationScript {
         stepId: sid++, codeLine: 6,
         description: { zh: `尝试在 (${row},${col}) 放置皇后`, en: `Try placing queen at (${row},${col})` },
         action: { type: 'compare', targets: [idx], color: 'warning' },
+        events: [{ type: 'n_queens.try_place', row, col }],
         stats: { comparisons: sid, swaps: 0, accesses: 0 },
       })
 
@@ -53,6 +56,7 @@ export function generateNQueens(n?: number): AnimationScript {
           stepId: sid++, codeLine: 8,
           description: { zh: `(${row},${col}) 安全，放置 Q`, en: `(${row},${col}) safe, place Q` },
           action: { type: 'highlight', targets: [idx], color: 'success' },
+          events: [{ type: 'n_queens.place', row, col }],
           stats: { comparisons: sid, swaps: 0, accesses: 0 },
         })
         if (solve(row + 1)) return true
@@ -61,6 +65,7 @@ export function generateNQueens(n?: number): AnimationScript {
           stepId: sid++, codeLine: 9,
           description: { zh: `回溯：撤销 (${row},${col}) 的皇后`, en: `Backtrack: remove queen at (${row},${col})` },
           action: { type: 'delete', targets: [idx], color: 'danger' },
+          events: [{ type: 'n_queens.backtrack', row, col }],
           stats: { comparisons: sid, swaps: 0, accesses: 0 },
         })
       }
@@ -74,7 +79,8 @@ export function generateNQueens(n?: number): AnimationScript {
   return {
     algorithm: 'n_queens',
     complexity: { time: { best: 'O(N!)', average: 'O(N!)', worst: 'O(N!)' }, space: 'O(N)' },
-    initialState: { type: 'matrix', data: finalBoard },
+    presentation: { engine: 'scene', module: 'n_queens', variant: 'board' },
+    initialState: { type: 'matrix', data: finalBoard, matrix: board.map((row) => row.map((cell) => cell === 'Q' ? 1 : 0)) },
     steps: steps as AnimationScript['steps'],
   }
 }

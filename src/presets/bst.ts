@@ -35,6 +35,7 @@ export function generateBST(): AnimationScript {
         'insert', [0], 'success', 0, 0, 1,
         { tree: { nodeStates: [{ id: '0', role: 'root', color: 'success' as ActionColor }] } },
       ))
+      steps[steps.length - 1].events = [{ type: 'tree.create', variant: 'bst', rootId: '0', nodes: [{ id: '0', value: v }], edges: [] }]
     } else {
       let i = 0
       let depth = 0
@@ -45,6 +46,7 @@ export function generateBST(): AnimationScript {
         'highlight', [0], 'warning', 0, 0, 1,
         bstTeaching(v, 0, bst[0], path, 'searching'),
       ))
+      steps[steps.length - 1].events = [{ type: 'tree.compare', nodeId: '0', value: v, result: v < bst[0] ? 'less' : 'greater' }]
       while (i < bst.length && bst[i] !== 0) {
         const goLeft = v < bst[i]
         const nextIdx = goLeft ? 2 * i + 1 : 2 * i + 2
@@ -56,6 +58,7 @@ export function generateBST(): AnimationScript {
           'compare', [i, nextIdx], 'warning', depth + 1, 0, 2,
           bstTeaching(v, nextIdx, bst[nextIdx] || 0, path, 'searching'),
         ))
+        steps[steps.length - 1].events = [{ type: 'tree.compare', nodeId: String(i), value: v, result: goLeft ? 'less' : 'greater' }]
         if (bst[nextIdx] === 0 || bst[nextIdx] === undefined) break
         i = nextIdx
         depth++
@@ -69,6 +72,7 @@ export function generateBST(): AnimationScript {
         'insert', [insertIdx], 'success', depth + 1, 0, 3,
         { tree: { nodeStates: [{ id: String(insertIdx), role: 'child', color: 'success' as ActionColor }] } },
       ))
+      steps[steps.length - 1].events = [{ type: 'tree.insert', parentId: String(i), node: { id: String(insertIdx), value: v }, side: v < bst[i] ? 'left' : 'right' }]
     }
   }
 
@@ -80,5 +84,5 @@ export function generateBST(): AnimationScript {
     { tree: { nodeStates: allIndices.map(i => ({ id: String(i), role: 'selected' as const, color: 'success' as ActionColor })) } },
   ))
 
-  return { algorithm: 'bst', complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(n)' }, space: 'O(n)' }, initialState: { type: 'tree', data: bst }, steps }
+  return { algorithm: 'bst', complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(n)' }, space: 'O(n)' }, presentation: { engine: 'scene', module: 'tree', variant: 'bst' }, initialState: { type: 'tree', data: bst }, steps }
 }

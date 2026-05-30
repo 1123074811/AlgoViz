@@ -61,4 +61,27 @@ const bfsGraphPreset: AnimationScript = {
   ],
 }
 
+bfsGraphPreset.presentation = { engine: 'scene', module: 'graph', variant: 'vertex' }
+bfsGraphPreset.steps = bfsGraphPreset.steps.map((step, index) => {
+  const events: NonNullable<AnimationScript['steps'][number]['events']> = []
+  if (index === 0) {
+    events.push({
+      type: 'graph.create',
+      nodes: bfsGraphPreset.initialState.nodes ?? [],
+      edges: bfsGraphPreset.initialState.edges ?? [],
+      directed: true,
+    })
+  }
+  if (step.action.type === 'mark' && step.action.targets.length > 0) {
+    step.action.targets.forEach((target) => events.push({ type: 'graph.visit_node', nodeId: String(target) }))
+  }
+  if (step.action.type === 'highlight' && step.action.targets.length > 0) {
+    step.action.targets.forEach((target) => events.push({ type: 'graph.enqueue', nodeId: String(target) }))
+  }
+  if (step.action.type === 'compare' && step.action.targets.length >= 2) {
+    events.push({ type: 'graph.visit_edge', source: String(step.action.targets[0]), target: String(step.action.targets[1]) })
+  }
+  return events.length > 0 ? { ...step, events } : step
+})
+
 export default bfsGraphPreset

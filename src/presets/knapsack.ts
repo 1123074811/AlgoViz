@@ -6,6 +6,7 @@ export function generateKnapsack(weights?: number[], values?: number[], capacity
   const C = capacity ?? 8
   const n = w.length
   const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(C + 1).fill(0))
+  const initialDp = dp.map((row) => [...row])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const steps: any[] = []
   let sid = 1, comps = 0
@@ -14,6 +15,7 @@ export function generateKnapsack(weights?: number[], values?: number[], capacity
     stepId: sid++, codeLine: 0,
     description: { zh: `物品: 重量[${w.join(',')}] 价值[${v.join(',')}]，背包容量=${C}`, en: `Items: wt[${w.join(',')}] val[${v.join(',')}], capacity=${C}` },
     action: { type: 'highlight', targets: [], color: 'primary' },
+    events: [{ type: 'matrix.create', rows: n + 1, cols: C + 1, values: initialDp }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
 
@@ -26,6 +28,11 @@ export function generateKnapsack(weights?: number[], values?: number[], capacity
           stepId: sid++, codeLine: 5,
           description: { zh: `物品${i}(重${w[i-1]}值${v[i-1]})，容量${j}：不取=${skip}，取=${take}，max=${Math.max(take, skip)}`, en: `Item ${i}(wt${w[i-1]}val${v[i-1]}), cap ${j}: skip=${skip}, take=${take}, max=${Math.max(take, skip)}` },
           action: { type: 'compare', targets: [(i - 1) * (C + 1) + j, i * (C + 1) + j], color: 'warning' },
+          events: [
+            { type: 'scene.clear_highlight' },
+            { type: 'matrix.mark_path', cells: [{ row: i - 1, col: j }, { row: i - 1, col: j - w[i - 1] }] },
+            { type: 'matrix.update_cell', row: i, col: j, value: Math.max(take, skip) },
+          ],
           stats: { comparisons: ++comps, swaps: 0, accesses: 0 },
         })
         dp[i][j] = Math.max(take, skip)
@@ -35,6 +42,11 @@ export function generateKnapsack(weights?: number[], values?: number[], capacity
           stepId: sid++, codeLine: 7,
           description: { zh: `物品${i}(重${w[i-1]}) > 容量${j}，只能不取 = ${dp[i-1][j]}`, en: `Item ${i}(wt${w[i-1]}) > cap ${j}, skip = ${dp[i-1][j]}` },
           action: { type: 'compare', targets: [(i - 1) * (C + 1) + j, i * (C + 1) + j], color: 'muted' },
+          events: [
+            { type: 'scene.clear_highlight' },
+            { type: 'matrix.mark_path', cells: [{ row: i - 1, col: j }] },
+            { type: 'matrix.update_cell', row: i, col: j, value: dp[i][j] },
+          ],
           stats: { comparisons: ++comps, swaps: 0, accesses: 0 },
         })
       }
@@ -48,13 +60,13 @@ export function generateKnapsack(weights?: number[], values?: number[], capacity
     stats: { comparisons: comps, swaps: 0, accesses: 0 },
   })
 
-  // Flatten dp table for matrix renderer
   const flat = dp.flat()
 
   return {
     algorithm: 'knapsack_01',
     complexity: { time: { best: 'O(n*C)', average: 'O(n*C)', worst: 'O(n*C)' }, space: 'O(n*C)' },
-    initialState: { type: 'matrix', data: flat },
+    presentation: { engine: 'scene', module: 'matrix', variant: 'dp_table' },
+    initialState: { type: 'matrix', data: flat, matrix: dp },
     steps: steps as AnimationScript['steps'],
   }
 }
