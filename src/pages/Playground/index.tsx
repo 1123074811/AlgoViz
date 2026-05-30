@@ -6,6 +6,7 @@ import { Icon } from '@/icons'
 import { useAnimationEngine } from '@/hooks/useAnimationEngine'
 import { analyzeCode, getApiConfig, parseInputData, type AIResult, type AIErrorReport, type AIRepairAttempt } from '@/ai'
 import type { AnimationScript } from '@/types/animation'
+import { compileAndValidateCode } from '@/utils/codeCompiler'
 import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
 import Header from '@/components/Layout/Header'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
@@ -77,6 +78,25 @@ export default function Playground() {
   const handleEditorMount: OnMount = useCallback((editor) => { editorRef.current = editor }, [])
 
   const handleAnalyze = async () => {
+    // Local Code Compilation & Syntax Validation Check
+    const compResult = compileAndValidateCode(code, codeLanguage)
+    if (!compResult.success && compResult.error) {
+      setAiStatus('error')
+      setAiError(`[${compResult.error.type}] ${compResult.error.message} (第 ${compResult.error.line} 行)${compResult.error.context ? `\n\n代码上下文:\n\`\`\`\n${compResult.error.context}\n\`\`\`` : ''}`)
+      setAiErrorReport({
+        stage: 'compilation',
+        title: '代码本地编译错误 / Compilation Error',
+        issues: [{
+          code: 'COMP_ERR',
+          path: `line ${compResult.error.line}`,
+          message: compResult.error.message,
+          suggestion: '请检查并修正代码语法错误后再试。'
+        }]
+      })
+      setAnimationScript(null) // Animation fails to generate
+      return
+    }
+
     if (!hasApiConfig) { navigate('/settings'); return }
     setAiStatus('analyzing'); setAiError(''); setAiErrorReport(null)
     setAiRawResponse(''); setAiRepairHistory(null); setShowRawResponse(false)
