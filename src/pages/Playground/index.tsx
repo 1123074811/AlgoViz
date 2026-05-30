@@ -80,20 +80,38 @@ export default function Playground() {
   const handleAnalyze = async () => {
     // Local Code Compilation & Syntax Validation Check
     const compResult = compileAndValidateCode(code, codeLanguage)
-    if (!compResult.success && compResult.error) {
+
+    if (compResult.warnings.length > 0) {
+      const warnLines = compResult.warnings.map(w => `  ⚠ L${w.line}: [${w.type}] ${w.message}`)
+      console.warn(`代码检查发现 ${compResult.warnings.length} 个警告:\n${warnLines.join('\n')}`)
+    }
+
+    if (!compResult.success) {
+      const firstErr = compResult.errors[0]
+      const allErrors = compResult.errors.map(e =>
+        `[${e.type}] L${e.line}: ${e.message}${e.context ? '\n  → ' + e.context : ''}`
+      ).join('\n\n')
+      const warnNote = compResult.warnings.length > 0
+        ? `\n\n(${compResult.warnings.length} 个警告)` : ''
+
       setAiStatus('error')
-      setAiError(`[${compResult.error.type}] ${compResult.error.message} (第 ${compResult.error.line} 行)${compResult.error.context ? `\n\n代码上下文:\n\`\`\`\n${compResult.error.context}\n\`\`\`` : ''}`)
+      setAiError(`发现 ${compResult.errors.length} 个编译错误:\n\n${allErrors}${warnNote}`)
       setAiErrorReport({
         stage: 'compilation',
-        title: '代码本地编译错误 / Compilation Error',
-        issues: [{
+        title: `代码编译错误 (${compResult.errors.length} 个) / Compilation Errors`,
+        message: firstErr.message,
+        issues: compResult.errors.map(e => ({
           code: 'COMP_ERR',
-          path: `line ${compResult.error.line}`,
-          message: compResult.error.message,
-          suggestion: '请检查并修正代码语法错误后再试。'
-        }]
+          path: `line ${e.line}`,
+          message: `[${e.type}] ${e.message}${e.context ? '\n上下文: ' + e.context : ''}`,
+          suggestion: '请修正以上语法错误后再试。',
+          severity: 'error' as const,
+          recoverable: false
+        })),
+        suggestions: compResult.errors.map(e => `修正第 ${e.line} 行: ${e.message}`),
+        canRetry: false
       })
-      setAnimationScript(null) // Animation fails to generate
+      setAnimationScript(null)
       return
     }
 

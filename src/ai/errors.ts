@@ -1,6 +1,7 @@
 export type AIErrorStage =
   | 'config' | 'request' | 'response' | 'json_extract'
   | 'json_parse' | 'schema_validation' | 'repair' | 'render_compatibility'
+  | 'compilation'
 
 export type AIErrorSeverity = 'info' | 'warning' | 'error'
 

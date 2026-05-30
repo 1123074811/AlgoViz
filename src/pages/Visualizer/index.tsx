@@ -3863,9 +3863,9 @@ export default function Visualizer() {
   const handleAIAnalyze = async () => {
     // Local Code Compilation & Syntax Validation Check
     const compResult = compileAndValidateCode(code, codeLanguage)
-    if (!compResult.success && compResult.error) {
+    if (!compResult.success) {
       setAiStatus('error')
-      setAiError(`[${compResult.error.type}] ${compResult.error.message} (第 ${compResult.error.line} 行)${compResult.error.context ? `\n\n代码上下文:\n\`\`\`\n${compResult.error.context}\n\`\`\`` : ''}`)
+      setAiError(`[${compResult.errors[0].type}] ${compResult.errors[0].message} (第 ${compResult.errors[0].line} 行)${compResult.errors[0].context ? `\n\n代码上下文:\n\`\`\`\n${compResult.errors[0].context}\n\`\`\`` : ''}`)
       setAnimationScript(null) // Animation fails to generate
       return
     }
