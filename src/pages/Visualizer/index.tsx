@@ -3721,8 +3721,6 @@ export default function Visualizer() {
         initialOp = 'delete'
       } else if (selectedAlgorithm.id.endsWith('_search')) {
         initialOp = 'search'
-      } else if (selectedAlgorithm.id === 'bfs_graph' || selectedAlgorithm.id === 'dfs_graph') {
-        initialOp = 'search'
       }
       
       setCurrentOperationId(initialOp)

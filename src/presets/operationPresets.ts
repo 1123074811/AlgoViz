@@ -720,8 +720,8 @@ export function getOperationsForAlgo(algoId: string): OperationDef[] | undefined
     key = 'linked_list'
   } else if (algoId === 'avl_tree' || algoId === 'red_black_tree' || algoId.startsWith('bst_') || algoId === 'avl_insert') {
     key = 'bst'
-  } else if (algoId === 'dfs_graph' || algoId === 'dijkstra') {
-    key = 'bfs_graph'
+  } else {
+    return undefined
   }
   
   return DATA_STRUCTURE_OPERATIONS[key]
