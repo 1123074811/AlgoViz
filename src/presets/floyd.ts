@@ -94,4 +94,27 @@ const floydPreset: AnimationScript = {
   ],
 }
 
+floydPreset.presentation = { engine: 'scene', module: 'graph' }
+floydPreset.steps = floydPreset.steps.map((step, index) => {
+  const events: NonNullable<(typeof step)['events']> = []
+  if (index === 0) {
+    events.push({
+      type: 'graph.create',
+      nodes: [{ id: '0', label: '0' }, { id: '1', label: '1' }, { id: '2', label: '2' }, { id: '3', label: '3' }],
+      edges: [],
+      directed: true,
+    })
+  }
+  if (step.action.type === 'mark' && step.action.targets.length > 0) {
+    events.push({ type: 'graph.visit_node', nodeId: String(step.action.targets[0]) })
+  }
+  if (step.action.type === 'compare' && step.action.targets.length > 0) {
+    events.push({ type: 'graph.relax_edge', source: '0', target: String(step.action.targets[0]), success: step.action.color === 'success' })
+  }
+  if (step.action.type === 'highlight' && step.action.targets.length > 0) {
+    events.push({ type: 'graph.visit_node', nodeId: String(step.action.targets[0]) })
+  }
+  return events.length > 0 ? { ...step, events } : step
+})
+
 export default floydPreset

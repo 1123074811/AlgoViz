@@ -66,4 +66,32 @@ const dijkstraPreset: AnimationScript = {
   ],
 }
 
+dijkstraPreset.presentation = { engine: 'scene', module: 'graph' }
+dijkstraPreset.steps = dijkstraPreset.steps.map((step, index) => {
+  const events: NonNullable<(typeof step)['events']> = []
+  if (index === 0) {
+    events.push({
+      type: 'graph.create',
+      nodes: dijkstraPreset.initialState.nodes ?? [],
+      edges: dijkstraPreset.initialState.edges ?? [],
+      directed: false,
+    })
+  }
+  if (step.action.type === 'mark' && step.action.targets.length > 0) {
+    step.action.targets.forEach((target) => events.push({ type: 'graph.visit_node', nodeId: String(target) }))
+  }
+  if (step.action.type === 'highlight' && step.action.targets.length > 0) {
+    step.action.targets.forEach((target) => events.push({ type: 'graph.visit_node', nodeId: String(target) }))
+  }
+  if (step.action.type === 'compare' && step.action.targets.length >= 2) {
+    events.push({ type: 'graph.visit_edge', source: String(step.action.targets[0]), target: String(step.action.targets[1]) })
+    const dists = step.teachingState?.graph?.distances
+    if (dists) {
+      const tgt = String(step.action.targets[1])
+      events.push({ type: 'graph.relax_edge', source: String(step.action.targets[0]), target: tgt, oldDistance: dists[tgt] ?? '∞', newDistance: dists[tgt] ?? '∞', success: step.action.color === 'warning' })
+    }
+  }
+  return events.length > 0 ? { ...step, events } : step
+})
+
 export default dijkstraPreset

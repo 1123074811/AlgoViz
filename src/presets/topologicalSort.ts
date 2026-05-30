@@ -36,4 +36,32 @@ const topologicalSortPreset: AnimationScript = {
   ],
 }
 
+topologicalSortPreset.presentation = { engine: 'scene', module: 'graph' }
+topologicalSortPreset.steps = topologicalSortPreset.steps.map((step, index) => {
+  const events: NonNullable<(typeof step)['events']> = []
+  if (index === 0) {
+    events.push({
+      type: 'graph.create',
+      nodes: topologicalSortPreset.initialState.nodes ?? [],
+      edges: topologicalSortPreset.initialState.edges ?? [],
+      directed: true,
+    })
+  }
+  if (step.action.type === 'mark' && step.action.targets.length > 0) {
+    step.action.targets.forEach((target) => events.push({ type: 'graph.visit_node', nodeId: String(target) }))
+  }
+  if (step.action.type === 'compare' && step.action.targets.length >= 2) {
+    events.push({ type: 'graph.visit_edge', source: String(step.action.targets[0]), target: String(step.action.targets[1]) })
+  }
+  if (step.action.type === 'highlight' && step.action.targets.length > 0) {
+    step.action.targets.forEach((target) => {
+      events.push({ type: 'graph.enqueue', nodeId: String(target) })
+    })
+  }
+  if (step.teachingState?.graph?.output && (step.action.type === 'mark' || step.action.type === 'highlight')) {
+    // dequeue events are handled via mark and highlight which remove from queue
+  }
+  return events.length > 0 ? { ...step, events } : step
+})
+
 export default topologicalSortPreset

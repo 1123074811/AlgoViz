@@ -32,4 +32,28 @@ const bellmanFordPreset: AnimationScript = {
   ],
 }
 
+bellmanFordPreset.presentation = { engine: 'scene', module: 'graph' }
+bellmanFordPreset.steps = bellmanFordPreset.steps.map((step, index) => {
+  const events: NonNullable<(typeof step)['events']> = []
+  if (index === 0) {
+    events.push({
+      type: 'graph.create',
+      nodes: bellmanFordPreset.initialState.nodes ?? [],
+      edges: bellmanFordPreset.initialState.edges ?? [],
+      directed: true,
+    })
+  }
+  if (step.action.type === 'mark' && step.action.targets.length > 0) {
+    step.action.targets.forEach((target) => events.push({ type: 'graph.visit_node', nodeId: String(target) }))
+  }
+  if (step.action.type === 'compare' && step.action.targets.length >= 2) {
+    events.push({ type: 'graph.visit_edge', source: String(step.action.targets[0]), target: String(step.action.targets[1]) })
+    events.push({ type: 'graph.relax_edge', source: String(step.action.targets[0]), target: String(step.action.targets[1]), success: step.action.color === 'warning' || step.action.color === 'success' })
+  }
+  if (step.action.type === 'highlight' && step.action.targets.length > 0) {
+    step.action.targets.forEach((target) => events.push({ type: 'graph.visit_node', nodeId: String(target) }))
+  }
+  return events.length > 0 ? { ...step, events } : step
+})
+
 export default bellmanFordPreset
