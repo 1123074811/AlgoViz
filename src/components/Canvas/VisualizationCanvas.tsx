@@ -1,10 +1,6 @@
 import type { AnimationScript, AnimationStep } from '@/types/animation'
 import type { VisualState } from '@/hooks/useAnimationEngine'
-import ArrayRenderer from './renderers/ArrayRenderer'
-import GraphRenderer from './renderers/GraphRenderer'
-import TreeRenderer from './renderers/TreeRenderer'
-import MatrixRenderer from './renderers/MatrixRenderer'
-import LinkedListRenderer from './renderers/LinkedListRenderer'
+import SceneCanvas from '@/scene/SceneCanvas'
 
 interface VisualizationCanvasProps {
   script: AnimationScript | null
@@ -12,7 +8,7 @@ interface VisualizationCanvasProps {
   currentStepData: AnimationStep | null
 }
 
-export default function VisualizationCanvas({ script, visualState, currentStepData }: VisualizationCanvasProps) {
+export default function VisualizationCanvas({ script, visualState }: VisualizationCanvasProps) {
   if (!script) {
     return (
       <div className="h-full flex items-center justify-center bg-slate-50">
@@ -32,42 +28,10 @@ export default function VisualizationCanvas({ script, visualState, currentStepDa
     )
   }
 
-  const rendererType = script.initialState.type
-  // Only check arrayData for array-type renderers; graph/tree/matrix use different data
-  if (rendererType === 'array' && visualState.arrayData.length === 0) {
-    return (
-      <div className="h-full flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <p className="text-sm text-muted">No data to render</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (rendererType === 'array') {
-    return (
-      <div className="h-full p-6 bg-slate-50">
-        <div className="h-full bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-          <ArrayRenderer visualState={visualState} currentStepData={currentStepData} />
-        </div>
-      </div>
-    )
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rendererMap: Record<string, React.ComponentType<any>> = {
-    graph: GraphRenderer,
-    tree: TreeRenderer,
-    matrix: MatrixRenderer,
-    linked_list: LinkedListRenderer,
-  }
-
-  const Renderer = rendererMap[rendererType] === undefined ? ArrayRenderer : rendererMap[rendererType]
-
   return (
     <div className="h-full p-6 bg-slate-50">
       <div className="h-full bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-        <Renderer visualState={visualState} currentStepData={currentStepData} />
+        <SceneCanvas script={script} currentStep={visualState.currentStep} />
       </div>
     </div>
   )
