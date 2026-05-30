@@ -348,40 +348,42 @@ def topological_sort(n, edges):
     return result`,
   },
 
-  // ============ 数据结构 ============
+  // ============ 数据结构与算法操作 ============
   {
-    id: 'array', name: '数组', nameEn: 'Array', category: 'data-structure', difficulty: 'easy',
-    hasPreset: true, defaultLanguage: 'python', defaultCode: '# Array operations\narr = [1, 2, 3, 4, 5]\narr.append(6)\narr.insert(0, 0)\narr.pop()\narr[2] = 10',
+    id: 'linked_list_insert', name: '链表插入结点', nameEn: 'Singly LinkedList Insertion', category: 'data-structure', difficulty: 'easy',
+    hasPreset: true, defaultLanguage: 'python',
+    defaultCode: `def insert_after(prev_node, new_val):
+    if prev_node is None: return
+    new_node = ListNode(new_val)
+    new_node.next = prev_node.next
+    prev_node.next = new_node`,
   },
   {
-    id: 'linked_list', name: '单向链表', nameEn: 'Singly Linked List', category: 'data-structure', difficulty: 'easy',
+    id: 'linked_list_delete', name: '链表删除结点', nameEn: 'Singly LinkedList Deletion', category: 'data-structure', difficulty: 'easy',
     hasPreset: true, defaultLanguage: 'python',
-    defaultCode: `class Node:
-    def __init__(self, val):
-        self.val = val
-        self.next = None
-
-def traverse(head):
+    defaultCode: `def delete_node(prev_node):
+    if prev_node is None or prev_node.next is None:
+        return
+    target = prev_node.next
+    prev_node.next = target.next`,
+  },
+  {
+    id: 'linked_list_search', name: '查找链表结点', nameEn: 'Singly LinkedList Search', category: 'data-structure', difficulty: 'easy',
+    hasPreset: true, defaultLanguage: 'python',
+    defaultCode: `def search_list(head, target):
     cur = head
-    while cur:
-        print(cur.val)
-        cur = cur.next`,
+    while cur is not None:
+        if cur.val == target:
+            return cur  # Found
+        cur = cur.next
+    return None  # Not Found`,
   },
   {
-    id: 'doubly_linked_list', name: '双向链表', nameEn: 'Doubly Linked List', category: 'data-structure', difficulty: 'easy',
-    hasPreset: true, defaultLanguage: 'python',
-    defaultCode: `class Node:
-    def __init__(self, val):
-        self.val = val
-        self.prev = None
-        self.next = None`,
-  },
-  {
-    id: 'stack', name: '栈', nameEn: 'Stack', category: 'data-structure', difficulty: 'easy',
+    id: 'stack', name: '栈操作演示', nameEn: 'Stack Operations', category: 'data-structure', difficulty: 'easy',
     hasPreset: true, defaultLanguage: 'python', defaultCode: '# Stack operations\nstack = []\nstack.append(1)  # push\nstack.append(2)\nstack.pop()     # 2\nstack[-1]      # peek',
   },
   {
-    id: 'queue', name: '队列', nameEn: 'Queue', category: 'data-structure', difficulty: 'easy',
+    id: 'queue', name: '队列操作演示', nameEn: 'Queue Operations', category: 'data-structure', difficulty: 'easy',
     hasPreset: true, defaultLanguage: 'python',
     defaultCode: `from collections import deque
 q = deque()
@@ -390,66 +392,76 @@ q.append(2)
 q.popleft()    # dequeue -> 1`,
   },
   {
-    id: 'binary_tree', name: '二叉树', nameEn: 'Binary Tree', category: 'data-structure', difficulty: 'medium',
+    id: 'binary_tree_traverse', name: '二叉树遍历', nameEn: 'Binary Tree Traversal', category: 'data-structure', difficulty: 'medium',
     hasPreset: true, defaultLanguage: 'python',
-    defaultCode: `class TreeNode:
-    def __init__(self, val=0):
-        self.val = val
-        self.left = None
-        self.right = None
-
-def inorder(root):
+    defaultCode: `def inorder(root):
     if not root: return
     inorder(root.left)
     print(root.val)
     inorder(root.right)`,
   },
   {
-    id: 'bst', name: '二叉搜索树', nameEn: 'BST', category: 'data-structure', difficulty: 'medium',
+    id: 'bst_insert', name: '二叉搜索树插入', nameEn: 'BST Insertion', category: 'data-structure', difficulty: 'medium',
     hasPreset: true, defaultLanguage: 'python',
-    defaultCode: `class TreeNode:
-    def __init__(self, val=0):
-        self.val = val
-        self.left = None
-        self.right = None
-
-def insert(root, val):
-    if not root: return TreeNode(val)
+    defaultCode: `def insert_bst(root, val):
+    if root is None:
+        return TreeNode(val)
     if val < root.val:
-        root.left = insert(root.left, val)
+        root.left = insert_bst(root.left, val)
     else:
-        root.right = insert(root.right, val)
-    return root
-
-def search(root, val):
-    if not root or root.val == val:
+        root.right = insert_bst(root.right, val)
+    return root`,
+  },
+  {
+    id: 'bst_delete', name: '二叉搜索树删除', nameEn: 'BST Deletion', category: 'data-structure', difficulty: 'hard',
+    hasPreset: true, defaultLanguage: 'python',
+    defaultCode: `def delete_bst(root, key):
+    if root is None: return root
+    if key < root.val:
+        root.left = delete_bst(root.left, key)
+    elif key > root.val:
+        root.right = delete_bst(root.right, key)
+    else:
+        if root.left is None: return root.right
+        if root.right is None: return root.left
+        temp = get_min(root.right)
+        root.val = temp.val
+        root.right = delete_bst(root.right, temp.val)
+    return root`,
+  },
+  {
+    id: 'bst_search', name: '二叉搜索树查找', nameEn: 'BST Search', category: 'data-structure', difficulty: 'medium',
+    hasPreset: true, defaultLanguage: 'python',
+    defaultCode: `def search_bst(root, val):
+    if root is None or root.val == val:
         return root
     if val < root.val:
-        return search(root.left, val)
-    return search(root.right, val)`,
+        return search_bst(root.left, val)
+    return search_bst(root.right, val)`,
   },
   {
-    id: 'avl_tree', name: 'AVL 树', nameEn: 'AVL Tree', category: 'data-structure', difficulty: 'hard',
+    id: 'avl_insert', name: '自平衡树平衡旋转 (AVL)', nameEn: 'AVL Tree Balancing & Rotations', category: 'data-structure', difficulty: 'hard',
     hasPreset: true, defaultLanguage: 'python',
-    defaultCode: `class TreeNode:
-    def __init__(self, val=0):
-        self.val = val
-        self.left = None
-        self.right = None
-        self.height = 1
-
-def get_height(node):
-    return node.height if node else 0
-
-def get_balance(node):
-    return get_height(node.left) - get_height(node.right) if node else 0`,
+    defaultCode: `def insert_avl(root, val):
+    if root is None: return TreeNode(val)
+    # 1. Standard BST Insert
+    if val < root.val:
+        root.left = insert_avl(root.left, val)
+    else:
+        root.right = insert_avl(root.right, val)
+    # 2. Update height and rebalance
+    root.height = 1 + max(get_height(root.left), get_height(root.right))
+    balance = get_balance(root)
+    # LL case -> Right Rotate
+    if balance > 1 and val < root.left.val:
+        return right_rotate(root)
+    # RR case -> Left Rotate
+    if balance < -1 and val > root.right.val:
+        return left_rotate(root)
+    return root`,
   },
   {
-    id: 'red_black_tree', name: '红黑树', nameEn: 'Red-Black Tree', category: 'data-structure', difficulty: 'hard',
-    hasPreset: true, defaultLanguage: 'python', defaultCode: '# Red-Black Tree\n# 自平衡二叉搜索树，节点分为红色和黑色\n# 插入/删除后通过旋转和变色维持平衡',
-  },
-  {
-    id: 'heap_ds', name: '堆', nameEn: 'Heap', category: 'data-structure', difficulty: 'medium',
+    id: 'heap_ds', name: '堆操作演示 (上浮与下沉)', nameEn: 'Heap Operations (Bubble-up/Sink-down)', category: 'data-structure', difficulty: 'medium',
     hasPreset: true, defaultLanguage: 'python',
     defaultCode: `import heapq
 # 最小堆

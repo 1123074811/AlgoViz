@@ -208,6 +208,123 @@ export default function ArrayRenderer({ visualState, currentStepData }: ArrayRen
     )
   }
 
+  const shouldUseGrid = arrayData.length > 28 || bars.some((bar) => bar.width < 3)
+  if (shouldUseGrid) {
+    const columns = Math.min(18, Math.max(8, Math.ceil(Math.sqrt(arrayData.length * 2))))
+    const rows = Math.ceil(arrayData.length / columns)
+    const cellGap = 1
+    const cellW = (92 - (columns - 1) * cellGap) / columns
+    const cellH = Math.min(9, Math.max(5.5, (78 - (rows - 1) * cellGap) / rows))
+    const startX = 4
+    const startY = 8
+    const targetCells = targetIndices
+      .map((index) => {
+        const row = Math.floor(index / columns)
+        const col = index % columns
+        return { index, x: startX + col * (cellW + cellGap), y: startY + row * (cellH + cellGap) }
+      })
+
+    return (
+      <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrayLaneArrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,6 L6,3 z" fill="var(--color-danger)" />
+          </marker>
+          <marker id="arrayCompareArrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,6 L6,3 z" fill="var(--color-warning)" />
+          </marker>
+        </defs>
+
+        <rect x="2" y="3" width="96" height="91" rx="3" fill="rgba(255,255,255,0.88)" stroke="var(--color-border)" strokeWidth="0.3" />
+        <text x="5" y="6.5" fontSize="2.2" fontWeight="700" fill="var(--color-primary)">数组分行演示</text>
+        <text x="95" y="6.5" textAnchor="end" fontSize="1.9" fill="var(--color-muted)" fontFamily="var(--font-code)">{arrayData.length} items</text>
+
+        {arrayData.map((value, index) => {
+          const row = Math.floor(index / columns)
+          const col = index % columns
+          const x = startX + col * (cellW + cellGap)
+          const y = startY + row * (cellH + cellGap)
+          const colorKey = colorMap.get(index) ?? (targetIndices.includes(index) ? currentStepData?.action.color : 'primary') ?? 'primary'
+          const color = COLOR_MAP[colorKey] ?? COLOR_MAP.primary
+          const isTarget = targetIndices.includes(index)
+          const isSorted = colorKey === 'success'
+          return (
+            <g key={`${elementIds[index] ?? index}-${index}`} className={isTarget ? 'array-lane-pulse' : undefined}>
+              <rect
+                x={x}
+                y={y}
+                width={cellW}
+                height={cellH}
+                rx="1.2"
+                fill={isTarget ? `${color}22` : isSorted ? 'rgba(16,185,129,0.14)' : 'white'}
+                stroke={isTarget ? color : isSorted ? COLOR_MAP.success : 'var(--color-border)'}
+                strokeWidth={isTarget ? 0.65 : 0.35}
+              />
+              <text x={x + cellW / 2} y={y + cellH / 2 + 0.8} textAnchor="middle" fontSize={cellW > 5 ? '2.8' : '2.1'} fontWeight="700" fill={isTarget ? color : 'var(--color-text)'} fontFamily="var(--font-code)">
+                {String(value).slice(0, cellW > 5 ? 4 : 2)}
+              </text>
+              <text x={x + cellW / 2} y={y + cellH - 0.8} textAnchor="middle" fontSize="1.2" fill="var(--color-muted)" fontFamily="var(--font-code)">
+                {visualState.labels?.[index] ?? index}
+              </text>
+            </g>
+          )
+        })}
+
+        {hasPair && targetCells[0] && targetCells[1] && (
+          <g>
+            <path
+              d={`M ${targetCells[0].x + cellW / 2} ${targetCells[0].y + cellH + 1.5} C ${targetCells[0].x + cellW / 2} ${targetCells[0].y + cellH + 5}, ${targetCells[1].x + cellW / 2} ${targetCells[1].y + cellH + 5}, ${targetCells[1].x + cellW / 2} ${targetCells[1].y + cellH + 1.5}`}
+              fill="none"
+              stroke={isSwapping ? 'var(--color-danger)' : 'var(--color-warning)'}
+              strokeWidth="0.55"
+              strokeDasharray={isComparing ? '1.5 1.2' : undefined}
+              markerEnd={isSwapping ? 'url(#arrayLaneArrow)' : 'url(#arrayCompareArrow)'}
+              className="array-flow"
+            />
+            <text
+              x={(targetCells[0].x + targetCells[1].x + cellW) / 2}
+              y={Math.min(targetCells[0].y, targetCells[1].y) - 1}
+              textAnchor="middle"
+              fontSize="2.4"
+              fontWeight="800"
+              fill={isSwapping ? 'var(--color-danger)' : 'var(--color-warning)'}
+            >
+              {isSwapping ? '交换' : '比较'}
+            </text>
+          </g>
+        )}
+
+        {currentStepData && (
+          <g>
+            <rect x="18" y="95" width="64" height="3.2" rx="1.2" fill="rgba(255,255,255,0.8)" stroke="var(--color-border)" strokeWidth="0.25" />
+            <text x="50" y="97.3" textAnchor="middle" fontSize="1.7" fill="var(--color-muted)" fontFamily="var(--font-code)">
+              <tspan fill="var(--color-warning)" fontWeight="700">比{currentStepData.stats.comparisons}</tspan>
+              <tspan dx="3">|</tspan>
+              <tspan dx="3" fill="var(--color-danger)" fontWeight="700">换{currentStepData.stats.swaps}</tspan>
+              <tspan dx="3">| 访{currentStepData.stats.accesses}</tspan>
+            </text>
+          </g>
+        )}
+
+        <style>{`
+          .array-lane-pulse {
+            animation: array-lane-pop 0.65s ease-in-out infinite alternate;
+          }
+          .array-flow {
+            animation: array-flow-dash 0.7s linear infinite;
+          }
+          @keyframes array-lane-pop {
+            from { opacity: 1; }
+            to { opacity: 0.72; }
+          }
+          @keyframes array-flow-dash {
+            to { stroke-dashoffset: -8; }
+          }
+        `}</style>
+      </svg>
+    )
+  }
+
   const rangeY = baseline + 0.3
   const auxStartY = rangeY + (hasRanges ? 3 : 0)
   const statsY = baseline + (hasRanges ? 3 : 0) + auxCount * 3.2

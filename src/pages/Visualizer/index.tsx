@@ -11,6 +11,8 @@ import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
 import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
 import InputDataPanel from '@/components/Editor/InputDataPanel'
+import { getSceneDiagnosticSummary, getSceneEventStats, usesSceneEngine } from '@/scene'
+import { getOperationsForAlgo, type OperationDef } from '@/presets/operationPresets'
 
 type AIStatus = 'idle' | 'analyzing' | 'success' | 'error'
 
@@ -1363,6 +1365,10 @@ export default function Visualizer() {
   const [aiRawResponse, setAiRawResponse] = useState('')
   const [showRawResponse, setShowRawResponse] = useState(false)
   const [showDefinition, setShowDefinition] = useState(false)
+  const [currentOperationId, setCurrentOperationId] = useState<string>('')
+
+  const operations = selectedAlgorithm ? getOperationsForAlgo(selectedAlgorithm.id) : undefined
+  const hasOperations = operations && operations.length > 0
 
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
   const decorationsRef = useRef<string[]>([])
@@ -1418,9 +1424,23 @@ export default function Visualizer() {
     // 图/树/回溯 — 用数字表示
     n_queens:      { value: '4', hint: '整数 N，推荐 4~8' },
     backtracking:  { value: '[1, 2, 3]', hint: '整数数组，全排列/子集输入' },
-    // 高级数据结构
+    // 高级数据结构与基础结构操作
     segment_tree:  { value: '[1, 3, 5, 7, 9, 11]', hint: '整数数组，支持区间查询' },
     fenwick_tree:  { value: '[3, 2, -1, 6, 5, 4, -3, 3]', hint: '整数数组，可含负数' },
+    linked_list_insert: { value: '[1, 2, 3]', hint: '单链表初始数值数组' },
+    linked_list_delete: { value: '[1, 2, 3]', hint: '单链表初始数值数组' },
+    linked_list_search: { value: '[1, 2, 3]', hint: '单链表初始数值数组' },
+    binary_tree_traverse: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉树层序数组' },
+    bst_insert: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉搜索树初始数值数组' },
+    bst_delete: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉搜索树初始数值数组' },
+    bst_search: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉搜索树初始数值数组' },
+    avl_insert: { value: '[8, 3, 10, 1, 6, 14]', hint: 'AVL自平衡树初始数组' },
+    stack: { value: '[1, 2, 3]', hint: '栈初始入栈元素列表' },
+    queue: { value: '[1, 2, 3]', hint: '队列初始入队元素列表' },
+    heap_ds: { value: '[4, 10, 3, 5, 1, 2]', hint: '堆初始数组' },
+    trie: { value: '["cat", "car", "dog"]', hint: '字典树单词列表' },
+    hash_table: { value: '{"key1": "value1", "key2": "value2"}', hint: '初始键值对' },
+    union_find: { value: '[[0, 1], [1, 2], [3, 4]]', hint: '并查集连通边列表' },
   }
 
   // Parse input data from text — returns the natural type for the algorithm
@@ -1467,7 +1487,6 @@ export default function Visualizer() {
     if (!selectedAlgorithm) return
     const lang = selectedAlgorithm.defaultLanguage as 'python' | 'javascript' | 'cpp' | 'java'
     setCodeLanguage(lang)
-    setCode(getCodeTemplate(selectedAlgorithm.id, lang))
     setAiStatus('idle')
     setAiError('')
     setAiRawResponse('')
@@ -1476,11 +1495,37 @@ export default function Visualizer() {
     const algoChanged = prevAlgoId.current !== selectedAlgorithm.id
     if (algoChanged) {
       prevAlgoId.current = selectedAlgorithm.id
+      
+      // Determine initial sub-operation based on concrete algorithm operation
+      let initialOp = ''
+      if (selectedAlgorithm.id.endsWith('_insert') || selectedAlgorithm.id === 'avl_insert') {
+        initialOp = 'insert'
+      } else if (selectedAlgorithm.id.endsWith('_delete')) {
+        initialOp = 'delete'
+      } else if (selectedAlgorithm.id.endsWith('_search')) {
+        initialOp = 'search'
+      } else if (selectedAlgorithm.id === 'bfs_graph' || selectedAlgorithm.id === 'dfs_graph') {
+        initialOp = 'search'
+      }
+      
+      setCurrentOperationId(initialOp)
       const defInput = DEFAULT_INPUTS[selectedAlgorithm.id]
       if (defInput) {
         setInputData(defInput.value)
       }
     }
+
+    // If a custom operation is selected, load its code and script directly
+    if (currentOperationId) {
+      const op = operations?.find(o => o.id === currentOperationId)
+      if (op) {
+        setAnimationScript(op.script)
+        setCode(op.code[codeLanguage] || op.code.python || '')
+        return
+      }
+    }
+
+    setCode(getCodeTemplate(selectedAlgorithm.id, lang))
 
     if (selectedAlgorithm.hasPreset) {
       // Try generator first (dynamic, responds to input changes)
@@ -1631,6 +1676,9 @@ export default function Visualizer() {
 
   const steps = animationScript?.steps ?? []
   const complexity = animationScript?.complexity
+  const isSceneEngineActive = usesSceneEngine(animationScript)
+  const sceneEventStats = getSceneEventStats(animationScript)
+  const sceneDiagnosticSummary = getSceneDiagnosticSummary(animationScript)
 
   return (
     <div className="h-full flex flex-col">
@@ -1654,7 +1702,14 @@ export default function Visualizer() {
                 onChange={(e) => {
                   const lang = e.target.value as 'python' | 'javascript' | 'cpp' | 'java'
                   setCodeLanguage(lang)
-                  setCode(getCodeTemplate(selectedAlgorithm.id, lang))
+                  if (currentOperationId) {
+                    const op = operations?.find((o) => o.id === currentOperationId)
+                    if (op) {
+                      setCode(op.code[lang] || op.code.python || '')
+                    }
+                  } else {
+                    setCode(getCodeTemplate(selectedAlgorithm.id, lang))
+                  }
                 }}
                 className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-border
                            bg-white text-slate-600 outline-none cursor-pointer
@@ -1704,12 +1759,37 @@ export default function Visualizer() {
         </div>
 
         {/* Center: Canvas (45%) */}
-        <div className="flex-1 xl:w-[45%] xl:flex-none border-b xl:border-b-0 xl:border-r border-border min-w-0 min-h-0">
-          <VisualizationCanvas
-            script={animationScript}
-            visualState={visualState}
-            currentStepData={currentStepData}
-          />
+        <div className="flex-1 xl:w-[45%] xl:flex-none border-b xl:border-b-0 xl:border-r border-border min-w-0 min-h-0 flex flex-col">
+          {hasOperations && (
+            <div className="bg-surface border-b border-border px-4 py-2.5 flex items-center justify-between shrink-0 flex-wrap gap-2">
+              <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                <Icon name="workflow" size={14} className="text-primary animate-pulse" />
+                {lang === 'zh' ? '数据结构操作演示' : 'Data Structure Operations'}
+              </span>
+              <div className="flex gap-1.5 flex-wrap">
+                {operations.map((op) => (
+                  <button
+                    key={op.id}
+                    onClick={() => setCurrentOperationId(op.id)}
+                    className={`px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition-all border
+                      ${currentOperationId === op.id
+                        ? 'bg-primary text-white border-primary shadow-sm font-semibold'
+                        : 'bg-white text-slate-600 border-border hover:bg-slate-50'
+                      }`}
+                  >
+                    {lang === 'zh' ? op.label : op.labelEn}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex-1 min-h-0">
+            <VisualizationCanvas
+              script={animationScript}
+              visualState={visualState}
+              currentStepData={currentStepData}
+            />
+          </div>
         </div>
 
         {/* Right: Info Panel (20%) */}
@@ -1773,6 +1853,50 @@ export default function Visualizer() {
                 </p>
               </div>
             )}
+
+            {/* Render Engine */}
+            <div className="p-3 rounded-lg border border-border bg-surface">
+              <h4 className="text-xs font-semibold text-slate-700 mb-2">Render Engine</h4>
+              <div className="flex items-center justify-between gap-2">
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${isSceneEngineActive ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+                  {isSceneEngineActive ? 'Scene Engine' : 'Classic Renderer'}
+                </span>
+                {animationScript?.presentation?.module && (
+                  <span className="text-[10px] font-code text-slate-400">{animationScript.presentation.module}</span>
+                )}
+              </div>
+              {isSceneEngineActive && (
+                <>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="rounded-lg bg-white px-2 py-1.5">
+                      <div className="text-slate-400">event steps</div>
+                      <div className="font-code font-semibold text-slate-700">{sceneEventStats.eventSteps}</div>
+                    </div>
+                    <div className="rounded-lg bg-white px-2 py-1.5">
+                      <div className="text-slate-400">events</div>
+                      <div className="font-code font-semibold text-slate-700">{sceneEventStats.totalEvents}</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 text-[10px]">
+                    <span className={`rounded-full px-2 py-0.5 ${sceneDiagnosticSummary.errors > 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                      errors {sceneDiagnosticSummary.errors}
+                    </span>
+                    <span className={`rounded-full px-2 py-0.5 ${sceneDiagnosticSummary.warnings > 0 ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}>
+                      warnings {sceneDiagnosticSummary.warnings}
+                    </span>
+                  </div>
+                  {sceneDiagnosticSummary.diagnostics.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {sceneDiagnosticSummary.diagnostics.slice(0, 2).map((diagnostic) => (
+                        <div key={`${diagnostic.stepId}-${diagnostic.eventIndex}-${diagnostic.message}`} className="rounded-lg bg-red-50 px-2 py-1 text-[10px] text-red-600">
+                          Step {diagnostic.stepId}: {diagnostic.message}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
 
             {/* Stats */}
             <div className="p-3 rounded-lg border border-border bg-surface">

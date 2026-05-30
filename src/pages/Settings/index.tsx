@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icon } from '@/icons'
 import Header from '@/components/Layout/Header'
+import { testApiConnection } from '@/ai/client'
 
 type ConnectionStatus = 'idle' | 'testing' | 'connected' | 'failed'
 
@@ -16,9 +17,8 @@ const MODEL_PRICING: Record<string, { input: number; output: number; label: stri
   'claude-haiku-4-5':  { input: 1.0,  output: 5.0, label: 'Claude Haiku 4.5' },
   'gemini-3.1-pro':  { input: 2.0,  output: 12,  label: 'Gemini 3.1 Pro' },
   'gemini-2.5-flash':{ input: 0.30, output: 2.5, label: 'Gemini 2.5 Flash' },
-  'deepseek-v4-pro':   { input: 0.44, output: 0.87, label: 'DeepSeek V4 Pro' },
-  'deepseek-v4-flash': { input: 0.14, output: 0.28, label: 'DeepSeek V4 Flash' },
-  'deepseek-v3.2':     { input: 0.26, output: 0.38, label: 'DeepSeek V3.2' },
+  'deepseek-v4-pro':   { input: 0.55, output: 2.19, label: 'DeepSeek V4 Pro' },
+  'deepseek-v4-flash': { input: 0.27, output: 1.10, label: 'DeepSeek V4 Flash' },
 }
 
 const ESTIMATED_SYSTEM_PROMPT_TOKENS = 800
@@ -28,7 +28,7 @@ const ESTIMATED_OVERHEAD_TOKENS = 200
 export default function Settings() {
   const { t } = useTranslation()
   const [apiKey, setApiKey] = useState('')
-  const [baseUrl, setBaseUrl] = useState('https://api.openai.com/v1')
+  const [baseUrl, setBaseUrl] = useState('https://api.deepseek.com')
   const [model, setModel] = useState('deepseek-v4-pro')
   const [status, setStatus] = useState<ConnectionStatus>('idle')
   const [showKey, setShowKey] = useState(false)
@@ -61,32 +61,13 @@ export default function Settings() {
     saveConfig()
 
     const start = performance.now()
-    try {
-      const res = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: 'user', content: 'Hi' }],
-          max_tokens: 5,
-        }),
-      })
+    const result = await testApiConnection({ apiKey, baseUrl, model })
+    setResponseTime(Math.round(performance.now() - start))
 
-      setResponseTime(Math.round(performance.now() - start))
-
-      if (res.ok) {
-        setStatus('connected')
-      } else {
-        const err = await res.json().catch(() => ({}))
-        console.error('API error:', err)
-        setStatus('failed')
-      }
-    } catch (e) {
-      setResponseTime(Math.round(performance.now() - start))
-      console.error('Connection failed:', e)
+    if (result.success) {
+      setStatus('connected')
+    } else {
+      console.error('Connection failed:', result.errorReport || result.error)
       setStatus('failed')
     }
   }
@@ -187,15 +168,16 @@ export default function Settings() {
             />
             <div className="mt-2 flex flex-wrap gap-2">
               {[
-                { url: 'https://api.openai.com/v1', label: 'OpenAI' },
-                { url: 'https://api.anthropic.com/v1', label: 'Anthropic' },
-                { url: 'https://generativelanguage.googleapis.com/v1beta/openai', label: 'Gemini' },
-                { url: 'https://api.deepseek.com/v1', label: 'DeepSeek' },
+                { url: 'https://api.openai.com/v1', model: 'gpt-5.4-mini', label: 'OpenAI' },
+                { url: 'https://api.anthropic.com/v1', model: 'claude-sonnet-4-6', label: 'Anthropic' },
+                { url: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.5-flash', label: 'Gemini' },
+                { url: 'https://api.deepseek.com', model: 'deepseek-v4-pro', label: 'DeepSeek' },
               ].map((preset) => (
                 <button
                   key={preset.url}
                   onClick={() => {
                     setBaseUrl(preset.url)
+                    setModel(preset.model)
                     setStatus('idle')
                   }}
                   className={`text-[10px] px-2 py-1 rounded-md border cursor-pointer
