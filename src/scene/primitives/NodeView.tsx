@@ -19,9 +19,9 @@ export default function NodeView({ node }: NodeViewProps) {
   const isActive = node.state?.role === 'active' || node.state?.role === 'visited' || node.state?.role === 'current'
 
   if (isCircle) {
-    return renderCircle(node, width, palette, opacity, isActive)
+    return <><NodeStyles />{renderCircle(node, width, palette, opacity, isActive)}</>
   }
-  return renderRect(node, width, height, palette, opacity, isActive)
+  return <><NodeStyles />{renderRect(node, width, height, palette, opacity, isActive)}</>
 }
 
 function renderCircle(
@@ -94,12 +94,19 @@ function renderRect(
           )
         })}
       </g>
-      <style>{`
-        .node-pulse { animation: node-pop 0.5s ease-in-out; transform-box: fill-box; transform-origin: center; }
-        .node-active-ring { animation: node-ring 0.9s ease-out infinite; transform-box: fill-box; transform-origin: center; }
-        @keyframes node-pop { 0% { transform: scale(0.94); } 55% { transform: scale(1.04); } 100% { transform: scale(1); } }
-        @keyframes node-ring { from { opacity: 0.15; transform: scale(0.94); } to { opacity: 0.02; transform: scale(1.12); } }
-      `}</style>
     </g>
   )
 }
+
+const NODE_STYLES = `
+  .node-pulse { animation: node-pop 0.5s ease-in-out; transform-box: fill-box; transform-origin: center; }
+  .node-active-ring { animation: node-ring 0.9s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes node-pop { 0% { transform: scale(0.94); } 55% { transform: scale(1.04); } 100% { transform: scale(1); } }
+  @keyframes node-ring { from { opacity: 0.15; transform: scale(0.94); } to { opacity: 0.02; transform: scale(1.12); } }
+`
+
+function NodeStyles() {
+  return <style>{NODE_STYLES}</style>
+}
+
+export { NodeStyles }
