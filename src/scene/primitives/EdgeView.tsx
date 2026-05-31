@@ -22,9 +22,24 @@ export default function EdgeView({ edge, scene }: EdgeViewProps) {
 
   const color = edge.state?.color ? COLOR_MAP[edge.state.color] : edge.style?.color ? COLOR_MAP[edge.style.color] : '#94A3B8'
   const markerEnd = edge.directed ? edge.variant === 'dependency' ? 'url(#sceneDependencyArrow)' : 'url(#sceneArrow)' : undefined
-  const path = edge.style?.curved
-    ? `M ${from.x} ${from.y} Q ${(from.x + to.x) / 2} ${Math.max(from.y, to.y) + 40} ${to.x} ${to.y}`
-    : `M ${from.x} ${from.y} L ${to.x} ${to.y}`
+  
+  let path = ''
+  if (edge.style?.curved) {
+    const dx = to.x - from.x
+    const dy = to.y - from.y
+    if (Math.abs(dy) < 30) {
+      // Horizontal separation: classic bottom dip (e.g., adjacent list nodes)
+      path = `M ${from.x} ${from.y} Q ${(from.x + to.x) / 2} ${Math.max(from.y, to.y) + 40} ${to.x} ${to.y}`
+    } else {
+      // Significant vertical separation: sweep in a beautiful, natural outward side-arch
+      const bulgeX = dx > 0 ? -Math.abs(dy) * 0.35 : Math.abs(dy) * 0.35
+      const controlX = (from.x + to.x) / 2 + bulgeX
+      const controlY = (from.y + to.y) / 2
+      path = `M ${from.x} ${from.y} Q ${controlX} ${controlY} ${to.x} ${to.y}`
+    }
+  } else {
+    path = `M ${from.x} ${from.y} L ${to.x} ${to.y}`
+  }
 
   return (
     <g>

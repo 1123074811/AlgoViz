@@ -1,6 +1,7 @@
 import type { SceneCommand } from '../commandTypes'
 import type { LinkedListAlgorithmEvent } from '../eventTypes'
 import type { CompileContext, EventCompiler } from '../SceneEngine'
+import { AuxiliaryUnit, DataUnit } from '../primitives/DataUnits'
 import { createEdge } from '../variants/edgeVariants'
 import { createLinkedListNode } from '../variants/nodeVariants'
 
@@ -25,7 +26,7 @@ function compileLinkedListEvent(event: LinkedListAlgorithmEvent, context: Compil
     case 'linked_list.insert_before':
       return compileInsertBefore(event, context)
     case 'linked_list.delete':
-      return [{ type: 'set_state', entityId: event.nodeId, state: { role: 'deleted', color: 'danger', opacity: 0.45 }, merge: true }, { type: 'remove_entity', entityId: event.nodeId }, { type: 'relayout', layout: 'linked_list' }]
+      return compileDelete(event, context)
     case 'linked_list.reverse_link':
       return compileReverseLink(event, context)
     case 'linked_list.set_head':
@@ -67,8 +68,16 @@ function compileInsertAfter(event: Extract<LinkedListAlgorithmEvent, { type: 'li
   const target = context.scene.entities[event.targetNodeId]
   const variant = target?.type === 'node' && target.variant === 'linked_list.doubly' ? 'doubly' : 'singly'
   const targetPosition = target && 'position' in target && target.position ? target.position : { x: 110, y: 260 }
+  const phantomId = `phantom_ins_${event.newNode.id}`
+  const arrowId = `arrow_ins_${event.newNode.id}`
   const commands: SceneCommand[] = [
     { type: 'set_state', entityId: event.targetNodeId, state: { role: 'active', color: 'warning', pulse: true }, merge: true },
+    // Create phantom cell at source position to show insertion trajectory
+    { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: event.newNode.value, index: -1, x: targetPosition.x + 160, y: targetPosition.y - 80, color: 'success' }) },
+    { type: 'connect', edge: AuxiliaryUnit.arrow({
+      id: arrowId, fromEntity: phantomId, toEntity: event.newNode.id,
+      curved: true, dashed: true, thickness: 2, color: 'success', pulse: true,
+    }) },
     { type: 'create_node', node: createLinkedListNode(event.newNode.id, event.newNode.value, variant, targetPosition.x + 80, targetPosition.y + 120), animation: 'drop' },
   ]
 
@@ -83,6 +92,9 @@ function compileInsertAfter(event: Extract<LinkedListAlgorithmEvent, { type: 'li
     if (oldNextId) commands.push({ type: 'connect', edge: createEdge(edgeId(oldNextId, 'prev', event.newNode.id), oldNextId, 'prev', event.newNode.id, 'next', 'muted', true) })
   }
 
+  commands.push({ type: 'wait', duration: 250 })
+  commands.push({ type: 'disconnect', edgeId: arrowId })
+  commands.push({ type: 'remove_entity', entityId: phantomId })
   commands.push({ type: 'relayout', layout: 'linked_list' })
   commands.push({ type: 'set_state', entityId: event.newNode.id, state: { role: 'inserted', color: 'success', pulse: true }, merge: true })
   return commands
@@ -101,10 +113,44 @@ function compileInsertBefore(event: Extract<LinkedListAlgorithmEvent, { type: 'l
   return compileInsertAfter({ type: 'linked_list.insert_after', targetNodeId: prevEdge.from.entityId, newNode: event.newNode }, context)
 }
 
+function compileDelete(event: Extract<LinkedListAlgorithmEvent, { type: 'linked_list.delete' }>, context: CompileContext): SceneCommand[] {
+  const node = context.scene.entities[event.nodeId]
+  const nodeVal = node?.type === 'node' ? String(node.fields.find(f => f.id === 'data')?.value ?? '?') : '?'
+  const phantomId = `phantom_del_${event.nodeId}`
+  const arrowId = `arrow_del_${event.nodeId}`
+  const pos = node && 'position' in node && node.position ? node.position : { x: 200, y: 260 }
+  return [
+    { type: 'set_state', entityId: event.nodeId, state: { role: 'deleted', color: 'danger', pulse: true }, merge: true },
+    { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: nodeVal, index: -1, x: pos.x + 140, y: pos.y - 100, color: 'danger' }) },
+    { type: 'connect', edge: AuxiliaryUnit.arrow({
+      id: arrowId, fromEntity: event.nodeId, toEntity: phantomId,
+      curved: true, dashed: true, thickness: 2, color: 'danger', pulse: true,
+    }) },
+    { type: 'wait', duration: 250 },
+    { type: 'disconnect', edgeId: arrowId },
+    { type: 'remove_entity', entityId: phantomId },
+    { type: 'remove_entity', entityId: event.nodeId },
+    { type: 'relayout', layout: 'linked_list' },
+  ]
+}
+
 function compileReverseLink(event: Extract<LinkedListAlgorithmEvent, { type: 'linked_list.reverse_link' }>, context: CompileContext): SceneCommand[] {
   const oldEdge = Object.values(context.scene.edges).find((edge) => edge.from.entityId === event.fromNodeId && edge.from.portId === 'next')
-  const commands: SceneCommand[] = [{ type: 'set_state', entityId: event.fromNodeId, state: { role: 'active', color: 'warning' }, merge: true }]
-  if (oldEdge) commands.push({ type: 'disconnect', edgeId: oldEdge.id })
+  const oldToId = oldEdge?.to.entityId
+  const reverseArrowId = `reverse_${event.fromNodeId}_${event.toNodeId ?? 'null'}`
+  const commands: SceneCommand[] = [
+    { type: 'set_state', entityId: event.fromNodeId, state: { role: 'active', color: 'warning', pulse: true }, merge: true },
+  ]
+  if (oldEdge) {
+    // Draw curve arrow showing the reversal trajectory
+    commands.push({ type: 'connect', edge: AuxiliaryUnit.arrow({
+      id: reverseArrowId, fromEntity: event.fromNodeId, toEntity: oldToId ?? event.fromNodeId,
+      curved: true, dashed: true, thickness: 2, color: 'warning', pulse: true,
+    }) })
+    commands.push({ type: 'disconnect', edgeId: oldEdge.id })
+    commands.push({ type: 'wait', duration: 200 })
+    commands.push({ type: 'disconnect', edgeId: reverseArrowId })
+  }
   if (event.toNodeId) commands.push({ type: 'connect', edge: createEdge(edgeId(event.fromNodeId, 'next', event.toNodeId), event.fromNodeId, 'next', event.toNodeId) })
   commands.push({ type: 'relayout', layout: 'linked_list' })
   return commands

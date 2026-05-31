@@ -51,6 +51,8 @@ function compileArrayEvent(event: ArrayAlgorithmEvent, context: CompileContext):
         { type: 'set_state', entityId: cellId(event.from), state: { role: 'idle', color: 'muted' }, merge: true },
       ]
     }
+    case 'array.set_value':
+      return [{ type: 'set_cell', cellId: cellId(event.index), value: event.value, state: { role: 'current', color: 'primary', pulse: true } }]
     case 'array.mark_sorted':
       return event.indices.map(index => ({ type: 'set_state' as const, entityId: cellId(index), state: { role: 'sorted' as const, color: 'success' as const, pulse: false }, merge: true }))
     case 'array.partition':

@@ -79,66 +79,85 @@ function countLeaves(scene: SceneState, rootId: string, nodes: SceneNode[]): num
  * so large trees don't overflow and small trees aren't too sparse.
  * The root is centered horizontally around x=500.
  */
+/**
+ * Query an edge to see if a child node is connected to the left or right port of its parent.
+ */
+function getLeftAndRightChildren(scene: SceneState, nodeId: string): { leftId: string | null; rightId: string | null } {
+  let leftId: string | null = null
+  let rightId: string | null = null
+  for (const edge of Object.values(scene.edges)) {
+    if (edge.from.entityId === nodeId) {
+      if (edge.from.portId === 'left') {
+        leftId = edge.to.entityId
+      } else if (edge.from.portId === 'right') {
+        rightId = edge.to.entityId
+      }
+    }
+  }
+  return { leftId, rightId }
+}
+
+/**
+ * Layout tree nodes with adaptive spacing.
+ *
+ * Horizontal and vertical gaps are computed from tree depth and leaf count,
+ * so large trees don't overflow and small trees aren't too sparse.
+ * The root is centered horizontally around x=500.
+ */
 export function layoutTree(scene: SceneState): Record<string, Point> {
   const nodes = getTreeNodeEntities(scene)
   if (nodes.length === 0) return {}
 
-  const nodeIdSet = new Set(nodes.map(n => n.id))
   const rootId = findRoot(scene, nodes)
   if (!rootId) return {}
 
   const depth = computeDepth(scene, rootId, nodes)
-  const leafCount = countLeaves(scene, rootId, nodes)
 
-  const hGap = Math.max(64, Math.min(120, 900 / Math.max(leafCount, 1)))
-  const vGap = Math.max(56, Math.min(90, 500 / Math.max(depth, 1)))
+  // Symmetric binary tree layout gaps
+  const vGap = Math.max(120, Math.min(145, 500 / Math.max(depth, 1)))
+  const hGap = Math.max(85, Math.min(110, 360 / Math.max(depth, 1)))
   const startY = 80
 
   const positions: Record<string, Point> = {}
-  let leafIndex = 0
 
-  function dfs(nodeId: string, d: number) {
-    if (!nodeIdSet.has(nodeId)) return
-    const children = getChildren(scene, nodeId).filter(c => nodeIdSet.has(c))
-
-    if (children.length === 0) {
-      positions[nodeId] = { x: leafIndex * hGap, y: startY + d * vGap }
-      leafIndex++
-      return
-    }
-
-    for (const child of children) {
-      dfs(child, d + 1)
-    }
-
-    const xs = children
-      .map(c => positions[c]?.x)
-      .filter((x): x is number => x !== undefined)
-
-    if (xs.length > 0) {
-      positions[nodeId] = {
-        x: xs.reduce((a, b) => a + b, 0) / xs.length,
-        y: startY + d * vGap,
+  function layoutNode(nodeId: string, x: number, d: number) {
+    positions[nodeId] = { x, y: startY + d * vGap }
+    
+    const { leftId, rightId } = getLeftAndRightChildren(scene, nodeId)
+    
+    if (leftId || rightId) {
+      // Binary Tree Mode: precise left/right symmetric offset
+      const hSpacing = hGap * Math.pow(1.85, Math.max(0, depth - d - 1))
+      if (leftId) {
+        layoutNode(leftId, x - hSpacing, d + 1)
+      }
+      if (rightId) {
+        layoutNode(rightId, x + hSpacing, d + 1)
+      }
+    } else {
+      // General Tree Mode (e.g. Trie, Multi-branch trees): layout all children symmetrically
+      const children = getChildren(scene, nodeId)
+      if (children.length > 0) {
+        const branchGap = hGap * Math.pow(1.5, Math.max(0, depth - d - 1))
+        const totalWidth = (children.length - 1) * branchGap
+        const startX = x - totalWidth / 2
+        children.forEach((childId, index) => {
+          layoutNode(childId, startX + index * branchGap, d + 1)
+        })
       }
     }
   }
 
-  dfs(rootId, 0)
+  // Layout recursively starting from root at center x=500
+  layoutNode(rootId, 500, 0)
 
-  // Center the root horizontally around x=500
-  const rootPos = positions[rootId]
-  const offsetX = rootPos ? 500 - rootPos.x : 0
-
-  for (const id of Object.keys(positions)) {
-    positions[id].x += offsetX
-  }
-
-  // Handle any unvisited nodes
+  // Handle any unvisited nodes (nodes that might be disconnected during transitions)
   const visited = new Set(Object.keys(positions))
+  let orphanIndex = 0
   for (const node of nodes) {
     if (!visited.has(node.id)) {
-      positions[node.id] = { x: leafIndex * hGap + offsetX, y: startY }
-      leafIndex++
+      positions[node.id] = { x: 100 + orphanIndex * 120, y: startY + depth * vGap }
+      orphanIndex++
     }
   }
 

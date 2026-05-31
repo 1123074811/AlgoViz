@@ -32,6 +32,7 @@ export type ArrayAlgorithmEvent =
   | { type: 'array.compare'; indices: [number, number] }
   | { type: 'array.swap'; indices: [number, number] }
   | { type: 'array.move'; from: number; to: number }
+  | { type: 'array.set_value'; index: number; value: number | string }
   | { type: 'array.mark_sorted'; indices: number[] }
   | { type: 'array.partition'; pivotIndex: number; left: number; right: number }
 

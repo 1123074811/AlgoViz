@@ -35,7 +35,7 @@ export function useAnimationEngine(script: AnimationScript | null) {
     }
 
     let arr = [...script.initialState.data]
-    const shouldReplayLinearData = script.initialState.type === 'array' || script.initialState.type === 'linked_list'
+    const shouldReplayLinearData = script.initialState.type === 'array' || script.initialState.type === 'linked_list' || script.initialState.type === 'tree'
     const elementIds = arr.map((_, i) => i)
     const persistentMarked = new Map<number, ActionColor>()
     const persistentEdgeColors = new Map<string, ActionColor>()
