@@ -103,6 +103,7 @@ export function generateRadixSort(arr: number[]): AnimationScript {
           [{ id: 'output', label: `输出(output) / ${digitPlace}`, data: [...output], activeIndices: [i] }]
         )
       ))
+      steps[steps.length - 1].events = [{ type: 'array.set_value', index: i, value: output[i] }]
       steps[steps.length - 1].action.value = output[i]
       steps[steps.length - 1].action.to = i
     }

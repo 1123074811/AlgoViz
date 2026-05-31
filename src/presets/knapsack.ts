@@ -60,13 +60,13 @@ export function generateKnapsack(weights?: number[], values?: number[], capacity
     stats: { comparisons: comps, swaps: 0, accesses: 0 },
   })
 
-  const flat = dp.flat()
+  const flat = initialDp.flat()
 
   return {
     algorithm: 'knapsack_01',
     complexity: { time: { best: 'O(n*C)', average: 'O(n*C)', worst: 'O(n*C)' }, space: 'O(n*C)' },
     presentation: { engine: 'scene', module: 'matrix', variant: 'dp_table' },
-    initialState: { type: 'matrix', data: flat, matrix: dp },
+    initialState: { type: 'matrix', data: flat, matrix: initialDp },
     steps: steps as AnimationScript['steps'],
   }
 }

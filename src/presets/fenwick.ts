@@ -4,6 +4,7 @@ export function generateFenwick(arr: number[]): AnimationScript {
   const data = [...arr]
   const n = data.length
   const tree = new Array(n + 1).fill(0)
+  const initialTree = [...tree]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const steps: any[] = []
   let sid = 1
@@ -12,7 +13,7 @@ export function generateFenwick(arr: number[]): AnimationScript {
     stepId: sid++, codeLine: 0,
     description: { zh: `数组 [${data.join(', ')}]，构建树状数组 (Fenwick Tree / BIT)`, en: `Array [${data.join(', ')}], build Fenwick Tree` },
     action: { type: 'highlight', targets: [], color: 'primary' },
-    events: [{ type: 'array.create', values: tree.slice(1) }],
+    events: [{ type: 'array.create', values: initialTree.slice(1) }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
 
@@ -74,7 +75,7 @@ export function generateFenwick(arr: number[]): AnimationScript {
     algorithm: 'fenwick_tree',
     complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'array', variant: 'fenwick' },
-    initialState: { type: 'array', data: tree.slice(1) },
+    initialState: { type: 'array', data: initialTree.slice(1) },
     steps: steps as AnimationScript['steps'],
   }
 }

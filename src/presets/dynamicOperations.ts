@@ -318,12 +318,15 @@ export function generateDynamicBSTOp(
           } else {
             // Insert here!
             const newId = `new_node`
+            const step = makeStep(sid++, 3,
+              `成功将节点 ${param} 插入为节点 ${val} 的左孩子！插入完毕`,
+              `Successfully inserted node ${param} as left child of ${val}!`,
+              'insert', [arr.length], 'success', 0, 0, sid
+            )
+            step.action.value = param
+            step.action.to = arr.length
             steps.push({
-              ...makeStep(sid++, 3,
-                `成功将节点 ${param} 插入为节点 ${val} 的左孩子！插入完毕`,
-                `Successfully inserted node ${param} as left child of ${val}!`,
-                'insert', [], 'success', 0, 0, sid
-              ),
+              ...step,
               events: [{ type: 'tree.insert', parentId: curr.id, node: { id: newId, value: param }, side: 'left' }]
             } as any)
             break
@@ -342,12 +345,15 @@ export function generateDynamicBSTOp(
           } else {
             // Insert here!
             const newId = `new_node`
+            const step = makeStep(sid++, 3,
+              `成功将节点 ${param} 插入为节点 ${val} 的右孩子！插入完毕`,
+              `Successfully inserted node ${param} as right child of ${val}!`,
+              'insert', [arr.length], 'success', 0, 0, sid
+            )
+            step.action.value = param
+            step.action.to = arr.length
             steps.push({
-              ...makeStep(sid++, 3,
-                `成功将节点 ${param} 插入为节点 ${val} 的右孩子！插入完毕`,
-                `Successfully inserted node ${param} as right child of ${val}!`,
-                'insert', [], 'success', 0, 0, sid
-              ),
+              ...step,
               events: [{ type: 'tree.insert', parentId: curr.id, node: { id: newId, value: param }, side: 'right' }]
             } as any)
             break
@@ -407,12 +413,13 @@ export function generateDynamicBSTOp(
       } as any)
 
       if (!foundNode.left || !foundNode.right) {
+        const step = makeStep(sid++, 8,
+          `该节点至多只有一个孩子，断开与其双亲节点的连接，直接将其释放`,
+          `Node has at most one child, disconnect from parent and remove`,
+          'delete', [arr.indexOf(param)], 'success', 0, 0, sid
+        )
         steps.push({
-          ...makeStep(sid++, 8,
-            `该节点至多只有一个孩子，断开与其双亲节点的连接，直接将其释放`,
-            `Node has at most one child, disconnect from parent and remove`,
-            'highlight', [], 'success', 0, 0, sid
-          ),
+          ...step,
           events: [{ type: 'tree.delete', nodeId: foundNode.id }]
         } as any)
       } else {
@@ -430,12 +437,13 @@ export function generateDynamicBSTOp(
           ]
         } as any)
 
+        const step = makeStep(sid++, 11,
+          `拷贝后继节点值并物理移除后继节点`,
+          `Copy successor value and remove successor node`,
+          'delete', [arr.indexOf(param)], 'success', 0, 0, sid
+        )
         steps.push({
-          ...makeStep(sid++, 11,
-            `拷贝后继节点值并物理移除后继节点`,
-            `Copy successor value and remove successor node`,
-            'highlight', [], 'success', 0, 0, sid
-          ),
+          ...step,
           events: [
             { type: 'tree.delete', nodeId: succ.id }
           ]

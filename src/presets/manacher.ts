@@ -5,6 +5,7 @@ export function generateManacher(s?: string): AnimationScript {
   const T = '#' + str.split('').join('#') + '#'
   const n = T.length
   const P: number[] = new Array(n).fill(0)
+  const initialP = [...P]
   const steps: AnimationScript['steps'] = []
   let sid = 1, C = 0, R = 0
 
@@ -58,7 +59,7 @@ export function generateManacher(s?: string): AnimationScript {
     algorithm: 'manacher',
     complexity: { time: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'string' },
-    initialState: { type: 'array', data: P },
+    initialState: { type: 'array', data: initialP },
     steps,
   }
 }

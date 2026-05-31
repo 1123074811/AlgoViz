@@ -7,13 +7,31 @@ export function generateRedBlackTree(): AnimationScript {
   let sid = 1
   const nums = tree.map(v => v === '' ? 0 : Number(v))
 
+  // Construct active nodes and edges dynamically based on standard binary tree array layout
+  const nodes = nums
+    .map((v, i) => ({ id: String(i), value: v }))
+    .filter(n => n.value !== 0)
+
+  const edges: { parentId: string; childId: string; port: 'left' | 'right' }[] = []
+  for (let i = 0; i < nums.length; i++) {
+    if (nums[i] === 0) continue
+    const leftIdx = 2 * i + 1
+    const rightIdx = 2 * i + 2
+    if (leftIdx < nums.length && nums[leftIdx] !== 0) {
+      edges.push({ parentId: String(i), childId: String(leftIdx), port: 'left' })
+    }
+    if (rightIdx < nums.length && nums[rightIdx] !== 0) {
+      edges.push({ parentId: String(i), childId: String(rightIdx), port: 'right' })
+    }
+  }
+
   steps.push({
     stepId: sid++,
     codeLine: 0,
     description: { zh: '红黑树 — 自平衡二叉搜索树，节点分红色/黑色', en: 'Red-Black Tree — self-balancing BST, nodes are red/black' },
     action: { type: 'highlight', targets: [], color: 'primary' },
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
-    events: [{ type: 'tree.create', variant: 'binary', rootId: '0', nodes: nums.map((v, i) => ({ id: String(i), value: v })), edges: [] }],
+    events: [{ type: 'tree.create', variant: 'binary', rootId: '0', nodes, edges }],
     teachingState: {
       tree: {
         nodeStates: [

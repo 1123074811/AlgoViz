@@ -7,6 +7,7 @@ export function generateUnboundedKnapsack(weights?: number[], values?: number[],
   const n = w.length
   const dp: number[] = new Array(C + 1).fill(0)
   const table: number[][] = [new Array(C + 1).fill(0)]
+  const initialTable = table.map(row => [...row])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const steps: any[] = []
   let sid = 1
@@ -54,7 +55,7 @@ export function generateUnboundedKnapsack(weights?: number[], values?: number[],
     algorithm: 'unbounded_knapsack',
     complexity: { time: { best: 'O(n*C)', average: 'O(n*C)', worst: 'O(n*C)' }, space: 'O(C)' },
     presentation: { engine: 'scene', module: 'matrix', variant: 'dp_table' },
-    initialState: { type: 'matrix', data: table.flat(), matrix: table },
+    initialState: { type: 'matrix', data: Array.from({ length: n + 1 }, () => new Array(C + 1).fill(0)).flat(), matrix: Array.from({ length: n + 1 }, () => new Array(C + 1).fill(0)) },
     steps: steps as AnimationScript['steps'],
   }
 }

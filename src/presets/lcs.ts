@@ -60,12 +60,12 @@ export function generateLCS(text1?: string, text2?: string): AnimationScript {
     stats: { comparisons: m * n, swaps: 0, accesses: 0 },
   })
 
-  const flat = dp.flat()
+  const flat = initialDp.flat()
   return {
     algorithm: 'lcs',
     complexity: { time: { best: 'O(m*n)', average: 'O(m*n)', worst: 'O(m*n)' }, space: 'O(m*n)' },
     presentation: { engine: 'scene', module: 'matrix', variant: 'dp_table' },
-    initialState: { type: 'matrix', data: flat, matrix: dp },
+    initialState: { type: 'matrix', data: flat, matrix: initialDp },
     steps: steps as AnimationScript['steps'],
   }
 }

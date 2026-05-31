@@ -84,6 +84,7 @@ export function generateBucketSort(arr: number[]): AnimationScript {
         'highlight', [idx], 'success', 0, 0, 1,
         sortTeachingWithAux({ phase: 'collect', bucketCount, fromBucket: i, value: v, toPos: idx }, bucketArrays)
       ))
+      steps[steps.length - 1].events = [{ type: 'array.set_value', index: idx, value: v }]
       steps[steps.length - 1].action.value = v
       steps[steps.length - 1].action.to = idx
 

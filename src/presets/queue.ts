@@ -3,7 +3,8 @@ import type { AnimationScript } from '@/types/animation'
 export function generateQueue(): AnimationScript {
   const steps: AnimationScript['steps'] = []
   let sid = 1
-  const queue: number[] = [1, 2, 3]
+  const initialQueue = [1, 2, 3]
+  const queue = [...initialQueue]
 
   // Step 1: initial queue with pipe container
   steps.push({
@@ -56,7 +57,7 @@ export function generateQueue(): AnimationScript {
     algorithm: 'queue',
     complexity: { time: { best: 'O(1)', average: 'O(1)', worst: 'O(1)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'queue' },
-    initialState: { type: 'array', data: queue },
+    initialState: { type: 'array', data: initialQueue },
     steps,
   }
 }

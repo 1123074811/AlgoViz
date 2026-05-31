@@ -6,6 +6,7 @@ export function generateNQueens(n?: number): AnimationScript {
   const steps: any[] = []
   let sid = 1
   const board: string[][] = Array.from({ length: N }, () => new Array(N).fill('·'))
+  const initialBoard = board.map(row => [...row])
 
   steps.push({
     stepId: sid++, codeLine: 0,
@@ -75,12 +76,12 @@ export function generateNQueens(n?: number): AnimationScript {
 
   solve(0)
 
-  const finalBoard = board.flat().map((c) => (c === 'Q' ? 1 : 0))
+  const initialFlat = initialBoard.flat().map((c) => (c === 'Q' ? 1 : 0))
   return {
     algorithm: 'n_queens',
     complexity: { time: { best: 'O(N!)', average: 'O(N!)', worst: 'O(N!)' }, space: 'O(N)' },
     presentation: { engine: 'scene', module: 'n_queens', variant: 'board' },
-    initialState: { type: 'matrix', data: finalBoard, matrix: board.map((row) => row.map((cell) => cell === 'Q' ? 1 : 0)) },
+    initialState: { type: 'matrix', data: initialFlat, matrix: initialBoard.map((row) => row.map((cell) => cell === 'Q' ? 1 : 0)) },
     steps: steps as AnimationScript['steps'],
   }
 }

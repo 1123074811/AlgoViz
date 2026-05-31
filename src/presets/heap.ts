@@ -1,7 +1,7 @@
 import type { AnimationScript } from '@/types/animation'
 
 export function generateHeapOperations(_arr?: number[]): AnimationScript {
-  const data = [3, 1, 6, 5, 2, 4]
+  const data = (_arr && _arr.length > 0) ? _arr : [3, 1, 6, 5, 2, 4]
   const steps: AnimationScript['steps'] = []
   let sid = 1
 
@@ -16,6 +16,7 @@ export function generateHeapOperations(_arr?: number[]): AnimationScript {
 
   // Build heap by inserting elements one by one
   const heap: number[] = []
+  const initialHeap = [...heap]
   for (let idx = 0; idx < data.length; idx++) {
     const v = data[idx]
     heap.push(v)
@@ -40,13 +41,14 @@ export function generateHeapOperations(_arr?: number[]): AnimationScript {
     const nodeId = `h${heap.length - 1}`
     const parentIdx = Math.floor((i - 1) / 2)
     const parentId = `h${parentIdx}`
+    const side = i % 2 !== 0 ? 'left' : 'right'
 
     steps.push({
       stepId: sid++, codeLine: 4,
       description: { zh: `插入 ${v}（作为 h${parentIdx} 的子节点）`, en: `Insert ${v} (as child of h${parentIdx})` },
       action: { type: 'insert', targets: [i], color: 'warning' },
       events: [
-        { type: 'tree.insert', parentId, node: { id: nodeId, value: v } },
+        { type: 'tree.insert', parentId, node: { id: nodeId, value: v }, side },
       ],
       stats: { comparisons: sid, swaps: 0, accesses: 0 },
     })
@@ -157,7 +159,7 @@ export function generateHeapOperations(_arr?: number[]): AnimationScript {
     algorithm: 'heap_ds',
     complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'tree', variant: 'binary' },
-    initialState: { type: 'tree', data: heap, root: 'h0', treeNodes: [] },
+    initialState: { type: 'tree', data: initialHeap, root: 'h0', treeNodes: [] },
     steps,
   }
 }

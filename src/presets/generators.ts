@@ -254,10 +254,8 @@ export function generateInsertionSort(arr: number[]): AnimationScript {
           rng('sorted', '已排序', 0, i + 1, 'sorted'),
         ),
       ),
-      ...evt([{ type: 'array.mark_sorted', indices: [j + 1] }]),
+      ...evt([{ type: 'array.set_value', index: j + 1, value: key }, { type: 'array.mark_sorted', indices: [j + 1] }]),
     })
-    steps[steps.length - 1].action.value = key
-    steps[steps.length - 1].action.to = j + 1
   }
   steps.push({
     ...makeStep(sid++, 8,
@@ -623,7 +621,7 @@ export function generateCountingSort(arr: number[]): AnimationScript {
     steps.push({
       ...makeStep(sid++, 6, noteZh, `Write output[${i}]=${output[i]} back to arr[${i}]`, 'highlight', [i], 'success', 0, 0, acc += 1,
       sortTeachingWithAux({ i, value: output[i] }, [auxArr('output', '输出', output, [i])])),
-      ...evt([{ type: 'scene.note', text: noteZh }]),
+      ...evt([{ type: 'array.set_value', index: i, value: output[i] }, { type: 'scene.note', text: noteZh }]),
     })}
     steps[steps.length - 1].action.value = output[i]
     steps[steps.length - 1].action.to = i
@@ -720,7 +718,7 @@ export function generateMergeSort(arr: number[]): AnimationScript {
       steps.push({
         ...makeStep(sid++, 17, noteZh, `Write temp[${k}]=${temp[k]} back to arr[${start + k}]`, 'highlight', [start + k], 'success', comps, 0, 0,
         sortTeachingWithAux({ start, mid, end }, [auxArr('temp', '临时数组', temp, [k])])),
-        ...evt([{ type: 'scene.note', text: noteZh }]),
+        ...evt([{ type: 'array.set_value', index: start + k, value: temp[k] }, { type: 'scene.note', text: noteZh }]),
       })}
       steps[steps.length - 1].action.value = temp[k]
       steps[steps.length - 1].action.to = start + k
@@ -860,6 +858,7 @@ import { generateBST } from './bst'
 import { generateAVLTree } from './avlTree'
 import { generateRedBlackTree } from './redBlackTree'
 import { generateTrie } from './trie'
+import { generateBellmanFord } from './bellmanFord'
 import { generateHashTable } from './hashTable'
 import { generateBacktracking } from './backtracking'
 import { generateArray } from './arrayDS'
@@ -956,6 +955,7 @@ const hashTableWrapper = (_input: unknown) => generateHashTable()
 const backtrackingWrapper = (_input: unknown) => generateBacktracking()
 const leetcodeWrapper = (_input: unknown) => generateLeetCode()
 const acmWrapper = (_input: unknown) => generateACM()
+const bellmanFordWrapper = (input: unknown) => generateBellmanFord(input)
 
 const linkedListInsertWrapper = (input: any) => {
   const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
@@ -1003,6 +1003,7 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   manacher: manacherWrapper, segment_tree: segmentTreeWrapper,
   interval_dp: intervalDPWrapper, stack: stackWrapper,
   queue: queueWrapper, heap_ds: heapWrapper, union_find: unionFindWrapper,
+  bellman_ford: bellmanFordWrapper,
   linked_list_insert: linkedListInsertWrapper,
   linked_list_delete: linkedListDeleteWrapper,
   linked_list_search: linkedListSearchWrapper,

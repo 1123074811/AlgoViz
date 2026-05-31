@@ -6,6 +6,7 @@ export function generateLinkedList(): AnimationScript {
   let sid = 1
   const list: number[] = []
   const vals = [1, 2, 3, 4]
+  const initialList = [...vals]
 
   steps.push({ stepId: sid++, codeLine: 0, description: { zh: '单向链表 (Singly Linked List)', en: 'Singly Linked List' }, action: { type: 'highlight', targets: [], color: 'primary' }, stats: { comparisons: 0, swaps: 0, accesses: 0 } })
 
@@ -30,5 +31,5 @@ export function generateLinkedList(): AnimationScript {
 
   steps.push({ stepId: sid++, codeLine: 8, description: { zh: `遍历: ${list.join(' → ')} → null`, en: `Traverse: ${list.join(' → ')} → null` }, action: { type: 'mark', targets: [0, 1, 2], color: 'success' }, events: [{ type: 'linked_list.visit', nodeId: 'n1', pointerId: 'cur' }, { type: 'linked_list.visit', nodeId: 'n2', pointerId: 'cur' }, { type: 'linked_list.visit', nodeId: 'n4', pointerId: 'cur' }], stats: { comparisons: 0, swaps: 0, accesses: list.length } })
 
-  return { algorithm: 'linked_list', complexity: { time: { best: 'O(1)', average: 'O(n)', worst: 'O(n)' }, space: 'O(n)' }, presentation: { engine: 'scene', module: 'linked_list', variant: 'singly' }, initialState: { type: 'linked_list', data: list }, steps: steps as AnimationScript['steps'] }
+  return { algorithm: 'linked_list', complexity: { time: { best: 'O(1)', average: 'O(n)', worst: 'O(n)' }, space: 'O(n)' }, presentation: { engine: 'scene', module: 'linked_list', variant: 'singly' }, initialState: { type: 'linked_list', data: initialList }, steps: steps as AnimationScript['steps'] }
 }

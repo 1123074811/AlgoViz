@@ -51,7 +51,7 @@ export function generateMatrixChain(dims?: number[]): AnimationScript {
     algorithm: 'matrix_chain',
     complexity: { time: { best: 'O(n³)', average: 'O(n³)', worst: 'O(n³)' }, space: 'O(n²)' },
     presentation: { engine: 'scene', module: 'matrix', variant: 'dp_table' },
-    initialState: { type: 'matrix', data: dp.flat(), matrix: dp },
+    initialState: { type: 'matrix', data: initialDp.flat(), matrix: initialDp },
     steps: steps as AnimationScript['steps'],
   }
 }

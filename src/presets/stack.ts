@@ -3,7 +3,8 @@ import type { AnimationScript } from '@/types/animation'
 export function generateStack(): AnimationScript {
   const steps: AnimationScript['steps'] = []
   let sid = 1
-  const stack: number[] = [1, 2]
+  const initialStack = [1, 2]
+  const stack = [...initialStack]
 
   // Step 1: initial stack with U-shape container
   steps.push({
@@ -56,7 +57,7 @@ export function generateStack(): AnimationScript {
     algorithm: 'stack',
     complexity: { time: { best: 'O(1)', average: 'O(1)', worst: 'O(1)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'stack' },
-    initialState: { type: 'array', data: stack },
+    initialState: { type: 'array', data: initialStack },
     steps,
   }
 }

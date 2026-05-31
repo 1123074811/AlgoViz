@@ -63,7 +63,7 @@ export function generateEditDistance(w1?: string, w2?: string): AnimationScript 
     algorithm: 'edit_distance',
     complexity: { time: { best: 'O(m*n)', average: 'O(m*n)', worst: 'O(m*n)' }, space: 'O(m*n)' },
     presentation: { engine: 'scene', module: 'matrix', variant: 'dp_table' },
-    initialState: { type: 'matrix', data: dp.flat(), matrix: dp },
+    initialState: { type: 'matrix', data: initialDp.flat(), matrix: initialDp },
     steps: steps as AnimationScript['steps'],
   }
 }

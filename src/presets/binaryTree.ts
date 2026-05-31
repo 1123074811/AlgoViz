@@ -7,13 +7,31 @@ export function generateBinaryTree(): AnimationScript {
   let sid = 1
   const nums = tree.filter(v => v !== 0)
 
+  // Construct active nodes and edges dynamically based on standard binary tree array layout
+  const nodes = tree
+    .map((v, i) => ({ id: String(i), value: v }))
+    .filter(n => n.value !== 0)
+
+  const edges: { parentId: string; childId: string; port: 'left' | 'right' }[] = []
+  for (let i = 0; i < tree.length; i++) {
+    if (tree[i] === 0) continue
+    const leftIdx = 2 * i + 1
+    const rightIdx = 2 * i + 2
+    if (leftIdx < tree.length && tree[leftIdx] !== 0) {
+      edges.push({ parentId: String(i), childId: String(leftIdx), port: 'left' })
+    }
+    if (rightIdx < tree.length && tree[rightIdx] !== 0) {
+      edges.push({ parentId: String(i), childId: String(rightIdx), port: 'right' })
+    }
+  }
+
   steps.push(makeStep(sid++, 0,
     `二叉树演示。每个节点最多有两个子节点（左、右）。本树高=3，共 ${nums.length} 个节点`,
     `Binary Tree demo. Each node has at most 2 children (left, right). Height=3, ${nums.length} nodes`,
     'highlight', [0], 'primary', 0, 0, 0,
     { tree: { nodeStates: [{ id: '0', role: 'root', color: 'primary' as ActionColor }] } },
   ))
-  steps[0].events = [{ type: 'tree.create', variant: 'binary', rootId: '0', nodes: tree.map((v, i) => (v !== 0 ? { id: String(i), value: v } : { id: String(i), value: '' })).filter(n => n.id !== undefined), edges: [] }]
+  steps[0].events = [{ type: 'tree.create', variant: 'binary', rootId: '0', nodes, edges }]
 
   // Inorder traversal
   const inorderPath = [3, 1, 9, 4, 10, 0, 11, 6, 12, 2, 13, 7, 14]

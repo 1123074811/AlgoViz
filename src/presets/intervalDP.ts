@@ -54,7 +54,7 @@ export function generateIntervalDP(arr?: number[]): AnimationScript {
     algorithm: 'interval_dp',
     complexity: { time: { best: 'O(n³)', average: 'O(n³)', worst: 'O(n³)' }, space: 'O(n²)' },
     presentation: { engine: 'scene', module: 'matrix', variant: 'dp_table' },
-    initialState: { type: 'matrix', data: dp.flat() },
+    initialState: { type: 'matrix', data: initialDp.flat() },
     steps: steps as AnimationScript['steps'],
   }
 }

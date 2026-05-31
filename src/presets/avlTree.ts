@@ -21,6 +21,24 @@ export function generateAVLTree(): AnimationScript {
   const steps: AnimationScript['steps'] = []
   let sid = 1
 
+  // Construct active nodes and edges dynamically based on standard binary tree array layout
+  const nodes = tree
+    .map((v, i) => ({ id: String(i), value: v }))
+    .filter(n => n.value !== 0)
+
+  const edges: { parentId: string; childId: string; port: 'left' | 'right' }[] = []
+  for (let i = 0; i < tree.length; i++) {
+    if (tree[i] === 0) continue
+    const leftIdx = 2 * i + 1
+    const rightIdx = 2 * i + 2
+    if (leftIdx < tree.length && tree[leftIdx] !== 0) {
+      edges.push({ parentId: String(i), childId: String(leftIdx), port: 'left' })
+    }
+    if (rightIdx < tree.length && tree[rightIdx] !== 0) {
+      edges.push({ parentId: String(i), childId: String(rightIdx), port: 'right' })
+    }
+  }
+
   steps.push(makeStep(sid++, 0,
     'AVL 树（自平衡二叉搜索树）演示。AVL 要求任意节点的左右子树高度差（平衡因子）不超过 1，插入后若失衡则通过旋转修复',
     'AVL Tree (self-balancing BST) demo. AVL requires |balanceFactor| ≤ 1 for every node, rebalance via rotation after insertion',
@@ -94,7 +112,7 @@ export function generateAVLTree(): AnimationScript {
   ))
 
   // Attach events to steps
-  steps[0].events = [{ type: 'tree.create', variant: 'avl', rootId: '0', nodes: tree.map((v, i) => (v !== 0 ? { id: String(i), value: v } : { id: String(i), value: '' })), edges: [] }]
+  steps[0].events = [{ type: 'tree.create', variant: 'avl', rootId: '0', nodes, edges }]
   steps[1].events = [{ type: 'tree.compare', nodeId: '1', value: 6, result: 'less' }, { type: 'tree.update_metadata', nodeId: '1', height: 2, balanceFactor: -2 }]
   steps[2].events = [{ type: 'tree.compare', nodeId: '1', value: 4, result: 'less' }, { type: 'tree.rotate', rotation: 'right-left', pivotId: '1' }]
   steps[3].events = [{ type: 'tree.rotate', rotation: 'right-left', pivotId: '1' }, { type: 'tree.insert', parentId: '0', node: { id: '9', value: 4 }, side: 'right' }]

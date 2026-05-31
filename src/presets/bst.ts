@@ -19,6 +19,7 @@ export function generateBST(): AnimationScript {
   let sid = 1
   const inserts = [8, 3, 10, 1, 6, 14, 4, 7, 13]
   const bst: number[] = []
+  const initialBst = [...bst]
 
   steps.push(makeStep(sid++, 0,
     '从空树开始，依次插入 [8,3,10,1,6,14,4,7,13]，演示 BST 的插入过程。BST 性质：左子树所有节点 < 根 < 右子树所有节点',
@@ -84,5 +85,5 @@ export function generateBST(): AnimationScript {
     { tree: { nodeStates: allIndices.map(i => ({ id: String(i), role: 'selected' as const, color: 'success' as ActionColor })) } },
   ))
 
-  return { algorithm: 'bst', complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(n)' }, space: 'O(n)' }, presentation: { engine: 'scene', module: 'tree', variant: 'bst' }, initialState: { type: 'tree', data: bst }, steps }
+  return { algorithm: 'bst', complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(n)' }, space: 'O(n)' }, presentation: { engine: 'scene', module: 'tree', variant: 'bst' }, initialState: { type: 'tree', data: initialBst }, steps }
 }
