@@ -13,30 +13,47 @@ export const stackCompiler: EventCompiler = {
 }
 
 function compileStackEvent(event: StackAlgorithmEvent, context: CompileContext): SceneCommand[] {
+  // 1. Auto-cleanup any phantoms, trajectory arrows and deleted nodes from previous steps to maintain static state persistence
+  const cleanupCommands: SceneCommand[] = []
+  Object.keys(context.scene.entities).forEach(key => {
+    if (key.startsWith('phantom_') || key.startsWith('popped_')) {
+      cleanupCommands.push({ type: 'remove_entity', entityId: key })
+    }
+    const ent = context.scene.entities[key]
+    if (ent && 'state' in ent && ent.state?.role === 'deleted') {
+      cleanupCommands.push({ type: 'remove_entity', entityId: key })
+    }
+  })
+  Object.keys(context.scene.edges).forEach(key => {
+    if (key.startsWith('push_arrow_') || key.startsWith('pop_arrow_')) {
+      cleanupCommands.push({ type: 'disconnect', edgeId: key })
+    }
+  })
+
   switch (event.type) {
     case 'stack.create':
-      return event.values.map((value, index) => ({
-        type: 'create_cell' as const,
-        cell: DataUnit.arrayCell({ id: stackCellId(index), value, index, x: CX, y: START_Y + index * CELL_GAP }),
-      }))
+      return [
+        ...cleanupCommands,
+        ...event.values.map((value, index) => ({
+          type: 'create_cell' as const,
+          cell: DataUnit.arrayCell({ id: stackCellId(index), value, index, x: CX, y: START_Y + index * CELL_GAP }),
+        }))
+      ]
     case 'stack.push': {
       const count = Object.keys(context.scene.entities).filter(k => k.startsWith('stack_')).length
       const arrowId = `push_arrow_${count}`
       const phantomId = `phantom_push_${count}`
       const id = stackCellId(count)
-      // Create actual cell hidden, draw curve trajectory from phantom cell, wait, then show actual cell and cleanup
+      // Create actual cell, and create a phantom cell representing the path, connected with a curved arrow
       return [
+        ...cleanupCommands,
         { type: 'create_cell', cell: DataUnit.arrayCell({ id, value: event.value, index: count, x: CX, y: START_Y + count * CELL_GAP }) },
-        { type: 'set_state', entityId: id, state: { role: 'inserted', color: 'success', opacity: 0 }, merge: true },
+        { type: 'set_state', entityId: id, state: { role: 'inserted', color: 'success', pulse: true }, merge: true },
         { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: event.value, index: -1, x: CX + 160, y: START_Y - 60 }) },
         { type: 'connect', edge: AuxiliaryUnit.arrow({
           id: arrowId, fromEntity: phantomId, toEntity: id,
           curved: true, dashed: true, thickness: 2, color: 'success', pulse: true,
         }) },
-        { type: 'wait', duration: 300 },
-        { type: 'remove_entity', entityId: phantomId },
-        { type: 'disconnect', edgeId: arrowId },
-        { type: 'set_state', entityId: id, state: { role: 'inserted', color: 'success', opacity: 1, pulse: true }, merge: true },
         { type: 'add_note', text: `push(${event.value})` },
       ]
     }
@@ -48,22 +65,23 @@ function compileStackEvent(event: StackAlgorithmEvent, context: CompileContext):
       const topVal = (topCell?.type === 'cell' && (typeof topCell.value === 'string' || typeof topCell.value === 'number')) ? topCell.value : '?'
       const phantomId = `popped_${topIdx}`
       const arrowId = `pop_arrow_${topIdx}`
+      // Keep topId as 'deleted' with half opacity so arrow remains visible, and clean up in the next step
       return [
-        { type: 'set_state', entityId: topId, state: { role: 'deleted', color: 'danger', pulse: true }, merge: true },
+        ...cleanupCommands,
+        { type: 'set_state', entityId: topId, state: { role: 'deleted', color: 'danger', opacity: 0.4, pulse: true }, merge: true },
         { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: topVal, index: -1, x: CX + 160, y: START_Y - 60, color: 'danger' }) },
         { type: 'connect', edge: AuxiliaryUnit.arrow({
           id: arrowId, fromEntity: topId, toEntity: phantomId,
           curved: true, dashed: true, thickness: 2, color: 'danger', pulse: true,
         }) },
-        { type: 'wait', duration: 300 },
-        { type: 'disconnect', edgeId: arrowId },
-        { type: 'remove_entity', entityId: phantomId },
-        { type: 'remove_entity', entityId: topId },
         { type: 'add_note', text: `pop() → ${topVal}` },
       ]
     }
     case 'stack.peek':
-      return [{ type: 'set_state', entityId: stackCellId(event.index), state: { role: 'current', color: 'warning', pulse: true }, merge: true }]
+      return [
+        ...cleanupCommands,
+        { type: 'set_state', entityId: stackCellId(event.index), state: { role: 'current', color: 'warning', pulse: true }, merge: true }
+      ]
   }
 }
 
