@@ -3586,6 +3586,114 @@ export default function Visualizer() {
   const [currentOperationId, setCurrentOperationId] = useState<string>('')
   const [operationParam, setOperationParam] = useState<string>('5')
 
+  // Resizable Panels States (Left Editor: 35%, Right Info: 22%)
+  const [leftWidth, setLeftWidth] = useState(35)
+  const [rightWidth, setRightWidth] = useState(22)
+  const [isDesktop, setIsDesktop] = useState(true)
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1280)
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const handleLeftResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = leftWidth
+    const containerWidth = window.innerWidth
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX
+      const deltaPercent = (deltaX / containerWidth) * 100
+      let newWidth = startWidth + deltaPercent
+      // Enforce limits (Min 20%, Max 50% width)
+      if (newWidth < 20) newWidth = 20
+      if (newWidth > 50) newWidth = 50
+      setLeftWidth(newWidth)
+      
+      // Real-time Monaco editor layout remeasure during resizing
+      if (editorRef.current) {
+        editorRef.current.layout()
+      }
+    }
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      if (editorRef.current) {
+        setTimeout(() => editorRef.current?.layout(), 20)
+      }
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }
+
+  const handleRightResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = rightWidth
+    const containerWidth = window.innerWidth
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX
+      const deltaPercent = (deltaX / containerWidth) * 100
+      let newWidth = startWidth - deltaPercent
+      // Enforce limits (Min 15%, Max 35% width)
+      if (newWidth < 15) newWidth = 15
+      if (newWidth > 35) newWidth = 35
+      setRightWidth(newWidth)
+    }
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }
+
+  // Vertical Editor Height State (Code Editor top: 62% default)
+  const [editorHeight, setEditorHeight] = useState(62)
+
+  const handleEditorHeightResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const startY = e.clientY
+    const startHeight = editorHeight
+    const leftPanelElement = document.getElementById('left-workspace-panel')
+    if (!leftPanelElement) return
+    const containerHeight = leftPanelElement.getBoundingClientRect().height
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaY = moveEvent.clientY - startY
+      const deltaPercent = (deltaY / containerHeight) * 100
+      let newHeight = startHeight + deltaPercent
+      // Enforce limits (Min 30%, Max 82% height)
+      if (newHeight < 30) newHeight = 30
+      if (newHeight > 82) newHeight = 82
+      setEditorHeight(newHeight)
+
+      // Real-time Monaco editor layout remeasure during resizing
+      if (editorRef.current) {
+        editorRef.current.layout()
+      }
+    }
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      if (editorRef.current) {
+        setTimeout(() => editorRef.current?.layout(), 20)
+      }
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }
+
   const operations = selectedAlgorithm ? getOperationsForAlgo(selectedAlgorithm.id) : undefined
   const hasOperations = operations && operations.length > 0
 
@@ -3660,6 +3768,10 @@ export default function Visualizer() {
     trie: { value: '["cat", "car", "dog"]', hint: '字典树单词列表' },
     hash_table: { value: '{"key1": "value1", "key2": "value2"}', hint: '初始键值对' },
     union_find: { value: '[[0, 1], [1, 2], [3, 4]]', hint: '并查集连通边列表' },
+    bellman_ford: {
+      value: '{\n  "nodes": [\n    {"id": "0", "label": "S"},\n    {"id": "1", "label": "A"},\n    {"id": "2", "label": "B"},\n    {"id": "3", "label": "C"},\n    {"id": "4", "label": "D"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1", "weight": 5},\n    {"source": "0", "target": "2", "weight": 4},\n    {"source": "1", "target": "3", "weight": 3},\n    {"source": "2", "target": "1", "weight": -2},\n    {"source": "2", "target": "3", "weight": 7},\n    {"source": "3", "target": "4", "weight": 2},\n    {"source": "1", "target": "4", "weight": 6}\n  ]\n}',
+      hint: '带权有向图 JSON (支持自定义顶点与权值)'
+    },
   }
 
   // Parse input data from text — returns the natural type for the algorithm
@@ -3776,10 +3888,13 @@ export default function Visualizer() {
               setInputData(newVal)
             }
           } else if (script.initialState.nodes && !Array.isArray(data)) {
-            const newVal = JSON.stringify({ nodes: script.initialState.nodes.length, edges: script.initialState.edges?.length })
-            if (newVal !== inputData) {
-              internalInputUpdate.current = true
-              setInputData(newVal)
+            const isDetailedGraph = data && typeof data === 'object' && 'nodes' in (data as any) && 'edges' in (data as any)
+            if (!isDetailedGraph) {
+              const newVal = JSON.stringify({ nodes: script.initialState.nodes.length, edges: script.initialState.edges?.length })
+              if (newVal !== inputData) {
+                internalInputUpdate.current = true
+                setInputData(newVal)
+              }
             }
           }
           return
@@ -3925,109 +4040,149 @@ export default function Visualizer() {
       {/* Three-column layout */}
       <div className="flex-1 flex flex-col xl:flex-row overflow-hidden">
         {/* Left: Code Editor (35%) */}
-        <div className="xl:w-[35%] h-[42%] xl:h-auto border-b xl:border-b-0 xl:border-r border-border flex flex-col bg-white min-w-0 min-h-0">
-          <CodeEditorPanel
-            value={code}
-            language={codeLanguage}
-            onChange={setCode}
-            onMount={handleEditorMount}
-            disabled={aiStatus === 'analyzing'}
-            title={selectedAlgorithm.name}
-            className="flex-1"
-            rightSlot={
-              <>
-              {/* Language selector */}
-              <select
-                value={codeLanguage}
-                onChange={(e) => {
-                  const lang = e.target.value as 'python' | 'javascript' | 'cpp' | 'java'
-                  setCodeLanguage(lang)
-                  localStorage.setItem('algoviz-editor-code-lang', lang)
-                  if (currentOperationId) {
-                    const op = operations?.find((o) => o.id === currentOperationId)
-                    if (op) {
-                      setCode(op.code[lang] || op.code.python || '')
-                    }
-                  } else {
-                    setCode(getCodeTemplate(selectedAlgorithm.id, lang))
-                  }
-                }}
-                className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-border
-                           bg-white text-slate-600 outline-none cursor-pointer
-                           focus:border-primary"
-              >
-                <option value="python">Python</option>
-                <option value="javascript">JavaScript</option>
-                <option value="cpp">C++</option>
-                <option value="java">Java</option>
-              </select>
-              {selectedAlgorithm.hasPreset && (
-                <span className="text-[10px] text-green-600 font-medium bg-green-50 px-1.5 py-0.5 rounded">
-                  {t('sidebar.presetBadge')}
-                </span>
-              )}
-              </>
-            }
-          />
-          {hasOperations ? (
-            <div className="flex flex-col gap-2 shrink-0">
-              <InputDataPanel
-                value={inputData}
-                onChange={setInputData}
-                title={lang === 'zh' ? '原始数据 (初始结构)' : 'Original Data (Initial Structure)'}
-                helperText={lang === 'zh' ? '用于构建初始数据结构的数组' : 'Initial elements for building the data structure'}
-                placeholder="[8, 3, 10, 1, 6, 14]"
-                disabled={aiStatus === 'analyzing'}
-                className="h-24 xl:h-28"
-              />
-              <InputDataPanel
-                value={operationParam}
-                onChange={setOperationParam}
-                title={(() => {
-                  if (currentOperationId === 'insert') return lang === 'zh' ? '操作输入 (插入节点的值)' : 'Operation Parameter (Value to Insert)'
-                  if (currentOperationId === 'delete') return lang === 'zh' ? '操作输入 (删除节点的值)' : 'Operation Parameter (Value to Delete)'
-                  return lang === 'zh' ? '操作输入 (查找节点的值)' : 'Operation Parameter (Value to Search)'
-                })()}
-                helperText={lang === 'zh' ? '输入一个具体的数值' : 'Enter a specific numeric value'}
-                placeholder="5"
-                disabled={aiStatus === 'analyzing'}
-                className="h-20 xl:h-24"
-              />
-            </div>
-          ) : (
-            <InputDataPanel
-              value={inputData}
-              onChange={setInputData}
-              title={t('visualizer.inputData')}
-              helperText={(() => {
-                const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
-                if (def) return def.hint
-                const info = parseInputData(inputData)
-                return info.valid ? `类型: ${info.kind} · ${info.summary}` : '支持数组、字符串、JSON 对象'
-              })()}
-              placeholder={(() => {
-                const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
-                return def?.value ?? '[5, 3, 8, 1, 9, 2]'
-              })()}
+        <div 
+          id="left-workspace-panel"
+          className="xl:flex-none h-[42%] xl:h-auto border-b xl:border-b-0 border-border flex flex-col bg-white min-w-0 min-h-0"
+          style={isDesktop ? { width: `${leftWidth}%` } : undefined}
+        >
+          {/* Top: Code Editor Panel */}
+          <div 
+            className="flex-1 xl:flex-none flex flex-col min-h-0"
+            style={isDesktop ? { height: `${editorHeight}%` } : undefined}
+          >
+            <CodeEditorPanel
+              value={code}
+              language={codeLanguage}
+              onChange={setCode}
+              onMount={handleEditorMount}
               disabled={aiStatus === 'analyzing'}
-              className="h-28 xl:h-32"
+              title={selectedAlgorithm.name}
+              className="flex-1"
+              rightSlot={
+                <>
+                {/* Language selector */}
+                <select
+                  value={codeLanguage}
+                  onChange={(e) => {
+                    const lang = e.target.value as 'python' | 'javascript' | 'cpp' | 'java'
+                    setCodeLanguage(lang)
+                    localStorage.setItem('algoviz-editor-code-lang', lang)
+                    if (currentOperationId) {
+                      const op = operations?.find((o) => o.id === currentOperationId)
+                      if (op) {
+                        setCode(op.code[lang] || op.code.python || '')
+                      }
+                    } else {
+                      setCode(getCodeTemplate(selectedAlgorithm.id, lang))
+                    }
+                  }}
+                  className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-border
+                             bg-white text-slate-600 outline-none cursor-pointer
+                             focus:border-primary"
+                >
+                  <option value="python">Python</option>
+                  <option value="javascript">JavaScript</option>
+                  <option value="cpp">C++</option>
+                  <option value="java">Java</option>
+                </select>
+                {selectedAlgorithm.hasPreset && (
+                  <span className="text-[10px] text-green-600 font-medium bg-green-50 px-1.5 py-0.5 rounded">
+                    {t('sidebar.presetBadge')}
+                  </span>
+                )}
+                </>
+              }
             />
-          )}
-          {/* Output result */}
-          {currentStep >= totalSteps && totalSteps > 0 && visualState.arrayData.length > 0 && (
-            <div className="h-20 border-t border-border bg-green-50 p-2.5 shrink-0">
-              <div className="text-xs font-semibold text-green-700 mb-1">
-                {lang === 'zh' ? '输出结果' : 'Output'}
-              </div>
-              <div className="text-xs font-code text-green-600 leading-relaxed break-all overflow-auto max-h-12">
-                [{visualState.arrayData.join(', ')}]
-              </div>
+          </div>
+
+          {/* Horizontal Drag Resizer Bar */}
+          <div 
+            onMouseDown={handleEditorHeightResizeStart}
+            className="hidden xl:flex h-[6px] hover:h-[10px] w-full cursor-row-resize hover:bg-primary/10 hover:border-t hover:border-b hover:border-primary/20 transition-all shrink-0 select-none items-center justify-center bg-slate-50 border-t border-b border-border group"
+            title={lang === 'zh' ? '拖动调整高度' : 'Drag to resize'}
+          >
+            <div className="h-[1.5px] w-5 bg-slate-300 group-hover:bg-primary rounded-full transition-all" />
+          </div>
+
+          {/* Bottom: Inputs and Outputs Container */}
+          <div 
+            className="xl:flex-none flex flex-col xl:overflow-hidden overflow-y-auto shrink-0 min-h-0"
+            style={isDesktop ? { height: `${100 - editorHeight}%` } : undefined}
+          >
+            <div className="flex-1 flex flex-col min-h-0">
+              {hasOperations ? (
+                <div className="flex flex-col gap-2 flex-1 min-h-0 p-1">
+                  <InputDataPanel
+                    value={inputData}
+                    onChange={setInputData}
+                    title={lang === 'zh' ? '原始数据 (初始结构)' : 'Original Data (Initial Structure)'}
+                    helperText={lang === 'zh' ? '用于构建初始数据结构的数组' : 'Initial elements for building the data structure'}
+                    placeholder="[8, 3, 10, 1, 6, 14]"
+                    disabled={aiStatus === 'analyzing'}
+                    className="h-24 xl:flex-1 xl:h-auto xl:min-h-0"
+                  />
+                  <InputDataPanel
+                    value={operationParam}
+                    onChange={setOperationParam}
+                    title={(() => {
+                      if (currentOperationId === 'insert') return lang === 'zh' ? '操作输入 (插入节点的值)' : 'Operation Parameter (Value to Insert)'
+                      if (currentOperationId === 'delete') return lang === 'zh' ? '操作输入 (删除节点的值)' : 'Operation Parameter (Value to Delete)'
+                      return lang === 'zh' ? '操作输入 (查找节点的值)' : 'Operation Parameter (Value to Search)'
+                    })()}
+                    helperText={lang === 'zh' ? '输入一个具体的数值' : 'Enter a specific numeric value'}
+                    placeholder="5"
+                    disabled={aiStatus === 'analyzing'}
+                    className="h-20 xl:h-24 xl:shrink-0"
+                  />
+                </div>
+              ) : (
+                <InputDataPanel
+                  value={inputData}
+                  onChange={setInputData}
+                  title={t('visualizer.inputData')}
+                  helperText={(() => {
+                    const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
+                    if (def) return def.hint
+                    const info = parseInputData(inputData)
+                    return info.valid ? `类型: ${info.kind} · ${info.summary}` : '支持数组、字符串、JSON 对象'
+                  })()}
+                  placeholder={(() => {
+                    const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
+                    return def?.value ?? '[5, 3, 8, 1, 9, 2]'
+                  })()}
+                  disabled={aiStatus === 'analyzing'}
+                  className="h-28 xl:flex-1 xl:h-auto xl:min-h-0 p-1"
+                />
+              )}
+              {/* Output result */}
+              {currentStep >= totalSteps && totalSteps > 0 && visualState.arrayData.length > 0 && (
+                <div className="h-20 border-t border-border bg-green-50 p-2.5 shrink-0 mt-auto">
+                  <div className="text-xs font-semibold text-green-700 mb-1">
+                    {lang === 'zh' ? '输出结果' : 'Output'}
+                  </div>
+                  <div className="text-xs font-code text-green-600 leading-relaxed break-all overflow-auto max-h-12">
+                    [{visualState.arrayData.join(', ')}]
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+        </div>
+
+        {/* Left-Center Resizer Bar */}
+        <div 
+          onMouseDown={handleLeftResizeStart}
+          className="hidden xl:flex w-[6px] hover:w-[10px] h-full cursor-col-resize hover:bg-primary/10 hover:border-r hover:border-l hover:border-primary/20 transition-all shrink-0 select-none items-center justify-center bg-slate-50 border-r border-l border-border group"
+          title={lang === 'zh' ? '拖动调整宽度' : 'Drag to resize'}
+        >
+          <div className="w-[1.5px] h-5 bg-slate-300 group-hover:bg-primary rounded-full transition-all" />
         </div>
 
         {/* Center: Canvas (45%) */}
-        <div className="flex-1 xl:w-[45%] xl:flex-none border-b xl:border-b-0 xl:border-r border-border min-w-0 min-h-0 flex flex-col">
+        <div 
+          className="flex-1 xl:flex-none border-b xl:border-b-0 border-border min-w-0 min-h-0 flex flex-col"
+          style={isDesktop ? { width: `${100 - leftWidth - rightWidth}%` } : undefined}
+        >
           {hasOperations && (
             <div className="bg-surface border-b border-border px-4 py-2.5 flex items-center justify-between shrink-0 flex-wrap gap-2">
               <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
@@ -4065,8 +4220,20 @@ export default function Visualizer() {
           </div>
         </div>
 
+        {/* Center-Right Resizer Bar */}
+        <div 
+          onMouseDown={handleRightResizeStart}
+          className="hidden xl:flex w-[6px] hover:w-[10px] h-full cursor-col-resize hover:bg-primary/10 hover:border-r hover:border-l hover:border-primary/20 transition-all shrink-0 select-none items-center justify-center bg-slate-50 border-r border-l border-border group"
+          title={lang === 'zh' ? '拖动调整宽度' : 'Drag to resize'}
+        >
+          <div className="w-[1.5px] h-5 bg-slate-300 group-hover:bg-primary rounded-full transition-all" />
+        </div>
+
         {/* Right: Info Panel (20%) */}
-        <div className="xl:w-[20%] h-44 xl:h-auto flex flex-col bg-white min-w-0 shrink-0">
+        <div 
+          className="xl:flex-none h-44 xl:h-auto flex flex-col bg-white min-w-0 shrink-0"
+          style={isDesktop ? { width: `${rightWidth}%` } : undefined}
+        >
           <div className="h-9 border-b border-border flex items-center px-3 bg-surface shrink-0">
             <span className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
               <Icon name="info" size={14} />
