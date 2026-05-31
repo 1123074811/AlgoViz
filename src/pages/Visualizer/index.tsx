@@ -7,6 +7,7 @@ import { getPreset, generatePreset, hasGenerator } from '@/presets'
 import { useAnimationEngine } from '@/hooks/useAnimationEngine'
 import { analyzeCode, getApiConfig, parseInputData, type AIResult } from '@/ai'
 import { compileAndValidateCode } from '@/utils/codeCompiler'
+import { parseAlgorithmInput, getLeetCodeDefault, getLeetCodePlaceholder } from '@/utils/inputParser'
 import { ALGORITHM_DEFS, type AlgorithmDefinition } from '@/data/algorithmDefs'
 import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
@@ -3577,7 +3578,10 @@ export default function Visualizer() {
   const [codeLanguage, setCodeLanguage] = useState<'python' | 'javascript' | 'cpp' | 'java'>(() => {
     return (localStorage.getItem('algoviz-editor-code-lang') as any) || 'python'
   })
-  const [inputData, setInputData] = useState('[5, 3, 8, 1, 9, 2]')
+  const [inputData, setInputData] = useState('')
+  const [inputFormat, setInputFormat] = useState<'leetcode' | 'json'>(() => {
+    return (localStorage.getItem('algoviz-input-format') as 'leetcode' | 'json') || 'leetcode'
+  })
   const [aiStatus, setAiStatus] = useState<AIStatus>('idle')
   const [aiError, setAiError] = useState('')
   const [aiRawResponse, setAiRawResponse] = useState('')
@@ -3770,27 +3774,27 @@ export default function Visualizer() {
     union_find: { value: '[[0, 1], [1, 2], [3, 4]]', hint: '并查集连通边列表' },
     bfs_graph: {
       value: '{\n  "nodes": [\n    {"id": "0", "label": "A"},\n    {"id": "1", "label": "B"},\n    {"id": "2", "label": "C"},\n    {"id": "3", "label": "D"},\n    {"id": "4", "label": "E"},\n    {"id": "5", "label": "F"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1"},\n    {"source": "0", "target": "2"},\n    {"source": "1", "target": "3"},\n    {"source": "1", "target": "4"},\n    {"source": "2", "target": "5"}\n  ]\n}',
-      hint: '无向图 JSON (nodes + edges)'
+      hint: '无向图 JSON (nodes + edges)。LeetCode格式请切到 LeetCode 模式'
     },
     dfs_graph: {
       value: '{\n  "nodes": [\n    {"id": "0", "label": "A"},\n    {"id": "1", "label": "B"},\n    {"id": "2", "label": "C"},\n    {"id": "3", "label": "D"},\n    {"id": "4", "label": "E"},\n    {"id": "5", "label": "F"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1"},\n    {"source": "0", "target": "2"},\n    {"source": "1", "target": "3"},\n    {"source": "1", "target": "4"},\n    {"source": "2", "target": "5"}\n  ]\n}',
-      hint: '无向图 JSON (nodes + edges)'
+      hint: '无向图 JSON (nodes + edges)。LeetCode格式请切到 LeetCode 模式'
     },
     dijkstra: {
       value: '{\n  "nodes": [\n    {"id": "0", "label": "A"},\n    {"id": "1", "label": "B"},\n    {"id": "2", "label": "C"},\n    {"id": "3", "label": "D"},\n    {"id": "4", "label": "E"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1", "weight": 4},\n    {"source": "0", "target": "2", "weight": 2},\n    {"source": "1", "target": "2", "weight": 1},\n    {"source": "1", "target": "3", "weight": 5},\n    {"source": "2", "target": "3", "weight": 8},\n    {"source": "2", "target": "4", "weight": 10},\n    {"source": "3", "target": "4", "weight": 2}\n  ]\n}',
-      hint: '带权无向图 JSON (nodes + edges + weight)'
+      hint: '带权无向图 JSON (nodes + edges + weight)。LeetCode格式请切到 LeetCode 模式'
     },
     prim: {
       value: '{\n  "nodes": [\n    {"id": "0", "label": "A"},\n    {"id": "1", "label": "B"},\n    {"id": "2", "label": "C"},\n    {"id": "3", "label": "D"},\n    {"id": "4", "label": "E"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1", "weight": 2},\n    {"source": "0", "target": "3", "weight": 6},\n    {"source": "1", "target": "2", "weight": 3},\n    {"source": "1", "target": "3", "weight": 8},\n    {"source": "1", "target": "4", "weight": 5},\n    {"source": "2", "target": "4", "weight": 7},\n    {"source": "3", "target": "4", "weight": 9}\n  ]\n}',
-      hint: '带权无向图 JSON'
+      hint: '带权无向图 JSON。LeetCode格式请切到 LeetCode 模式'
     },
     kruskal: {
       value: '{\n  "nodes": [\n    {"id": "0", "label": "A"},\n    {"id": "1", "label": "B"},\n    {"id": "2", "label": "C"},\n    {"id": "3", "label": "D"},\n    {"id": "4", "label": "E"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1", "weight": 2},\n    {"source": "0", "target": "3", "weight": 6},\n    {"source": "1", "target": "2", "weight": 3},\n    {"source": "1", "target": "3", "weight": 8},\n    {"source": "1", "target": "4", "weight": 5},\n    {"source": "2", "target": "4", "weight": 7},\n    {"source": "3", "target": "4", "weight": 9}\n  ]\n}',
-      hint: '带权无向图 JSON'
+      hint: '带权无向图 JSON。LeetCode格式请切到 LeetCode 模式'
     },
     topological_sort: {
       value: '{\n  "nodes": [\n    {"id": "0", "label": "A"},\n    {"id": "1", "label": "B"},\n    {"id": "2", "label": "C"},\n    {"id": "3", "label": "D"},\n    {"id": "4", "label": "E"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1"},\n    {"source": "0", "target": "2"},\n    {"source": "1", "target": "3"},\n    {"source": "2", "target": "3"},\n    {"source": "3", "target": "4"}\n  ]\n}',
-      hint: '有向无环图(DAG) JSON'
+      hint: '有向无环图(DAG) JSON。LeetCode格式请切到 LeetCode 模式'
     },
     floyd: {
       value: '[[0, 3, 999, 7], [8, 0, 2, 999], [999, 999, 0, 1], [6, 999, 999, 0]]',
@@ -3808,36 +3812,16 @@ export default function Visualizer() {
 
   // Parse input data from text — returns the natural type for the algorithm
   const parsedInput = useCallback((): unknown => {
-    try {
-      const parsed = JSON.parse(inputData)
-      // String type: KMP, Manacher, etc.
-      if (typeof parsed === 'string' && selectedAlgorithm?.id) {
-        return parsed
+    if (!selectedAlgorithm?.id) return [5, 3, 8, 1, 9, 2]
+    if (!inputData.trim()) {
+      const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
+      if (def) {
+        try { return JSON.parse(def.value) } catch { /* ignore */ }
       }
-      // Array of strings: LCS, edit_distance, KMP
-      if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'string') {
-        return parsed
-      }
-      // Number: n-queens
-      if (typeof parsed === 'number') {
-        return parsed
-      }
-      // Object: graph, tree, etc.
-      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-        return parsed
-      }
-      // Number array (default)
-      if (Array.isArray(parsed) && parsed.length > 0 && parsed.every((v) => typeof v === 'number')) {
-        return parsed
-      }
-    } catch { /* ignore */ }
-    // Fallback to default for this algorithm
-    const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
-    if (def) {
-      try { return JSON.parse(def.value) } catch { /* ignore */ }
+      return [5, 3, 8, 1, 9, 2]
     }
-    return [5, 3, 8, 1, 9, 2]
-  }, [inputData, selectedAlgorithm?.id])
+    return parseAlgorithmInput(inputData, inputFormat, selectedAlgorithm.id)
+  }, [inputData, selectedAlgorithm?.id, inputFormat])
 
   // Load preset or regenerate when algorithm or input changes
   useEffect(() => {
@@ -3868,9 +3852,13 @@ export default function Visualizer() {
       }
       
       setCurrentOperationId(initialOp)
-      const defInput = DEFAULT_INPUTS[selectedAlgorithm.id]
-      if (defInput) {
-        setInputData(defInput.value)
+      // Set default input based on format: LeetCode or JSON
+      if (inputFormat === 'leetcode') {
+        const lcDefault = getLeetCodeDefault(selectedAlgorithm.id)
+        if (lcDefault) setInputData(lcDefault)
+      } else {
+        const defInput = DEFAULT_INPUTS[selectedAlgorithm.id]
+        if (defInput) setInputData(defInput.value)
       }
     }
 
@@ -3912,20 +3900,22 @@ export default function Visualizer() {
         const script = generatePreset(selectedAlgorithm.id, data)
         if (script) {
           setAnimationScript(script)
-          // Sync input textarea: only for number arrays (sorting etc.), not for string/graph/tree inputs
-          if (Array.isArray(data) && data.every(v => typeof v === 'number') && script.initialState.data.length > 0) {
-            const newVal = JSON.stringify(script.initialState.data)
-            if (newVal !== inputData) {
-              internalInputUpdate.current = true
-              setInputData(newVal)
-            }
-          } else if (script.initialState.nodes && !Array.isArray(data)) {
-            const isDetailedGraph = data && typeof data === 'object' && 'nodes' in (data as any) && 'edges' in (data as any)
-            if (!isDetailedGraph) {
-              const newVal = JSON.stringify({ nodes: script.initialState.nodes.length, edges: script.initialState.edges?.length })
+          // Sync input textarea: only when JSON format, not LeetCode code format
+          if (inputFormat === 'json') {
+            if (Array.isArray(data) && data.every(v => typeof v === 'number') && script.initialState.data.length > 0) {
+              const newVal = JSON.stringify(script.initialState.data)
               if (newVal !== inputData) {
                 internalInputUpdate.current = true
                 setInputData(newVal)
+              }
+            } else if (script.initialState.nodes && !Array.isArray(data)) {
+              const isDetailedGraph = data && typeof data === 'object' && 'nodes' in (data as any) && 'edges' in (data as any)
+              if (!isDetailedGraph) {
+                const newVal = JSON.stringify({ nodes: script.initialState.nodes.length, edges: script.initialState.edges?.length })
+                if (newVal !== inputData) {
+                  internalInputUpdate.current = true
+                  setInputData(newVal)
+                }
               }
             }
           }
@@ -4142,6 +4132,34 @@ export default function Visualizer() {
             style={isDesktop ? { height: `${100 - editorHeight}%` } : undefined}
           >
             <div className="flex-1 flex flex-col min-h-0">
+              {/* Format Selector */}
+              <div className="flex items-center gap-1.5 px-1.5 py-1 border-b border-border bg-muted/30 shrink-0">
+                <span className="text-[10px] text-muted-foreground font-medium whitespace-nowrap">
+                  {lang === 'zh' ? '格式' : 'Fmt'}
+                </span>
+                <select
+                  value={inputFormat}
+                  onChange={(e) => {
+                    const fmt = e.target.value as 'leetcode' | 'json'
+                    setInputFormat(fmt)
+                    localStorage.setItem('algoviz-input-format', fmt)
+                    // Update input data to match new format
+                    if (selectedAlgorithm?.id) {
+                      if (fmt === 'leetcode') {
+                        const lcDefault = getLeetCodeDefault(selectedAlgorithm.id)
+                        if (lcDefault) setInputData(lcDefault)
+                      } else {
+                        const defInput = DEFAULT_INPUTS[selectedAlgorithm.id]
+                        if (defInput) setInputData(defInput.value)
+                      }
+                    }
+                  }}
+                  className="text-[11px] border border-border rounded px-1.5 py-0.5 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="leetcode">LeetCode</option>
+                  <option value="json">JSON</option>
+                </select>
+              </div>
               {hasOperations ? (
                 <div className="flex flex-col gap-2 flex-1 min-h-0 p-1">
                   <InputDataPanel
@@ -4149,7 +4167,7 @@ export default function Visualizer() {
                     onChange={setInputData}
                     title={lang === 'zh' ? '原始数据 (初始结构)' : 'Original Data (Initial Structure)'}
                     helperText={lang === 'zh' ? '用于构建初始数据结构的数组' : 'Initial elements for building the data structure'}
-                    placeholder="[8, 3, 10, 1, 6, 14]"
+                    placeholder={selectedAlgorithm?.id ? (inputFormat === 'leetcode' ? getLeetCodePlaceholder(selectedAlgorithm.id) : (DEFAULT_INPUTS[selectedAlgorithm.id]?.value ?? '[5, 3, 8, 1, 9, 2]')) : '[5, 3, 8, 1, 9, 2]'}
                     disabled={aiStatus === 'analyzing'}
                     className="h-24 xl:flex-1 xl:h-auto xl:min-h-0"
                   />
@@ -4179,6 +4197,7 @@ export default function Visualizer() {
                     return info.valid ? `类型: ${info.kind} · ${info.summary}` : '支持数组、字符串、JSON 对象'
                   })()}
                   placeholder={(() => {
+                    if (inputFormat === 'leetcode' && selectedAlgorithm?.id) return getLeetCodePlaceholder(selectedAlgorithm.id)
                     const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
                     return def?.value ?? '[5, 3, 8, 1, 9, 2]'
                   })()}
