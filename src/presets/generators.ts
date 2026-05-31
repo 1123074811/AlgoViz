@@ -975,8 +975,22 @@ const backtrackingWrapper = (input: unknown) => generateBacktracking(parseArr(in
 const leetcodeWrapper = (_input: unknown) => generateLeetCode()
 const acmWrapper = (_input: unknown) => generateACM()
 function parseGraphInput(input: unknown): GraphInput {
+  // ── 1. Handle string input (raw code / LeetCode format) ──────────────
+  if (typeof input === 'string' && input.trim().length > 0) {
+    const s = input.trim()
+    // Try JSON parse first
+    try {
+      const parsed = JSON.parse(s)
+      if (parsed && typeof parsed === 'object') return parseGraphInput(parsed)
+    } catch { /* not JSON, parse as code */ }
+    return parseCodeGraphString(s)
+  }
+
+  // ── 2. Handle object input (JSON) ───────────────────────────────────
   if (typeof input === 'object' && input !== null) {
     const obj = input as Record<string, unknown>
+
+    // 2a. Full format: { nodes: [...], edges: [...] }
     if (Array.isArray(obj.nodes) && Array.isArray(obj.edges)) {
       const nodes = obj.nodes as Array<{ id?: string; label?: string }>
       const edges = obj.edges as Array<{ source?: string; target?: string; weight?: number }>
@@ -985,7 +999,8 @@ function parseGraphInput(input: unknown): GraphInput {
         edges: edges.map(e => ({ source: e.source ?? '0', target: e.target ?? '0', weight: e.weight })),
       }
     }
-    // Fallback: array of edges [[u,v], [v,w], ...]
+
+    // 2b. Edge-list format: [[u,v], [v,w], ...] or [[u,v,w], ...]
     if (Array.isArray(obj) && obj.length > 0 && Array.isArray(obj[0])) {
       const edgePairs = obj as unknown[][]
       const nodeSet = new Set<string>()
@@ -994,13 +1009,37 @@ function parseGraphInput(input: unknown): GraphInput {
         if (Array.isArray(pair) && pair.length >= 2) {
           const s = String(pair[0]), t = String(pair[1])
           nodeSet.add(s); nodeSet.add(t)
-          edges.push({ source: s, target: t })
+          edges.push({ source: s, target: t, weight: pair.length >= 3 ? Number(pair[2]) : undefined })
         }
       }
       return { nodes: Array.from(nodeSet).map(id => ({ id, label: id })), edges }
     }
+
+    // 2c. { n: 5, edges: [[0,1],[1,2]] }
+    if (Array.isArray(obj.edges)) {
+      const edgePairs = obj.edges as unknown[][]
+      let n: number | undefined = typeof obj.n === 'number' ? obj.n : undefined
+      const edges: GraphInput['edges'] = []
+      let maxId = -1
+      for (const pair of edgePairs) {
+        if (Array.isArray(pair) && pair.length >= 2) {
+          const s = String(pair[0]), t = String(pair[1])
+          const si = parseInt(s), ti = parseInt(t)
+          if (!isNaN(si)) maxId = Math.max(maxId, si)
+          if (!isNaN(ti)) maxId = Math.max(maxId, ti)
+          edges.push({ source: s, target: t, weight: pair.length >= 3 ? Number(pair[2]) : undefined })
+        }
+      }
+      if (n === undefined) n = maxId + 1
+      const nodeCount = Math.max(n, edges.length > 0 ? maxId + 1 : 5)
+      return {
+        nodes: Array.from({ length: nodeCount }, (_, i) => ({ id: String(i), label: String(i) })),
+        edges,
+      }
+    }
   }
-  // Default graph
+
+  // ── 3. Default fallback graph ───────────────────────────────────────
   return {
     nodes: [
       { id: '0', label: 'A' }, { id: '1', label: 'B' }, { id: '2', label: 'C' },
@@ -1011,6 +1050,105 @@ function parseGraphInput(input: unknown): GraphInput {
       { source: '1', target: '3' }, { source: '1', target: '4' }, { source: '2', target: '5' },
     ],
   }
+}
+
+/** Parse a natural code-format graph description string into GraphInput */
+function parseCodeGraphString(s: string): GraphInput {
+  // Strip comments and normalize
+  s = s.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
+  s = s.replace(/const\s+|let\s+|var\s+|int\s+|vector.*?>\s*/g, '')
+  s = s.replace(/;\s*$/gm, '')
+
+  let n: number | undefined
+  let edges: unknown[][] | undefined
+  let weights: number[] | undefined
+  let start: string | undefined
+  let goal: string | undefined
+
+  // ── Extract n = <number> ────────────────────────────────────────────
+  const nMatch = s.match(/\bn\s*[:=]\s*(\d+)/)
+  if (nMatch) n = parseInt(nMatch[1])
+
+  // ── Extract edges = [[...], [...], ...] ──────────────────────────────
+  const edgesBlock = extractArrayBlock(s, 'edges')
+  if (edgesBlock) {
+    try { edges = JSON.parse(edgesBlock) } catch { /* ignore */ }
+  }
+
+  // ── If no 'edges=' found, try the last big array in the string ──────
+  if (!edges) {
+    const allArrays = [...s.matchAll(/\[[\s\S]*?\]/g)]
+    for (let i = allArrays.length - 1; i >= 0; i--) {
+      const match = allArrays[i][0]
+      try {
+        const parsed = JSON.parse(match)
+        if (Array.isArray(parsed) && parsed.length > 0 && Array.isArray(parsed[0])) {
+          edges = parsed
+          break
+        }
+      } catch { continue }
+    }
+  }
+
+  // ── Extract weights = [...] ──────────────────────────────────────────
+  const weightsBlock = extractArrayBlock(s, 'weights')
+  if (weightsBlock) {
+    try { weights = JSON.parse(weightsBlock) } catch { /* ignore */ }
+  }
+
+  // ── Extract start / goal ────────────────────────────────────────────
+  const startMatch = s.match(/\bstart\s*[:=]\s*["']?(\w+)["']?/)
+  if (startMatch) start = startMatch[1]
+  const goalMatch = s.match(/\bgoal\s*[:=]\s*["']?(\w+)["']?/)
+  if (goalMatch) goal = goalMatch[1]
+
+  // ── Build GraphInput ────────────────────────────────────────────────
+  if (edges && edges.length > 0) {
+    const nodeSet = new Set<string>()
+    const graphEdges: GraphInput['edges'] = []
+    let maxId = -1
+    for (const pair of edges) {
+      if (Array.isArray(pair) && pair.length >= 2) {
+        const s = String(pair[0]), t = String(pair[1])
+        const si = parseInt(s), ti = parseInt(t)
+        if (!isNaN(si)) maxId = Math.max(maxId, si)
+        if (!isNaN(ti)) maxId = Math.max(maxId, ti)
+        nodeSet.add(s); nodeSet.add(t)
+        graphEdges.push({ source: s, target: t, weight: pair.length >= 3 ? Number(pair[2]) : undefined })
+      }
+    }
+
+    if (n === undefined) n = Math.max(maxId + 1, nodeSet.size)
+    const nodeCount = Math.max(n, maxId + 1)
+
+    // Use the full range 0..n-1 even if some nodes aren't in edges
+    return {
+      nodes: Array.from({ length: nodeCount }, (_, i) => ({ id: String(i), label: String(i) })),
+      edges: graphEdges,
+    }
+  }
+
+  // ── Fallback ─────────────────────────────────────────────────────────
+  return {
+    nodes: [{ id: '0', label: 'A' }, { id: '1', label: 'B' }, { id: '2', label: 'C' }, { id: '3', label: 'D' }, { id: '4', label: 'E' }, { id: '5', label: 'F' }],
+    edges: [{ source: '0', target: '1' }, { source: '0', target: '2' }, { source: '1', target: '3' }, { source: '1', target: '4' }, { source: '2', target: '5' }],
+  }
+}
+
+/** Extract a JSON array value following a variable assignment like `varname = [...]` */
+function extractArrayBlock(text: string, varName: string): string | null {
+  const re = new RegExp(`\\b${varName}\\s*[:=]\\s*(\\[[\\s\\S]*?\\])\\s*(?:[,;]|$)`, 'm')
+  const m = text.match(re)
+  if (m && m[1]) {
+    // Find the matching closing bracket
+    let depth = 0, end = 0
+    for (let i = 0; i < m[1].length; i++) {
+      if (m[1][i] === '[') depth++
+      else if (m[1][i] === ']') { depth--; if (depth === 0) { end = i + 1; break } }
+    }
+    return m[1].slice(0, end)
+  }
+  return null
 }
 
 const bfsWrapper = (input: unknown) => generateBFS(parseGraphInput(input))
