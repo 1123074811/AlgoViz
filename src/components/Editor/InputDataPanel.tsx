@@ -44,6 +44,18 @@ export default function InputDataPanel({
           language={language}
           value={value}
           onChange={(val) => onChange(val ?? '')}
+          onMount={(editor, monaco) => {
+            editor.addAction({
+              id: 'duplicate-line-ctrl-d',
+              label: 'Duplicate Line',
+              keybindings: [
+                monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD
+              ],
+              run: (ed) => {
+                ed.trigger('keyboard', 'editor.action.copyLinesDownAction', null)
+              }
+            })
+          }}
           theme="light"
           options={{
             readOnly: disabled,

@@ -32,6 +32,23 @@ export default function CodeEditorPanel({
   rightSlot,
   className = '',
 }: CodeEditorPanelProps) {
+  const handleEditorMount: OnMount = (editor, monaco) => {
+    editor.addAction({
+      id: 'duplicate-line-ctrl-d',
+      label: 'Duplicate Line',
+      keybindings: [
+        monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD
+      ],
+      run: (ed) => {
+        ed.trigger('keyboard', 'editor.action.copyLinesDownAction', null)
+      }
+    })
+
+    if (onMount) {
+      onMount(editor, monaco)
+    }
+  }
+
   return (
     <div className={`flex flex-col min-h-0 bg-white ${className}`}>
       {(title || subtitle || rightSlot) && (
@@ -49,7 +66,7 @@ export default function CodeEditorPanel({
           language={mapMonacoLanguage(language)}
           value={value}
           onChange={(val) => onChange(val ?? '')}
-          onMount={onMount}
+          onMount={handleEditorMount}
           theme="light"
           options={{
             readOnly: disabled,
