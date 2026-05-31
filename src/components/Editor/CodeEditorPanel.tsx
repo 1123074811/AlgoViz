@@ -67,6 +67,11 @@ export default function CodeEditorPanel({
             renderLineHighlight: 'line',
             overviewRulerBorder: false,
             hideCursorInOverviewRuler: true,
+            autoClosingBrackets: 'always',
+            autoClosingQuotes: 'always',
+            autoIndent: 'advanced',
+            formatOnType: true,
+            formatOnPaste: true,
           }}
         />
       </div>

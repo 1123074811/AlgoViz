@@ -32,7 +32,7 @@ export default function ContainerView({ type, cells }: ContainerViewProps) {
           fill="none" stroke={CONTAINER_STROKE} strokeWidth={CONTAINER_STROKE_WIDTH}
           strokeLinecap="round" strokeLinejoin="round"
         />
-        <text x={centerX} y={topY - 6} textAnchor="middle" fontSize="10" fill="#64748B" fontFamily="monospace">top</text>
+        <text x={leftX - 8} y={topY + 8} textAnchor="end" fontSize="10" fill="#64748B" fontFamily="monospace" dominantBaseline="middle">top ➔</text>
       </g>
     )
   }
