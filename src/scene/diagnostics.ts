@@ -8,7 +8,7 @@ export interface SceneDiagnostic {
   message: string
 }
 
-const IMPLEMENTED_EVENT_PREFIXES = ['scene.', 'linked_list.', 'tree.', 'array.', 'matrix.', 'n_queens.', 'graph.']
+const IMPLEMENTED_EVENT_PREFIXES = ['scene.', 'linked_list.', 'tree.', 'array.', 'matrix.', 'n_queens.', 'graph.', 'queue.', 'stack.', 'string.']
 
 const REQUIRED_FIELDS: Record<string, string[]> = {
   'linked_list.create': ['variant', 'nodes'],

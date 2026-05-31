@@ -24,17 +24,19 @@ function compileQueueEvent(event: QueueAlgorithmEvent, context: CompileContext):
       const phantomId = `phantom_enq_${count}`
       const arrowId = `enq_arrow_${count}`
       const id = queueCellId(count)
-      // Phantom cell enters from right, curves into the pipe
+      // Hide actual cell first, draw curve trajectory from phantom cell, wait, then show actual cell and cleanup
       return [
+        { type: 'create_cell', cell: DataUnit.arrayCell({ id, value: event.value, index: count, x: START_X + count * CELL_GAP, y: START_Y }) },
+        { type: 'set_state', entityId: id, state: { role: 'inserted', color: 'success', opacity: 0 }, merge: true },
         { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: event.value, index: -1, x: START_X + (count + 2) * CELL_GAP, y: START_Y - 80 }) },
         { type: 'connect', edge: AuxiliaryUnit.arrow({
-          id: arrowId, fromEntity: phantomId, toEntity: queueCellId(count - 1),
+          id: arrowId, fromEntity: phantomId, toEntity: id,
           curved: true, dashed: true, thickness: 2, color: 'success', pulse: true,
         }) },
         { type: 'wait', duration: 300 },
         { type: 'remove_entity', entityId: phantomId },
-        { type: 'create_cell', cell: DataUnit.arrayCell({ id, value: event.value, index: count, x: START_X + count * CELL_GAP, y: START_Y }) },
-        { type: 'set_state', entityId: id, state: { role: 'inserted', color: 'success', pulse: true }, merge: true },
+        { type: 'disconnect', edgeId: arrowId },
+        { type: 'set_state', entityId: id, state: { role: 'inserted', color: 'success', opacity: 1, pulse: true }, merge: true },
         { type: 'add_note', text: `enqueue(${event.value})` },
       ]
     }
@@ -53,6 +55,9 @@ function compileQueueEvent(event: QueueAlgorithmEvent, context: CompileContext):
           id: arrowId, fromEntity: frontId, toEntity: phantomId,
           curved: true, dashed: true, thickness: 2, color: 'danger', pulse: true,
         }) },
+        { type: 'wait', duration: 300 },
+        { type: 'disconnect', edgeId: arrowId },
+        { type: 'remove_entity', entityId: phantomId },
         { type: 'remove_entity', entityId: frontId },
         // Shift remaining cells left
         ...ids.slice(1).map((oldId, newIndex) => {
