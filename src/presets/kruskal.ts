@@ -1,59 +1,123 @@
 import type { AnimationScript, ActionColor } from '@/types/animation'
+import type { GraphInput } from './bfsGraph'
 
-function kStep(id: number, ln: number, zh: string, en: string,
-  type: string, targets: number[], color: ActionColor,
-  comps: number, accs: number, components: string[],
-): AnimationScript['steps'][0] {
+export function generateKruskal(input: GraphInput): AnimationScript {
+  const { nodes, edges: rawEdges } = input
+  const n = nodes.length
+  const getLabel = (id: string) => nodes.find(n => n.id === id)?.label ?? id
+  const getIdx = (id: string) => nodes.findIndex(n => n.id === id)
+
+  const edges = rawEdges.map(e => ({ source: e.source, target: e.target, weight: e.weight ?? 1 }))
+  edges.sort((a, b) => a.weight - b.weight)
+
+  // Union-Find
+  const parent = new Map<string, string>()
+  for (const nd of nodes) parent.set(nd.id, nd.id)
+
+  function find(x: string): string {
+    if (parent.get(x) !== x) parent.set(x, find(parent.get(x)!))
+    return parent.get(x)!
+  }
+  function union(a: string, b: string) { parent.set(find(a), find(b)) }
+  function componentLabel(id: string) {
+    const root = find(id)
+    const members = nodes.filter(nd => find(nd.id) === root).map(nd => getLabel(nd.id))
+    return `{${members.join(',')}}`
+  }
+
+  const steps: AnimationScript['steps'] = []
+  let sid = 1
+  const mstEdges: Array<{ source: string; target: string; weight: number }> = []
+
+  const initialComponents = nodes.map(nd => componentLabel(nd.id))
+
+  // Step 1: Init
+  steps.push({
+    stepId: sid++, codeLine: 2,
+    description: {
+      zh: `Kruskal：按权重排序边，初始每个节点自成一个连通分量。已排序：${edges.map(e => `${getLabel(e.source)}-${getLabel(e.target)}(${e.weight})`).join(', ')}`,
+      en: `Kruskal: sort edges by weight, each node is its own component`,
+    },
+    action: { type: 'highlight', targets: [], color: 'primary' },
+    events: [{ type: 'graph.create', nodes, edges: edges.map(e => ({ source: e.source, target: e.target, weight: e.weight })), directed: false }],
+    stats: { comparisons: 0, swaps: 0, accesses: n + edges.length },
+    teachingState: { graph: { sets: { components: initialComponents } } },
+  })
+
+  for (const edge of edges) {
+    const { source, target, weight } = edge
+    if (find(source) !== find(target)) {
+      union(source, target)
+      mstEdges.push(edge)
+
+      const comps = [...new Set(nodes.map(nd => componentLabel(nd.id)))]
+      steps.push({
+        stepId: sid++, codeLine: 6,
+        description: {
+          zh: `选择边 ${getLabel(source)}-${getLabel(target)}(${weight})：不同分量，不形成环，加入 MST`,
+          en: `Add edge ${getLabel(source)}-${getLabel(target)}(${weight}): different components, add to MST`,
+        },
+        action: { type: 'compare', targets: [getIdx(source), getIdx(target)], color: 'success' },
+        events: [
+          { type: 'graph.visit_edge', source, target },
+          { type: 'graph.visit_node', nodeId: source },
+          { type: 'graph.visit_node', nodeId: target },
+        ],
+        stats: { comparisons: sid, swaps: 0, accesses: mstEdges.length },
+        teachingState: {
+          graph: {
+            sets: { components: comps },
+            edgeStates: [{ source, target, role: 'relaxed' as const, color: 'success' as ActionColor }],
+          },
+        },
+      })
+
+      if (mstEdges.length === n - 1) break
+    } else {
+      steps.push({
+        stepId: sid++, codeLine: 6,
+        description: {
+          zh: `跳过边 ${getLabel(source)}-${getLabel(target)}(${weight})：两端在同一分量，会形成环`,
+          en: `Skip ${getLabel(source)}-${getLabel(target)}(${weight}): same component, would create cycle`,
+        },
+        action: { type: 'compare', targets: [getIdx(source), getIdx(target)], color: 'muted' },
+        events: [{ type: 'graph.visit_edge', source, target }],
+        stats: { comparisons: sid, swaps: 0, accesses: mstEdges.length },
+        teachingState: { graph: { sets: { components: [...new Set(nodes.map(nd => componentLabel(nd.id)))] } } },
+      })
+    }
+  }
+
+  const totalWeight = mstEdges.reduce((s, e) => s + e.weight, 0)
+  steps.push({
+    stepId: sid++, codeLine: 12,
+    description: {
+      zh: `Kruskal 完成！MST 总权重 = ${totalWeight}，${mstEdges.length} 条边`,
+      en: `Kruskal done! MST total weight = ${totalWeight}, ${mstEdges.length} edges`,
+    },
+    action: { type: 'mark', targets: nodes.map((_, i) => i), color: 'success' },
+    events: mstEdges.map(e => ({ type: 'graph.visit_edge' as const, source: e.source, target: e.target })),
+    stats: { comparisons: sid, swaps: 0, accesses: mstEdges.length },
+    teachingState: {
+      graph: {
+        sets: { components: [nodes.map(nd => getLabel(nd.id)).join(',')] },
+        edgeStates: mstEdges.map(e => ({ source: e.source, target: e.target, role: 'relaxed' as const, color: 'success' as ActionColor })),
+      },
+    },
+  })
+
   return {
-    stepId: id, codeLine: ln, description: { zh, en },
-    action: { type: type as AnimationScript['steps'][0]['action']['type'], targets, color },
-    stats: { comparisons: comps, swaps: 0, accesses: accs },
-    teachingState: { graph: { sets: { components } } },
+    algorithm: 'kruskal',
+    complexity: { time: { best: 'O(E log E)', average: 'O(E log E)', worst: 'O(E log E)' }, space: 'O(V)' },
+    presentation: { engine: 'scene', module: 'graph' },
+    initialState: { type: 'graph', data: [], nodes, edges: edges.map(e => ({ source: e.source, target: e.target, weight: e.weight })) },
+    steps,
   }
 }
 
-const kruskalPreset: AnimationScript = {
-  algorithm: 'kruskal',
-  complexity: { time: { best: 'O(E log E)', average: 'O(E log E)', worst: 'O(E log E)' }, space: 'O(V)' },
-  initialState: {
-    type: 'graph', data: [],
-    nodes: [{ id: '0', label: 'A' }, { id: '1', label: 'B' }, { id: '2', label: 'C' }, { id: '3', label: 'D' }, { id: '4', label: 'E' }],
-    edges: [{ source: '0', target: '1', weight: 2 }, { source: '0', target: '3', weight: 6 }, { source: '1', target: '2', weight: 3 }, { source: '1', target: '3', weight: 8 }, { source: '1', target: '4', weight: 5 }, { source: '2', target: '4', weight: 7 }, { source: '3', target: '4', weight: 9 }],
-  },
-  steps: [
-    kStep(1, 2, 'Kruskal：将所有边按权重升序排序，初始每个节点自成一个连通分量。Kruskal 与 Prim 不同，边不必连通到现有 MST', 'Kruskal: sort edges by weight. Each node initially its own component. Unlike Prim, edges need not connect to existing MST', 'highlight', [], 'primary', 0, 7, ['{A}','{B}','{C}','{D}','{E}']),
-    kStep(2, 6, '取最小边 A-B(2)：A∈{A}、B∈{B}，分量不同，不形成环，加入 MST。合并为 {A,B}', 'Edge A-B(2): A,B in different components, no cycle, add to MST. Union {A,B}', 'compare', [0,1], 'success', 1, 8, ['{A,B}','{C}','{D}','{E}']),
-    kStep(3, 7, 'MST: A-B(2)。并查集判断：两端属于同一分量则跳过（会成环），不同则合并。列表: AB(2)<BC(3)<BE(5)<AD(6)<CE(7)<BD(8)<DE(9)', 'MST: AB(2). Union-Find: skip if same component (would cycle), add & union if different', 'mark', [0,1], 'success', 1, 9, ['{A,B}','{C}','{D}','{E}']),
-    kStep(4, 6, '边 B-C(3)：B∈{A,B}、C∈{C}，不同分量，加入 MST。合并 {A,B,C}', 'Edge B-C(3): B in {A,B}, C in {C}, different, add. Union {A,B,C}', 'compare', [1,2], 'success', 2, 10, ['{A,B,C}','{D}','{E}']),
-    kStep(5, 7, 'MST: AB(2), BC(3)。已选 2 条，目标 V-1=4 条', 'MST: AB, BC. 2 edges, target 4', 'mark', [1,2], 'success', 2, 11, ['{A,B,C}','{D}','{E}']),
-    kStep(6, 6, '边 B-E(5)：B∈{A,B,C}、E∈{E}，不同分量，加入 MST。合并 {A,B,C,E}', 'Edge B-E(5): different components, add. Union {A,B,C,E}', 'compare', [1,4], 'success', 3, 12, ['{A,B,C,E}','{D}']),
-    kStep(7, 7, 'MST: AB, BC, BE。3 条边，只剩 1 条。5 节点图需要 4 条边形成生成树', 'MST: AB, BC, BE. 3 edges, need 1 more. N nodes requires N-1 edges for a spanning tree', 'mark', [1,4], 'success', 3, 13, ['{A,B,C,E}','{D}']),
-    kStep(8, 6, '边 A-D(6)：A∈{A,B,C,E}、D∈{D}，不同分量，加入 MST。并查集合并全部 → {A,B,C,D,E}', 'Edge A-D(6): different, add. Union all → {A,B,C,D,E}', 'compare', [0,3], 'success', 4, 14, ['{A,B,C,D,E}']),
-    kStep(9, 7, '4 条边 = V-1，MST 完成！总重 2+3+5+6=16。Kruskal O(E log E)，适合稀疏图', '4 edges = V-1, MST done! Total 16. Kruskal O(E log E), good for sparse graphs', 'mark', [0,1,2,3,4], 'success', 4, 14, ['{A,B,C,D,E}']),
-  ],
-}
-
-kruskalPreset.presentation = { engine: 'scene', module: 'graph' }
-kruskalPreset.steps = kruskalPreset.steps.map((step, index) => {
-  const events: NonNullable<(typeof step)['events']> = []
-  if (index === 0) {
-    events.push({
-      type: 'graph.create',
-      nodes: kruskalPreset.initialState.nodes ?? [],
-      edges: kruskalPreset.initialState.edges ?? [],
-      directed: false,
-    })
-  }
-  if (step.action.type === 'mark' && step.action.targets.length > 0) {
-    step.action.targets.forEach((target) => events.push({ type: 'graph.visit_node', nodeId: String(target) }))
-  }
-  if (step.action.type === 'compare' && step.action.targets.length >= 2) {
-    events.push({ type: 'graph.visit_edge', source: String(step.action.targets[0]), target: String(step.action.targets[1]) })
-  }
-  if (step.action.type === 'highlight' && step.action.targets.length > 0) {
-    events.push({ type: 'graph.visit_node', nodeId: String(step.action.targets[0]) })
-  }
-  return events.length > 0 ? { ...step, events } : step
+const kruskalPreset = generateKruskal({
+  nodes: [{ id: '0', label: 'A' }, { id: '1', label: 'B' }, { id: '2', label: 'C' }, { id: '3', label: 'D' }, { id: '4', label: 'E' }],
+  edges: [{ source: '0', target: '1', weight: 2 }, { source: '0', target: '3', weight: 6 }, { source: '1', target: '2', weight: 3 }, { source: '1', target: '3', weight: 8 }, { source: '1', target: '4', weight: 5 }, { source: '2', target: '4', weight: 7 }, { source: '3', target: '4', weight: 9 }],
 })
 
 export default kruskalPreset

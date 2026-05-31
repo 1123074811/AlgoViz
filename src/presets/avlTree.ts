@@ -16,8 +16,8 @@ function avlTeaching(nodeId: string, role: 'current' | 'rotating' | 'balanced' |
   }
 }
 
-export function generateAVLTree(): AnimationScript {
-  const tree = [8, 3, 10, 1, 6, 0, 14, 0, 0, 4]
+export function generateAVLTree(arr?: number[]): AnimationScript {
+  const tree = arr && arr.length > 0 ? [...arr] : [8, 3, 10, 1, 6, 0, 14, 0, 0, 4]
   const steps: AnimationScript['steps'] = []
   let sid = 1
 

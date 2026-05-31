@@ -1,14 +1,14 @@
 import type { AnimationScript, ActionColor } from '@/types/animation'
 import { makeStep } from './utils'
 
-export function generateTrie(): AnimationScript {
+export function generateTrie(words?: string[]): AnimationScript {
   const steps: AnimationScript['steps'] = []
   let sid = 1
-  const words = ['cat', 'car', 'dog']
+  const wordList = words && words.length > 0 ? words : ['cat', 'car', 'dog']
 
   steps.push(makeStep(sid++, 0,
-    `Trie（字典树/前缀树）演示。插入 "${words.join('", "')}"，每个节点代表一个字符，共享相同前缀的单词共用路径`,
-    `Trie (prefix tree) demo. Insert "${words.join('", "')}". Each node is a character; words with same prefix share the path`,
+    `Trie（字典树/前缀树）演示。插入 "${wordList.join('", "')}"，每个节点代表一个字符，共享相同前缀的单词共用路径`,
+    `Trie (prefix tree) demo. Insert "${wordList.join('", "')}". Each node is a character; words with same prefix share the path`,
     'highlight', [], 'primary', 0, 0, 0,
     { tree: { nodeStates: [{ id: 'root', role: 'root', color: 'primary' as ActionColor }] } },
   ))

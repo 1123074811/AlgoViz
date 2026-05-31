@@ -1,8 +1,8 @@
 import type { AnimationScript, ActionColor } from '@/types/animation'
 import { makeStep } from './utils'
 
-export function generateBinaryTree(): AnimationScript {
-  const tree = [8, 3, 10, 1, 6, 0, 14, 0, 0, 4, 7, 0, 0, 13, 0]
+export function generateBinaryTree(arr?: number[]): AnimationScript {
+  const tree = arr && arr.length > 0 ? [...arr] : [8, 3, 10, 1, 6, 0, 14, 0, 0, 4, 7, 0, 0, 13, 0]
   const steps: AnimationScript['steps'] = []
   let sid = 1
   const nums = tree.filter(v => v !== 0)

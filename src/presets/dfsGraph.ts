@@ -1,72 +1,185 @@
 import type { AnimationScript, GraphNodeState, ActionColor } from '@/types/animation'
+import type { GraphInput } from './bfsGraph'
 
-const N = ['0','1','2','3','4','5'] as const
-
-function dfsStep(id: number, ln: number, zh: string, en: string,
-  type: string, targets: number[], color: ActionColor,
-  comps: number, accs: number,
-  stack: string[], visited: string[], current: string | null,
-): AnimationScript['steps'][0] {
-  const ns: GraphNodeState[] = [
-    ...visited.map(i => ({ id: i, role: 'visited' as const, color: 'success' as ActionColor })),
-    ...stack.map(i => ({ id: i, role: 'stacked' as const, color: 'primary' as ActionColor })),
-  ]
-  if (current) ns.push({ id: current, role: 'current', color: 'warning' as ActionColor })
-  return {
-    stepId: id, codeLine: ln, description: { zh, en },
-    action: { type: type as AnimationScript['steps'][0]['action']['type'], targets, color },
-    stats: { comparisons: comps, swaps: 0, accesses: accs },
-    teachingState: { graph: { stack, output: visited, nodeStates: ns } },
+export function generateDFS(input: GraphInput): AnimationScript {
+  const { nodes, edges } = input
+  const adjacency = new Map<string, string[]>()
+  for (const n of nodes) adjacency.set(n.id, [])
+  for (const e of edges) {
+    const list = adjacency.get(e.source) ?? []
+    list.push(e.target)
+    adjacency.set(e.source, list)
+    // Undirected: add reverse edge too
+    const rev = adjacency.get(e.target) ?? []
+    if (!rev.includes(e.source)) rev.push(e.source)
+    adjacency.set(e.target, rev)
   }
-}
 
-const dfsGraphPreset: AnimationScript = {
-  algorithm: 'dfs_graph',
-  complexity: { time: { best: 'O(V+E)', average: 'O(V+E)', worst: 'O(V+E)' }, space: 'O(V)' },
-  initialState: {
-    type: 'graph', data: [],
-    nodes: N.map((id, i) => ({ id, label: String.fromCharCode(65 + i) })),
-    edges: [{ source: '0', target: '1' }, { source: '0', target: '2' }, { source: '1', target: '3' }, { source: '1', target: '4' }, { source: '2', target: '5' }],
-  },
-  steps: [
-    dfsStep(1, 1, '从 A 开始 DFS。DFS 沿着一条路径深入到底，无法前进时回溯', 'Start DFS from A. DFS explores as deep as possible, then backtracks', 'highlight', [0], 'primary', 0, 1, ['0'], [], '0'),
-    dfsStep(2, 2, '访问 A，标记已访问。A 入栈（递归调用栈）', 'Visit A, mark visited. A pushed onto recursion stack', 'mark', [0], 'success', 0, 2, ['0'], ['0'], '0'),
-    dfsStep(3, 4, '探索 A→B：B 未被访问，沿边深入', 'Explore A->B: B unvisited, go deeper', 'compare', [0, 1], 'warning', 1, 3, ['0', '1'], ['0'], '1'),
-    dfsStep(4, 2, '访问 B，已访问节点: A,B。栈顶: B', 'Visit B. Visited: A,B. Stack top: B', 'mark', [1], 'success', 1, 4, ['0', '1'], ['0', '1'], '1'),
-    dfsStep(5, 4, '探索 B→D：D 未被访问，沿边深入', 'Explore B->D: D unvisited, go deeper', 'compare', [1, 3], 'warning', 2, 5, ['0', '1', '3'], ['0', '1'], '3'),
-    dfsStep(6, 2, '访问 D。D 无未访问邻居，回溯到 B。DFS 的关键：走到尽头后回退', 'Visit D. No more unvisited neighbors, backtrack to B. DFS hallmark: retreat when stuck', 'mark', [3], 'success', 2, 6, ['0', '1'], ['0', '1', '3'], '1'),
-    dfsStep(7, 4, '探索 B→E：E 未被访问，沿边深入', 'Explore B->E: E unvisited, go deeper', 'compare', [1, 4], 'warning', 3, 7, ['0', '1', '4'], ['0', '1', '3'], '4'),
-    dfsStep(8, 2, '访问 E。E 无未访问邻居，回溯到 B。B 所有邻居已处理，回溯到 A', 'Visit E. No more neighbors, backtrack B→A', 'mark', [4], 'success', 3, 8, ['0'], ['0', '1', '3', '4'], '0'),
-    dfsStep(9, 5, '回溯到 A，检查 A 的剩余邻居。A 还有邻居 C 未访问', 'Backtracked to A, check remaining neighbors. A has C unvisited', 'highlight', [0], 'muted', 3, 9, ['0'], ['0', '1', '3', '4'], '0'),
-    dfsStep(10, 4, '探索 A→C：C 未被访问，沿边深入', 'Explore A->C: C unvisited, go deeper', 'compare', [0, 2], 'warning', 4, 10, ['0', '2'], ['0', '1', '3', '4'], '2'),
-    dfsStep(11, 2, '访问 C', 'Visit C', 'mark', [2], 'success', 4, 11, ['0', '2'], ['0', '1', '3', '4', '2'], '2'),
-    dfsStep(12, 4, '探索 C→F：F 未被访问，沿边深入', 'Explore C->F: F unvisited, go deeper', 'compare', [2, 5], 'warning', 5, 12, ['0', '2', '5'], ['0', '1', '3', '4', '2'], '5'),
-    dfsStep(13, 2, '访问 F。F 无未访问邻居，回溯。栈为空，DFS 完成！', 'Visit F. No more neighbors, backtrack. Stack empty, DFS complete!', 'mark', [5], 'success', 5, 13, [], ['0', '1', '3', '4', '2', '5'], null),
-    dfsStep(14, 6, 'DFS 遍历顺序：A→B→D→E→C→F。DFS 深度优先，适合路径搜索、拓扑排序等问题', 'DFS order: A->B->D->E->C->F. DFS used for path finding, topological sort, cycle detection', 'mark', [0,1,2,3,4,5], 'success', 5, 14, [], ['0','1','3','4','2','5'], null),
-  ],
-}
+  const steps: AnimationScript['steps'] = []
+  let sid = 1
+  const visited = new Set<string>()
+  const output: string[] = []
+  const stack: string[] = []
+  const startId = nodes[0]?.id ?? '0'
 
-dfsGraphPreset.presentation = { engine: 'scene', module: 'graph' }
-dfsGraphPreset.steps = dfsGraphPreset.steps.map((step, index) => {
-  const events: NonNullable<(typeof step)['events']> = []
-  if (index === 0) {
-    events.push({
-      type: 'graph.create',
-      nodes: dfsGraphPreset.initialState.nodes ?? [],
-      edges: dfsGraphPreset.initialState.edges ?? [],
-      directed: true,
+  const getLabel = (id: string) => nodes.find(n => n.id === id)?.label ?? id
+  const getIdx = (id: string) => nodes.findIndex(n => n.id === id)
+
+  function nodeStates(currentId: string | null): GraphNodeState[] {
+    const states: GraphNodeState[] = []
+    for (const id of output) states.push({ id, role: 'visited', color: 'success' as ActionColor })
+    for (const id of stack) {
+      if (!output.includes(id)) states.push({ id, role: 'stacked', color: 'primary' as ActionColor })
+    }
+    if (currentId) states.push({ id: currentId, role: 'current', color: 'warning' as ActionColor })
+    return states
+  }
+
+  // Step 1: Initial state
+  steps.push({
+    stepId: sid++, codeLine: 1,
+    description: { zh: 'DFS 初始化：使用递归（隐式栈）或显式栈进行深度优先遍历', en: 'DFS init: depth-first traversal using recursion or explicit stack' },
+    action: { type: 'highlight', targets: [], color: 'primary' },
+    events: [
+      { type: 'graph.create', nodes, edges, directed: false },
+    ],
+    stats: { comparisons: 0, swaps: 0, accesses: nodes.length },
+    teachingState: { graph: { stack: [], output: [], nodeStates: [] } },
+  })
+
+  // Step 2: Push start node
+  stack.push(startId)
+  steps.push({
+    stepId: sid++, codeLine: 3,
+    description: { zh: `起点 ${getLabel(startId)} 入栈（递归调用栈）。DFS 沿路径深入，走到尽头再回溯`, en: `Push ${getLabel(startId)} onto recursion stack` },
+    action: { type: 'highlight', targets: [getIdx(startId)], color: 'primary' },
+    events: [
+      { type: 'graph.enqueue', nodeId: startId },
+    ],
+    stats: { comparisons: 0, swaps: 0, accesses: 1 },
+    teachingState: {
+      graph: {
+        stack: [...stack],
+        output: [...output],
+        nodeStates: nodeStates(startId),
+      },
+    },
+  })
+
+  // DFS iterative using explicit stack
+  while (stack.length > 0) {
+    const current = stack.pop()!
+    if (visited.has(current)) continue
+
+    const currentIdx = getIdx(current)
+    visited.add(current)
+    output.push(current)
+
+    // Visit current node
+    steps.push({
+      stepId: sid++, codeLine: 5,
+      description: { zh: `访问 ${getLabel(current)}，标记已访问。当前已访问: ${output.map(getLabel).join(', ')}`, en: `Visit ${getLabel(current)}. Visited: ${output.map(getLabel).join(', ')}` },
+      action: { type: 'mark', targets: [currentIdx], color: 'success' },
+      events: [
+        { type: 'graph.dequeue', nodeId: current },
+        { type: 'graph.visit_node', nodeId: current },
+      ],
+      stats: { comparisons: sid, swaps: 0, accesses: output.length + stack.length },
+      teachingState: {
+        graph: {
+          stack: [...stack],
+          output: [...output],
+          nodeStates: nodeStates(current),
+        },
+      },
     })
-  }
-  if (step.action.type === 'mark' && step.action.targets.length > 0) {
-    step.action.targets.forEach((target) => events.push({ type: 'graph.visit_node', nodeId: String(target) }))
-  }
-  if (step.action.type === 'compare' && step.action.targets.length >= 2) {
-    events.push({ type: 'graph.visit_edge', source: String(step.action.targets[0]), target: String(step.action.targets[1]) })
-  }
-  if (step.action.type === 'highlight' && step.action.targets.length > 0) {
-    step.action.targets.forEach((target) => events.push({ type: 'graph.visit_node', nodeId: String(target) }))
-  }
-  return events.length > 0 ? { ...step, events } : step
-})
 
-export default dfsGraphPreset
+    // Explore neighbors in reverse order (so first neighbor gets processed first with stack LIFO)
+    const neighbors = adjacency.get(current) ?? []
+    for (let i = neighbors.length - 1; i >= 0; i--) {
+      const neighbor = neighbors[i]
+      const nIdx = getIdx(neighbor)
+
+      if (visited.has(neighbor)) {
+        steps.push({
+          stepId: sid++, codeLine: 8,
+          description: { zh: `检查边 ${getLabel(current)}→${getLabel(neighbor)}：${getLabel(neighbor)} 已访问，跳过`, en: `Check edge ${getLabel(current)}→${getLabel(neighbor)}: visited, skip` },
+          action: { type: 'compare', targets: [currentIdx, nIdx], color: 'muted' },
+          events: [
+            { type: 'graph.visit_edge', source: current, target: neighbor },
+          ],
+          stats: { comparisons: sid, swaps: 0, accesses: visited.size + stack.length },
+          teachingState: {
+            graph: {
+              stack: [...stack],
+              output: [...output],
+              nodeStates: nodeStates(current),
+            },
+          },
+        })
+      } else {
+        stack.push(neighbor)
+        steps.push({
+          stepId: sid++, codeLine: 9,
+          description: { zh: `检查边 ${getLabel(current)}→${getLabel(neighbor)}：${getLabel(neighbor)} 未访问，压入栈中`, en: `Check edge ${getLabel(current)}→${getLabel(neighbor)}: undiscovered, push to stack` },
+          action: { type: 'compare', targets: [currentIdx, nIdx], color: 'warning' },
+          events: [
+            { type: 'graph.visit_edge', source: current, target: neighbor },
+          ],
+          stats: { comparisons: sid, swaps: 0, accesses: visited.size + stack.length },
+          teachingState: {
+            graph: {
+              stack: [...stack],
+              output: [...output],
+              nodeStates: nodeStates(neighbor),
+              edgeStates: [{ source: current, target: neighbor, role: 'candidate' as const, color: 'warning' as const }],
+            },
+          },
+        })
+        // Push to stack step
+        steps.push({
+          stepId: sid++, codeLine: 10,
+          description: { zh: `${getLabel(neighbor)} 压入栈中，栈: [${[...stack].reverse().map(getLabel).join(', ')}]`, en: `${getLabel(neighbor)} pushed to stack, stack: [${[...stack].reverse().map(getLabel).join(', ')}]` },
+          action: { type: 'highlight', targets: [nIdx], color: 'primary' },
+          events: [
+            { type: 'graph.enqueue', nodeId: neighbor },
+          ],
+          stats: { comparisons: sid, swaps: 0, accesses: visited.size + stack.length },
+          teachingState: {
+            graph: {
+              stack: [...stack],
+              output: [...output],
+              nodeStates: nodeStates(neighbor),
+            },
+          },
+        })
+      }
+    }
+  }
+
+  // Final step
+  steps.push({
+    stepId: sid++, codeLine: 14,
+    description: { zh: `DFS 完成！遍历顺序：${output.map(getLabel).join(' → ')}`, en: `DFS complete! Order: ${output.map(getLabel).join(' → ')}` },
+    action: { type: 'mark', targets: output.map(getIdx).filter(i => i >= 0), color: 'success' },
+    events: output.map(id => ({ type: 'graph.visit_node' as const, nodeId: id })),
+    stats: { comparisons: sid, swaps: 0, accesses: visited.size },
+    teachingState: {
+      graph: {
+        stack: [],
+        output: [...output],
+        nodeStates: output.map(id => ({ id, role: 'visited' as const, color: 'success' as const })),
+      },
+    },
+  })
+
+  return {
+    algorithm: 'dfs_graph',
+    complexity: { time: { best: 'O(V+E)', average: 'O(V+E)', worst: 'O(V+E)' }, space: 'O(V)' },
+    presentation: { engine: 'scene', module: 'graph' },
+    initialState: { type: 'graph', data: [], nodes, edges },
+    steps,
+  }
+}
+
+export default generateDFS

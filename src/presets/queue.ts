@@ -1,9 +1,10 @@
 import type { AnimationScript } from '@/types/animation'
 
-export function generateQueue(): AnimationScript {
+export function generateQueue(arr?: number[]): AnimationScript {
   const steps: AnimationScript['steps'] = []
   let sid = 1
-  const initialQueue = [1, 2, 3]
+  const inputArr = arr && arr.length > 0 ? arr : [1, 2, 3]
+  const initialQueue = [...inputArr]
   const queue = [...initialQueue]
 
   // Step 1: initial queue with pipe container
@@ -11,7 +12,7 @@ export function generateQueue(): AnimationScript {
     stepId: sid++, codeLine: 0,
     description: { zh: '队列 (Queue) — FIFO 先进先出，管道形容器，元素从左向右流动', en: 'Queue — FIFO, pipe container, elements flow left to right' },
     action: { type: 'highlight', targets: [], color: 'primary' },
-    events: [{ type: 'queue.create', values: [1, 2, 3] }],
+    events: [{ type: 'queue.create', values: [...initialQueue] }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
 

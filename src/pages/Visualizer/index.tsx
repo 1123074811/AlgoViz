@@ -3768,6 +3768,38 @@ export default function Visualizer() {
     trie: { value: '["cat", "car", "dog"]', hint: '字典树单词列表' },
     hash_table: { value: '{"key1": "value1", "key2": "value2"}', hint: '初始键值对' },
     union_find: { value: '[[0, 1], [1, 2], [3, 4]]', hint: '并查集连通边列表' },
+    bfs_graph: {
+      value: '{\n  "nodes": [\n    {"id": "0", "label": "A"},\n    {"id": "1", "label": "B"},\n    {"id": "2", "label": "C"},\n    {"id": "3", "label": "D"},\n    {"id": "4", "label": "E"},\n    {"id": "5", "label": "F"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1"},\n    {"source": "0", "target": "2"},\n    {"source": "1", "target": "3"},\n    {"source": "1", "target": "4"},\n    {"source": "2", "target": "5"}\n  ]\n}',
+      hint: '无向图 JSON (nodes + edges)'
+    },
+    dfs_graph: {
+      value: '{\n  "nodes": [\n    {"id": "0", "label": "A"},\n    {"id": "1", "label": "B"},\n    {"id": "2", "label": "C"},\n    {"id": "3", "label": "D"},\n    {"id": "4", "label": "E"},\n    {"id": "5", "label": "F"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1"},\n    {"source": "0", "target": "2"},\n    {"source": "1", "target": "3"},\n    {"source": "1", "target": "4"},\n    {"source": "2", "target": "5"}\n  ]\n}',
+      hint: '无向图 JSON (nodes + edges)'
+    },
+    dijkstra: {
+      value: '{\n  "nodes": [\n    {"id": "0", "label": "A"},\n    {"id": "1", "label": "B"},\n    {"id": "2", "label": "C"},\n    {"id": "3", "label": "D"},\n    {"id": "4", "label": "E"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1", "weight": 4},\n    {"source": "0", "target": "2", "weight": 2},\n    {"source": "1", "target": "2", "weight": 1},\n    {"source": "1", "target": "3", "weight": 5},\n    {"source": "2", "target": "3", "weight": 8},\n    {"source": "2", "target": "4", "weight": 10},\n    {"source": "3", "target": "4", "weight": 2}\n  ]\n}',
+      hint: '带权无向图 JSON (nodes + edges + weight)'
+    },
+    prim: {
+      value: '{\n  "nodes": [\n    {"id": "0", "label": "A"},\n    {"id": "1", "label": "B"},\n    {"id": "2", "label": "C"},\n    {"id": "3", "label": "D"},\n    {"id": "4", "label": "E"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1", "weight": 2},\n    {"source": "0", "target": "3", "weight": 6},\n    {"source": "1", "target": "2", "weight": 3},\n    {"source": "1", "target": "3", "weight": 8},\n    {"source": "1", "target": "4", "weight": 5},\n    {"source": "2", "target": "4", "weight": 7},\n    {"source": "3", "target": "4", "weight": 9}\n  ]\n}',
+      hint: '带权无向图 JSON'
+    },
+    kruskal: {
+      value: '{\n  "nodes": [\n    {"id": "0", "label": "A"},\n    {"id": "1", "label": "B"},\n    {"id": "2", "label": "C"},\n    {"id": "3", "label": "D"},\n    {"id": "4", "label": "E"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1", "weight": 2},\n    {"source": "0", "target": "3", "weight": 6},\n    {"source": "1", "target": "2", "weight": 3},\n    {"source": "1", "target": "3", "weight": 8},\n    {"source": "1", "target": "4", "weight": 5},\n    {"source": "2", "target": "4", "weight": 7},\n    {"source": "3", "target": "4", "weight": 9}\n  ]\n}',
+      hint: '带权无向图 JSON'
+    },
+    topological_sort: {
+      value: '{\n  "nodes": [\n    {"id": "0", "label": "A"},\n    {"id": "1", "label": "B"},\n    {"id": "2", "label": "C"},\n    {"id": "3", "label": "D"},\n    {"id": "4", "label": "E"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1"},\n    {"source": "0", "target": "2"},\n    {"source": "1", "target": "3"},\n    {"source": "2", "target": "3"},\n    {"source": "3", "target": "4"}\n  ]\n}',
+      hint: '有向无环图(DAG) JSON'
+    },
+    floyd: {
+      value: '[[0, 3, 999, 7], [8, 0, 2, 999], [999, 999, 0, 1], [6, 999, 999, 0]]',
+      hint: '距离矩阵 (999=∞)'
+    },
+    a_star: {
+      value: '{\n  "nodes": [\n    {"id": "0", "label": "S"},\n    {"id": "1", "label": "A"},\n    {"id": "2", "label": "B"},\n    {"id": "3", "label": "C"},\n    {"id": "4", "label": "G"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1", "weight": 1},\n    {"source": "0", "target": "2", "weight": 4},\n    {"source": "1", "target": "2", "weight": 2},\n    {"source": "1", "target": "3", "weight": 5},\n    {"source": "2", "target": "3", "weight": 1},\n    {"source": "3", "target": "4", "weight": 3},\n    {"source": "2", "target": "4", "weight": 7}\n  ],\n  "start": "0",\n  "goal": "4",\n  "heuristics": {"0": 4, "1": 3, "2": 2, "3": 1, "4": 0}\n}',
+      hint: '有向图 + start/goal + heuristics'
+    },
     bellman_ford: {
       value: '{\n  "nodes": [\n    {"id": "0", "label": "S"},\n    {"id": "1", "label": "A"},\n    {"id": "2", "label": "B"},\n    {"id": "3", "label": "C"},\n    {"id": "4", "label": "D"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1", "weight": 5},\n    {"source": "0", "target": "2", "weight": 4},\n    {"source": "1", "target": "3", "weight": 3},\n    {"source": "2", "target": "1", "weight": -2},\n    {"source": "2", "target": "3", "weight": 7},\n    {"source": "3", "target": "4", "weight": 2},\n    {"source": "1", "target": "4", "weight": 6}\n  ]\n}',
       hint: '带权有向图 JSON (支持自定义顶点与权值)'

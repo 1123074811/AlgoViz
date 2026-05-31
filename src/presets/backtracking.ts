@@ -1,10 +1,10 @@
 import type { AnimationScript } from '@/types/animation'
 
-export function generateBacktracking(): AnimationScript {
+export function generateBacktracking(arr?: number[]): AnimationScript {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const steps: any[] = []
   let sid = 1
-  const result = [1, 2, 3]
+  const result = arr && arr.length > 0 ? arr : [1, 2, 3]
 
   steps.push({ stepId: sid++, codeLine: 0, description: { zh: '回溯算法 — 尝试所有选择，遇到不合法的立即回退', en: 'Backtracking — try all choices, backtrack when invalid' }, action: { type: 'highlight', targets: [], color: 'primary' }, events: [{ type: 'array.create', values: result }], stats: { comparisons: 0, swaps: 0, accesses: 0 } })
 

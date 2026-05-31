@@ -1,9 +1,10 @@
 import type { AnimationScript } from '@/types/animation'
 
-export function generateStack(): AnimationScript {
+export function generateStack(arr?: number[]): AnimationScript {
   const steps: AnimationScript['steps'] = []
   let sid = 1
-  const initialStack = [1, 2]
+  const inputArr = arr && arr.length > 0 ? arr : [1, 2]
+  const initialStack = [...inputArr]
   const stack = [...initialStack]
 
   // Step 1: initial stack with U-shape container
@@ -11,7 +12,7 @@ export function generateStack(): AnimationScript {
     stepId: sid++, codeLine: 0,
     description: { zh: '栈 (Stack) — LIFO 后进先出，U 形容器底部封闭、顶部开口', en: 'Stack — LIFO, U-shaped container open at top' },
     action: { type: 'highlight', targets: [], color: 'primary' },
-    events: [{ type: 'stack.create', values: [1, 2] }],
+    events: [{ type: 'stack.create', values: [...initialStack] }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
 

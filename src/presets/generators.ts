@@ -864,8 +864,18 @@ import { generateBacktracking } from './backtracking'
 import { generateArray } from './arrayDS'
 import { generateLeetCode } from './leetcode'
 import { generateACM } from './acm'
+import { generateBFS } from './bfsGraph'
+import { generateDFS } from './dfsGraph'
+import { generateDijkstra } from './dijkstra'
+import { generatePrim } from './prim'
+import { generateKruskal } from './kruskal'
+import { generateTopologicalSort } from './topologicalSort'
+import { generateFloyd } from './floyd'
+import { generateAStar } from './aStar'
+export { generateBFS, generateDFS, generateDijkstra, generatePrim, generateKruskal, generateTopologicalSort, generateFloyd, generateAStar }
 import { generateRadixSort } from './radixSort'
 import { generateBucketSort } from './bucketSort'
+import type { GraphInput } from './bfsGraph'
 import { generateDynamicLinkedListOp, generateDynamicBSTOp } from './dynamicOperations'
 
 // ─── Input parsing helpers for natural types ───
@@ -942,19 +952,91 @@ const sudokuWrapper = (_input: unknown) => generateSudoku()
 const manacherWrapper = (input: unknown) => generateManacher(parseStr(input, 'babad'))
 const segmentTreeWrapper = (input: unknown) => generateSegmentTree(parseArr(input).slice(0, 6))
 const intervalDPWrapper = (input: unknown) => generateIntervalDP(parseArr(input).slice(0, 5))
-const stackWrapper = (_input: unknown) => generateStack()
+const stackWrapper = (input: unknown) => generateStack(parseArr(input))
 import { DATA_STRUCTURE_OPERATIONS } from './operationPresets'
 
-const queueWrapper = (_input: unknown) => generateQueue()
+const queueWrapper = (input: unknown) => generateQueue(parseArr(input))
 const heapWrapper = (input: unknown) => generateHeapOperations(parseArr(input).slice(0, 6))
-const unionFindWrapper = (_input: unknown) => generateUnionFind()
-const binaryTreeWrapper = (_input: unknown) => generateBinaryTree()
-const avlTreeWrapper = (_input: unknown) => generateAVLTree()
-const trieWrapper = (_input: unknown) => generateTrie()
-const hashTableWrapper = (_input: unknown) => generateHashTable()
-const backtrackingWrapper = (_input: unknown) => generateBacktracking()
+const unionFindWrapper = (input: unknown) => {
+  if (Array.isArray(input) && input.length > 0 && Array.isArray(input[0])) return generateUnionFind(input as number[][])
+  return generateUnionFind()
+}
+const binaryTreeWrapper = (input: unknown) => generateBinaryTree(parseArr(input))
+const avlTreeWrapper = (input: unknown) => generateAVLTree(parseArr(input))
+const trieWrapper = (input: unknown) => {
+  if (Array.isArray(input) && input.every(v => typeof v === 'string')) return generateTrie(input as string[])
+  return generateTrie()
+}
+const hashTableWrapper = (input: unknown) => {
+  if (typeof input === 'object' && input !== null && !Array.isArray(input)) return generateHashTable(input as Record<string, string>)
+  return generateHashTable()
+}
+const backtrackingWrapper = (input: unknown) => generateBacktracking(parseArr(input))
 const leetcodeWrapper = (_input: unknown) => generateLeetCode()
 const acmWrapper = (_input: unknown) => generateACM()
+function parseGraphInput(input: unknown): GraphInput {
+  if (typeof input === 'object' && input !== null) {
+    const obj = input as Record<string, unknown>
+    if (Array.isArray(obj.nodes) && Array.isArray(obj.edges)) {
+      const nodes = obj.nodes as Array<{ id?: string; label?: string }>
+      const edges = obj.edges as Array<{ source?: string; target?: string; weight?: number }>
+      return {
+        nodes: nodes.map((n, i) => ({ id: n.id ?? String(i), label: n.label ?? n.id ?? String(i) })),
+        edges: edges.map(e => ({ source: e.source ?? '0', target: e.target ?? '0', weight: e.weight })),
+      }
+    }
+    // Fallback: array of edges [[u,v], [v,w], ...]
+    if (Array.isArray(obj) && obj.length > 0 && Array.isArray(obj[0])) {
+      const edgePairs = obj as unknown[][]
+      const nodeSet = new Set<string>()
+      const edges: GraphInput['edges'] = []
+      for (const pair of edgePairs) {
+        if (Array.isArray(pair) && pair.length >= 2) {
+          const s = String(pair[0]), t = String(pair[1])
+          nodeSet.add(s); nodeSet.add(t)
+          edges.push({ source: s, target: t })
+        }
+      }
+      return { nodes: Array.from(nodeSet).map(id => ({ id, label: id })), edges }
+    }
+  }
+  // Default graph
+  return {
+    nodes: [
+      { id: '0', label: 'A' }, { id: '1', label: 'B' }, { id: '2', label: 'C' },
+      { id: '3', label: 'D' }, { id: '4', label: 'E' }, { id: '5', label: 'F' },
+    ],
+    edges: [
+      { source: '0', target: '1' }, { source: '0', target: '2' },
+      { source: '1', target: '3' }, { source: '1', target: '4' }, { source: '2', target: '5' },
+    ],
+  }
+}
+
+const bfsWrapper = (input: unknown) => generateBFS(parseGraphInput(input))
+const dfsWrapper = (input: unknown) => generateDFS(parseGraphInput(input))
+const dijkstraWrapper = (input: unknown) => generateDijkstra(parseGraphInput(input))
+const primWrapper = (input: unknown) => generatePrim(parseGraphInput(input))
+const kruskalWrapper = (input: unknown) => generateKruskal(parseGraphInput(input))
+const topoWrapper = (input: unknown) => generateTopologicalSort(parseGraphInput(input))
+const floydWrapper = (input: unknown) => {
+  if (Array.isArray(input) && input.length > 0 && Array.isArray(input[0])) return generateFloyd(input as number[][])
+  if (typeof input === 'object' && input !== null && Array.isArray((input as Record<string, unknown>).matrix)) return generateFloyd((input as Record<string, unknown>).matrix as number[][])
+  return generateFloyd()
+}
+const aStarWrapper = (input: unknown) => {
+  const graph = parseGraphInput(input)
+  if (typeof input === 'object' && input !== null) {
+    const obj = input as Record<string, unknown>
+    return generateAStar({
+      ...graph,
+      start: typeof obj.start === 'string' ? obj.start : undefined,
+      goal: typeof obj.goal === 'string' ? obj.goal : undefined,
+      heuristics: typeof obj.heuristics === 'object' ? obj.heuristics as Record<string, number> : undefined,
+    })
+  }
+  return generateAStar(graph)
+}
 const bellmanFordWrapper = (input: unknown) => generateBellmanFord(input)
 
 const linkedListInsertWrapper = (input: any) => {
@@ -1002,6 +1084,9 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   matrix_chain: matrixChainWrapper, sudoku: sudokuWrapper,
   manacher: manacherWrapper, segment_tree: segmentTreeWrapper,
   interval_dp: intervalDPWrapper, stack: stackWrapper,
+  bfs_graph: bfsWrapper, dfs_graph: dfsWrapper,
+  dijkstra: dijkstraWrapper, prim: primWrapper, kruskal: kruskalWrapper,
+  topological_sort: topoWrapper, floyd: floydWrapper, a_star: aStarWrapper,
   queue: queueWrapper, heap_ds: heapWrapper, union_find: unionFindWrapper,
   bellman_ford: bellmanFordWrapper,
   linked_list_insert: linkedListInsertWrapper,

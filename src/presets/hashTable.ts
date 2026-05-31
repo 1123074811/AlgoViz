@@ -1,6 +1,6 @@
 import type { AnimationScript } from '@/types/animation'
 
-export function generateHashTable(): AnimationScript {
+export function generateHashTable(_pairs?: Record<string, string>): AnimationScript {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const steps: any[] = []
   let sid = 1
@@ -136,23 +136,17 @@ export function generateHashTable(): AnimationScript {
     })
   }
 
-  // ─── Demo: Insert 4 key-value pairs ─────────────────────────────────
+  // ─── Demo: Insert key-value pairs ────────────────────────────────────
+  const pairs = _pairs && Object.keys(_pairs).length > 0
+    ? Object.entries(_pairs)
+    : [['name', 'Alice'], ['age', '25'], ['city', 'Beijing'], ['email', 'alice@algo']]
 
-  // Insert "name":"Alice" → hash=417, idx=1
-  const idxA = put('name', 'Alice')
-
-  // Insert "age":"25" → hash=301, idx=5
-  const idxB = put('age', '25')
-
-  // Insert "city":"Beijing" → hash=441, idx=1 → COLLISION → probes to idx=2
-  const idxC = put('city', 'Beijing')
-
-  // Insert "email":"alice@algo" → hash=520, idx=0
-  const idxD = put('email', 'alice@algo')
+  const lastIdx = pairs.map(([k, v]) => put(k, v)).pop() ?? 0
 
   // ─── Lookup demo ────────────────────────────────────────────────────
-
-  get('city', idxC)
+  if (pairs.length > 0) {
+    get(pairs[Math.min(2, pairs.length - 1)][0], lastIdx)
+  }
 
   // ─── Final state ────────────────────────────────────────────────────
 

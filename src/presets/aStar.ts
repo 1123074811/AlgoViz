@@ -1,60 +1,226 @@
 import type { AnimationScript, ActionColor } from '@/types/animation'
+import type { GraphInput } from './bfsGraph'
 
-function aStep(id: number, ln: number, zh: string, en: string,
-  type: string, targets: number[], color: ActionColor,
-  comps: number, accs: number, scores: Record<string, string | number>,
-  openSet: string[], closedSet: string[],
-): AnimationScript['steps'][0] {
-  return {
-    stepId: id, codeLine: ln, description: { zh, en },
-    action: { type: type as AnimationScript['steps'][0]['action']['type'], targets, color },
-    stats: { comparisons: comps, swaps: 0, accesses: accs },
-    teachingState: { graph: { distances: scores, sets: { open: openSet, closed: closedSet } } },
+export interface AStarInput extends GraphInput {
+  start?: string
+  goal?: string
+  heuristics?: Record<string, number>
+}
+
+export function generateAStar(input: AStarInput): AnimationScript {
+  const { nodes, edges, heuristics: hMap } = input
+  const getLabel = (id: string) => nodes.find(n => n.id === id)?.label ?? id
+  const getIdx = (id: string) => nodes.findIndex(n => n.id === id)
+
+  const adj = new Map<string, Array<{ to: string; weight: number }>>()
+  for (const nd of nodes) adj.set(nd.id, [])
+  for (const e of edges) {
+    adj.get(e.source)?.push({ to: e.target, weight: e.weight ?? 1 })
   }
-}
 
-const aStarPreset: AnimationScript = {
-  algorithm: 'a_star',
-  complexity: { time: { best: 'O(E)', average: 'O(E log V)', worst: 'O(E log V)' }, space: 'O(V)' },
-  initialState: {
-    type: 'graph', data: [],
-    nodes: [{ id: '0', label: 'S' }, { id: '1', label: 'A' }, { id: '2', label: 'B' }, { id: '3', label: 'C' }, { id: '4', label: 'G' }],
-    edges: [{ source: '0', target: '1', weight: 1 }, { source: '0', target: '2', weight: 4 }, { source: '1', target: '2', weight: 2 }, { source: '1', target: '3', weight: 5 }, { source: '2', target: '3', weight: 1 }, { source: '3', target: '4', weight: 3 }, { source: '2', target: '4', weight: 7 }],
-  },
-  steps: [
-    aStep(1, 2, 'A* 搜索从 S 到 G。f(n)=g(n)+h(n)，g=实际距离，h=启发估计。A* 保证在可纳启发下找到最优解', 'A* from S to G. f(n)=g(n)+h(n), g=actual cost, h=heuristic. A* guarantees optimal with admissible heuristic', 'highlight', [0], 'primary', 0, 1, { 'g(S)': 0, 'h(S)': 4, 'f(S)': 4 }, ['0'], []),
-    aStep(2, 4, 'Open 集中 S(f=4) 最小，出队处理。检查 S→A：g=1, h=3, f=4 < ∞，A 入 open', 'S(f=4) smallest in open, dequeue. Check S->A: g=1, h=3, f=4 < ∞, A into open', 'compare', [0,1], 'warning', 1, 2, { 'g(A)': 1, 'h(A)': 3, 'f(A)': 4, 'g(B)': 4, 'h(B)': 2, 'f(B)': 6 }, ['1','2'], ['0']),
-    aStep(3, 4, 'S→B：g=4, h=2, f=6。Open: [A(f=4), B(f=6)]。A f 最小，选 A', 'S->B: g=4, h=2, f=6. Open: [A(f=4), B(f=6)]. A has min f, pick A', 'compare', [0,2], 'warning', 2, 3, { 'g(A)': 1, 'f(A)': 4, 'g(B)': 4, 'f(B)': 6 }, ['1','2'], ['0']),
-    aStep(4, 4, 'A 出队。A→B：g=1+2=3 < current g(B)=4，找到到 B 的更短路径！更新 B: g=3, f=5', 'Dequeue A. A->B: g=1+2=3 < 4, shorter path to B! Update B: g=3, f=5', 'compare', [1,2], 'warning', 3, 4, { 'g(A)': 1, 'f(A)': 4, 'g(B)': 3, 'f(B)': 5, 'g(C)': 6, 'f(C)': 7 }, ['2','3'], ['0','1']),
-    aStep(5, 4, 'A→C：g=1+5=6, h=1, f=7 < ∞，C 入 open。B(f=5) 最小，选 B', 'A->C: g=1+5=6, h=1, f=7 < ∞, C into open. B(f=5) is min, pick B', 'compare', [1,3], 'warning', 4, 5, { 'g(B)': 3, 'f(B)': 5, 'g(C)': 6, 'f(C)': 7 }, ['2','3'], ['0','1']),
-    aStep(6, 4, 'B 出队。B→C：g=3+1=4 < 6，更新 C：g=4, f=5。B→G：g=3+7=10, f=10，G 入 open', 'Dequeue B. B->C: g=3+1=4 < 6, update C: g=4, f=5. B->G: g=10, h=0, f=10, G into open', 'compare', [2,3], 'warning', 5, 6, { 'g(C)': 4, 'f(C)': 5, 'g(G)': 10, 'f(G)': 10 }, ['3','4'], ['0','1','2']),
-    aStep(7, 4, 'C(f=5) 最小，出队。C→G：g=4+3=7 < 10，更新 G：g=7, f=7！通过 C 到 G 更短', 'C(f=5) is min, dequeue. C->G: g=4+3=7 < 10, update G: g=7, f=7! Shorter via C', 'compare', [3,4], 'warning', 6, 7, { 'g(C)': 4, 'f(C)': 5, 'g(G)': 7, 'f(G)': 7 }, ['4'], ['0','1','2','3']),
-    aStep(8, 6, '目标 G 出队！A* 找到最短路径 S→A→B→C→G，总距离 7。A* 比 Dijkstra 快，因为启发函数 h 引导搜索方向', 'Goal G dequeued! Path S->A->B->C->G, total 7. A* faster than Dijkstra as heuristic guides search', 'mark', [0,1,2,3,4], 'success', 7, 8, { 'g(G)': 7, 'f(G)': 7 }, [], ['0','1','2','3','4']),
-  ],
-}
+  const startId = input.start ?? nodes[0]?.id ?? '0'
+  const goalId = input.goal ?? nodes[nodes.length - 1]?.id ?? String(nodes.length - 1)
+  const h: Record<string, number> = hMap ?? {}
+  for (const nd of nodes) {
+    if (h[nd.id] === undefined) h[nd.id] = Math.abs(parseInt(nd.id) - parseInt(goalId))
+  }
 
-aStarPreset.presentation = { engine: 'scene', module: 'graph' }
-aStarPreset.steps = aStarPreset.steps.map((step, index) => {
-  const events: NonNullable<(typeof step)['events']> = []
-  if (index === 0) {
-    events.push({
-      type: 'graph.create',
-      nodes: aStarPreset.initialState.nodes ?? [],
-      edges: aStarPreset.initialState.edges ?? [],
-      directed: false,
+  const steps: AnimationScript['steps'] = []
+  let sid = 1
+
+  const gScore: Record<string, number> = {}
+  const fScore: Record<string, number> = {}
+  const prev: Record<string, string | null> = {}
+  const closed = new Set<string>()
+  const INF = Number.MAX_SAFE_INTEGER
+
+  for (const nd of nodes) { gScore[nd.id] = INF; fScore[nd.id] = INF; prev[nd.id] = null }
+  gScore[startId] = 0
+  fScore[startId] = h[startId] ?? 0
+  const openSet = [startId]
+
+  function fmtVal(v: number) { return v === INF ? '∞' : String(v) }
+
+  function openMinNode() {
+    let best = '', bestF = INF
+    for (const id of openSet) {
+      if (!closed.has(id) && fScore[id] < bestF) { bestF = fScore[id]; best = id }
+    }
+    return best
+  }
+
+  // Step 1: Init
+  steps.push({
+    stepId: sid++, codeLine: 2,
+    description: {
+      zh: `A* 从 ${getLabel(startId)} 到 ${getLabel(goalId)}。f(n)=g(n)+h(n)，g=实际距离，h=启发估计`,
+      en: `A* from ${getLabel(startId)} to ${getLabel(goalId)}. f(n)=g(n)+h(n)`,
+    },
+    action: { type: 'highlight', targets: [getIdx(startId)], color: 'primary' },
+    events: [{ type: 'graph.create', nodes, edges: edges.map(e => ({ source: e.source, target: e.target, weight: e.weight })), directed: true }],
+    stats: { comparisons: 0, swaps: 0, accesses: 1 },
+    teachingState: {
+      graph: {
+        distances: { 'g': 0, [`h(${getLabel(startId)})`]: h[startId] ?? 0, 'f': fScore[startId] },
+        sets: { open: [startId], closed: [] },
+      },
+    },
+  })
+
+  while (openSet.length > 0) {
+    const current = openMinNode()
+    if (!current) break
+
+    if (current === goalId) {
+      // Reached goal — reconstruct path
+      const path: string[] = []
+      let p: string | null = goalId
+      while (p) { path.unshift(p); p = prev[p] }
+      steps.push({
+        stepId: sid++, codeLine: 10,
+        description: {
+          zh: `到达目标 ${getLabel(goalId)}！最短路径：${path.map(getLabel).join(' → ')}，距离=${gScore[goalId]}`,
+          en: `Goal ${getLabel(goalId)} reached! Path: ${path.map(getLabel).join(' → ')}, dist=${gScore[goalId]}`,
+        },
+        action: { type: 'mark', targets: path.map(getIdx).filter(i => i >= 0), color: 'success' },
+        events: path.map(id => ({ type: 'graph.visit_node' as const, nodeId: id })),
+        stats: { comparisons: sid, swaps: 0, accesses: closed.size + openSet.length },
+        teachingState: {
+          graph: {
+            distances: { goal: gScore[goalId] },
+            sets: { open: [], closed: [...closed, current] },
+            nodeStates: path.map(id => ({ id, role: 'visited' as const, color: 'success' as ActionColor })),
+          },
+        },
+      })
+      break
+    }
+
+    openSet.splice(openSet.indexOf(current), 1)
+    closed.add(current)
+
+    steps.push({
+      stepId: sid++, codeLine: 5,
+      description: {
+        zh: `取出 f 最小节点 ${getLabel(current)}：g=${fmtVal(gScore[current])}, h=${h[current]}, f=${fmtVal(fScore[current])}`,
+        en: `Pop min-f node ${getLabel(current)}: g=${fmtVal(gScore[current])}, h=${h[current]}, f=${fmtVal(fScore[current])}`,
+      },
+      action: { type: 'mark', targets: [getIdx(current)], color: 'success' },
+      events: [{ type: 'graph.visit_node', nodeId: current }],
+      stats: { comparisons: sid, swaps: 0, accesses: closed.size + openSet.length },
+      teachingState: {
+        graph: {
+          sets: { open: [...openSet], closed: [...closed] },
+          distances: { [`g(${getLabel(current)})`]: gScore[current], [`h(${getLabel(current)})`]: h[current], [`f(${getLabel(current)})`]: fScore[current] },
+          nodeStates: [
+            ...[...closed].map(id => ({ id, role: 'visited' as const, color: 'success' as ActionColor })),
+            ...openSet.map(id => ({ id, role: 'queued' as const, color: 'primary' as ActionColor })),
+          ],
+        },
+      },
     })
+
+    // Explore neighbors (directed edges, only outgoing)
+    for (const { to: neighbor, weight: w } of (adj.get(current) ?? [])) {
+      if (closed.has(neighbor)) continue
+
+      const tentativeG = gScore[current] + w
+      const oldG = gScore[neighbor]
+
+      if (tentativeG < oldG) {
+        gScore[neighbor] = tentativeG
+        fScore[neighbor] = tentativeG + (h[neighbor] ?? 0)
+        prev[neighbor] = current
+
+        if (!openSet.includes(neighbor)) {
+          openSet.push(neighbor)
+          steps.push({
+            stepId: sid++, codeLine: 8,
+            description: {
+              zh: `探索 ${getLabel(current)}→${getLabel(neighbor)}：g=${tentativeG}, f=${fScore[neighbor]}，新节点加入 Open`,
+              en: `Explore ${getLabel(current)}→${getLabel(neighbor)}: g=${tentativeG}, f=${fScore[neighbor]}, new node added to Open`,
+            },
+            action: { type: 'compare', targets: [getIdx(current), getIdx(neighbor)], color: 'success' },
+            events: [
+              { type: 'graph.visit_edge', source: current, target: neighbor },
+              { type: 'graph.enqueue', nodeId: neighbor },
+            ],
+            stats: { comparisons: sid, swaps: 0, accesses: closed.size + openSet.length },
+            teachingState: {
+              graph: {
+                sets: { open: [...openSet], closed: [...closed] },
+                edgeStates: [{ source: current, target: neighbor, role: 'relaxed' as const, color: 'success' as ActionColor }],
+                nodeStates: [
+                  ...[...closed].map(id => ({ id, role: 'visited' as const, color: 'success' as ActionColor })),
+                  ...openSet.map(id => ({ id, role: 'queued' as const, color: 'primary' as ActionColor })),
+                ],
+              },
+            },
+          })
+        } else {
+          steps.push({
+            stepId: sid++, codeLine: 8,
+            description: {
+              zh: `松弛 ${getLabel(current)}→${getLabel(neighbor)}：g=${tentativeG} < ${fmtVal(oldG)}，更新 Open 中的 f=${fScore[neighbor]}`,
+              en: `Relax ${getLabel(current)}→${getLabel(neighbor)}: g=${tentativeG} < ${fmtVal(oldG)}, update f=${fScore[neighbor]} in Open`,
+            },
+            action: { type: 'compare', targets: [getIdx(current), getIdx(neighbor)], color: 'warning' },
+            events: [
+              { type: 'graph.visit_edge', source: current, target: neighbor },
+              { type: 'graph.relax_edge', source: current, target: neighbor, oldDistance: fmtVal(oldG), newDistance: fmtVal(tentativeG), success: true },
+            ],
+            stats: { comparisons: sid, swaps: 0, accesses: closed.size + openSet.length },
+            teachingState: {
+              graph: {
+                sets: { open: [...openSet], closed: [...closed] },
+                edgeStates: [{ source: current, target: neighbor, role: 'relaxed' as const, color: 'warning' as ActionColor }],
+                nodeStates: [
+                  ...[...closed].map(id => ({ id, role: 'visited' as const, color: 'success' as ActionColor })),
+                  ...openSet.map(id => ({ id, role: 'queued' as const, color: 'primary' as ActionColor })),
+                  { id: neighbor, role: 'current' as const, color: 'warning' as ActionColor },
+                ],
+              },
+            },
+          })
+        }
+      } else if (!closed.has(neighbor)) {
+        steps.push({
+          stepId: sid++, codeLine: 8,
+          description: {
+            zh: `检查 ${getLabel(current)}→${getLabel(neighbor)}：g=${tentativeG} ≥ ${fmtVal(oldG)}，不更新`,
+            en: `Check ${getLabel(current)}→${getLabel(neighbor)}: g=${tentativeG} >= ${fmtVal(oldG)}, no update`,
+          },
+          action: { type: 'compare', targets: [getIdx(current), getIdx(neighbor)], color: 'muted' },
+          events: [{ type: 'graph.visit_edge', source: current, target: neighbor }],
+          stats: { comparisons: sid, swaps: 0, accesses: closed.size + openSet.length },
+          teachingState: {
+            graph: {
+              sets: { open: [...openSet], closed: [...closed] },
+              nodeStates: [
+                ...[...closed].map(id => ({ id, role: 'visited' as const, color: 'success' as ActionColor })),
+                ...openSet.map(id => ({ id, role: 'queued' as const, color: 'primary' as ActionColor })),
+              ],
+            },
+          },
+        })
+      }
+    }
   }
-  if (step.action.type === 'mark' && step.action.targets.length > 0) {
-    step.action.targets.forEach((target) => events.push({ type: 'graph.visit_node', nodeId: String(target) }))
+
+  return {
+    algorithm: 'a_star',
+    complexity: { time: { best: 'O(E)', average: 'O(E log V)', worst: 'O(E log V)' }, space: 'O(V)' },
+    presentation: { engine: 'scene', module: 'graph' },
+    initialState: { type: 'graph', data: [], nodes, edges: edges.map(e => ({ source: e.source, target: e.target, weight: e.weight })) },
+    steps,
   }
-  if (step.action.type === 'compare' && step.action.targets.length >= 2) {
-    events.push({ type: 'graph.visit_edge', source: String(step.action.targets[0]), target: String(step.action.targets[1]) })
-    events.push({ type: 'graph.relax_edge', source: String(step.action.targets[0]), target: String(step.action.targets[1]), success: step.action.color === 'warning' })
-  }
-  if (step.action.type === 'highlight' && step.action.targets.length > 0) {
-    events.push({ type: 'graph.visit_node', nodeId: String(step.action.targets[0]) })
-  }
-  return events.length > 0 ? { ...step, events } : step
+}
+
+const aStarPreset = generateAStar({
+  nodes: [{ id: '0', label: 'S' }, { id: '1', label: 'A' }, { id: '2', label: 'B' }, { id: '3', label: 'C' }, { id: '4', label: 'G' }],
+  edges: [{ source: '0', target: '1', weight: 1 }, { source: '0', target: '2', weight: 4 }, { source: '1', target: '2', weight: 2 }, { source: '1', target: '3', weight: 5 }, { source: '2', target: '3', weight: 1 }, { source: '3', target: '4', weight: 3 }, { source: '2', target: '4', weight: 7 }],
+  start: '0', goal: '4',
+  heuristics: { '0': 4, '1': 3, '2': 2, '3': 1, '4': 0 },
 })
 
 export default aStarPreset
