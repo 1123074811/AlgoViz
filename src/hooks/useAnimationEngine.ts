@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import type { AnimationScript, ActionColor, TeachingState, VisualRole, TreeInitialNode } from '@/types/animation'
+import { clearSnapshotCache } from '@/scene/SceneEngine'
 
 export interface VisualState {
   arrayData: number[]
@@ -126,6 +127,7 @@ export function useAnimationEngine(script: AnimationScript | null) {
     : null
 
   useEffect(() => {
+    clearSnapshotCache()
     setIsPlaying(false)
     setCurrentStep(0)
   }, [script])

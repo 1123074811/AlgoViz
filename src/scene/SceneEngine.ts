@@ -8,15 +8,102 @@ import { layoutGraph } from './layouts/graphLayout'
 import { layoutLinkedList } from './layouts/linkedListLayout'
 import { layoutTree } from './layouts/treeLayout'
 
+// ── Snapshot cache for incremental replay ──
+
+const SNAPSHOT_INTERVAL = 20 // Save a snapshot every N steps
+
+interface SnapshotEntry {
+  step: number
+  scene: SceneState
+}
+
+let snapshotCache: SnapshotEntry[] = []
+let snapshotScriptId = '' // Invalidate cache when script changes
+
+function getScriptId(script: AnimationScript): string {
+  return `${script.algorithm}_${script.steps.length}_${script.initialState.type}`
+}
+
+function clearSnapshotCache() {
+  snapshotCache = []
+  snapshotScriptId = ''
+}
+
+function ensureCacheInitialized(script: AnimationScript) {
+  const id = getScriptId(script)
+  if (snapshotScriptId !== id) {
+    snapshotCache = []
+    snapshotScriptId = id
+  }
+}
+
+function findNearestSnapshot(targetStep: number): { step: number; scene: SceneState } | null {
+  let best: SnapshotEntry | null = null
+  for (const entry of snapshotCache) {
+    if (entry.step <= targetStep && (!best || entry.step > best.step)) {
+      best = entry
+    }
+  }
+  return best ? { step: best.step, scene: deepCloneScene(best.scene) } : null
+}
+
+function saveSnapshot(step: number, scene: SceneState) {
+  // Avoid duplicate snapshots for the same step
+  if (snapshotCache.length > 0 && snapshotCache[snapshotCache.length - 1].step === step) return
+  snapshotCache.push({ step, scene: deepCloneScene(scene) })
+}
+
+/** Deep-clone a SceneState so snapshots don't share references with active state */
+function deepCloneScene(scene: SceneState): SceneState {
+  return {
+    entities: Object.fromEntries(Object.entries(scene.entities).map(([k, v]) => {
+      const cloned: any = { ...v }
+      if ('ports' in v) cloned.ports = [...v.ports]
+      if ('fields' in v) cloned.fields = v.fields.map(f => ({ ...f }))
+      return [k, cloned as SceneEntity]
+    })),
+    edges: Object.fromEntries(Object.entries(scene.edges).map(([k, v]) => [k, { ...v }])),
+    pointers: Object.fromEntries(Object.entries(scene.pointers).map(([k, v]) => [k, { ...v }])),
+    labels: Object.fromEntries(Object.entries(scene.labels).map(([k, v]) => [k, { ...v }])),
+    groups: Object.fromEntries(Object.entries(scene.groups).map(([k, v]) => [k, { ...v }])),
+    ...(scene.camera && { camera: { ...scene.camera } }),
+    ...(scene.selectedIds && { selectedIds: [...scene.selectedIds] }),
+    ...(scene.notes && { notes: [...scene.notes] }),
+  }
+}
+
 export function deriveSceneState(script: AnimationScript, currentStep: number): SceneState {
-  let scene = createEmptyScene()
+  ensureCacheInitialized(script)
+
   const replayLimit = Math.min(currentStep, script.steps.length)
 
-  for (let i = 0; i < replayLimit; i++) {
+  // Try to start from nearest snapshot to avoid full O(n) replay
+  let scene: SceneState
+  let startStep: number
+
+  const nearest = findNearestSnapshot(replayLimit)
+  if (nearest && nearest.step < replayLimit) {
+    scene = nearest.scene
+    startStep = nearest.step
+  } else {
+    scene = createEmptyScene()
+    startStep = 0
+    // Save snapshot at step 0 (initial empty state)
+    if (replayLimit > SNAPSHOT_INTERVAL) {
+      saveSnapshot(0, scene)
+    }
+  }
+
+  for (let i = startStep; i < replayLimit; i++) {
     const events = script.steps[i].events ?? []
     for (const event of events) {
       const commands = compileEvent(event, { scene, stepIndex: i, script })
       scene = applyCommands(scene, commands)
+    }
+
+    // Save snapshot at interval boundaries
+    if ((i + 1) % SNAPSHOT_INTERVAL === 0 && i + 1 < replayLimit) {
+      saveSnapshot(i + 1, scene)
     }
   }
 
@@ -444,3 +531,5 @@ export interface EventCompiler {
   supports: (event: AlgorithmEvent) => boolean
   compile: (event: AlgorithmEvent, context: CompileContext) => SceneCommand[]
 }
+
+export { clearSnapshotCache }
