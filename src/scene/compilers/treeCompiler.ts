@@ -60,7 +60,7 @@ function compileInsert(event: Extract<TreeAlgorithmEvent, { type: 'tree.insert' 
     { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: event.node.value, index: -1, x: parentPos.x + sideOffset, y: parentPos.y - 80, color: 'success' }) },
     { type: 'connect', edge: AuxiliaryUnit.arrow({
       id: arrowId, fromEntity: phantomId, toEntity: event.node.id,
-      curved: true, dashed: true, thickness: 2, color: 'success', pulse: true,
+      curved: true, dashed: true, thickness: 1.2, color: 'success', pulse: true,
     }) },
     { type: 'create_node', node: createTreeNode(event.node.id, event.node.value, variant), animation: 'drop' },
     { type: 'connect', edge: createEdge(treeEdgeId(event.parentId, port, event.node.id), event.parentId, port, event.node.id, 'parent') },
@@ -92,7 +92,7 @@ function compileDelete(event: Extract<TreeAlgorithmEvent, { type: 'tree.delete' 
     { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: nodeVal, index: -1, x: pos.x + 140, y: pos.y - 80, color: 'danger' }) },
     { type: 'connect', edge: AuxiliaryUnit.arrow({
       id: arrowId, fromEntity: event.nodeId, toEntity: phantomId,
-      curved: true, dashed: true, thickness: 2, color: 'danger', pulse: true,
+      curved: true, dashed: true, thickness: 1.2, color: 'danger', pulse: true,
     }) },
     { type: 'wait', duration: 250 },
     { type: 'disconnect', edgeId: arrowId },
@@ -116,13 +116,13 @@ function compileRotate(event: Extract<TreeAlgorithmEvent, { type: 'tree.rotate' 
   if (isLeft) {
     commands.push({ type: 'connect', edge: AuxiliaryUnit.arrow({
       id: `${rotateArrowId}_left`, fromEntity: event.pivotId, toEntity: event.pivotId,
-      curved: true, dashed: false, thickness: 2.5, color: 'danger', pulse: true, variant: 'counterclockwise',
+      curved: true, dashed: true, thickness: 1.2, color: 'danger', pulse: true, variant: 'counterclockwise',
     }) })
   }
   if (isRight) {
     commands.push({ type: 'connect', edge: AuxiliaryUnit.arrow({
       id: `${rotateArrowId}_right`, fromEntity: event.pivotId, toEntity: event.pivotId,
-      curved: true, dashed: false, thickness: 2.5, color: 'danger', pulse: true, variant: 'clockwise',
+      curved: true, dashed: true, thickness: 1.2, color: 'danger', pulse: true, variant: 'clockwise',
     }) })
   }
   commands.push({ type: 'wait', duration: 300 })

@@ -52,7 +52,7 @@ function compileQueueEvent(event: QueueAlgorithmEvent, context: CompileContext):
         { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: event.value, index: -1, x: START_X + (count + 2) * CELL_GAP, y: START_Y - 80 }) },
         { type: 'connect', edge: AuxiliaryUnit.arrow({
           id: arrowId, fromEntity: phantomId, toEntity: id,
-          curved: true, dashed: true, thickness: 2, color: 'success', pulse: true,
+          curved: true, dashed: true, thickness: 1.2, color: 'success', pulse: true,
         }) },
         { type: 'add_note', text: `enqueue(${event.value})` },
       ]
@@ -71,7 +71,7 @@ function compileQueueEvent(event: QueueAlgorithmEvent, context: CompileContext):
         { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: frontVal, index: -1, x: START_X - 100, y: START_Y - 80, color: 'danger' }) },
         { type: 'connect', edge: AuxiliaryUnit.arrow({
           id: arrowId, fromEntity: frontId, toEntity: phantomId,
-          curved: true, dashed: true, thickness: 2, color: 'danger', pulse: true,
+          curved: true, dashed: true, thickness: 1.2, color: 'danger', pulse: true,
         }) },
         // Shift remaining cells left
         ...ids.slice(1).map((oldId, newIndex) => {

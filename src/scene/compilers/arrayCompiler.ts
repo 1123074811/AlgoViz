@@ -37,8 +37,8 @@ function compileArrayEvent(event: ArrayAlgorithmEvent, context: CompileContext):
       return [
         { type: 'set_cell', cellId: cellId(a), value: cellB?.type === 'cell' ? cellB.value : undefined, state: { role: 'swapping', color: 'danger', pulse: true } },
         { type: 'set_cell', cellId: cellId(b), value: cellA?.type === 'cell' ? cellA.value : undefined, state: { role: 'swapping', color: 'danger', pulse: true } },
-        { type: 'connect', edge: AuxiliaryUnit.arrow({ id: swapEdgeId(a, b), fromEntity: cellId(a), toEntity: cellId(b), curved: true, dashed: true, thickness: 2, color: 'danger', pulse: true }) },
-        { type: 'connect', edge: AuxiliaryUnit.arrow({ id: swapEdgeId(b, a), fromEntity: cellId(b), toEntity: cellId(a), curved: true, dashed: true, thickness: 2, color: 'danger', pulse: true }) },
+        { type: 'connect', edge: AuxiliaryUnit.arrow({ id: swapEdgeId(a, b), fromEntity: cellId(a), toEntity: cellId(b), curved: true, dashed: true, thickness: 1.2, color: 'danger', pulse: true }) },
+        { type: 'connect', edge: AuxiliaryUnit.arrow({ id: swapEdgeId(b, a), fromEntity: cellId(b), toEntity: cellId(a), curved: true, dashed: true, thickness: 1.2, color: 'danger', pulse: true }) },
         { type: 'wait', duration: 200 },
       ]
     }
@@ -46,7 +46,7 @@ function compileArrayEvent(event: ArrayAlgorithmEvent, context: CompileContext):
       const fromCell = context.scene.entities[cellId(event.from)]
       const value = fromCell?.type === 'cell' ? fromCell.value : undefined
       return [
-        { type: 'connect', edge: AuxiliaryUnit.arrow({ id: `move_${event.from}_${event.to}`, fromEntity: cellId(event.from), toEntity: cellId(event.to), curved: true, dashed: true, thickness: 2, color: 'primary', pulse: true }) },
+        { type: 'connect', edge: AuxiliaryUnit.arrow({ id: `move_${event.from}_${event.to}`, fromEntity: cellId(event.from), toEntity: cellId(event.to), curved: true, dashed: true, thickness: 1.2, color: 'primary', pulse: true }) },
         { type: 'set_cell', cellId: cellId(event.to), value, state: { role: 'current', color: 'primary', pulse: true } },
         { type: 'set_state', entityId: cellId(event.from), state: { role: 'idle', color: 'muted' }, merge: true },
       ]

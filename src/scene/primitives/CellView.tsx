@@ -17,13 +17,27 @@ export default function CellView({ cell }: CellViewProps) {
     return null
   }
 
+  const opacity = cell.state?.opacity ?? 1
+  const value = cell.value?.toString() ?? ''
+
+  // Matrix header row/col index labels rendered as plain text
+  if (cell.state?.role === 'header') {
+    return (
+      <g transform={`translate(${cell.position.x}, ${cell.position.y})`} opacity={opacity}>
+        <title>{`${cell.id} · header`}</title>
+        <text x={0} y={4} textAnchor="middle" fontSize="12" fontFamily="monospace"
+          fill="#64748B" fontWeight={500}>
+          {value}
+        </text>
+      </g>
+    )
+  }
+
   const width = cell.size?.width ?? 44
   const height = cell.size?.height ?? 44
   const palette = cell.state?.role === 'idle' ? COLOR_MAP.muted
     : cell.state?.color ? (COLOR_MAP[cell.state.color] ?? COLOR_MAP.muted)
     : COLOR_MAP.muted
-  const opacity = cell.state?.opacity ?? 1
-  const value = cell.value?.toString() ?? ''
   const isCurrent = cell.state?.role === 'current' || cell.state?.role === 'active'
   const isDanger = cell.state?.role === 'swapping' || cell.state?.role === 'conflict'
   const textColor = isDanger ? '#EF4444' : '#1E293B'

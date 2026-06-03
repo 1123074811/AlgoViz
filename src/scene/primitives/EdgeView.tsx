@@ -1,3 +1,4 @@
+import React from 'react'
 import type { Point, SceneEdge, SceneState } from '../types'
 
 const COLOR_MAP = {
@@ -14,29 +15,33 @@ interface EdgeViewProps {
 }
 
 export default function EdgeView({ edge, scene }: EdgeViewProps) {
+  const color = edge.state?.color ? COLOR_MAP[edge.state.color] : edge.style?.color ? COLOR_MAP[edge.style.color] : '#94A3B8'
+
+  // Self-loop: rotation arrows (clockwise / counterclockwise)
+  if (edge.from.entityId === edge.to.entityId && (edge.variant === 'clockwise' || edge.variant === 'counterclockwise')) {
+    return renderSelfLoop(edge, scene, color)
+  }
+
   const rawFrom = resolveAnchor(scene, edge.from.entityId, edge.from.portId)
   const rawTo = resolveAnchor(scene, edge.to.entityId, edge.to.portId)
   const from = rawFrom && rawTo ? trimAnchor(scene, edge.from.entityId, rawFrom, rawTo) : rawFrom
   const to = rawFrom && rawTo ? trimAnchor(scene, edge.to.entityId, rawTo, rawFrom) : rawTo
   if (!from || !to) return null
 
-  const color = edge.state?.color ? COLOR_MAP[edge.state.color] : edge.style?.color ? COLOR_MAP[edge.style.color] : '#94A3B8'
-  const markerEnd = edge.directed ? edge.variant === 'dependency' ? 'url(#sceneDependencyArrow)' : 'url(#sceneArrow)' : undefined
-  
+  // Select marker: trajectory arrows use subtle color-matched markers, structural edges use standard
+  const markerEnd = edge.directed ? selectMarker(edge) : undefined
+
+  // Academic dash pattern: subtle long dash for trajectory, short dash for structural
+  const dashArray = edge.style?.dashed
+    ? (edge.state?.pulse ? '6 4' : '5 5')
+    : undefined
+
+  // Default thickness: structural=1.5, trajectory=1.2
+  const thickness = edge.style?.thickness ?? (edge.style?.dashed ? 1.2 : 1.5)
+
   let path = ''
   if (edge.style?.curved) {
-    const dx = to.x - from.x
-    const dy = to.y - from.y
-    if (Math.abs(dy) < 30) {
-      // Horizontal separation: classic bottom dip (e.g., adjacent list nodes)
-      path = `M ${from.x} ${from.y} Q ${(from.x + to.x) / 2} ${Math.max(from.y, to.y) + 40} ${to.x} ${to.y}`
-    } else {
-      // Significant vertical separation: sweep in a beautiful, natural outward side-arch
-      const bulgeX = dx > 0 ? -Math.abs(dy) * 0.35 : Math.abs(dy) * 0.35
-      const controlX = (from.x + to.x) / 2 + bulgeX
-      const controlY = (from.y + to.y) / 2
-      path = `M ${from.x} ${from.y} Q ${controlX} ${controlY} ${to.x} ${to.y}`
-    }
+    path = computeCurvedPath(from, to, edge)
   } else {
     path = `M ${from.x} ${from.y} L ${to.x} ${to.y}`
   }
@@ -44,8 +49,104 @@ export default function EdgeView({ edge, scene }: EdgeViewProps) {
   return (
     <g>
       <title>{`${edge.id}: ${edge.from.entityId}${edge.from.portId ? `.${edge.from.portId}` : ''} → ${edge.to.entityId}${edge.to.portId ? `.${edge.to.portId}` : ''}`}</title>
-      <path d={path} fill="none" stroke={color} strokeWidth={edge.style?.thickness ?? 2} strokeDasharray={edge.style?.dashed ? '4 4' : undefined} markerEnd={markerEnd} className={edge.state?.pulse ? 'scene-edge-flow' : undefined} />
+      <path d={path} fill="none" stroke={color} strokeWidth={thickness}
+        strokeDasharray={dashArray}
+        strokeOpacity={edge.style?.dashed ? 0.7 : 1}
+        markerEnd={markerEnd}
+        className={edge.state?.pulse ? 'scene-edge-flow' : undefined} />
       {edge.label && <text x={(from.x + to.x) / 2} y={(from.y + to.y) / 2 - 8} textAnchor="middle" className="fill-slate-500 text-xs">{edge.label}</text>}
+    </g>
+  )
+}
+
+/**
+ * Select the appropriate SVG marker based on edge variant and color.
+ * Trajectory arrows get color-matched subtle markers; structural edges get standard markers.
+ */
+function selectMarker(edge: SceneEdge): string | undefined {
+  if (edge.variant === 'dependency') return 'url(#sceneDependencyArrow)'
+  // Trajectory arrows (dashed + curved) use color-matched trajectory markers
+  if (edge.style?.dashed && edge.style?.curved) {
+    const colorKey = edge.state?.color ?? edge.style?.color ?? 'muted'
+    if (colorKey === 'success') return 'url(#sceneTrajectorySuccess)'
+    if (colorKey === 'danger') return 'url(#sceneTrajectoryDanger)'
+    if (colorKey === 'primary') return 'url(#sceneTrajectoryPrimary)'
+  }
+  return 'url(#sceneArrow)'
+}
+
+/**
+ * Compute an elegant academic curved path between two points.
+ * Uses quadratic Bézier with context-aware control point placement.
+ */
+function computeCurvedPath(from: Point, to: Point, edge: SceneEdge): string {
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  const dist = Math.sqrt(dx * dx + dy * dy)
+
+  if (Math.abs(dy) < 30 && Math.abs(dx) < 30) {
+    // Very close points: small bottom dip
+    return `M ${from.x} ${from.y} Q ${(from.x + to.x) / 2} ${Math.max(from.y, to.y) + 30} ${to.x} ${to.y}`
+  }
+
+  if (Math.abs(dy) < 30) {
+    // Horizontal separation: elegant bottom arc (e.g., adjacent list nodes, swap arrows)
+    const dipDepth = Math.max(35, dist * 0.25)
+    return `M ${from.x} ${from.y} Q ${(from.x + to.x) / 2} ${Math.max(from.y, to.y) + dipDepth} ${to.x} ${to.y}`
+  }
+
+  if (Math.abs(dx) < 30) {
+    // Vertical separation: elegant side arc (e.g., stack push/pop)
+    const sideDir = edge.from.portId === 'right' || edge.to.portId === 'right' ? 1 : -1
+    const bulge = Math.max(40, Math.abs(dy) * 0.3)
+    const controlX = (from.x + to.x) / 2 + sideDir * bulge
+    return `M ${from.x} ${from.y} Q ${controlX} ${(from.y + to.y) / 2} ${to.x} ${to.y}`
+  }
+
+  // Diagonal: natural outward side-arch
+  const bulgeX = dx > 0 ? -Math.abs(dy) * 0.3 : Math.abs(dy) * 0.3
+  const controlX = (from.x + to.x) / 2 + bulgeX
+  const controlY = (from.y + to.y) / 2
+  return `M ${from.x} ${from.y} Q ${controlX} ${controlY} ${to.x} ${to.y}`
+}
+
+/**
+ * Render a self-loop arrow for tree rotation visualization.
+ * Draws a circular arc above the node with an arrowhead indicating direction.
+ */
+function renderSelfLoop(edge: SceneEdge, scene: SceneState, color: string): React.ReactElement | null {
+  const entity = scene.entities[edge.from.entityId]
+  if (!entity || !('position' in entity) || !entity.position) return null
+  const pos = entity.position
+  const r = ('size' in entity ? entity.size?.width ?? 48 : 48) / 2
+  const isClockwise = edge.variant === 'clockwise'
+
+  // Loop arc parameters
+  const loopR = r + 18
+  const startAngle = isClockwise ? -60 : -120
+  const endAngle = isClockwise ? 120 : 60
+
+  // Convert angles to SVG arc
+  const startRad = (startAngle * Math.PI) / 180
+  const endRad = (endAngle * Math.PI) / 180
+  const cx = pos.x
+  const cy = pos.y - r - loopR * 0.4
+
+  const sx = cx + loopR * Math.cos(startRad)
+  const sy = cy + loopR * Math.sin(startRad)
+  const ex = cx + loopR * Math.cos(endRad)
+  const ey = cy + loopR * Math.sin(endRad)
+
+  const path = `M ${sx} ${sy} A ${loopR} ${loopR} 0 ${isClockwise ? 1 : 0} ${isClockwise ? 1 : 0} ${ex} ${ey}`
+  const marker = isClockwise ? 'url(#sceneTrajectoryDanger)' : 'url(#sceneTrajectoryDanger)'
+
+  return (
+    <g>
+      <title>{`${edge.id}: ${edge.variant} rotation on ${edge.from.entityId}`}</title>
+      <path d={path} fill="none" stroke={color} strokeWidth={1.2}
+        strokeDasharray="5 5" strokeOpacity={0.7}
+        markerEnd={marker}
+        className={edge.state?.pulse ? 'scene-edge-flow' : undefined} />
     </g>
   )
 }
@@ -55,14 +156,29 @@ function trimAnchor(scene: SceneState, entityId: string, from: Point, to: Point)
   if (!entity || !('size' in entity) || !entity.size) return from
   const dx = to.x - from.x
   const dy = to.y - from.y
-  const ax = Math.abs(dx)
-  const ay = Math.abs(dy)
-  if (ax === 0 && ay === 0) return from
+  const dist = Math.sqrt(dx * dx + dy * dy)
+  if (dist === 0) return from
 
-  const halfW = entity.size.width / 2
-  const halfH = entity.size.height / 2
-  const scale = Math.min(halfW / Math.max(ax, 0.001), halfH / Math.max(ay, 0.001))
-  return { x: from.x + dx * scale, y: from.y + dy * scale }
+  const isCircle = entity.type === 'node' && (entity.variant.startsWith('tree.') || entity.variant.startsWith('graph.'))
+  let scale = 0
+  if (isCircle) {
+    const r = entity.size.width / 2
+    scale = r / dist
+  } else {
+    const halfW = entity.size.width / 2
+    const halfH = entity.size.height / 2
+    scale = Math.min(halfW / Math.max(Math.abs(dx), 0.001), halfH / Math.max(Math.abs(dy), 0.001))
+  }
+
+  const boundaryX = from.x + dx * scale
+  const boundaryY = from.y + dy * scale
+
+  // Stand-off gap (5px) from the boundary towards the other entity to prevent arrow tip overlap
+  const gap = 5
+  return {
+    x: boundaryX + (dx / dist) * gap,
+    y: boundaryY + (dy / dist) * gap
+  }
 }
 
 export function resolveAnchor(scene: SceneState, entityId: string, portId?: string): Point | null {

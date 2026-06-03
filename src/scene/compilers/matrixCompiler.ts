@@ -62,7 +62,7 @@ function createMatrix(rows: number, cols: number, values?: Array<Array<number | 
         id: `m_rhead_${row}`, type: 'cell',
         position: { x: startX - cellSize / 2 - labelPad, y: startY + row * cellSize },
         size: { width: labelPad * 2, height: cellSize },
-        value: row, state: { role: 'idle', color: 'muted' },
+        value: row, state: { role: 'header', color: 'muted' },
       },
     })
   }
@@ -75,7 +75,7 @@ function createMatrix(rows: number, cols: number, values?: Array<Array<number | 
         id: `m_chead_${col}`, type: 'cell',
         position: { x: startX + col * cellSize, y: startY - cellSize / 2 - labelPad },
         size: { width: cellSize, height: labelPad * 2 },
-        value: col, state: { role: 'idle', color: 'muted' },
+        value: col, state: { role: 'header', color: 'muted' },
       },
     })
   }
@@ -87,7 +87,7 @@ function createMatrix(rows: number, cols: number, values?: Array<Array<number | 
       id: 'm_corner', type: 'cell',
       position: { x: startX - cellSize / 2 - labelPad, y: startY - cellSize / 2 - labelPad },
       size: { width: labelPad * 2, height: labelPad * 2 },
-      value: '', state: { role: 'idle', color: 'muted' },
+      value: '', state: { role: 'header', color: 'muted' },
     },
   })
 

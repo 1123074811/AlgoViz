@@ -119,14 +119,25 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
           <filter id="sceneShadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="8" stdDeviation="7" floodColor="#0F172A" floodOpacity="0.12" />
           </filter>
-          <marker id="sceneArrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
-            <path d="M0,0 L0,6 L8,3 z" fill="#94A3B8" />
+          {/* Academic open chevron arrowheads — minimalist, no fill */}
+          <marker id="sceneArrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M1,1 L9,4 L1,7" fill="none" stroke="#64748B" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
           </marker>
-          <marker id="sceneDependencyArrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
-            <path d="M0,0 L0,6 L8,3 z" fill="#F59E0B" />
+          <marker id="sceneDependencyArrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M1,1 L9,4 L1,7" fill="none" stroke="#D97706" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
           </marker>
-          <marker id="scenePointerArrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
-            <path d="M0,0 L0,6 L8,3 z" fill="#93C5FD" />
+          <marker id="scenePointerArrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path d="M1,1 L9,4 L1,7" fill="none" stroke="#93C5FD" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          </marker>
+          {/* Trajectory arrow markers — even thinner, more subtle for animated paths */}
+          <marker id="sceneTrajectorySuccess" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M1,0.5 L7,3 L1,5.5" fill="none" stroke="#10B981" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+          </marker>
+          <marker id="sceneTrajectoryDanger" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M1,0.5 L7,3 L1,5.5" fill="none" stroke="#EF4444" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+          </marker>
+          <marker id="sceneTrajectoryPrimary" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M1,0.5 L7,3 L1,5.5" fill="none" stroke="#3B82F6" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
           </marker>
         </defs>
         <NodeStyles />
