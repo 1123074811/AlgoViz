@@ -70,32 +70,38 @@ AlgoViz 面向以下场景：
 - 步骤稳定可控
 - 适合教学演示
 
-### 3. 多类型可视化渲染器
+### 3. 场景化动画引擎 (Scene Engine)
 
-当前渲染入口位于 `src/components/Canvas/VisualizationCanvas.tsx`，根据 `initialState.type` 选择不同渲染器：
+项目采用事件驱动的场景动画引擎，核心渲染入口为 `src/scene/SceneCanvas.tsx`。AI 或预制脚本输出算法语义事件（如 `array.swap`、`tree.rotate`、`stack.push`），由各数据结构编译器编译为场景命令（创建/删除/连接/状态变更），最终由统一的 SVG 场景画布渲染。
 
-| 类型 | 渲染器 | 说明 |
+| 编译器 | 事件前缀 | 覆盖算法 |
 |---|---|---|
-| `array` | `ArrayRenderer` | 数组、排序、搜索、滑动窗口等 |
-| `graph` | `GraphRenderer` | BFS、DFS、最短路、最小生成树等 |
-| `tree` | `TreeRenderer` | 二叉树、BST、AVL、Trie 等 |
-| `matrix` | `MatrixRenderer` | 动态规划表格、矩阵类算法 |
-| `linked_list` | `LinkedListRenderer` | 单链表、双向链表等结构 |
+| `arrayCompiler` | `array.*` | 排序、搜索、滑动窗口、单调栈 |
+| `treeCompiler` | `tree.*` | BST、AVL、红黑树、Trie、堆 |
+| `graphCompiler` | `graph.*` | BFS、DFS、Dijkstra、Prim、Kruskal、拓扑排序 |
+| `matrixCompiler` | `matrix.*` / `n_queens.*` | DP 表格、N 皇后、数独 |
+| `linkedListCompiler` | `linked_list.*` | 单链表、双向链表、循环链表 |
+| `stackCompiler` | `stack.*` | 栈操作（push/pop/peek） |
+| `queueCompiler` | `queue.*` | 队列操作（enqueue/dequeue/peek） |
+| `stringCompiler` | `string.*` | KMP、Manacher、字符串匹配 |
+
+旧版 `VisualizationCanvas.tsx` + 独立渲染器仍保留用于兼容，但新算法统一走 Scene Engine 路径。
 
 ### 4. 中英双语
 
 项目使用 `i18next` 和 `react-i18next` 提供中英双语资源，语言配置保存在浏览器本地。
 
-### 5. 统一教材风设计
+### 5. 简约学术风设计
 
-视觉风格偏向清晰、克制、适合教学场景的教材风：
+视觉风格遵循学术教材的简约克制美学，兼顾信息密度与视觉优雅：
 
-- 白色主背景
-- 蓝色主色
-- 绿色表示完成
-- 橙色表示当前高亮
-- 红色表示冲突、比较或错误
-- 灰色表示非活跃状态
+- 白色主背景，蓝色主色
+- 绿色表示完成/插入，橙色表示当前高亮，红色表示冲突/删除，灰色表示非活跃
+- **开口 V 形箭头**：无填充学术风箭头标记，替代传统实心三角
+- **曲线轨迹**：节点交换、入栈出栈、入队出队、树旋转等操作均以二次贝塞尔曲线弧线展示移动轨迹
+- **虚线流动动画**：轨迹箭头采用细线虚线 + 流动动画，结构边为实线
+- **圆形/矩形精确裁剪**：箭头末端按实体几何形状精确裁剪并留 5px 间距，避免视觉重叠
+- **矩阵下标**：行列索引以纯文本渲染，不被单元格边框包裹
 
 ---
 
@@ -109,7 +115,7 @@ AlgoViz 面向以下场景：
 | 路由 | React Router v6 |
 | 状态管理 | Zustand |
 | 样式 | Tailwind CSS + CSS Variables |
-| 可视化 | D3.js + Canvas/SVG 渲染思路 + Framer Motion |
+| 可视化 | SVG 场景引擎 (Scene Engine) + 事件编译器 + 自适应布局 |
 | 代码编辑器 | Monaco Editor |
 | 国际化 | i18next + react-i18next |
 | AI 调用 | 用户自配置 OpenAI 兼容 Chat Completions 接口 |
@@ -156,7 +162,11 @@ VisualizationCanvas 选择对应渲染器
 | 自动修复 | `src/ai/repair.ts` | 执行本地 JSON 修复，并构造 AI 二次修复请求 |
 | 类型定义 | `src/types/animation.ts` | 定义 AnimationScript、Step、Action 等类型 |
 | 动画引擎 Hook | `src/hooks/useAnimationEngine.ts` | 根据当前步骤派生可视状态，控制播放 |
-| 渲染入口 | `src/components/Canvas/VisualizationCanvas.tsx` | 根据状态类型选择渲染器 |
+| 场景引擎 | `src/scene/SceneEngine.ts` | 根据动画脚本与当前步骤派生完整场景状态 |
+| 事件编译器 | `src/scene/compilers/*.ts` | 将算法语义事件编译为场景命令 |
+| 场景图元 | `src/scene/primitives/*.tsx` | NodeView、CellView、EdgeView、ContainerView 等渲染组件 |
+| 布局引擎 | `src/scene/layouts/*.ts` | 树/图/链表自适应布局算法 |
+| 渲染入口 | `src/scene/SceneCanvas.tsx` | 统一 SVG 画布，渲染节点/边/指针/容器/标签 |
 | 预制脚本/生成器 | `src/presets/` | 为常见算法提供稳定动画数据 |
 
 ---
@@ -390,56 +400,80 @@ src/components/Layout/Sidebar.tsx
 AlgoViz/
 ├── index.html
 ├── package.json
-├── package-lock.json
 ├── postcss.config.js
 ├── tailwind.config.js
 ├── tsconfig.json
-├── tsconfig.node.json
 ├── vite.config.ts
 └── src/
     ├── App.tsx
     ├── main.tsx
     ├── index.css
-    ├── ai/
-    │   ├── client.ts
-    │   ├── index.ts
-    │   ├── parser.ts
-    │   └── prompts.ts
+    ├── ai/                          # AI 分析引擎
+    │   ├── client.ts                # API 调用 + 代理回退
+    │   ├── parser.ts                # JSON 提取与解析
+    │   ├── prompts.ts               # Prompt 模板
+    │   ├── schema.ts                # AnimationScript 校验
+    │   ├── repair.ts                # 本地/AI 自动修复
+    │   ├── errors.ts                # 结构化错误报告
+    │   └── input.ts                 # 输入数据结构识别
+    ├── scene/                       # 场景动画引擎 (核心)
+    │   ├── SceneEngine.ts           # 场景状态派生 + 命令应用
+    │   ├── SceneCanvas.tsx          # 统一 SVG 画布渲染
+    │   ├── EventTimeline.tsx        # 事件时间线组件
+    │   ├── eventCompiler.ts         # 编译器路由
+    │   ├── eventTypes.ts            # 算法事件类型定义
+    │   ├── commandTypes.ts          # 场景命令类型定义
+    │   ├── types.ts                 # 场景实体/边/状态类型
+    │   ├── compilers/               # 各数据结构事件编译器
+    │   │   ├── arrayCompiler.ts
+    │   │   ├── treeCompiler.ts
+    │   │   ├── graphCompiler.ts
+    │   │   ├── matrixCompiler.ts
+    │   │   ├── linkedListCompiler.ts
+    │   │   ├── stackCompiler.ts
+    │   │   ├── queueCompiler.ts
+    │   │   └── stringCompiler.ts
+    │   ├── primitives/              # 场景图元渲染组件
+    │   │   ├── NodeView.tsx          # 节点 (圆形/矩形)
+    │   │   ├── CellView.tsx          # 单元格 (数组/矩阵)
+    │   │   ├── EdgeView.tsx          # 边 + 曲线轨迹 + 箭头
+    │   │   ├── ContainerView.tsx     # 容器 (栈U形/队列管道)
+    │   │   ├── PointerView.tsx       # 指针箭头
+    │   │   ├── LabelView.tsx         # 文本标签
+    │   │   └── DataUnits.ts          # 实体/边工厂函数
+    │   ├── layouts/                 # 自适应布局算法
+    │   │   ├── treeLayout.ts         # 端口感知二叉树 + 多分支布局
+    │   │   ├── graphLayout.ts        # 稳定圆形 + 分层流式布局
+    │   │   └── linkedListLayout.ts   # 链表水平布局
+    │   └── variants/               # 节点/边视觉变体
     ├── components/
-    │   ├── Canvas/
-    │   │   ├── VisualizationCanvas.tsx
-    │   │   └── renderers/
-    │   │       ├── ArrayRenderer.tsx
-    │   │       ├── GraphRenderer.tsx
-    │   │       ├── LinkedListRenderer.tsx
-    │   │       ├── MatrixRenderer.tsx
-    │   │       └── TreeRenderer.tsx
-    │   └── Layout/
-    │       ├── Header.tsx
-    │       ├── MainLayout.tsx
-    │       └── Sidebar.tsx
+    │   ├── Canvas/                  # 旧版渲染器 (兼容保留)
+    │   ├── Controls/                # 播放控制栏
+    │   ├── Editor/                  # 代码/输入编辑器
+    │   └── Layout/                  # 页面布局
     ├── data/
     │   └── algorithmDefs.ts
     ├── hooks/
     │   └── useAnimationEngine.ts
     ├── i18n/
-    │   ├── index.ts
-    │   └── locales/
     ├── icons/
-    │   └── index.tsx
     ├── pages/
     │   ├── Home/
     │   ├── Playground/
     │   ├── Settings/
     │   └── Visualizer/
-    ├── presets/
-    │   ├── generators.ts
+    ├── presets/                     # 预制动画脚本与生成器
     │   ├── index.ts
-    │   └── *.ts
+    │   ├── generators.ts            # 动态生成器 (50+ 算法)
+    │   ├── operationPresets.ts       # 数据结构操作预设
+    │   └── *.ts                     # 各算法独立预设
     ├── store/
     │   └── algorithmStore.ts
-    └── types/
-        └── animation.ts
+    ├── types/
+    │   └── animation.ts
+    └── utils/
+        ├── codeCompiler.ts
+        └── inputParser.ts
 ```
 
 ---
@@ -826,24 +860,31 @@ tailwind.config.js
 根据当前代码结构，项目已实现：
 
 - React 18 + TypeScript + Vite 项目脚手架。
-- Tailwind CSS 与 CSS Variables 教材风样式体系。
+- Tailwind CSS 与 CSS Variables 简约学术风样式体系。
 - 首页、可视化页、AI 代码实验室、设置页。
 - React Router v6 路由。
 - Zustand 算法状态管理。
 - Monaco Editor 代码编辑器集成。
 - i18next 中英双语。
 - Lucide 图标封装。
-- OpenAI 兼容接口调用。
+- OpenAI 兼容接口调用 + 代理回退机制。
 - AI System Prompt 模板与多输入结构 Prompt 上下文。
 - AI 返回 JSON 提取、Schema 校验、规范化和自动修复。
 - 结构化 AI 错误报告、修复建议、原始响应查看和修复历史展示。
 - AnimationScript 类型系统。
-- 数组、图、树、矩阵、链表渲染器入口。
+- **场景化动画引擎 (Scene Engine)**：事件驱动、编译器架构、统一 SVG 画布。
+- **8 个数据结构编译器**：数组、树、图、矩阵、链表、栈、队列、字符串。
+- **场景图元渲染**：NodeView、CellView、EdgeView、ContainerView、PointerView、LabelView。
+- **自适应布局引擎**：端口感知二叉树布局、稳定圆形/分层流式图布局、链表水平布局。
+- **曲线轨迹动画**：节点交换、入栈出栈、入队出队、树旋转等操作均以贝塞尔弧线展示。
+- **学术风箭头**：开口 V 形箭头标记、细线虚线轨迹、精确裁剪间距。
+- **辅助数据结构**：图/树遍历时自动渲染 Queue/Stack 辅助容器。
+- **操作栏**：结构型数据结构支持 Insert/Delete/Search 等操作切换。
 - 播放控制 Hook。
-- 多个预制算法脚本。
-- 大量算法动态生成器。
+- 50+ 算法预制脚本与动态生成器。
 - Playground 分析历史本地保存。
 - API 连接测试与 token 成本预估。
+- 可拖拽分栏布局（编辑器/画布/信息面板）。
 
 ---
 
@@ -879,13 +920,25 @@ tailwind.config.js
 - 支持更多输入数据结构，例如图、树、矩阵对象。
 - 支持 AI 失败后自动重试或请求格式修复。
 
-### 扩展设计：场景化算法动画引擎
+### Phase 4：场景化动画引擎（已完成）
 
 - 详细优化方案：[docs/scene-engine-optimization-plan.md](docs/scene-engine-optimization-plan.md)
 - 使用与维护说明：[docs/scene-engine-usage.md](docs/scene-engine-usage.md)
-- 面向链表、树、图、矩阵、回溯等复杂算法，设计可组合的场景图元和事件驱动动画系统。
-- 核心思路是让 AI 输出算法语义事件，由前端 Scene Engine 负责编译为节点、端口、边、指针和布局动画。
-- 该方案不是新的阶段规划，而是后续可按需渐进落地的动画引擎架构设计。
+- 实现事件驱动的 Scene Engine，AI/预制脚本输出算法语义事件，前端编译为场景命令。
+- 8 个数据结构编译器（数组、树、图、矩阵、链表、栈、队列、字符串）。
+- 统一 SVG 场景画布 + 6 种图元渲染组件。
+- 端口感知二叉树布局、稳定圆形/分层流式图布局、链表水平布局。
+- 简约学术风视觉：开口 V 形箭头、曲线轨迹、虚线流动动画、精确裁剪间距。
+- 辅助数据结构动态渲染（Queue/Stack 容器）。
+- 结构型数据结构操作栏（Insert/Delete/Search 切换）。
+- 可拖拽分栏布局。
+
+### 扩展方向
+
+- 新增更多算法编译器（如并查集、哈希表等）。
+- 增强动画过渡效果（节点平滑位移、淡入淡出）。
+- 支持用户自定义事件与场景图元。
+- 移动端触控优化。
 
 ---
 
@@ -893,12 +946,13 @@ tailwind.config.js
 
 如果你希望继续扩展 AlgoViz，可以优先从以下方向入手：
 
-1. **新增算法生成器**：在 `src/presets/` 中新增生成函数，并注册到 `generators.ts`。
-2. **扩展渲染器**：根据新的 `initialState.type` 添加新的可视化组件。
-3. **完善算法元数据**：在 `src/data/algorithmDefs.ts` 中补充定义、流程、复杂度和适用场景。
-4. **增强 AI Prompt**：在 `src/ai/prompts.ts` 中优化输出约束。
-5. **强化解析器**：在 `src/ai/parser.ts` 中增加更严格的 Schema 校验与错误恢复。
-6. **改进 UI 体验**：优化 `Visualizer` 和 `Playground` 的响应式布局与信息密度。
+1. **新增算法编译器**：在 `src/scene/compilers/` 中新增编译器，将算法事件编译为场景命令，并注册到 `eventCompiler.ts`。
+2. **新增算法生成器**：在 `src/presets/` 中新增生成函数，并注册到 `generators.ts`。
+3. **扩展场景图元**：在 `src/scene/primitives/` 中添加新的渲染组件（如高亮框、标注气泡等）。
+4. **完善算法元数据**：在 `src/data/algorithmDefs.ts` 中补充定义、流程、复杂度和适用场景。
+5. **增强 AI Prompt**：在 `src/ai/prompts.ts` 中优化输出约束。
+6. **强化解析器**：在 `src/ai/parser.ts` 中增加更严格的 Schema 校验与错误恢复。
+7. **改进 UI 体验**：优化 `Visualizer` 和 `Playground` 的响应式布局与信息密度。
 
 ---
 
