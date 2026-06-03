@@ -4,7 +4,7 @@ import type { CompileContext, EventCompiler } from '../SceneEngine'
 import { AuxiliaryUnit, DataUnit } from '../primitives/DataUnits'
 
 const CX = 500
-const START_Y = 200
+const BOTTOM_Y = 360
 const CELL_GAP = 44
 
 export const stackCompiler: EventCompiler = {
@@ -36,7 +36,7 @@ function compileStackEvent(event: StackAlgorithmEvent, context: CompileContext):
         ...cleanupCommands,
         ...event.values.map((value, index) => ({
           type: 'create_cell' as const,
-          cell: DataUnit.arrayCell({ id: stackCellId(index), value, index, x: CX, y: START_Y + index * CELL_GAP }),
+          cell: DataUnit.arrayCell({ id: stackCellId(index), value, index, x: CX, y: BOTTOM_Y - index * CELL_GAP }),
         }))
       ]
     case 'stack.push': {
@@ -47,12 +47,12 @@ function compileStackEvent(event: StackAlgorithmEvent, context: CompileContext):
       // Create actual cell, and create a phantom cell representing the path, connected with a curved arrow
       return [
         ...cleanupCommands,
-        { type: 'create_cell', cell: DataUnit.arrayCell({ id, value: event.value, index: count, x: CX, y: START_Y + count * CELL_GAP }) },
+        { type: 'create_cell', cell: DataUnit.arrayCell({ id, value: event.value, index: count, x: CX, y: BOTTOM_Y - count * CELL_GAP }) },
         { type: 'set_state', entityId: id, state: { role: 'inserted', color: 'success', pulse: true }, merge: true },
-        { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: event.value, index: -1, x: CX + 160, y: START_Y - 60 }) },
+        { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: event.value, index: -1, x: CX + 160, y: BOTTOM_Y - count * CELL_GAP - 60 }) },
         { type: 'connect', edge: AuxiliaryUnit.arrow({
           id: arrowId, fromEntity: phantomId, toEntity: id,
-          curved: true, dashed: true, thickness: 2, color: 'success', pulse: true,
+          curved: true, dashed: true, thickness: 1.2, color: 'success', pulse: true,
         }) },
         { type: 'add_note', text: `push(${event.value})` },
       ]
@@ -69,10 +69,10 @@ function compileStackEvent(event: StackAlgorithmEvent, context: CompileContext):
       return [
         ...cleanupCommands,
         { type: 'set_state', entityId: topId, state: { role: 'deleted', color: 'danger', opacity: 0.4, pulse: true }, merge: true },
-        { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: topVal, index: -1, x: CX + 160, y: START_Y - 60, color: 'danger' }) },
+        { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: topVal, index: -1, x: CX + 160, y: BOTTOM_Y - topIdx * CELL_GAP - 60, color: 'danger' }) },
         { type: 'connect', edge: AuxiliaryUnit.arrow({
           id: arrowId, fromEntity: topId, toEntity: phantomId,
-          curved: true, dashed: true, thickness: 2, color: 'danger', pulse: true,
+          curved: true, dashed: true, thickness: 1.2, color: 'danger', pulse: true,
         }) },
         { type: 'add_note', text: `pop() → ${topVal}` },
       ]

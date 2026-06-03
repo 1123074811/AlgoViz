@@ -20,8 +20,11 @@ export default function ContainerView({ type, cells }: ContainerViewProps) {
     // U-shaped container: bottom + left + right lines, open at top
     // Positioned around the vertical column of cells
     const centerX = cells[0].position.x
-    const topY = cells[0].position.y - cellH / 2 - pad
-    const bottomY = cells[cells.length - 1].position.y + cellH / 2 + pad
+    const yCoords = cells.map(c => c.position.y)
+    const minY = Math.min(...yCoords)
+    const maxY = Math.max(...yCoords)
+    const topY = minY - cellH / 2 - pad
+    const bottomY = maxY + cellH / 2 + pad
     const leftX = centerX - cellW / 2 - pad
     const rightX = centerX + cellW / 2 + pad
 

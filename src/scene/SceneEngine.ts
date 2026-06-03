@@ -159,7 +159,7 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
     if (stack) {
       const CELL_GAP = 44
       const CX = 840 // On the right side of the canvas
-      const START_Y = 160 // Top vertical offset
+      const BOTTOM_Y = 360 // Anchored bottom of the stack cup
 
       if (stack.length > 0) {
         stack.forEach((nodeId, index) => {
@@ -168,7 +168,7 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
           scene.entities[cellId] = {
             id: cellId,
             type: 'cell',
-            position: { x: CX, y: START_Y + index * CELL_GAP },
+            position: { x: CX, y: BOTTOM_Y - index * CELL_GAP },
             size: { width: 44, height: 44 },
             value,
             col: index,
@@ -185,7 +185,7 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
         scene.entities[cellId] = {
           id: cellId,
           type: 'cell',
-          position: { x: CX, y: START_Y },
+          position: { x: CX, y: BOTTOM_Y },
           size: { width: 44, height: 44 },
           value: '',
           col: 0,
@@ -200,7 +200,7 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
         id: 'stack_label',
         type: 'label',
         text: 'Stack (递归调用栈)',
-        position: { x: CX, y: START_Y - 45 }, // Higher up to avoid overlap with top stack border
+        position: { x: CX, y: BOTTOM_Y - 5 * CELL_GAP - 10 }, // Placed above the max-height stack cup
       }
     }
 
