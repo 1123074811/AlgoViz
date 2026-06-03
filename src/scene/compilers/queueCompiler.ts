@@ -82,7 +82,7 @@ function compileQueueEvent(event: QueueAlgorithmEvent, context: CompileContext):
           }
           return { type: 'wait' as const, duration: 0 }
         }),
-        ...ids.slice(1).map((oldId) => ({ type: 'remove_entity' as const, entityId: oldId })),
+        { type: 'remove_entity', entityId: ids[ids.length - 1] },
         { type: 'add_note', text: `dequeue() → ${frontVal}` },
       ]
     }
