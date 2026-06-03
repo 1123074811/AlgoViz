@@ -1,7 +1,7 @@
 import type { AnimationScript } from '@/types/animation'
 import type { AIErrorReport } from './errors'
 import { ERROR_TEMPLATES } from './errors'
-import { validateAnimationScript, normalizeAnimationScript } from './schema'
+import { validateAnimationScript, normalizeAnimationScript, validateCrossStepConsistency } from './schema'
 
 export interface ParseResult {
   success: boolean
@@ -83,6 +83,23 @@ export function parseAIResponseDetailed(raw: string): ParseResult {
     return {
       success: false,
       error: { ...ERROR_TEMPLATES.schemaFailed, issues: [{ path: '', code: 'normalize_failed', message: '规范化失败，脚本结构不完整', severity: 'error', recoverable: false }], rawResponse: raw },
+      rawJson: json,
+      extractedText,
+    }
+  }
+
+  // Cross-step semantic consistency
+  const crossStepIssues = validateCrossStepConsistency(
+    script.steps,
+    script.initialState.type
+  )
+
+  // If any cross-step issue is non-recoverable, the whole script is invalid
+  const hasFatalCrossStep = crossStepIssues.some(iss => iss.severity === 'error' && !iss.recoverable)
+  if (hasFatalCrossStep) {
+    return {
+      success: false,
+      error: { ...ERROR_TEMPLATES.schemaFailed, issues: [...issues, ...crossStepIssues], rawResponse: raw },
       rawJson: json,
       extractedText,
     }

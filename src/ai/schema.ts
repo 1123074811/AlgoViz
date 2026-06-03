@@ -203,6 +203,154 @@ function validateSteps(steps: unknown[], rendererType?: string): AIValidationIss
   return issues
 }
 
+/**
+ * Cross-step semantic consistency checks.
+ * Catches contradictions like: visiting a deleted node, double-insert without delete,
+ * tree rotation on non-existent node, use-after-delete.
+ */
+export function validateCrossStepConsistency(
+  steps: AnimationStep[],
+  rendererType: string
+): AIValidationIssue[] {
+  const issues: AIValidationIssue[] = []
+
+  // Track lifecycle of every entity ID mentioned in events
+  const entityLifecycle = new Map<string, { created: number; deleted: number | null }>()
+
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i]
+    const events = step.events ?? []
+
+    for (let ei = 0; ei < events.length; ei++) {
+      const event = events[ei] as Record<string, unknown>
+      const type = String(event.type ?? '')
+
+      // Track create/delete lifecycle
+      if (type.endsWith('.create')) {
+        const ids = extractCreatedIds(event, type)
+        for (const id of ids) {
+          if (entityLifecycle.has(id) && entityLifecycle.get(id)!.deleted === null) {
+            issues.push(issue(
+              `steps[${i}].events[${ei}]`,
+              'duplicate_create',
+              `实体 "${id}" 在第 ${entityLifecycle.get(id)!.created} 步已创建，第 ${i} 步重复创建（期间无 delete）`,
+              `检查是否忘记在中间插入 delete 事件`,
+              'error',
+              false
+            ))
+          }
+          entityLifecycle.set(id, { created: i, deleted: null })
+        }
+      }
+
+      if (type.endsWith('.delete')) {
+        const id = extractDeletedId(event, type)
+        if (id) {
+          const lifecycle = entityLifecycle.get(id)
+          if (lifecycle && lifecycle.deleted === null) {
+            lifecycle.deleted = i
+          }
+        }
+      }
+
+      // Check for visiting/using deleted entities
+      const refs = extractReferencedIds(event, type)
+      for (const refId of refs) {
+        const lifecycle = entityLifecycle.get(refId)
+        if (lifecycle && lifecycle.deleted !== null && lifecycle.deleted < i) {
+          issues.push(issue(
+            `steps[${i}].events[${ei}]`,
+            'use_after_delete',
+            `实体 "${refId}" 在第 ${lifecycle.deleted} 步已被删除，第 ${i} 步事件 "${type}" 仍引用它`,
+            `删除引用或调整事件顺序`,
+            'error',
+            false
+          ))
+        }
+      }
+    }
+  }
+
+  // Tree-specific: rotate must reference existing nodes
+  if (rendererType === 'tree') {
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i]
+      const events = step.events ?? []
+      for (let ei = 0; ei < events.length; ei++) {
+        const event = events[ei] as Record<string, unknown>
+        const type = String(event.type ?? '')
+        if (type === 'tree.rotate') {
+          const pivotId = event.pivotId as string
+          const lifecycle = entityLifecycle.get(pivotId)
+          if (!lifecycle || lifecycle.deleted !== null) {
+            issues.push(issue(
+              `steps[${i}].events[${ei}]`,
+              'rotate_invalid_node',
+              `tree.rotate 的 pivotId "${pivotId}" 在旋转时不存在或已被删除`,
+              undefined,
+              'error',
+              false
+            ))
+          }
+        }
+      }
+    }
+  }
+
+  return issues
+}
+
+function extractCreatedIds(event: Record<string, unknown>, type: string): string[] {
+  const ids: string[] = []
+  if (type === 'linked_list.create' || type === 'graph.create') {
+    const nodes = event.nodes as { id: string }[] | undefined
+    if (nodes) ids.push(...nodes.map(n => n.id))
+  }
+  if (type === 'tree.create') {
+    const nodes = event.nodes as { id: string }[] | undefined
+    if (nodes) ids.push(...nodes.map(n => n.id))
+  }
+  if (type === 'array.create') {
+    const count = event.count as number ?? 0
+    for (let j = 0; j < count; j++) ids.push(`arr_${j}`)
+  }
+  if (type === 'matrix.create') {
+    const rows = event.rows as number ?? 0
+    const cols = event.cols as number ?? 0
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        ids.push(`cell_${r}_${c}`)
+      }
+    }
+  }
+  return ids
+}
+
+function extractDeletedId(event: Record<string, unknown>, type: string): string | null {
+  if (type === 'linked_list.delete' || type === 'tree.delete') {
+    return (event.nodeId as string) ?? null
+  }
+  return null
+}
+
+function extractReferencedIds(event: Record<string, unknown>, type: string): string[] {
+  const ids: string[] = []
+  const nodeId = event.nodeId as string | undefined
+  const targetNodeId = event.targetNodeId as string | undefined
+  const from = event.from as string | undefined
+  const to = event.to as string | undefined
+  const source = event.source as string | undefined
+  const target = event.target as string | undefined
+
+  if (nodeId) ids.push(nodeId)
+  if (targetNodeId) ids.push(targetNodeId)
+  if (from) ids.push(from)
+  if (to) ids.push(to)
+  if (source) ids.push(source)
+  if (target) ids.push(target)
+  return ids
+}
+
 /** Normalize and sanitize: fill defaults, preserve Phase 2 fields */
 export function normalizeAnimationScript(raw: unknown): AnimationScript | null {
   if (!raw || typeof raw !== 'object') return null
