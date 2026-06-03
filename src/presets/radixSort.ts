@@ -6,16 +6,18 @@ export function generateRadixSort(arr: number[]): AnimationScript {
   const steps: AnimationScript['steps'] = []
   let sid = 1
   const n = data.length
-
   const maxVal = Math.max(...data, 1)
 
-  // Step 1: announce algorithm start + create array cells for scene engine
+  // Step 1: announce + create array cells + init empty count/output panels
   steps.push({
     ...makeStep(sid++, 0,
       `基数排序开始。最大值=${maxVal}，将按个位→十位→百位的顺序，从低位到高位逐位排序`,
       `Radix sort start. Max=${maxVal}, sort digit by digit from least significant (units) to most significant (hundreds)`,
       'highlight', [], 'primary', 0, 0, n,
-      sortTeaching({ max: maxVal, phase: '初始化 / Init' })
+      sortTeachingWithAux({ max: maxVal, phase: '初始化 / Init' }, [
+        { id: 'count', label: '计数数组 count[0..9]', data: new Array(10).fill(0) },
+        { id: 'output', label: '输出数组 output', data: new Array(n).fill('') },
+      ])
     ),
     events: [{ type: 'array.create', values: [...data] }, { type: 'scene.highlight', entityId: 'arr_0', role: 'active', color: 'primary' }],
   })
@@ -26,13 +28,16 @@ export function generateRadixSort(arr: number[]): AnimationScript {
     const digitNameZh = exp === 1 ? '个位' : exp === 10 ? '十位' : exp === 100 ? '百位' : `${exp}位`
     const digitNameEn = exp === 1 ? 'units' : exp === 10 ? 'tens' : 'hundreds'
 
-    // Step: announce current digit
+    // Announce current digit — show empty count for this digit
     steps.push({
       ...makeStep(sid++, 4,
-        `按${digitNameZh}排序 (exp=${exp})。基数排序从最低位开始，因为低位排序的结果会被高位排序保留（稳定性）`,
-        `Sort by ${digitNameEn} digit (exp=${exp}). Radix sort starts from LSD because stability preserves lower-digit ordering when sorting higher digits`,
+        `按${digitNameZh}排序 (exp=${exp})。基数排序从最低位开始，低位排序结果被高位排序保留（稳定性）`,
+        `Sort by ${digitNameEn} digit (exp=${exp}). LSD is stable, preserving lower-digit ordering`,
         'highlight', [], 'warning', 0, 0, n,
-        sortTeaching({ digit: (exp === 1 ? '个位' : exp === 10 ? '十位' : '百位'), exp })
+        sortTeachingWithAux({ digit: (exp === 1 ? '个位' : exp === 10 ? '十位' : '百位'), exp }, [
+          { id: 'count', label: `计数 count / ${digitPlace}`, data: new Array(10).fill(0) },
+          { id: 'output', label: `输出 output / ${digitPlace}`, data: new Array(n).fill('') },
+        ])
       ),
       events: [{ type: 'scene.note', text: `按${digitNameZh}排序 (exp=${exp})` }],
     })
@@ -44,41 +49,45 @@ export function generateRadixSort(arr: number[]): AnimationScript {
       count[digit]++
 
       const countArr: AuxiliaryArrayState = {
-        id: 'count', label: `计数(count) / ${digitPlace}`,
-        data: [...count],
+        id: 'count', label: `计数 count / ${digitPlace}`,
+        data: count.map(String),
         activeIndices: [digit],
         colorMap: { [digit]: 'warning' as ActionColor },
       }
 
       steps.push({
         ...makeStep(sid++, 6,
-          `${data[i]} 的${digitNameZh}=${digit}，count[${digit}] 从 ${count[digit] - 1} 增加到 ${count[digit]}`,
-          `${data[i]} ${digitNameEn} digit=${digit}, count[${digit}] increased from ${count[digit] - 1} to ${count[digit]}`,
+          `${data[i]} 的${digitNameZh}=${digit}，count[${digit}] 增加到 ${count[digit]}`,
+          `${data[i]} ${digitNameEn} digit=${digit}, count[${digit}] → ${count[digit]}`,
           'compare', [i], 'warning', sid, 0, 1,
-          sortTeachingWithAux({ digit: `${digitPlace}`, value: data[i] }, [countArr])
+          sortTeachingWithAux({ digit: `${digitPlace}`, value: data[i] }, [
+            countArr,
+            { id: 'output', label: `输出 output / ${digitPlace}`, data: new Array(n).fill('') },
+          ])
         ),
         events: [{ type: 'array.compare', indices: [i, i] }, { type: 'scene.highlight', entityId: `arr_${i}`, role: 'comparing', color: 'warning' }],
       })
     }
 
-    // Prefix sum: convert count to positions (cumulative)
+    // Prefix sum
     for (let i = 1; i < 10; i++) {
       count[i] += count[i - 1]
     }
 
     steps.push({
       ...makeStep(sid++, 7,
-        `计数转前缀和：count[i] 现在表示该位数字≤i 的元素个数，将用于确定每个元素在输出数组中的位置`,
-        `Prefix sum: count[i] now represents the number of elements with digit ≤ i, used to determine each element's position in the output array`,
+        `计数转前缀和：count[i]=count[i]+count[i−1]，现在 count[i] 表示该位数字 ≤i 的元素个数（即该数字元素在 output 中的结束位置）`,
+        `Prefix sum: count[i] now = cumulative count of digits ≤ i (ending position in output)`,
         'highlight', [], 'primary', sid, 0, 10,
         sortTeachingWithAux({ digit: `${digitPlace}`, phase: 'prefix_sum' }, [
-          { id: 'count', label: `前缀和(prefix) / ${digitPlace}`, data: [...count] },
+          { id: 'count', label: `前缀和 prefix / ${digitPlace}`, data: [...count], activeIndices: count.map((_, i) => i), colorMap: Object.fromEntries(count.map((_, i) => [i, 'success' as ActionColor])) },
+          { id: 'output', label: `输出 output / ${digitPlace}`, data: new Array(n).fill('') },
         ])
       ),
-      events: [{ type: 'scene.note', text: `前缀和转换完成：${JSON.stringify(count)}` }],
+      events: [{ type: 'scene.note', text: `前缀和：[${count.join(', ')}]` }],
     })
 
-    // Place elements into output array (backward scan for stability)
+    // Place elements into output (backward scan for stability)
     const output = new Array(n).fill(0)
     for (let i = n - 1; i >= 0; i--) {
       const digit = Math.floor(data[i] / exp) % 10
@@ -86,21 +95,21 @@ export function generateRadixSort(arr: number[]): AnimationScript {
       output[pos] = data[i]
 
       const outArr: AuxiliaryArrayState = {
-        id: 'output', label: `输出(output) / ${digitPlace}`,
-        data: [...output],
+        id: 'output', label: `输出 output / ${digitPlace}`,
+        data: output.map(v => v === 0 ? '' : String(v)),
         activeIndices: [pos],
         colorMap: { [pos]: 'success' as ActionColor },
       }
 
       steps.push({
         ...makeStep(sid++, 10,
-          `${data[i]}(${digitNameZh}=${digit}) 放入 output[${pos}]。逆向扫描保证稳定性：同一位数字的元素保持原有相对顺序`,
-          `${data[i]}(${digitNameEn}=${digit}) placed at output[${pos}]. Backward scan ensures stability: elements with the same digit preserve their original relative order`,
+          `${data[i]}(${digitNameZh}=${digit}) → output[${pos}]。逆向扫描保证稳定性`,
+          `${data[i]}(${digitNameEn}=${digit}) → output[${pos}]. Backward scan ensures stability`,
           'swap', [i], 'success', sid, 0, 1,
-          sortTeachingWithAux(
-            { digit: `${digitPlace}`, value: data[i], 'output_pos': pos },
-            [outArr]
-          )
+          sortTeachingWithAux({ digit: `${digitPlace}`, value: data[i], output_pos: pos }, [
+            { id: 'count', label: `前缀和 prefix / ${digitPlace}`, data: [...count], activeIndices: [digit], colorMap: { [digit]: 'warning' as ActionColor } },
+            outArr,
+          ])
         ),
         events: [{ type: 'array.compare', indices: [i, pos] }],
       })
@@ -111,13 +120,12 @@ export function generateRadixSort(arr: number[]): AnimationScript {
       data[i] = output[i]
       const step: AnimationScript['steps'][number] = {
         ...makeStep(sid++, 12,
-          `复制 output[${i}]=${output[i]} 回 arr[${i}]`,
-          `Copy output[${i}]=${output[i]} back to arr[${i}]`,
+          `复制 output[${i}]=${output[i]} → arr[${i}]`,
+          `Copy output[${i}]=${output[i]} → arr[${i}]`,
           'highlight', [i], 'success', sid, 0, 1,
-          sortTeachingWithAux(
-            { digit: `${digitPlace}`, value: output[i], toPos: i },
-            [{ id: 'output', label: `输出(output) / ${digitPlace}`, data: [...output], activeIndices: [i] }]
-          )
+          sortTeachingWithAux({ digit: `${digitPlace}`, value: output[i], toPos: i }, [
+            { id: 'output', label: `输出 output / ${digitPlace}`, data: output.map((v, j) => j <= i ? String(v) : ''), activeIndices: [i], colorMap: { [i]: 'success' as ActionColor } },
+          ])
         ),
         events: [
           { type: 'array.set_value', index: i, value: output[i] },
@@ -129,10 +137,11 @@ export function generateRadixSort(arr: number[]): AnimationScript {
       steps.push(step)
     }
 
+    // Digit done — show final output and sorted data range
     steps.push({
       ...makeStep(sid++, 12,
-        `${digitNameZh}排序完成：[${data.join(', ')}]。输出复制回原数组，${digitNameZh}有序，高位排序时低位顺序不变`,
-        `After sorting ${digitNameEn} digit: [${data.join(', ')}]. Output copied back. This digit is now sorted; higher-digit sorting will preserve this order due to stability`,
+        `${digitNameZh}排序完成：[${data.join(', ')}]。该位已有序，高位排序时低位顺序不变`,
+        `After sorting ${digitNameEn} digit: [${data.join(', ')}]. This digit order is now stable`,
         'mark', data.map((_, k) => k), 'success', sid, n, 2 * n,
         sortTeaching({ digit: `${digitPlace}`, phase: 'done' })
       ),
