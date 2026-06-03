@@ -1,7 +1,7 @@
 import type { AnimationScript } from '@/types/animation'
 import type { RelayoutCommand, SceneCommand } from './commandTypes'
 import type { AlgorithmEvent } from './eventTypes'
-import type { SceneNode, SceneState } from './types'
+import type { SceneEdge, SceneEntity, SceneGroup, SceneLabel, SceneNode, ScenePointer, SceneState } from './types'
 import { createEmptyScene } from './types'
 import { compileEvent } from './eventCompiler'
 import { layoutGraph } from './layouts/graphLayout'
@@ -9,14 +9,14 @@ import { layoutLinkedList } from './layouts/linkedListLayout'
 import { layoutTree } from './layouts/treeLayout'
 
 export function deriveSceneState(script: AnimationScript, currentStep: number): SceneState {
-  const scene = createEmptyScene()
+  let scene = createEmptyScene()
   const replayLimit = Math.min(currentStep, script.steps.length)
 
   for (let i = 0; i < replayLimit; i++) {
     const events = script.steps[i].events ?? []
     for (const event of events) {
       const commands = compileEvent(event, { scene, stepIndex: i, script })
-      applyCommands(scene, commands)
+      scene = applyCommands(scene, commands)
     }
   }
 
@@ -33,7 +33,7 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
     )
     for (const event of createEvents) {
       const commands = compileEvent(event, { scene, stepIndex: 0, script })
-      applyCommands(scene, commands)
+      scene = applyCommands(scene, commands)
     }
   }
 
@@ -86,16 +86,27 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
     }
 
     // Clear any existing entities with queue_ or stack_ prefix to avoid duplicates
-    Object.keys(scene.entities).forEach(key => {
+    let filteredEntities: Record<string, SceneEntity> = {}
+    let entitiesChanged = false
+    for (const [key, val] of Object.entries(scene.entities)) {
       if (key.startsWith('queue_') || key.startsWith('stack_')) {
-        delete scene.entities[key]
+        entitiesChanged = true
+      } else {
+        filteredEntities[key] = val
       }
-    })
-    Object.keys(scene.labels).forEach(key => {
+    }
+    let filteredLabels: Record<string, SceneLabel> = {}
+    let labelsChanged = false
+    for (const [key, val] of Object.entries(scene.labels)) {
       if (key === 'queue_label' || key === 'stack_label') {
-        delete scene.labels[key]
+        labelsChanged = true
+      } else {
+        filteredLabels[key] = val
       }
-    })
+    }
+    if (entitiesChanged || labelsChanged) {
+      scene = { ...scene, entities: entitiesChanged ? filteredEntities : scene.entities, labels: labelsChanged ? filteredLabels : scene.labels }
+    }
 
     const getNodeLabel = (nodeId: string) => {
       const ent = scene.entities[nodeId]
@@ -116,42 +127,60 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
         queue.forEach((nodeId, index) => {
           const value = getNodeLabel(nodeId)
           const cellId = `queue_${index}`
-          scene.entities[cellId] = {
-            id: cellId,
-            type: 'cell',
-            position: { x: START_X + index * CELL_GAP, y: START_Y },
-            size: { width: 44, height: 44 },
-            value,
-            col: index,
-            state: {
-              role: 'inserted',
-              color: 'primary',
-              pulse: index === queue.length - 1,
-            }
+          scene = {
+            ...scene,
+            entities: {
+              ...scene.entities,
+              [cellId]: {
+                id: cellId,
+                type: 'cell',
+                position: { x: START_X + index * CELL_GAP, y: START_Y },
+                size: { width: 44, height: 44 },
+                value,
+                col: index,
+                state: {
+                  role: 'inserted',
+                  color: 'primary',
+                  pulse: index === queue.length - 1,
+                },
+              },
+            },
           }
         })
       } else {
         // Create an empty placeholder cell so that ContainerView can render an empty Queue container
         const cellId = 'queue_0'
-        scene.entities[cellId] = {
-          id: cellId,
-          type: 'cell',
-          position: { x: 500, y: START_Y },
-          size: { width: 44, height: 44 },
-          value: '',
-          col: 0,
-          state: {
-            role: 'empty_placeholder',
-            color: 'muted',
-          }
+        scene = {
+          ...scene,
+          entities: {
+            ...scene.entities,
+            [cellId]: {
+              id: cellId,
+              type: 'cell',
+              position: { x: 500, y: START_Y },
+              size: { width: 44, height: 44 },
+              value: '',
+              col: 0,
+              state: {
+                role: 'empty_placeholder',
+                color: 'muted',
+              },
+            },
+          },
         }
       }
 
-      scene.labels['queue_label'] = {
-        id: 'queue_label',
-        type: 'label',
-        text: 'Queue (队列)',
-        position: { x: 500, y: START_Y - 55 }, // Higher up to avoid overlap with top container line
+      scene = {
+        ...scene,
+        labels: {
+          ...scene.labels,
+          queue_label: {
+            id: 'queue_label',
+            type: 'label',
+            text: 'Queue (队列)',
+            position: { x: 500, y: START_Y - 55 }, // Higher up to avoid overlap with top container line
+          },
+        },
       }
     }
 
@@ -165,157 +194,240 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
         stack.forEach((nodeId, index) => {
           const value = getNodeLabel(nodeId)
           const cellId = `stack_${index}`
-          scene.entities[cellId] = {
-            id: cellId,
-            type: 'cell',
-            position: { x: CX, y: BOTTOM_Y - index * CELL_GAP },
-            size: { width: 44, height: 44 },
-            value,
-            col: index,
-            state: {
-              role: 'inserted',
-              color: 'primary',
-              pulse: index === stack.length - 1,
-            }
+          scene = {
+            ...scene,
+            entities: {
+              ...scene.entities,
+              [cellId]: {
+                id: cellId,
+                type: 'cell',
+                position: { x: CX, y: BOTTOM_Y - index * CELL_GAP },
+                size: { width: 44, height: 44 },
+                value,
+                col: index,
+                state: {
+                  role: 'inserted',
+                  color: 'primary',
+                  pulse: index === stack.length - 1,
+                },
+              },
+            },
           }
         })
       } else {
         // Create an empty placeholder cell so that ContainerView can render an empty Stack container
         const cellId = 'stack_0'
-        scene.entities[cellId] = {
-          id: cellId,
-          type: 'cell',
-          position: { x: CX, y: BOTTOM_Y },
-          size: { width: 44, height: 44 },
-          value: '',
-          col: 0,
-          state: {
-            role: 'empty_placeholder',
-            color: 'muted',
-          }
+        scene = {
+          ...scene,
+          entities: {
+            ...scene.entities,
+            [cellId]: {
+              id: cellId,
+              type: 'cell',
+              position: { x: CX, y: BOTTOM_Y },
+              size: { width: 44, height: 44 },
+              value: '',
+              col: 0,
+              state: {
+                role: 'empty_placeholder',
+                color: 'muted',
+              },
+            },
+          },
         }
       }
 
-      scene.labels['stack_label'] = {
-        id: 'stack_label',
-        type: 'label',
-        text: 'Stack (递归调用栈)',
-        position: { x: CX, y: BOTTOM_Y - 5 * CELL_GAP - 10 }, // Placed above the max-height stack cup
+      scene = {
+        ...scene,
+        labels: {
+          ...scene.labels,
+          stack_label: {
+            id: 'stack_label',
+            type: 'label',
+            text: 'Stack (递归调用栈)',
+            position: { x: CX, y: BOTTOM_Y - 5 * CELL_GAP - 10 }, // Placed above the max-height stack cup
+          },
+        },
       }
     }
 
     // Trigger relayout to adjust graph node centers dynamically based on active queue/stack
-    relayout(scene, 'graph')
+    scene = relayout(scene, 'graph')
   }
 
   return scene
 }
 
 export function applyCommands(scene: SceneState, commands: SceneCommand[]): SceneState {
-  commands.forEach((command) => applyCommand(scene, command))
-  return scene
+  return commands.reduce((acc, cmd) => applyCommand(acc, cmd), scene)
 }
 
-function applyCommand(scene: SceneState, command: SceneCommand) {
+function applyCommand(scene: SceneState, command: SceneCommand): SceneState {
   switch (command.type) {
     case 'create_node':
-      scene.entities[command.node.id] = command.node
-      break
+      return { ...scene, entities: { ...scene.entities, [command.node.id]: command.node } }
     case 'create_cell':
-      scene.entities[command.cell.id] = command.cell
-      break
+      return { ...scene, entities: { ...scene.entities, [command.cell.id]: command.cell } }
     case 'remove_entity':
-      removeEntity(scene, command.entityId)
-      break
+      return removeEntity(scene, command.entityId)
     case 'move': {
       const entity = scene.entities[command.entityId]
-      if (entity && 'position' in entity) entity.position = command.to
-      break
+      if (!entity || !('position' in entity)) return scene
+      return { ...scene, entities: { ...scene.entities, [command.entityId]: { ...entity, position: command.to } as SceneEntity } }
     }
     case 'connect':
-      scene.edges[command.edge.id] = command.edge
-      break
-    case 'disconnect':
-      delete scene.edges[command.edgeId]
-      break
+      return { ...scene, edges: { ...scene.edges, [command.edge.id]: command.edge } }
+    case 'disconnect': {
+      const { [command.edgeId]: _, ...restEdges } = scene.edges
+      return { ...scene, edges: restEdges }
+    }
     case 'set_state': {
-      const entity = scene.entities[command.entityId] ?? scene.pointers[command.entityId] ?? scene.labels[command.entityId] ?? scene.groups[command.entityId]
-      if (entity) entity.state = command.merge ? { ...entity.state, ...command.state } : command.state
-      if (scene.edges[command.entityId]) scene.edges[command.entityId].state = command.merge ? { ...scene.edges[command.entityId].state, ...command.state } : command.state
-      break
+      const entityId = command.entityId
+      const entity = scene.entities[entityId]
+        ?? scene.pointers[entityId]
+        ?? scene.labels[entityId]
+        ?? scene.groups[entityId]
+      if (!entity) return scene
+      const newState = command.merge
+        ? { ...entity.state, ...command.state }
+        : command.state
+
+      let next = scene
+
+      // Update entity in its respective map
+      if (scene.entities[entityId]) {
+        next = { ...next, entities: { ...next.entities, [entityId]: { ...entity, state: newState } as SceneEntity } }
+      } else if (scene.pointers[entityId]) {
+        next = { ...next, pointers: { ...next.pointers, [entityId]: { ...entity, state: newState } as ScenePointer } }
+      } else if (scene.labels[entityId]) {
+        next = { ...next, labels: { ...next.labels, [entityId]: { ...entity, state: newState } as SceneLabel } }
+      } else if (scene.groups[entityId]) {
+        next = { ...next, groups: { ...next.groups, [entityId]: { ...entity, state: newState } as SceneGroup } }
+      }
+
+      // Also update edge state if an edge with this ID exists
+      if (scene.edges[entityId]) {
+        const edge = scene.edges[entityId]
+        next = { ...next, edges: { ...next.edges, [entityId]: { ...edge, state: command.merge ? { ...edge.state, ...command.state } : command.state } } }
+      }
+
+      return next
     }
     case 'set_field': {
       const node = scene.entities[command.nodeId]
-      if (node?.type === 'node') {
-        node.fields = node.fields.map((field) => field.id === command.fieldId ? { ...field, ...command.field } : field)
-      }
-      break
+      if (!node || node.type !== 'node') return scene
+      const newFields = node.fields.map(f =>
+        f.id === command.fieldId ? { ...f, ...command.field } : f
+      )
+      return { ...scene, entities: { ...scene.entities, [command.nodeId]: { ...node, fields: newFields } } }
     }
     case 'set_fields': {
       const node = scene.entities[command.nodeId]
-      if (node?.type === 'node') node.fields = command.fields
-      break
+      if (!node || node.type !== 'node') return scene
+      return { ...scene, entities: { ...scene.entities, [command.nodeId]: { ...node, fields: command.fields } } }
     }
     case 'set_cell': {
       const cell = scene.entities[command.cellId]
-      if (cell?.type === 'cell') {
-        if (command.value !== undefined) cell.value = command.value
-        if (command.state) cell.state = { ...cell.state, ...command.state }
-      }
-      break
+      if (!cell || cell.type !== 'cell') return scene
+      const updated = { ...cell }
+      if (command.value !== undefined) updated.value = command.value
+      if (command.state) updated.state = { ...cell.state, ...command.state }
+      return { ...scene, entities: { ...scene.entities, [command.cellId]: updated } }
     }
     case 'add_port': {
       const node = scene.entities[command.nodeId]
-      if (node?.type === 'node' && !node.ports.some((port) => port.id === command.port.id)) node.ports.push(command.port)
-      break
+      if (!node || node.type !== 'node' || node.ports.some(p => p.id === command.port.id)) return scene
+      return { ...scene, entities: { ...scene.entities, [command.nodeId]: { ...node, ports: [...node.ports, command.port] } } }
     }
     case 'remove_port': {
       const node = scene.entities[command.nodeId]
-      if (node?.type === 'node') node.ports = node.ports.filter((port) => port.id !== command.portId)
-      break
+      if (!node || node.type !== 'node') return scene
+      return { ...scene, entities: { ...scene.entities, [command.nodeId]: { ...node, ports: node.ports.filter(p => p.id !== command.portId) } } }
     }
     case 'move_pointer':
-      scene.pointers[command.pointerId] = {
-        id: command.pointerId,
-        type: 'pointer',
-        label: command.label ?? command.pointerId,
-        target: command.target,
+      return {
+        ...scene,
+        pointers: {
+          ...scene.pointers,
+          [command.pointerId]: {
+            id: command.pointerId,
+            type: 'pointer',
+            label: command.label ?? command.pointerId,
+            target: command.target,
+          },
+        },
       }
-      break
     case 'relayout':
-      relayout(scene, command.layout, command.scope)
-      break
+      return relayout(scene, command.layout, command.scope)
     case 'wait':
-      break
+      return scene
     case 'add_note':
-      scene.notes = [...(scene.notes ?? []), command.text]
-      break
+      return { ...scene, notes: [...(scene.notes ?? []), command.text] }
+    default:
+      return scene
   }
 }
 
-function removeEntity(scene: SceneState, entityId: string) {
-  delete scene.entities[entityId]
-  delete scene.labels[entityId]
-  delete scene.groups[entityId]
-  delete scene.pointers[entityId]
+function removeEntity(scene: SceneState, entityId: string): SceneState {
+  const { [entityId]: _e, ...restEntities } = scene.entities
+  const { [entityId]: _l, ...restLabels } = scene.labels
+  const { [entityId]: _g, ...restGroups } = scene.groups
+  const { [entityId]: _p, ...restPointers } = scene.pointers
 
-  Object.entries(scene.edges).forEach(([edgeId, edge]) => {
-    if (edge.from.entityId === entityId || edge.to.entityId === entityId || edgeId === entityId) delete scene.edges[edgeId]
-  })
+  // Remove edges connected to this entity
+  const filteredEdges: Record<string, SceneEdge> = {}
+  let edgesChanged = false
+  for (const [edgeId, edge] of Object.entries(scene.edges)) {
+    if (edgeId === entityId || edge.from.entityId === entityId || edge.to.entityId === entityId) {
+      edgesChanged = true
+    } else {
+      filteredEdges[edgeId] = edge
+    }
+  }
 
-  Object.values(scene.pointers).forEach((pointer) => {
-    if (pointer.target?.entityId === entityId) pointer.target = null
-  })
+  // Remove pointers targeting this entity
+  let fixedPointers = restPointers
+  let pointersChanged = false
+  for (const [ptrId, ptr] of Object.entries(restPointers)) {
+    if (ptr.target?.entityId === entityId) {
+      fixedPointers = { ...fixedPointers, [ptrId]: { ...ptr, target: null } }
+      pointersChanged = true
+    }
+  }
+
+  return {
+    ...scene,
+    entities: restEntities,
+    labels: restLabels,
+    groups: restGroups,
+    pointers: fixedPointers,
+    ...((edgesChanged || pointersChanged) && { edges: filteredEdges }),
+  }
 }
 
-function relayout(scene: SceneState, layout: RelayoutCommand['layout'], scope?: string[]) {
-  const positions = layout === 'linked_list' ? layoutLinkedList(scene) : layout === 'tree' ? layoutTree(scene) : layout === 'graph' ? layoutGraph(scene) : {}
-  Object.entries(positions).forEach(([entityId, position]) => {
-    if (!scope || scope.includes(entityId)) {
-      const entity = scene.entities[entityId]
-      if (entity && isPositionedNode(entity)) entity.position = position
+function relayout(scene: SceneState, layout: RelayoutCommand['layout'], scope?: string[]): SceneState {
+  const positions = layout === 'linked_list'
+    ? layoutLinkedList(scene)
+    : layout === 'tree'
+      ? layoutTree(scene)
+      : layout === 'graph'
+        ? layoutGraph(scene)
+        : {}
+
+  if (Object.keys(positions).length === 0) return scene
+
+  const updatedEntities = { ...scene.entities }
+  let changed = false
+  for (const [entityId, position] of Object.entries(positions)) {
+    if (scope && !scope.includes(entityId)) continue
+    const entity = updatedEntities[entityId]
+    if (entity && isPositionedNode(entity) && (entity.position.x !== position.x || entity.position.y !== position.y)) {
+      updatedEntities[entityId] = { ...entity, position }
+      changed = true
     }
-  })
+  }
+
+  return changed ? { ...scene, entities: updatedEntities } : scene
 }
 
 function isPositionedNode(entity: unknown): entity is SceneNode {
