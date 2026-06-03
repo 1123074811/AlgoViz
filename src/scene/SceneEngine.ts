@@ -1,4 +1,4 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, TeachingState } from '@/types/animation'
 import type { RelayoutCommand, SceneCommand } from './commandTypes'
 import type { AlgorithmEvent } from './eventTypes'
 import type { SceneEdge, SceneEntity, SceneGroup, SceneLabel, SceneNode, ScenePointer, SceneState } from './types'
@@ -340,6 +340,104 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
 
     // Trigger relayout to adjust graph node centers dynamically based on active queue/stack
     scene = relayout(scene, 'graph')
+  }
+
+  // ── Render auxiliary arrays from teachingState (generic) ──
+  scene = renderAuxiliaryArrays(scene, teachingState)
+
+  return scene
+}
+
+/// Render auxiliary arrays from teachingState as horizontal cell rows below the main visualization
+function renderAuxiliaryArrays(scene: SceneState, teachingState: TeachingState | undefined): SceneState {
+  if (!teachingState?.auxiliaryArrays || teachingState.auxiliaryArrays.length === 0) return scene
+
+  // Find the lowest existing cell Y to place auxiliary arrays below
+  let maxY = 200
+  for (const entity of Object.values(scene.entities)) {
+    if ('position' in entity && entity.position) {
+      const bottom = entity.position.y + ((entity as any).size?.height ?? 44)
+      if (bottom > maxY) maxY = bottom
+    }
+  }
+  // Check labels and pointers too
+  for (const label of Object.values(scene.labels)) {
+    if (label.position.y > maxY) maxY = label.position.y
+  }
+
+  const CELL_W = 52
+  const CELL_H = 38
+  const LABEL_H = 20
+  const ARRAY_GAP = 56  // gap between auxiliary arrays
+
+  const auxArrays = teachingState.auxiliaryArrays
+  // Clear previous auxiliary array entities
+  let entities = { ...scene.entities }
+  let labels = { ...scene.labels }
+  for (const key of Object.keys(entities)) {
+    if (key.startsWith('aux_')) {
+      const { [key]: _, ...rest } = entities
+      entities = rest
+    }
+  }
+  for (const key of Object.keys(labels)) {
+    if (key.startsWith('aux_label_')) {
+      const { [key]: _, ...rest } = labels
+      labels = rest
+    }
+  }
+
+  scene = { ...scene, entities, labels }
+
+  for (let ai = 0; ai < auxArrays.length; ai++) {
+    const arr = auxArrays[ai]
+    const startY = maxY + 60 + ai * ARRAY_GAP
+    const count = arr.data.length
+    // Center the row
+    const totalWidth = count * CELL_W
+    const startX = 500 - totalWidth / 2
+
+    // Label
+    scene = {
+      ...scene,
+      labels: {
+        ...scene.labels,
+        [`aux_label_${arr.id}`]: {
+          id: `aux_label_${arr.id}`,
+          type: 'label',
+          text: arr.label,
+          position: { x: startX, y: startY - LABEL_H },
+        },
+      },
+    }
+
+    // Cells
+    for (let ci = 0; ci < count; ci++) {
+      const val = arr.data[ci]
+      const isActive = arr.activeIndices?.includes(ci)
+      const cellColor = arr.colorMap?.[ci]
+      const cellId = `aux_${arr.id}_${ci}`
+
+      scene = {
+        ...scene,
+        entities: {
+          ...scene.entities,
+          [cellId]: {
+            id: cellId,
+            type: 'cell',
+            position: { x: startX + ci * CELL_W + CELL_W / 2, y: startY },
+            size: { width: CELL_W - 4, height: CELL_H },
+            value: val?.toString() ?? '',
+            col: ci,
+            state: {
+              role: isActive ? 'active' : 'idle',
+              color: cellColor ?? 'muted',
+              ...(isActive && { pulse: true }),
+            },
+          },
+        },
+      }
+    }
   }
 
   return scene

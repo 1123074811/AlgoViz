@@ -4,7 +4,7 @@ const CONTAINER_STROKE = '#94A3B8'
 const CONTAINER_STROKE_WIDTH = 2
 
 interface ContainerViewProps {
-  type: 'stack' | 'queue'
+  type: 'stack' | 'queue' | 'auxiliary'
   cells: SceneCell[]
 }
 
@@ -15,6 +15,37 @@ export default function ContainerView({ type, cells }: ContainerViewProps) {
   const cellW = cells[0].size?.width ?? 44
   const cellH = cells[0].size?.height ?? 44
   const pad = 10
+
+  if (type === 'auxiliary') {
+    // Rounded rectangle panel around auxiliary array cells
+    // Group cells by their y-coordinate (each row is a separate panel)
+    const rows = new Map<number, SceneCell[]>()
+    for (const c of cells) {
+      const y = c.position.y
+      if (!rows.has(y)) rows.set(y, [])
+      rows.get(y)!.push(c)
+    }
+
+    return (
+      <g>
+        {[...rows.entries()].map(([y, rowCells]) => {
+          const minX = Math.min(...rowCells.map(c => c.position.x - (c.size?.width ?? 52) / 2))
+          const maxX = Math.max(...rowCells.map(c => c.position.x + (c.size?.width ?? 52) / 2))
+          const minY = y - cellH / 2 - pad
+          const maxY = y + cellH / 2 + pad
+          const rx = 6
+
+          return (
+            <rect key={`aux_rect_${y}`}
+              x={minX - pad} y={minY} rx={rx} ry={rx}
+              width={maxX - minX + 2 * pad} height={maxY - minY}
+              fill="#F8FAFC" stroke="#E2E8F0" strokeWidth={1.2}
+            />
+          )
+        })}
+      </g>
+    )
+  }
 
   if (type === 'stack') {
     // U-shaped container: bottom + left + right lines, open at top

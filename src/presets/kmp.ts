@@ -7,12 +7,18 @@ export function generateKMP(text?: string, pattern?: string): AnimationScript {
   const steps: AnimationScript['steps'] = []
   let sid = 1
 
+  // LPS tracker — always include in teachingState
+  const lpsAux = (lps: number[], activeIndices?: number[]) => ({
+    auxiliaryArrays: [{ id: 'lps', label: 'LPS 数组', data: lps.map(String), activeIndices }],
+  })
+
   // Step 1: Show text and pattern strings
   steps.push({
     stepId: sid++, codeLine: 0,
     description: { zh: `文本: "${T}" (${n}), 模式: "${P}" (${m})`, en: `Text: "${T}" (${n}), Pattern: "${P}" (${m})` },
     action: { type: 'highlight', targets: [], color: 'primary' },
     events: [{ type: 'string.create_double', text: T, pattern: P }],
+    teachingState: lpsAux(new Array(m).fill(0)),
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
 
@@ -25,6 +31,7 @@ export function generateKMP(text?: string, pattern?: string): AnimationScript {
       description: { zh: `比较 P[${i}]='${P[i]}' 和 P[${len}]='${P[len]}'，构建 LPS 数组`, en: `Compare P[${i}]='${P[i]}' vs P[${len}]='${P[len]}', build LPS` },
       action: { type: 'compare', targets: [i, len], color: 'warning' },
       events: [{ type: 'string.compare', row: 1, indices: [i, len] }],
+      teachingState: lpsAux(lps, [i]),
       stats: { comparisons: sid, swaps: 0, accesses: 0 },
     })
     if (P[i] === P[len]) {
@@ -34,6 +41,7 @@ export function generateKMP(text?: string, pattern?: string): AnimationScript {
         description: { zh: `匹配！P[${i}]='${P[i]}' = P[${len - 1}]='${P[len - 1]}'，lps[${i}]=${lps[i]}`, en: `Match! lps[${i}]=${lps[i]}` },
         action: { type: 'mark', targets: [i], color: 'success' },
         events: [{ type: 'string.match', row: 1, index: i }],
+        teachingState: lpsAux(lps, [i]),
         stats: { comparisons: sid, swaps: 0, accesses: 0 },
       })
       i++
@@ -44,6 +52,7 @@ export function generateKMP(text?: string, pattern?: string): AnimationScript {
         description: { zh: `失配！P[${i}]='${P[i]}' ≠ P[${len}]，回退 len=${len}`, en: `Mismatch! len falls back to ${len}` },
         action: { type: 'highlight', targets: [i], color: 'danger' },
         events: [{ type: 'string.mismatch', row: 1, index: i }],
+        teachingState: lpsAux(lps, [len]),
         stats: { comparisons: sid, swaps: 0, accesses: 0 },
       })
     } else {
@@ -53,6 +62,7 @@ export function generateKMP(text?: string, pattern?: string): AnimationScript {
         description: { zh: `P[${i}] 无前缀匹配，lps[${i}]=0`, en: `No prefix match, lps[${i}]=0` },
         action: { type: 'mark', targets: [i], color: 'muted' },
         events: [{ type: 'string.mark_range', row: 1, indices: [i] }],
+        teachingState: lpsAux(lps, [i]),
         stats: { comparisons: sid, swaps: 0, accesses: 0 },
       })
       i++
@@ -64,6 +74,7 @@ export function generateKMP(text?: string, pattern?: string): AnimationScript {
     description: { zh: `LPS 数组构建完成: [${lps.join(', ')}]。开始搜索...`, en: `LPS done: [${lps.join(', ')}]. Start search...` },
     action: { type: 'highlight', targets: [], color: 'primary' },
     events: [{ type: 'string.mark_range', row: 1, indices: lps.map((_, j) => j) }],
+    teachingState: lpsAux(lps, lps.map((_, j) => j)),
     stats: { comparisons: sid, swaps: 0, accesses: 0 },
   })
 
@@ -78,6 +89,7 @@ export function generateKMP(text?: string, pattern?: string): AnimationScript {
         { type: 'string.compare', row: 0, indices: [ti, ti] },
         { type: 'string.compare', row: 1, indices: [pi, pi] },
       ],
+      teachingState: lpsAux(lps, [pi]),
       stats: { comparisons: sid, swaps: 0, accesses: 0 },
     })
     if (T[ti] === P[pi]) {
@@ -89,6 +101,7 @@ export function generateKMP(text?: string, pattern?: string): AnimationScript {
           { type: 'string.match', row: 0, index: ti },
           { type: 'string.match', row: 1, index: pi },
         ],
+        teachingState: lpsAux(lps, [pi]),
         stats: { comparisons: sid, swaps: 0, accesses: 0 },
       })
       ti++; pi++
@@ -96,12 +109,13 @@ export function generateKMP(text?: string, pattern?: string): AnimationScript {
       pi = lps[pi - 1]
       steps.push({
         stepId: sid++, codeLine: 18,
-        description: { zh: `失配！利用 LPS 跳过，pi 回退到 ${pi}（跳过了 ${lps[pi]} 个已匹配字符）`, en: `Mismatch! Skip via LPS, pi → ${pi}` },
+        description: { zh: `失配！利用 LPS 跳过，pi 回退到 ${pi}（跳过了 ${lps[pi - 1] ?? pi} 个已匹配字符）`, en: `Mismatch! Skip via LPS, pi → ${pi}` },
         action: { type: 'highlight', targets: [ti], color: 'warning' },
         events: [
           { type: 'string.compare', row: 0, indices: [ti, ti] },
           { type: 'string.compare', row: 1, indices: [pi, pi] },
         ],
+        teachingState: lpsAux(lps, [pi]),
         stats: { comparisons: sid, swaps: 0, accesses: 0 },
       })
     } else {
@@ -110,6 +124,7 @@ export function generateKMP(text?: string, pattern?: string): AnimationScript {
         description: { zh: `T[${ti}] 不匹配模式首字符，ti++`, en: `T[${ti}] ≠ pattern start, ti++` },
         action: { type: 'highlight', targets: [ti], color: 'muted' },
         events: [{ type: 'string.mismatch', row: 0, index: ti }],
+        teachingState: lpsAux(lps, []),
         stats: { comparisons: sid, swaps: 0, accesses: 0 },
       })
       ti++
@@ -121,6 +136,7 @@ export function generateKMP(text?: string, pattern?: string): AnimationScript {
         description: { zh: `找到匹配！位置 T[${foundAt}..${ti - 1}] = "${P}"`, en: `Found at T[${foundAt}..${ti - 1}] = "${P}"` },
         action: { type: 'mark', targets: [], color: 'success' },
         events: [{ type: 'string.mark_range', row: 0, indices: Array.from({ length: m }, (_, j) => foundAt + j) }],
+        teachingState: lpsAux(lps, []),
         stats: { comparisons: sid, swaps: 0, accesses: 0 },
       })
       break

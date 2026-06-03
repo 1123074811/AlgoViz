@@ -5,6 +5,15 @@ export function generateSlidingWindow(arr: number[], k?: number): AnimationScrip
   const steps: AnimationStep[] = []
   let sid = 1, comps = 0
 
+  // Helper: show window state as variables + window range
+  const winAux = (windowIndices: number[], sum: number, max: number) => ({
+    auxiliaryArrays: [{
+      id: 'window_state',
+      label: `窗口状态 (k=${K})`,
+      data: [`sum=${sum}`, `max=${max}`, `窗口=[${windowIndices.join(',')}]`],
+    }],
+  })
+
   steps.push({
     stepId: sid++, codeLine: 0,
     description: { zh: `数组 [${arr.join(', ')}]，窗口大小 k=${K}`, en: `Array [${arr.join(', ')}], window k=${K}` },
@@ -27,11 +36,13 @@ export function generateSlidingWindow(arr: number[], k?: number): AnimationScrip
   let windowSum = 0
   for (let i = 0; i < K; i++) windowSum += arr[i]
 
+  const initWindow = Array.from({ length: K }, (_, i) => i)
   steps.push({
     stepId: sid++, codeLine: 2,
     description: { zh: `初始窗口 [0..${K - 1}]: [${arr.slice(0, K).join(', ')}]，sum=${windowSum}`, en: `Init window [0..${K - 1}]: [${arr.slice(0, K).join(', ')}], sum=${windowSum}` },
-    action: { type: 'highlight', targets: Array.from({ length: K }, (_, i) => i), color: 'warning' },
-    events: [{ type: 'array.mark_sorted', indices: Array.from({ length: K }, (_, i) => i) }],
+    action: { type: 'highlight', targets: initWindow, color: 'warning' },
+    events: [{ type: 'array.mark_sorted', indices: initWindow }],
+    teachingState: winAux(initWindow, windowSum, windowSum),
     stats: { comparisons: 0, swaps: 0, accesses: K },
   })
 
@@ -59,6 +70,7 @@ export function generateSlidingWindow(arr: number[], k?: number): AnimationScrip
       description: { zh: `当前窗口 [${windowIndices.map(j => arr[j]).join(', ')}]，sum=${windowSum}${isNewMax ? ' (新最大值!)' : ''}，max=${maxSum}`, en: `Window [${windowIndices.map(j => arr[j]).join(', ')}], sum=${windowSum}${isNewMax ? ' (new max!)' : ''}, max=${maxSum}` },
       action: { type: 'highlight', targets: windowIndices, color: isNewMax ? 'success' : 'primary' },
       events: [{ type: 'array.mark_sorted', indices: windowIndices }],
+      teachingState: winAux(windowIndices, windowSum, maxSum),
       stats: { comparisons: comps, swaps: 0, accesses: comps + K + 1 },
     })
   }
