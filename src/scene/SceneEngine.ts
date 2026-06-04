@@ -17,29 +17,19 @@ interface SnapshotEntry {
   scene: SceneState
 }
 
-let snapshotCache: SnapshotEntry[] = []
-let snapshotScriptId = '' // Invalidate cache when script changes
+const scriptSnapshotCache = new WeakMap<AnimationScript, SnapshotEntry[]>()
 
-function getScriptId(script: AnimationScript): string {
-  return `${script.algorithm}_${script.steps.length}_${script.initialState.type}`
-}
-
-function clearSnapshotCache() {
-  snapshotCache = []
-  snapshotScriptId = ''
-}
-
-function ensureCacheInitialized(script: AnimationScript) {
-  const id = getScriptId(script)
-  if (snapshotScriptId !== id) {
-    snapshotCache = []
-    snapshotScriptId = id
+function getOrCreateCache(script: AnimationScript): SnapshotEntry[] {
+  if (!scriptSnapshotCache.has(script)) {
+    scriptSnapshotCache.set(script, [])
   }
+  return scriptSnapshotCache.get(script)!
 }
 
-function findNearestSnapshot(targetStep: number): { step: number; scene: SceneState } | null {
+function findNearestSnapshot(script: AnimationScript, targetStep: number): { step: number; scene: SceneState } | null {
+  const cache = scriptSnapshotCache.get(script) ?? []
   let best: SnapshotEntry | null = null
-  for (const entry of snapshotCache) {
+  for (const entry of cache) {
     if (entry.step <= targetStep && (!best || entry.step > best.step)) {
       best = entry
     }
@@ -47,20 +37,21 @@ function findNearestSnapshot(targetStep: number): { step: number; scene: SceneSt
   return best ? { step: best.step, scene: deepCloneScene(best.scene) } : null
 }
 
-function saveSnapshot(step: number, scene: SceneState) {
+function saveSnapshot(script: AnimationScript, step: number, scene: SceneState) {
+  const cache = getOrCreateCache(script)
   // Avoid duplicate snapshots for the same step
-  if (snapshotCache.length > 0 && snapshotCache[snapshotCache.length - 1].step === step) return
-  snapshotCache.push({ step, scene: deepCloneScene(scene) })
+  if (cache.length > 0 && cache[cache.length - 1].step === step) return
+  cache.push({ step, scene: deepCloneScene(scene) })
 }
 
 /** Deep-clone a SceneState so snapshots don't share references with active state */
 function deepCloneScene(scene: SceneState): SceneState {
   return {
     entities: Object.fromEntries(Object.entries(scene.entities).map(([k, v]) => {
-      const cloned: any = { ...v }
-      if ('ports' in v) cloned.ports = [...v.ports]
-      if ('fields' in v) cloned.fields = v.fields.map(f => ({ ...f }))
-      return [k, cloned as SceneEntity]
+      if (v.type === 'node') {
+        return [k, { ...v, ports: [...v.ports], fields: v.fields.map(f => ({ ...f })) }]
+      }
+      return [k, { ...v }]
     })),
     edges: Object.fromEntries(Object.entries(scene.edges).map(([k, v]) => [k, { ...v }])),
     pointers: Object.fromEntries(Object.entries(scene.pointers).map(([k, v]) => [k, { ...v }])),
@@ -73,15 +64,13 @@ function deepCloneScene(scene: SceneState): SceneState {
 }
 
 export function deriveSceneState(script: AnimationScript, currentStep: number): SceneState {
-  ensureCacheInitialized(script)
-
   const replayLimit = Math.min(currentStep, script.steps.length)
 
   // Try to start from nearest snapshot to avoid full O(n) replay
   let scene: SceneState
   let startStep: number
 
-  const nearest = findNearestSnapshot(replayLimit)
+  const nearest = findNearestSnapshot(script, replayLimit)
   if (nearest && nearest.step < replayLimit) {
     scene = nearest.scene
     startStep = nearest.step
@@ -90,7 +79,7 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
     startStep = 0
     // Save snapshot at step 0 (initial empty state)
     if (replayLimit > SNAPSHOT_INTERVAL) {
-      saveSnapshot(0, scene)
+      saveSnapshot(script, 0, scene)
     }
   }
 
@@ -103,7 +92,7 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
 
     // Save snapshot at interval boundaries
     if ((i + 1) % SNAPSHOT_INTERVAL === 0 && i + 1 < replayLimit) {
-      saveSnapshot(i + 1, scene)
+      saveSnapshot(script, i + 1, scene)
     }
   }
 
@@ -632,4 +621,3 @@ export interface EventCompiler {
   compile: (event: AlgorithmEvent, context: CompileContext) => SceneCommand[]
 }
 
-export { clearSnapshotCache }

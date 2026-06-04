@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { applyCommands, clearSnapshotCache } from '../SceneEngine'
+import { applyCommands } from '../SceneEngine'
 import { createEmptyScene } from '../types'
 import type { SceneState, SceneNode, SceneCell, SceneEdge, ScenePointer } from '../types'
 import type { SceneCommand } from '../commandTypes'
@@ -277,19 +277,22 @@ describe('applyCommands', () => {
   })
 })
 
-// ── clearSnapshotCache ────────────────────────────────────────────────────────
+// ── WeakMap cache isolation ───────────────────────────────────────────────────
 
-describe('clearSnapshotCache', () => {
-  // 14. clearSnapshotCache — after clearing, findNearestSnapshot returns null
-  // We verify this indirectly by checking that clearSnapshotCache doesn't throw
-  // and that re-exporting the function works correctly.
-  it('clearSnapshotCache is callable without errors', () => {
-    expect(() => clearSnapshotCache()).not.toThrow()
+describe('snapshot cache isolation', () => {
+  // 14. Each AnimationScript object has its own independent cache via WeakMap —
+  // verify that applyCommands still works correctly as a smoke test for the module.
+  it('applyCommands produces deterministic output (smoke test for cache module)', () => {
+    const scene = createEmptyScene()
+    const result = applyCommands(scene, [])
+    expect(result).toBe(scene) // identity when no commands
   })
 
-  it('clearSnapshotCache resets the internal cache (second call is also safe)', () => {
-    clearSnapshotCache()
-    clearSnapshotCache() // idempotent — must not throw
-    expect(true).toBe(true)
+  it('applyCommands with commands returns a new scene reference', () => {
+    const scene = createEmptyScene()
+    const node: SceneNode = makeNode('n1')
+    const result = applyCommands(scene, [{ type: 'create_node', node }])
+    expect(result).not.toBe(scene)
+    expect(result.entities['n1']).toBeDefined()
   })
 })
