@@ -13,6 +13,8 @@ import PlaybackControls from '@/components/Controls/PlaybackControls'
 import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
 import InputDataPanel from '@/components/Editor/InputDataPanel'
 import { useAlgorithmStore, type AIHistoryEntry } from '@/store/algorithmStore'
+import { generatePreset } from '@/presets'
+import { recognizeAlgorithm } from '@/presets/recognize'
 
 let playgroundAnalysisController: AbortController | null = null
 
@@ -57,6 +59,10 @@ export default function Playground() {
   const [aiErrorReport, setAiErrorReport] = useState<AIErrorReport | null>(null)
   const [aiRepairHistory, setAiRepairHistory] = useState<AIRepairAttempt[] | null>(null)
   const [showRawResponse, setShowRawResponse] = useState(false)
+  // Live mode: when the AI recognizes a built-in algorithm, the animation is
+  // generated locally from the current input — changing input re-runs the
+  // generator without another AI call. Null for unrecognized custom algorithms.
+  const [liveAlgoId, setLiveAlgoId] = useState<string | null>(null)
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
 
   const hasApiConfig = getApiConfig() !== null
@@ -70,6 +76,32 @@ export default function Playground() {
   } = useAnimationEngine(animationScript)
 
   const handleEditorMount: OnMount = useCallback((editor) => { editorRef.current = editor }, [])
+
+  // Build an animation locally from a recognized built-in generator + current input.
+  // Returns null when input is invalid or generation fails (keeps last animation).
+  const buildLiveScript = useCallback((algoId: string, rawInput: string): AnimationScript | null => {
+    const parsed = parseInputData(rawInput)
+    if (!parsed.valid) return null
+    try {
+      return generatePreset(algoId, parsed.value) ?? null
+    } catch {
+      return null
+    }
+  }, [])
+
+  // Live mode: regenerate the animation whenever the input changes for a
+  // recognized algorithm — no AI round-trip. Debounced to avoid thrashing while typing.
+  useEffect(() => {
+    if (!liveAlgoId) return
+    const handle = setTimeout(() => {
+      const script = buildLiveScript(liveAlgoId, inputData)
+      if (script) {
+        setAnimationScript(script)
+        setAIStatus('success')
+      }
+    }, 400)
+    return () => clearTimeout(handle)
+  }, [inputData, liveAlgoId, buildLiveScript, setAnimationScript, setAIStatus])
 
   const handleAnalyze = async () => {
     const compResult = compileAndValidateCode(code, codeLanguage)
@@ -141,10 +173,16 @@ export default function Playground() {
       playgroundAnalysisController = null
 
       if (result.success && result.script) {
-        setAnimationScript(result.script)
+        // If the AI recognized a built-in algorithm, drive the animation locally
+        // from the current input (live mode); otherwise use the AI's static script.
+        const recognized = recognizeAlgorithm(result.script.algorithm)
+        setLiveAlgoId(recognized)
+        const liveScript = recognized ? buildLiveScript(recognized, inputData) : null
+        const finalScript = liveScript ?? result.script
+        setAnimationScript(finalScript)
         setAIStatus('success')
         if (result.repaired) setAiRepairHistory(result.repairHistory ?? null)
-        updateAIHistory(historyId, { status: 'success', script: result.script })
+        updateAIHistory(historyId, { status: 'success', script: finalScript })
       } else {
         setAIStatus('error', result.error || '分析失败', result.rawResponse)
         setAiErrorReport(result.errorReport ?? null)
@@ -167,9 +205,12 @@ export default function Playground() {
     setCodeLanguage(entry.language)
     setInputData(entry.inputData)
     if (entry.status === 'success' && entry.script) {
+      // Re-enter live mode if the restored entry's algorithm is a built-in.
+      setLiveAlgoId(recognizeAlgorithm(entry.script.algorithm))
       setAnimationScript(entry.script)
       setAIStatus('success')
     } else {
+      setLiveAlgoId(null)
       setAnimationScript(null)
       setAIStatus('idle')
     }
@@ -229,6 +270,12 @@ export default function Playground() {
             AI 代码实验室
           </button>
           <span className="text-[10px] text-muted hidden sm:inline">粘贴或编写代码，AI 分析并生成可视化动画</span>
+          {liveAlgoId && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-600 font-medium flex items-center gap-1 shrink-0">
+              <Icon name="zap" size={10} />
+              实时算法 · 改输入即时更新
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <select value={codeLanguage} onChange={(e) => {
