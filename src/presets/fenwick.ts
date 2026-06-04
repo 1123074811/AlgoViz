@@ -1,12 +1,11 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateFenwick(arr: number[]): AnimationScript {
   const data = [...arr]
   const n = data.length
   const tree = new Array(n + 1).fill(0)
   const initialTree = [...tree]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1
 
   steps.push({
@@ -48,7 +47,7 @@ export function generateFenwick(arr: number[]): AnimationScript {
     stepId: sid++, codeLine: 9,
     description: { zh: `查询前缀和 prefix(4)`, en: `Query prefix sum(4)` },
     action: { type: 'highlight', targets: [3], color: 'primary' },
-    events: [{ type: 'array.compare', indices: [3] }],
+    events: [{ type: 'array.mark_sorted', indices: [3] }],
     stats: { comparisons: sid, swaps: 0, accesses: 0 },
   })
   while (idx > 0) {
@@ -57,7 +56,7 @@ export function generateFenwick(arr: number[]): AnimationScript {
       stepId: sid++, codeLine: 11,
       description: { zh: `tree[${idx}]=${tree[idx]}, sum=${sum}, idx -= lowbit → ${idx - (idx & -idx)}`, en: `tree[${idx}]=${tree[idx]}, sum=${sum}` },
       action: { type: 'compare', targets: [idx - 1], color: 'warning' },
-      events: [{ type: 'array.compare', indices: [idx - 1] }],
+      events: [{ type: 'array.mark_sorted', indices: [idx - 1] }],
       stats: { comparisons: sid, swaps: 0, accesses: 0 },
     })
     idx -= idx & -idx

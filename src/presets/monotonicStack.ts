@@ -1,9 +1,8 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateMonotonicStack(arr: number[]): AnimationScript {
   const data = [...arr]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1, comps = 0, acc = 0
 
   // Helper: create teachingState with current stack
@@ -34,7 +33,7 @@ export function generateMonotonicStack(arr: number[]): AnimationScript {
       stepId: sid++, codeLine: 4,
       description: { zh: `扫描 arr[${i}]=${data[i]}`, en: `Scan arr[${i}]=${data[i]}` },
       action: { type: 'highlight', targets: [i], color: 'primary' },
-      events: [{ type: 'array.compare', indices: [i] }],
+      events: [{ type: 'array.mark_sorted', indices: [i] }],
       teachingState: stackAux(stack, data),
       stats: { comparisons: comps, swaps: 0, accesses: ++acc },
     })

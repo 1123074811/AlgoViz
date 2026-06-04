@@ -1,8 +1,7 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateUnionFind(edges?: number[][]): AnimationScript {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1
 
   const unions = edges && edges.length > 0 ? edges : [[0, 1], [1, 2], [3, 4], [4, 5], [2, 4]]

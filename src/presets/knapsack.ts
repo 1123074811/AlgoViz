@@ -1,4 +1,4 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateKnapsack(weights?: number[], values?: number[], capacity?: number): AnimationScript {
   const w = weights ?? [2, 3, 4, 5]
@@ -7,8 +7,7 @@ export function generateKnapsack(weights?: number[], values?: number[], capacity
   const n = w.length
   const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(C + 1).fill(0))
   const initialDp = dp.map((row) => [...row])
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1, comps = 0
 
   steps.push({

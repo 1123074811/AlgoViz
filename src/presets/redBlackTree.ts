@@ -1,9 +1,8 @@
-import type { AnimationScript, ActionColor } from '@/types/animation'
+import type { AnimationScript, AnimationStep, ActionColor } from '@/types/animation'
 
 export function generateRedBlackTree(): AnimationScript {
   const tree = [13, 8, 17, 1, 11, 15, 25, '', 6, '', '', '', '', 22, 27]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: AnimationScript['steps'] = []
+  const steps: AnimationStep[] = []
   let sid = 1
   const nums = tree.map(v => v === '' ? 0 : Number(v))
 

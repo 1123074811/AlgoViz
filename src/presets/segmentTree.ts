@@ -1,11 +1,10 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateSegmentTree(arr: number[]): AnimationScript {
   const data = [...arr]
   const n = data.length
   const tree = new Array(4 * n).fill(0)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1
 
   steps.push({
@@ -23,7 +22,7 @@ export function generateSegmentTree(arr: number[]): AnimationScript {
         stepId: sid++, codeLine: 4,
         description: { zh: `叶节点 tree[${node}] = arr[${start}] = ${data[start]}`, en: `Leaf tree[${node}] = arr[${start}] = ${data[start]}` },
         action: { type: 'highlight', targets: [start], color: 'primary' },
-        events: [{ type: 'array.compare', indices: [start] }],
+        events: [{ type: 'array.mark_sorted', indices: [start] }],
         stats: { comparisons: sid, swaps: 0, accesses: 0 },
       })
       return
@@ -48,7 +47,7 @@ export function generateSegmentTree(arr: number[]): AnimationScript {
     stepId: sid++, codeLine: 11,
     description: { zh: `查询区间和 sum[1..3]：从根节点递归`, en: `Query range sum[1..3]: recurse from root` },
     action: { type: 'highlight', targets: [1, 2, 3], color: 'warning' },
-    events: [{ type: 'array.compare', indices: [1, 2, 3] }],
+    events: [{ type: 'array.mark_sorted', indices: [1, 2, 3] }],
     stats: { comparisons: sid, swaps: 0, accesses: 0 },
   })
 

@@ -1,8 +1,7 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateACM(): AnimationScript {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1
 
   steps.push({ stepId: sid++, codeLine: 0, description: { zh: 'ACM 常用算法模板', en: 'ACM Common Algorithm Templates' }, action: { type: 'highlight', targets: [], color: 'primary' }, stats: { comparisons: 0, swaps: 0, accesses: 0 } })

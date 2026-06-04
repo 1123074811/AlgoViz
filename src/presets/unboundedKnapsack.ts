@@ -1,4 +1,4 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateUnboundedKnapsack(weights?: number[], values?: number[], capacity?: number): AnimationScript {
   const w = weights ?? [2, 3, 5]
@@ -8,8 +8,7 @@ export function generateUnboundedKnapsack(weights?: number[], values?: number[],
   const dp: number[] = new Array(C + 1).fill(0)
   const table: number[][] = [new Array(C + 1).fill(0)]
   const initialTable = table.map(row => [...row])
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1
 
   steps.push({

@@ -1,8 +1,7 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateLinkedList(): AnimationScript {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1
   const list: number[] = []
   const vals = [1, 2, 3, 4]

@@ -1,9 +1,8 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateNQueens(n?: number): AnimationScript {
   const N = n ?? 4
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1
   const board: string[][] = Array.from({ length: N }, () => new Array(N).fill('·'))
   const initialBoard = board.map(row => [...row])

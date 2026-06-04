@@ -1,8 +1,7 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateBacktracking(arr?: number[]): AnimationScript {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1
   const result = arr && arr.length > 0 ? arr : [1, 2, 3]
 
@@ -10,7 +9,7 @@ export function generateBacktracking(arr?: number[]): AnimationScript {
 
   steps.push({ stepId: sid++, codeLine: 2, description: { zh: '决策树：根→选择1→选择2→选择3', en: 'Decision tree: root → choice1 → choice2 → choice3' }, action: { type: 'highlight', targets: [0, 1, 2], color: 'primary' }, events: [{ type: 'array.mark_sorted', indices: [0, 1, 2] }], stats: { comparisons: 0, swaps: 0, accesses: 3 } })
 
-  steps.push({ stepId: sid++, codeLine: 4, description: { zh: '选择不合法？撤销回退 (backtrack)', en: 'Invalid choice? Undo and backtrack' }, action: { type: 'delete', targets: [2], color: 'danger' }, events: [{ type: 'array.compare', indices: [2] }], stats: { comparisons: 0, swaps: 0, accesses: 2 } })
+  steps.push({ stepId: sid++, codeLine: 4, description: { zh: '选择不合法？撤销回退 (backtrack)', en: 'Invalid choice? Undo and backtrack' }, action: { type: 'delete', targets: [2], color: 'danger' }, events: [{ type: 'array.mark_sorted', indices: [2] }], stats: { comparisons: 0, swaps: 0, accesses: 2 } })
 
   steps.push({ stepId: sid++, codeLine: 5, description: { zh: '尝试其他分支: 1→2→?', en: 'Try other branch: 1→2→?' }, action: { type: 'highlight', targets: [0, 1], color: 'warning' }, events: [{ type: 'array.compare', indices: [0, 1] }], stats: { comparisons: 0, swaps: 0, accesses: 2 } })
 

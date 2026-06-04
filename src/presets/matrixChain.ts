@@ -1,11 +1,10 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateMatrixChain(dims?: number[]): AnimationScript {
   const d = dims ?? [10, 20, 30, 40, 30]
   const n = d.length - 1
   const dp: number[][] = Array.from({ length: n }, () => new Array(n).fill(0))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1
 
   const initialDp = dp.map((row) => [...row])

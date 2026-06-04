@@ -1,4 +1,4 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateEditDistance(w1?: string, w2?: string): AnimationScript {
   const word1 = w1 ?? 'horse'
@@ -8,8 +8,7 @@ export function generateEditDistance(w1?: string, w2?: string): AnimationScript 
   for (let i = 0; i <= m; i++) dp[i][0] = i
   for (let j = 0; j <= n; j++) dp[0][j] = j
   const initialDp = dp.map((row) => [...row])
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1
 
   steps.push({

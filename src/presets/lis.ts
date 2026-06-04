@@ -1,11 +1,10 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateLIS(arr: number[]): AnimationScript {
   const data = [...arr]
   const n = data.length
   const dp: number[] = new Array(n).fill(1)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1
 
   // Helper: include dp array in teachingState

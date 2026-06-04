@@ -1,4 +1,4 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateSudoku(): AnimationScript {
   const board = [
@@ -12,16 +12,16 @@ export function generateSudoku(): AnimationScript {
     ['.', '.', '.', '4', '1', '9', '.', '.', '5'],
     ['.', '.', '.', '.', '8', '.', '.', '7', '9'],
   ]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1
 
   const flatInit = board.flat().map(c => c === '.' ? 0 : parseInt(c))
+  const init2D = board.map(row => row.map(c => c === '.' ? 0 : parseInt(c)))
   steps.push({
     stepId: sid++, codeLine: 0,
     description: { zh: '数独初始盘面（0=空格）', en: 'Sudoku initial board (0=empty)' },
     action: { type: 'highlight', targets: [], color: 'primary' },
-    events: [{ type: 'matrix.create', rows: 9, cols: 9, values: flatInit }],
+    events: [{ type: 'matrix.create', rows: 9, cols: 9, values: init2D }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
 

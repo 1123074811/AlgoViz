@@ -1,11 +1,10 @@
-import type { AnimationScript } from '@/types/animation'
+import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 export function generateLCS(text1?: string, text2?: string): AnimationScript {
   const s1 = text1 ?? 'ABCBDAB'
   const s2 = text2 ?? 'BDCABA'
   const m = s1.length, n = s2.length
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const steps: any[] = []
+  const steps: AnimationStep[] = []
   let sid = 1
 
   const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
