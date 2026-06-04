@@ -1,4 +1,5 @@
 import type { Point, SceneState } from '../types'
+import { measureNodeRenderWidth } from '../textMetrics'
 
 /**
  * Generate a stable integer hash for any arbitrary string ID.
@@ -24,6 +25,15 @@ export function layoutGraph(scene: SceneState): Record<string, Point> {
   const vertices = Object.values(scene.entities)
     .filter(e => e.type === 'node' && e.variant === 'graph.vertex')
   if (vertices.length === 0) return {}
+
+  // Widest vertex drives minimum spacing so wide-label nodes don't overlap.
+  // Graph vertices render as circles (compact), so this is a no-op for typical
+  // graphs and only widens spacing when a vertex carries long text.
+  const maxNodeWidth = vertices.reduce((m, v) => {
+    const w = v.type === 'node' ? Math.max(v.size?.width ?? 48, measureNodeRenderWidth(v.fields, 48)) : 48
+    return Math.max(m, w)
+  }, 0)
+  const minClearance = maxNodeWidth + 24
 
   const hasQueue = Object.keys(scene.entities).some(k => k.startsWith('queue_'))
   const hasStack = Object.keys(scene.entities).some(k => k.startsWith('stack_'))
@@ -108,8 +118,8 @@ export function layoutGraph(scene: SceneState): Record<string, Point> {
         columns[r].sort((a, b) => a.localeCompare(b))
       }
 
-      const colGap = Math.max(160, Math.min(220, 500 / maxRank))
-      const rowGap = 135
+      const colGap = Math.max(160, Math.min(220, 500 / maxRank), minClearance)
+      const rowGap = Math.max(135, minClearance)
       const totalWidth = maxRank * colGap
       const startX = cx - totalWidth / 2
 
@@ -134,7 +144,9 @@ export function layoutGraph(scene: SceneState): Record<string, Point> {
   // FALLBACK MODE: Stable Circular Layout (for undirected or dense cyclic graphs)
   // ==========================================
   const totalSlots = Math.max(8, vertices.length)
-  const radius = Math.max(130, Math.min(280, totalSlots * 32))
+  // Chord between adjacent slots must clear node width: chord = 2·r·sin(π/slots).
+  const minRadiusForClearance = minClearance / (2 * Math.sin(Math.PI / totalSlots))
+  const radius = Math.max(130, Math.min(280, totalSlots * 32), minRadiusForClearance)
   const positions: Record<string, Point> = {}
 
   vertices.forEach((v) => {

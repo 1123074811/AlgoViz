@@ -1,4 +1,5 @@
 import type { SceneCell } from '../types'
+import { truncateToWidth } from '../textMetrics'
 
 const COLOR_MAP: Record<string, { stroke: string; fill: string }> = {
   primary: { stroke: '#3B82F6', fill: '#EFF6FF' },
@@ -41,6 +42,8 @@ export default function CellView({ cell }: CellViewProps) {
   const isCurrent = cell.state?.role === 'current' || cell.state?.role === 'active'
   const isDanger = cell.state?.role === 'swapping' || cell.state?.role === 'conflict'
   const textColor = isDanger ? '#EF4444' : '#1E293B'
+  // Truncate long values so they never spill past the cell border.
+  const displayValue = truncateToWidth(value, width - 6, 14)
 
   return (
     <g transform={`translate(${cell.position.x}, ${cell.position.y})`} opacity={opacity}>
@@ -55,7 +58,8 @@ export default function CellView({ cell }: CellViewProps) {
           fill={palette.fill} stroke={palette.stroke} strokeWidth={1.5} />
         <text x={0} y={4} textAnchor="middle" fontSize="14" fontFamily="monospace"
           fill={textColor} fontWeight={isCurrent ? 600 : 400}>
-          {value}
+          {displayValue !== value && <title>{value}</title>}
+          {displayValue}
         </text>
         {cell.col !== undefined && !cell.id.startsWith('queue_') && !cell.id.startsWith('stack_') && (
           <text x={0} y={height / 2 + 14} textAnchor="middle" fontSize="10"

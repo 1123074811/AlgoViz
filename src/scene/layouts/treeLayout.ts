@@ -1,4 +1,15 @@
 import type { Point, SceneState, SceneNode } from '../types'
+import { measureNodeRenderWidth } from '../textMetrics'
+
+/**
+ * Effective rendered width of a tree node. Circular tree nodes use a small
+ * fixed diameter; rectangular nodes (e.g. B/B+ tree) grow with their field text.
+ */
+function nodeWidth(node: SceneNode): number {
+  const isCircle = node.variant.startsWith('tree.') && node.variant !== 'tree.btree'
+  if (isCircle) return node.size?.width ?? 48
+  return Math.max(node.size?.width ?? 96, measureNodeRenderWidth(node.fields, 96))
+}
 
 /**
  * Filter entities with type === 'node' and variant.startsWith('tree.')
@@ -113,9 +124,15 @@ export function layoutTree(scene: SceneState): Record<string, Point> {
 
   const depth = computeDepth(scene, rootId, nodes)
 
+  // Widest node in the tree drives a minimum horizontal clearance so wide
+  // rectangular nodes (B/B+ tree) never overlap. Circular trees keep their
+  // compact spacing because their node widths are small.
+  const maxNodeWidth = nodes.reduce((m, n) => Math.max(m, nodeWidth(n)), 0)
+  const minClearance = maxNodeWidth + 24 // (leftW+rightW)/2 + GAP, conservative upper bound
+
   // Symmetric binary tree layout gaps
   const vGap = Math.max(120, Math.min(145, 500 / Math.max(depth, 1)))
-  const hGap = Math.max(85, Math.min(110, 360 / Math.max(depth, 1)))
+  const hGap = Math.max(85, Math.min(110, 360 / Math.max(depth, 1)), minClearance)
   const startY = 80
 
   const positions: Record<string, Point> = {}
