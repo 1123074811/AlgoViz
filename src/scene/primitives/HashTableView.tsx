@@ -58,8 +58,8 @@ export default function HashTableView({ buckets, entries, loadFactorCell }: Hash
         fill="none" stroke={STROKE} strokeWidth={STROKE_WIDTH} strokeDasharray="5 3" opacity={0.7}
       />
       <text
-        x={minX - pad} y={frameY - pad - 6}
-        textAnchor="start" fontSize="11" fill="#64748B" fontFamily="monospace"
+        x={minX - pad} y={frameY - pad - 26}
+        textAnchor="start" fontSize="12" fill="#64748B" fontFamily="monospace" fontWeight={600}
       >
         Hash Table（链地址法）
       </text>
@@ -101,14 +101,14 @@ export default function HashTableView({ buckets, entries, loadFactorCell }: Hash
         return <g key={`chainset_${b.id}`}>{segments}</g>
       })}
 
-      {/* Load factor panel */}
+      {/* Load factor panel (centered on the load-factor cell position) */}
       <g transform={`translate(${lfX}, ${lfY})`}>
-        <rect x={0} y={-bucketH / 2} width={108} height={bucketH} rx={8}
+        <rect x={-60} y={-bucketH / 2} width={120} height={bucketH} rx={8}
           fill="#F8FAFC" stroke="#E2E8F0" strokeWidth={1.2} />
-        <text x={10} y={-3} textAnchor="start" fontSize="10" fill="#94A3B8" fontFamily="monospace">
+        <text x={0} y={-3} textAnchor="middle" fontSize="10" fill="#94A3B8" fontFamily="monospace">
           load factor
         </text>
-        <text x={10} y={13} textAnchor="start" fontSize="14" fill="#475569" fontFamily="monospace" fontWeight={600}>
+        <text x={0} y={14} textAnchor="middle" fontSize="14" fill="#475569" fontFamily="monospace" fontWeight={600}>
           {lf}
         </text>
       </g>

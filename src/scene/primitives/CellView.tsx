@@ -61,7 +61,7 @@ export default function CellView({ cell }: CellViewProps) {
           {displayValue !== value && <title>{value}</title>}
           {displayValue}
         </text>
-        {cell.col !== undefined && !cell.id.startsWith('queue_') && !cell.id.startsWith('stack_') && (
+        {cell.col !== undefined && showColLabel(cell.id) && (
           <text x={0} y={height / 2 + 14} textAnchor="middle" fontSize="10"
             fill="#94A3B8" fontFamily="monospace">
             {cell.row !== undefined ? `${cell.row},${cell.col}` : cell.col}
@@ -76,4 +76,14 @@ export default function CellView({ cell }: CellViewProps) {
       `}</style>
     </g>
   )
+}
+
+// Dedicated-structure cells get their index/labels drawn by their own View
+// (HashTableView, VariablesView, StringView, SetView, ContainerView), so the
+// generic col label here would be duplicate noise.
+const DEDICATED_PREFIXES = ['queue_', 'stack_', 'deque_', 'set_', 'hashbucket_', 'hashentry_', 'mathvar_']
+function showColLabel(id: string): boolean {
+  if (DEDICATED_PREFIXES.some(p => id.startsWith(p))) return false
+  if (/^s_\d+_\d+$/.test(id)) return false // string char cells (StringView draws indices)
+  return true
 }

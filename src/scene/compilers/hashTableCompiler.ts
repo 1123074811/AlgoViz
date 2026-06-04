@@ -7,11 +7,12 @@ import type { SceneCell } from '../types'
 // ── Layout constants (HashTableView reads positions off the emitted cells) ──
 const START_X = 200
 const BUCKET_Y = 200
-const CELL_W = 56
+const CELL_W = 60 // bucket width
 const CELL_H = 44
-const BUCKET_GAP = 8 // horizontal gap between buckets
-const CHAIN_GAP = 14 // vertical gap between chained entries (and bucket → first entry)
+const BUCKET_GAP = 52 // horizontal gap between buckets — wide enough for chained entries
+const CHAIN_GAP = 16 // vertical gap between chained entries (and bucket → first entry)
 const ENTRY_H = 40
+const ENTRY_W = 104 // entry box width — fits "key:value" without truncation
 
 export const hashTableCompiler: EventCompiler = {
   supports: (event): event is HashTableAlgorithmEvent => event.type.startsWith('hashtable.'),
@@ -66,7 +67,8 @@ function loadFactorCell(n: number, capacity: number, x: number, y: number): Scen
     id: LOAD_FACTOR_ID,
     type: 'cell',
     position: { x, y },
-    size: { width: 1, height: 1 },
+    // Real size so the auto viewBox includes the load-factor panel (HashTableView draws it).
+    size: { width: 120, height: CELL_H },
     value: `${n}/${capacity}`,
     // empty_placeholder → CellView renders nothing; HashTableView reads .value/.meta
     state: { role: 'empty_placeholder', color: 'muted' },
@@ -126,7 +128,7 @@ function compileHashTableEvent(event: HashTableAlgorithmEvent, context: CompileC
         id,
         type: 'cell',
         position: { x: bucketX(event.bucket), y: entryY(chainIndex) },
-        size: { width: CELL_W, height: ENTRY_H },
+        size: { width: ENTRY_W, height: ENTRY_H },
         value: `${event.key}:${event.value}`,
         col: chainIndex,
         state: { role: 'inserted', color, pulse: true },
