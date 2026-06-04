@@ -118,9 +118,12 @@ export function allRecoverable(issues: AIValidationIssue[]): boolean {
 }
 
 /** Check if any issue needs AI repair.
- *  Only spend a second AI round-trip when at least one issue is genuinely
- *  non-recoverable. If every remaining issue is recoverable, local repair plus
- *  the tolerant normalizer can handle it without another network request. */
+ *  Parse/extract failures (truncated or non-JSON output) warrant a retry — local
+ *  repair cannot reconstruct a truncated object, but re-asking the model can.
+ *  Otherwise only spend a round-trip when something is genuinely non-recoverable;
+ *  all-recoverable schema issues are handled by local repair + tolerant normalize. */
 export function needsAIRepair(report: AIErrorReport): boolean {
-  return report.canRetry && report.issues.some((i) => !i.recoverable)
+  if (!report.canRetry) return false
+  if (report.stage === 'json_parse' || report.stage === 'json_extract') return true
+  return report.issues.some((i) => !i.recoverable)
 }

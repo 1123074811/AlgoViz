@@ -38,6 +38,18 @@ describe('needsAIRepair', () => {
   it('无 issue 时不触发', () => {
     expect(needsAIRepair(report([]))).toBe(false)
   })
+
+  // json_parse 阶段（截断/非法 JSON）→ 即使 issue 可恢复也应重试
+  it('json_parse 阶段失败应触发 AI 修复（即使 issue 标记可恢复）', () => {
+    const r: AIErrorReport = { ...report([iss(true)]), stage: 'json_parse' }
+    expect(needsAIRepair(r)).toBe(true)
+  })
+
+  // json_extract 阶段同理
+  it('json_extract 阶段失败应触发 AI 修复', () => {
+    const r: AIErrorReport = { ...report([iss(true)]), stage: 'json_extract' }
+    expect(needsAIRepair(r)).toBe(true)
+  })
 })
 
 describe('allRecoverable', () => {
