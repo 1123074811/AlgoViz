@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createAlgorithmStore, type AIHistoryEntry } from '../algorithmStore'
+import { createAlgorithmStore, type AIHistoryEntry, type AIHistoryStatus } from '../algorithmStore'
 import type { AnimationScript } from '@/types/animation'
 
 const localStorageMock = (() => {
@@ -20,7 +20,7 @@ const minimalScript: AnimationScript = {
   steps: [],
 }
 
-function makeEntry(id: string): AIHistoryEntry {
+function makeEntry(id: string, status: AIHistoryStatus = 'success'): AIHistoryEntry {
   return {
     id,
     timestamp: Date.now(),
@@ -29,7 +29,8 @@ function makeEntry(id: string): AIHistoryEntry {
     code: 'def sort(): pass',
     language: 'python',
     inputData: '[1,2,3]',
-    script: minimalScript,
+    status,
+    script: status === 'success' ? minimalScript : undefined,
   }
 }
 
@@ -100,5 +101,37 @@ describe('algorithmStore — AI 历史', () => {
     store.getState().addAIHistory(makeEntry('restore'))
     const store2 = createAlgorithmStore()
     expect(store2.getState().aiHistory[0].id).toBe('restore')
+  })
+})
+
+describe('algorithmStore — updateAIHistory / removeAIHistory', () => {
+  let store: ReturnType<typeof createAlgorithmStore>
+  beforeEach(() => {
+    localStorageMock.clear()
+    store = createAlgorithmStore()
+  })
+
+  it('updateAIHistory 更新指定条目的字段', () => {
+    store.getState().addAIHistory(makeEntry('u1', 'analyzing'))
+    store.getState().updateAIHistory('u1', { status: 'success', script: minimalScript })
+    const updated = store.getState().aiHistory.find(e => e.id === 'u1')
+    expect(updated?.status).toBe('success')
+    expect(updated?.script).toBeDefined()
+  })
+
+  it('updateAIHistory 对不存在的 id 无副作用', () => {
+    store.getState().addAIHistory(makeEntry('u2'))
+    const before = store.getState().aiHistory.length
+    store.getState().updateAIHistory('nonexistent', { status: 'error' })
+    expect(store.getState().aiHistory.length).toBe(before)
+  })
+
+  it('removeAIHistory 删除指定条目', () => {
+    store.getState().addAIHistory(makeEntry('r1'))
+    store.getState().addAIHistory(makeEntry('r2'))
+    store.getState().removeAIHistory('r1')
+    const ids = store.getState().aiHistory.map(e => e.id)
+    expect(ids).not.toContain('r1')
+    expect(ids).toContain('r2')
   })
 })

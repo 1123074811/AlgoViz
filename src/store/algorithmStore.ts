@@ -1,6 +1,8 @@
 import { createStore, useStore } from 'zustand'
 import type { AnimationScript } from '@/types/animation'
 
+export type AIHistoryStatus = 'analyzing' | 'success' | 'error'
+
 export type AIStatus = 'idle' | 'analyzing' | 'success' | 'error'
 
 export interface AIHistoryEntry {
@@ -11,7 +13,9 @@ export interface AIHistoryEntry {
   code: string
   language: string
   inputData: string
-  script: AnimationScript
+  status: AIHistoryStatus
+  script?: AnimationScript
+  error?: string
 }
 
 const AI_HISTORY_KEY = 'algoviz-ai-history'
@@ -885,6 +889,8 @@ export interface AlgorithmActions {
   setAIStatus: (status: AIStatus, error?: string, rawResponse?: string) => void
   addAIHistory: (entry: AIHistoryEntry) => void
   clearAIHistory: () => void
+  updateAIHistory: (id: string, patch: Partial<Omit<AIHistoryEntry, 'id'>>) => void
+  removeAIHistory: (id: string) => void
 }
 
 export const createAlgorithmStore = () => createStore<AlgorithmState & AlgorithmActions>((set) => ({
@@ -922,6 +928,23 @@ export const createAlgorithmStore = () => createStore<AlgorithmState & Algorithm
     saveAIHistory([])
     set({ aiHistory: [] })
   },
+
+  updateAIHistory: (id, patch) =>
+    set((state) => {
+      const idx = state.aiHistory.findIndex((e) => e.id === id)
+      if (idx === -1) return state
+      const next = [...state.aiHistory]
+      next[idx] = { ...next[idx], ...patch }
+      saveAIHistory(next)
+      return { aiHistory: next }
+    }),
+
+  removeAIHistory: (id) =>
+    set((state) => {
+      const next = state.aiHistory.filter((e) => e.id !== id)
+      saveAIHistory(next)
+      return { aiHistory: next }
+    }),
 }))
 
 const algorithmStore = createAlgorithmStore()

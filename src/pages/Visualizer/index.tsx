@@ -601,6 +601,7 @@ export default function Visualizer() {
           code,
           language: codeLanguage,
           inputData,
+          status: 'success',
           script: result.script,
         }
         addAIHistory(entry)

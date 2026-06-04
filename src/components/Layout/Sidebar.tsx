@@ -233,7 +233,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 onClick={() => {
                   const algo = algorithms.find((a) => a.id === entry.algorithmId)
                   if (algo) setSelectedAlgorithm(algo)
-                  setAnimationScript(entry.script)
+                  setAnimationScript(entry.script ?? null)
                   navigate('/visualizer')
                 }}
                 className="w-full flex items-center justify-between px-2 py-1.5 rounded-md
