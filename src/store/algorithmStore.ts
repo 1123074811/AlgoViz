@@ -1,5 +1,35 @@
-import { create } from 'zustand'
+import { createStore, useStore } from 'zustand'
 import type { AnimationScript } from '@/types/animation'
+
+export type AIStatus = 'idle' | 'analyzing' | 'success' | 'error'
+
+export interface AIHistoryEntry {
+  id: string
+  timestamp: number
+  algorithmId: string
+  algorithmName: string
+  code: string
+  language: string
+  inputData: string
+  script: AnimationScript
+}
+
+const AI_HISTORY_KEY = 'algoviz-ai-history'
+const AI_HISTORY_MAX = 20
+
+function loadAIHistory(): AIHistoryEntry[] {
+  try {
+    const raw = localStorage.getItem(AI_HISTORY_KEY)
+    if (!raw) return []
+    return JSON.parse(raw) as AIHistoryEntry[]
+  } catch {
+    return []
+  }
+}
+
+function saveAIHistory(history: AIHistoryEntry[]): void {
+  localStorage.setItem(AI_HISTORY_KEY, JSON.stringify(history))
+}
 
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
@@ -840,6 +870,10 @@ export interface AlgorithmState {
   searchQuery: string
   activeCategory: AlgorithmCategory | 'all'
   language: 'zh' | 'en'
+  aiStatus: AIStatus
+  aiError: string
+  aiRawResponse: string
+  aiHistory: AIHistoryEntry[]
 }
 
 export interface AlgorithmActions {
@@ -848,15 +882,22 @@ export interface AlgorithmActions {
   setSearchQuery: (query: string) => void
   setActiveCategory: (cat: AlgorithmCategory | 'all') => void
   setLanguage: (lang: 'zh' | 'en') => void
+  setAIStatus: (status: AIStatus, error?: string, rawResponse?: string) => void
+  addAIHistory: (entry: AIHistoryEntry) => void
+  clearAIHistory: () => void
 }
 
-export const createAlgorithmStore = create<AlgorithmState & AlgorithmActions>((set) => ({
+export const createAlgorithmStore = () => createStore<AlgorithmState & AlgorithmActions>((set) => ({
   selectedAlgorithm: null,
   algorithms: DEFAULT_ALGORITHMS,
   animationScript: null,
   searchQuery: '',
   activeCategory: 'all',
-  language: (localStorage.getItem('algoviz-lang') as 'zh' | 'en') || 'zh',
+  language: (() => { try { return (localStorage.getItem('algoviz-lang') as 'zh' | 'en') || 'zh' } catch { return 'zh' } })(),
+  aiStatus: 'idle' as AIStatus,
+  aiError: '',
+  aiRawResponse: '',
+  aiHistory: loadAIHistory(),
 
   setSelectedAlgorithm: (algo) => set({ selectedAlgorithm: algo }),
   setAnimationScript: (script) => set({ animationScript: script }),
@@ -866,6 +907,25 @@ export const createAlgorithmStore = create<AlgorithmState & AlgorithmActions>((s
     localStorage.setItem('algoviz-lang', lang)
     set({ language: lang })
   },
+
+  setAIStatus: (status, error = '', rawResponse = '') =>
+    set({ aiStatus: status, aiError: error, aiRawResponse: rawResponse }),
+
+  addAIHistory: (entry) =>
+    set((state) => {
+      const next = [entry, ...state.aiHistory].slice(0, AI_HISTORY_MAX)
+      saveAIHistory(next)
+      return { aiHistory: next }
+    }),
+
+  clearAIHistory: () => {
+    saveAIHistory([])
+    set({ aiHistory: [] })
+  },
 }))
 
-export const useAlgorithmStore = createAlgorithmStore
+const algorithmStore = createAlgorithmStore()
+
+export function useAlgorithmStore<T>(selector: (state: AlgorithmState & AlgorithmActions) => T): T {
+  return useStore(algorithmStore, selector)
+}
