@@ -1,4 +1,5 @@
 import type { SceneNode } from '../types'
+import { getAdaptiveCircleLayout } from '../engineUtils'
 
 const COLOR_MAP: Record<string, { stroke: string; fill: string }> = {
   primary: { stroke: '#3B82F6', fill: '#EFF6FF' },
@@ -31,8 +32,8 @@ function renderCircle(
   opacity: number,
   isActive: boolean
 ) {
-  const r = d / 2
   const value = node.fields[0]?.value?.toString() ?? ''
+  const { r, fontSize } = getAdaptiveCircleLayout(value, d)
   return (
     <g transform={`translate(${node.position.x}, ${node.position.y})`} opacity={opacity}>
       <title>{`${node.id} · ${node.variant}${node.state?.role ? ` · ${node.state.role}` : ''}`}</title>
@@ -41,7 +42,7 @@ function renderCircle(
           <circle cx={0} cy={0} r={r + 4} fill={palette.stroke} opacity="0.08" className="node-active-ring" />
         )}
         <circle cx={0} cy={0} r={r} fill={palette.fill} stroke={palette.stroke} strokeWidth={1.5} />
-        <text x={0} y={4} textAnchor="middle" fontSize="14" fontFamily="monospace" fill="#1E293B" fontWeight="bold">{value}</text>
+        <text x={0} y={Math.round(fontSize * 0.3)} textAnchor="middle" fontSize={fontSize} fontFamily="monospace" fill="#1E293B" fontWeight="bold">{value}</text>
         {node.fields.length > 1 && node.fields.slice(1).map((field, i) => (
           <text key={field.id} x={0} y={r + 14 + i * 12} textAnchor="middle" fontSize="10" fill="#94A3B8">
             {field.label}:{field.value ?? ''}

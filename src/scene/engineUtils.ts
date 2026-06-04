@@ -17,3 +17,28 @@ export function getSceneEventStats(script: AnimationScript | null | undefined) {
     { eventSteps: 0, totalEvents: 0 },
   )
 }
+
+/**
+ * Compute adaptive radius and font size for circular scene nodes (trees and graphs)
+ * to maintain a perfect aesthetic proportion between text and node size.
+ */
+export function getAdaptiveCircleLayout(value: string, defaultDiameter: number = 48): { r: number; fontSize: number } {
+  const valLen = value.length
+  
+  if (valLen === 0) {
+    return { r: 18, fontSize: 14 }
+  }
+  if (valLen === 1) {
+    return { r: 18, fontSize: 16 } // Nice large font for single digit/char
+  }
+  if (valLen === 2) {
+    return { r: 20, fontSize: 15 } // 40px diameter, 15px text fits perfectly
+  }
+  if (valLen === 3) {
+    return { r: 23, fontSize: 13 } // 46px diameter, 13px text
+  }
+  // For 4 or more characters, expand radius and scale down font size
+  const r = Math.max(24, 23 + (valLen - 3) * 3)
+  const fontSize = Math.max(10, 13 - (valLen - 3) * 0.8)
+  return { r, fontSize }
+}
