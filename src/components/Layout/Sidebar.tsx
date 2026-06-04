@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
 import { useNavigate } from 'react-router-dom'
 import { Icon, categoryIcons, algorithmTypeIcons, type IconName } from '@/icons'
-import { useAlgorithmStore, type AlgorithmCategory, type Difficulty } from '@/store/algorithmStore'
+import { useAlgorithmStore, type AlgorithmCategory, type Difficulty, type AIHistoryEntry } from '@/store/algorithmStore'
 
 const CATEGORIES: { key: AlgorithmCategory | 'all'; icon: IconName }[] = [
   { key: 'all', icon: 'home' },
@@ -28,6 +28,21 @@ interface SidebarProps {
   onToggle: () => void
 }
 
+function formatHistoryTime(timestamp: number): string {
+  const now = Date.now()
+  const date = new Date(timestamp)
+  const today = new Date(now)
+  const yesterday = new Date(now - 86400000)
+
+  if (date.toDateString() === today.toDateString()) {
+    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
+  }
+  if (date.toDateString() === yesterday.toDateString()) {
+    return '昨天'
+  }
+  return `${date.getMonth() + 1}/${date.getDate()}`
+}
+
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -38,6 +53,9 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const algorithms = useAlgorithmStore((s) => s.algorithms)
   const selectedAlgorithm = useAlgorithmStore((s) => s.selectedAlgorithm)
   const setSelectedAlgorithm = useAlgorithmStore((s) => s.setSelectedAlgorithm)
+  const aiHistory = useAlgorithmStore((s) => s.aiHistory)
+  const clearAIHistory = useAlgorithmStore((s) => s.clearAIHistory)
+  const setAnimationScript = useAlgorithmStore((s) => s.setAnimationScript)
 
   const filteredAlgos = useMemo(() => {
     let result = algorithms
@@ -193,6 +211,46 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           )}
         </div>
       </div>
+
+      {/* AI 分析历史 */}
+      {aiHistory.length > 0 && (
+        <div className="border-t border-border px-3 pt-3 pb-2">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
+              AI 分析历史
+            </span>
+            <button
+              onClick={clearAIHistory}
+              className="text-[10px] text-muted hover:text-red-400 transition-colors cursor-pointer border-none bg-transparent"
+            >
+              清空
+            </button>
+          </div>
+          <div className="space-y-0.5 max-h-48 overflow-y-auto">
+            {aiHistory.map((entry: AIHistoryEntry) => (
+              <button
+                key={entry.id}
+                onClick={() => {
+                  const algo = algorithms.find((a) => a.id === entry.algorithmId)
+                  if (algo) setSelectedAlgorithm(algo)
+                  setAnimationScript(entry.script)
+                  navigate('/visualizer')
+                }}
+                className="w-full flex items-center justify-between px-2 py-1.5 rounded-md
+                           text-left hover:bg-slate-100 transition-colors cursor-pointer
+                           border-none bg-transparent group"
+              >
+                <span className="text-xs text-slate-700 truncate flex-1 font-medium">
+                  {entry.algorithmName}
+                </span>
+                <span className="text-[10px] text-muted ml-2 shrink-0 group-hover:text-slate-500">
+                  {formatHistoryTime(entry.timestamp)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="p-3 border-t border-border">
         <p className="text-[10px] text-muted text-center">
