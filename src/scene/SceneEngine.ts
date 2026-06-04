@@ -352,23 +352,25 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
 function renderAuxiliaryArrays(scene: SceneState, teachingState: TeachingState | undefined): SceneState {
   if (!teachingState?.auxiliaryArrays || teachingState.auxiliaryArrays.length === 0) return scene
 
-  // Find the lowest existing cell Y to place auxiliary arrays below
+  // Find the lowest existing cell Y of the main visualization to place auxiliary arrays below
   let maxY = 200
-  for (const entity of Object.values(scene.entities)) {
+  for (const [id, entity] of Object.entries(scene.entities)) {
+    if (id.startsWith('aux_') || id.startsWith('queue_') || id.startsWith('stack_')) continue
     if ('position' in entity && entity.position) {
       const bottom = entity.position.y + ((entity as any).size?.height ?? 44)
       if (bottom > maxY) maxY = bottom
     }
   }
   // Check labels and pointers too
-  for (const label of Object.values(scene.labels)) {
+  for (const [id, label] of Object.entries(scene.labels)) {
+    if (id.startsWith('aux_label_') || id === 'queue_label' || id === 'stack_label') continue
     if (label.position.y > maxY) maxY = label.position.y
   }
 
   const CELL_W = 52
   const CELL_H = 38
-  const LABEL_H = 20
-  const ARRAY_GAP = 56  // gap between auxiliary arrays
+  const LABEL_H = 26
+  const ARRAY_GAP = 84  // gap between auxiliary arrays
 
   const auxArrays = teachingState.auxiliaryArrays
   // Clear previous auxiliary array entities
@@ -397,7 +399,7 @@ function renderAuxiliaryArrays(scene: SceneState, teachingState: TeachingState |
     const totalWidth = count * CELL_W
     const startX = 500 - totalWidth / 2
 
-    // Label
+    // Label - perfectly centered over the array
     scene = {
       ...scene,
       labels: {
@@ -406,7 +408,7 @@ function renderAuxiliaryArrays(scene: SceneState, teachingState: TeachingState |
           id: `aux_label_${arr.id}`,
           type: 'label',
           text: arr.label,
-          position: { x: startX, y: startY - LABEL_H },
+          position: { x: 500, y: startY - LABEL_H },
         },
       },
     }
