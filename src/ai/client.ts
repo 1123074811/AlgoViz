@@ -25,6 +25,7 @@ interface ChatRequestOptions {
   temperature?: number
   maxTokens?: number
   jsonMode?: boolean
+  signal?: AbortSignal
 }
 
 function normalizeBaseUrl(baseUrl: string): string {
@@ -113,6 +114,7 @@ export interface AnalyzeOptions {
   maxRepairAttempts?: number
   enableLocalRepair?: boolean
   enableAIRepair?: boolean
+  signal?: AbortSignal
 }
 
 export interface AIResult {
@@ -127,7 +129,11 @@ export interface AIResult {
 }
 
 export async function analyzeCode(params: AIRequestParams, options: AnalyzeOptions = {}): Promise<AIResult> {
-  const { maxRepairAttempts = 1, enableLocalRepair = true, enableAIRepair = true } = options
+  const { maxRepairAttempts = 1, enableLocalRepair = true, enableAIRepair = true, signal } = options
+
+  if (signal?.aborted) {
+    return { success: false, error: 'AbortError', rawResponse: '' }
+  }
 
   const config = getApiConfig()
   if (!config) {
@@ -156,7 +162,12 @@ export async function analyzeCode(params: AIRequestParams, options: AnalyzeOptio
   }
 
   try {
-    const result = await requestWithProxyFallback(config, buildSystemPrompt(params.language), buildUserMessage(params.code, params.language, params.inputData, parsedInput.promptContext, params.algorithmName), { temperature: 0.3, jsonMode: true })
+    const result = await requestWithProxyFallback(
+      config,
+      buildSystemPrompt(params.language),
+      buildUserMessage(params.code, params.language, params.inputData, parsedInput.promptContext, params.algorithmName),
+      { temperature: 0.3, jsonMode: true, signal },
+    )
 
     if (!result.success) {
       return { success: false, error: result.error, errorReport: result.errorReport, rawResponse: result.content }
@@ -186,7 +197,12 @@ export async function analyzeCode(params: AIRequestParams, options: AnalyzeOptio
       // Phase 4: AI repair request
       if (enableAIRepair && maxRepairAttempts > 0 && parseResult.error && needsAIRepair(parseResult.error)) {
         const repairPrompt = buildRepairPrompt(result.content, parseResult.error)
-        const repairResult = await requestWithProxyFallback(config, '你是 AnimationScript JSON 修复器。只输出修复后的完整 JSON。', repairPrompt, { temperature: 0, jsonMode: true })
+        const repairResult = await requestWithProxyFallback(
+          config,
+          '你是 AnimationScript JSON 修复器。只输出修复后的完整 JSON。',
+          repairPrompt,
+          { temperature: 0, jsonMode: true, signal },
+        )
 
         if (repairResult.success) {
           const repairedParse = parseAIResponseDetailed(repairResult.content)
@@ -220,6 +236,8 @@ export async function analyzeCode(params: AIRequestParams, options: AnalyzeOptio
 
     return { success: true, script: parseResult.script }
   } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') throw e
+    if (typeof e === 'object' && e !== null && (e as { name?: string }).name === 'AbortError') throw e
     const message = e instanceof Error ? e.message : String(e)
     const result = buildFetchErrorResult(message)
     return { success: false, error: result.error, errorReport: result.errorReport, rawResponse: result.content }
@@ -275,6 +293,7 @@ async function requestViaProxy(
         ...(normalizedConfig.apiKey ? { 'X-Proxy-Key': normalizedConfig.apiKey } : {}),
       },
       body: JSON.stringify(buildChatRequestBody(normalizedConfig, systemPrompt, userMessage, options)),
+      signal: options.signal,
     })
 
     if (!response.ok) {
@@ -288,6 +307,8 @@ async function requestViaProxy(
     if (!content.trim()) return buildEmptyResponseResult(data, '（通过代理）')
     return { success: true, content }
   } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') throw e
+    if (typeof e === 'object' && e !== null && (e as { name?: string }).name === 'AbortError') throw e
     const message = `代理请求失败: ${(e as Error).message}`
     return {
       success: false,
@@ -321,8 +342,11 @@ async function requestChatCompletion(
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${normalizedConfig.apiKey}` },
       body: JSON.stringify(buildChatRequestBody(normalizedConfig, systemPrompt, userMessage, options)),
+      signal: options.signal,
     })
   } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') throw e
+    if (typeof e === 'object' && e !== null && (e as { name?: string }).name === 'AbortError') throw e
     return buildFetchErrorResult(e instanceof Error ? e.message : String(e))
   }
 
