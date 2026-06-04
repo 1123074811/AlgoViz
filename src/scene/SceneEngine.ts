@@ -63,6 +63,25 @@ function deepCloneScene(scene: SceneState): SceneState {
   }
 }
 
+/**
+ * Seed the scene with the initial data structure from `initialState`, so the
+ * structure is always visible even when the script never emits an explicit
+ * create event. Currently covers `array` (cells from initialState.data) — the
+ * scene engine otherwise renders nothing for array scripts that lack an
+ * `array.create` event. Explicit create events during replay overwrite these
+ * seeded entities (same ids), so this is a safe no-harm fallback.
+ */
+function seedInitialStructures(scene: SceneState, script: AnimationScript): SceneState {
+  if (script.initialState.type === 'array' && (script.initialState.data?.length ?? 0) > 0) {
+    const commands = compileEvent(
+      { type: 'array.create', values: script.initialState.data } as AlgorithmEvent,
+      { scene, stepIndex: 0, script },
+    )
+    return applyCommands(scene, commands)
+  }
+  return scene
+}
+
 export function deriveSceneState(script: AnimationScript, currentStep: number): SceneState {
   const replayLimit = Math.min(currentStep, script.steps.length)
 
@@ -76,8 +95,9 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
     startStep = nearest.step
   } else {
     scene = createEmptyScene()
+    scene = seedInitialStructures(scene, script)
     startStep = 0
-    // Save snapshot at step 0 (initial empty state)
+    // Save snapshot at step 0 (initial seeded state)
     if (replayLimit > SNAPSHOT_INTERVAL) {
       saveSnapshot(script, 0, scene)
     }

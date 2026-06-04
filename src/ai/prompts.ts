@@ -79,7 +79,8 @@ export function buildSystemPrompt(language: string): string {
 - 链表可用事件：\`linked_list.create\`、\`linked_list.visit\`、\`linked_list.move_pointer\`、\`linked_list.insert_after\`、\`linked_list.insert_before\`、\`linked_list.delete\`、\`linked_list.reverse_link\`、\`linked_list.set_head\`、\`linked_list.set_tail\`
 - 树算法涉及节点创建、插入、访问、比较或元数据更新时，也可以设置 \`presentation.engine = "scene"\` 并使用 \`tree.create\`、\`tree.visit\`、\`tree.compare\`、\`tree.insert\`、\`tree.delete\`、\`tree.rotate\`、\`tree.update_metadata\`
 - 图算法可使用 \`graph.create\`、\`graph.visit_node\`、\`graph.visit_edge\`、\`graph.relax_edge\`、\`graph.enqueue\`、\`graph.dequeue\`，节点 id 必须与 initialState.nodes 对齐
-- 矩阵、数组和 N 皇后可以使用 \`matrix.*\`、\`array.*\`、\`n_queens.*\` 事件；如果输出 events，必须使用白名单事件并补齐必填字段
+- **数组类算法（排序、二分查找、滑动窗口等）必须输出 events，且第一步的 events 必须包含 \`array.create\`（携带完整初始数组），否则可视化引擎无法渲染出任何格子。后续步骤用 \`array.compare\`、\`array.swap\`、\`array.move\`、\`array.set_value\`、\`array.mark_sorted\`、\`array.partition\` 驱动动画**
+- 矩阵和 N 皇后可使用 \`matrix.*\`、\`n_queens.*\` 事件；如果输出 events，必须使用白名单事件并补齐必填字段
 
 ### 链表 events 示例
 \`\`\`json
@@ -101,6 +102,37 @@ export function buildSystemPrompt(language: string): string {
         }
       ],
       "stats": { "comparisons": 0, "swaps": 0, "accesses": 2 }
+    }
+  ]
+}
+\`\`\`
+
+### 数组 events 示例（排序/查找必须第一步发 array.create）
+\`\`\`json
+{
+  "presentation": { "engine": "scene", "module": "array" },
+  "initialState": { "type": "array", "data": [5, 3, 8, 1] },
+  "steps": [
+    {
+      "stepId": 1, "codeLine": 0,
+      "description": { "zh": "初始化数组", "en": "Initialize array" },
+      "action": { "type": "highlight", "targets": [], "color": "primary" },
+      "events": [{ "type": "array.create", "values": [5, 3, 8, 1] }],
+      "stats": { "comparisons": 0, "swaps": 0, "accesses": 0 }
+    },
+    {
+      "stepId": 2, "codeLine": 3,
+      "description": { "zh": "比较 arr[0] 和 arr[1]", "en": "Compare arr[0] and arr[1]" },
+      "action": { "type": "compare", "targets": [0, 1], "color": "warning" },
+      "events": [{ "type": "array.compare", "indices": [0, 1] }],
+      "stats": { "comparisons": 1, "swaps": 0, "accesses": 2 }
+    },
+    {
+      "stepId": 3, "codeLine": 4,
+      "description": { "zh": "交换 arr[0] 和 arr[1]", "en": "Swap arr[0] and arr[1]" },
+      "action": { "type": "swap", "targets": [0, 1], "color": "danger" },
+      "events": [{ "type": "array.swap", "indices": [0, 1] }],
+      "stats": { "comparisons": 1, "swaps": 1, "accesses": 4 }
     }
   ]
 }
