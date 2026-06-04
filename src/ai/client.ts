@@ -81,7 +81,7 @@ function buildChatRequestBody(config: ApiConfig, systemPrompt: string, userMessa
       { role: 'user', content: userMessage },
     ],
     stream: false,
-    max_tokens: options.maxTokens ?? 4096,
+    max_tokens: options.maxTokens ?? 8192,
   }
 
   if (options.temperature !== undefined) body.temperature = options.temperature
