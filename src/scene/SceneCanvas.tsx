@@ -9,6 +9,7 @@ import HashTableView from './primitives/HashTableView'
 import LabelView from './primitives/LabelView'
 import NodeView, { NodeStyles } from './primitives/NodeView'
 import PointerView from './primitives/PointerView'
+import VariablesView from './primitives/VariablesView'
 import type { SceneCell, SceneEntity, SceneNode } from './types'
 
 interface SceneCanvasProps {
@@ -235,6 +236,8 @@ function renderContainers(entities: SceneEntity[]) {
     .sort((a, b) => parseInt(a.id.split('_')[1]) - parseInt(b.id.split('_')[1]))
   const hashEntries = cells.filter(c => c.id.startsWith('hashentry_'))
   const loadFactorCell = cells.find(c => c.id === 'hashtable_loadfactor')
+  const mathVars = cells.filter(c => c.id.startsWith('mathvar_'))
+    .sort((a, b) => (a.col ?? 0) - (b.col ?? 0))
   return (
     <>
       {stackCells.length > 0 && <ContainerView type="stack" cells={stackCells} />}
@@ -244,6 +247,7 @@ function renderContainers(entities: SceneEntity[]) {
       {mapNodes.length > 0 && <ContainerView type="map" cells={[]} nodes={mapNodes} />}
       {auxCells.length > 0 && <ContainerView type="auxiliary" cells={auxCells} />}
       {hashBuckets.length > 0 && <HashTableView buckets={hashBuckets} entries={hashEntries} loadFactorCell={loadFactorCell} />}
+      {mathVars.length > 0 && <VariablesView vars={mathVars} />}
     </>
   )
 }

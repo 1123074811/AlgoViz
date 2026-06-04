@@ -155,6 +155,17 @@ export class AnimationBuilder {
     return this.add([{ type: 'hashtable.remove', key, bucket }], this.act('delete', [], 'danger'))
   }
 
+  // ── 纯数学 / 变量面板（结构无关算法，@type 用 array） ──
+  varInit(vars: Array<{ name: string; value: number | string }>): this {
+    return this.add([{ type: 'math.init', vars: vars.map(v => ({ ...v })) }], this.act('highlight', [], 'primary'))
+  }
+  varSet(name: string, value: number | string): this {
+    return this.add([{ type: 'math.set', name, value }], this.act('highlight', [], 'primary'))
+  }
+  varHighlight(name: string): this {
+    return this.add([{ type: 'math.highlight', name }], this.act('highlight', [], 'warning'))
+  }
+
   // ── note / escape ──
   note(text: string): this {
     return this.add([{ type: 'scene.note', text }], this.act('annotate', [], 'muted'))

@@ -49,6 +49,13 @@ export function buildGeneratorSystemPrompt(language: string): string {
 - \`b.hashRemove(key, bucket)\` 删除
 要点：自己用简单 hash（如字符串各字符码之和 % capacity）算出 bucket；冲突用链地址法，同一 bucket 再 put 时把 collision 传 true。key 用字符串，value 用数字或字符串。
 
+### 纯数学 / 变量面板（无数据结构的算法，@type 用 array）
+适用于 GCD、快速幂、费波那契、数位 DP 等——没有数组/链表/树，只是追踪一组变量的演变。用横排的"寄存器面板"展示各变量当前值。
+- \`b.varInit([{name, value}, ...])\` 第一步必调，列出算法用到的所有变量及初值（如 GCD 的 a、b、r）
+- \`b.varSet(name, value)\` 每当某变量改变就发一次，更新对应寄存器的值并高亮；首次出现的变量名会自动新建一格
+- \`b.varHighlight(name)\` 仅高亮某变量（不改值），用于强调"正在读取/比较此变量"
+要点：每一步关键计算都要 varSet 反映变量变化，不要只 b.note 文字；变量名用短标识（a、b、r、result）。配合 b.desc 说明这一步在做什么。
+
 ## 硬性要求
 - 代码必须用 input 的实际值运行，**换输入要能产出不同动画**（不要硬编码步骤）
 - 数组类第一步必须 \`b.arrayCreate(input)\`；图/树类似

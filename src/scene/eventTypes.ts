@@ -107,4 +107,10 @@ export type HashTableAlgorithmEvent =
   | { type: 'hashtable.remove'; key: string; bucket: number }
   | { type: 'hashtable.highlight_bucket'; bucket: number }
 
-export type AlgorithmEvent = CommonAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent
+export type MathAlgorithmEvent =
+  | { type: 'math.init'; vars: Array<{ name: string; value: number | string }> }
+  | { type: 'math.set'; name: string; value: number | string }
+  | { type: 'math.highlight'; name: string }
+  | { type: 'math.note'; text: string }
+
+export type AlgorithmEvent = CommonAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | MathAlgorithmEvent
