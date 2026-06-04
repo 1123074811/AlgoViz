@@ -1,5 +1,6 @@
 import React from 'react'
 import type { Point, SceneEdge, SceneState } from '../types'
+import { getAdaptiveCircleLayout } from '../engineUtils'
 
 const COLOR_MAP = {
   primary: '#3B82F6',
@@ -162,7 +163,11 @@ function trimAnchor(scene: SceneState, entityId: string, from: Point, to: Point)
   const isCircle = entity.type === 'node' && (entity.variant.startsWith('tree.') || entity.variant.startsWith('graph.'))
   let scale = 0
   if (isCircle) {
-    const r = entity.size.width / 2
+    let r = entity.size.width / 2
+    if ('fields' in entity && entity.fields?.[0]?.value != null) {
+      const val = entity.fields[0].value.toString()
+      r = getAdaptiveCircleLayout(val, entity.size.width).r
+    }
     scale = r / dist
   } else {
     const halfW = entity.size.width / 2
