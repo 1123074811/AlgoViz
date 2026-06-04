@@ -92,18 +92,6 @@ export default function Playground() {
     }
   }, [])
 
-  const runGenerator = useCallback(async (body: string, type: 'array' | 'graph' | 'tree' | 'linked_list', rawInput: string) => {
-    const parsed = parseInputData(rawInput)
-    if (!parsed.valid) return
-    const result = await runGeneratorSandboxed(body, parsed.value, { algorithm: 'custom', type })
-    if (result.ok && result.script) {
-      setAnimationScript(result.script)
-      setAIStatus('success')
-    } else {
-      setAIStatus('error', result.error || '生成器执行失败')
-    }
-  }, [setAnimationScript, setAIStatus])
-
   // 输入变化 → 本地重生成（Phase 1 内置生成器 或 Phase 2 AI 生成器），不调 AI
   useEffect(() => {
     if (liveAlgoId) {
