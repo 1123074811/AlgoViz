@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { OnMount } from '@monaco-editor/react'
 import { Icon } from '@/icons'
-import { useAlgorithmStore } from '@/store/algorithmStore'
+import { useAlgorithmStore, type AIHistoryEntry } from '@/store/algorithmStore'
 import { getPreset, generatePreset, hasGenerator } from '@/presets'
 import { useAnimationEngine } from '@/hooks/useAnimationEngine'
 import { analyzeCode, getApiConfig, parseInputData, type AIResult } from '@/ai'
@@ -17,8 +17,6 @@ import { getSceneDiagnosticSummary, getSceneEventStats, usesSceneEngine } from '
 import { getOperationsForAlgo, type OperationDef } from '@/presets/operationPresets'
 import { getCodeTemplate, type CodeLang } from './codeTemplates'
 import DefinitionCard from './DefinitionCard'
-
-type AIStatus = 'idle' | 'analyzing' | 'success' | 'error'
 
 const ALGO_DESC_ZH: Record<string, string> = {
   bubble_sort: '重复遍历数列，依次比较相邻元素，如果顺序错误则交换位置。每轮将最大值"冒泡"到末尾。',
@@ -130,6 +128,8 @@ function getConcreteAlgoId(algoId: string, opId: string): string {
   return algoId
 }
 
+let currentAnalysisController: AbortController | null = null
+
 export default function Visualizer() {
   const { t, i18n } = useTranslation()
   const lang = i18n.language as 'zh' | 'en'
@@ -137,6 +137,11 @@ export default function Visualizer() {
   const selectedAlgorithm = useAlgorithmStore((s) => s.selectedAlgorithm)
   const animationScript = useAlgorithmStore((s) => s.animationScript)
   const setAnimationScript = useAlgorithmStore((s) => s.setAnimationScript)
+  const aiStatus = useAlgorithmStore((s) => s.aiStatus)
+  const aiError = useAlgorithmStore((s) => s.aiError)
+  const aiRawResponse = useAlgorithmStore((s) => s.aiRawResponse)
+  const setAIStatus = useAlgorithmStore((s) => s.setAIStatus)
+  const addAIHistory = useAlgorithmStore((s) => s.addAIHistory)
 
   const [code, setCode] = useState('')
   const [codeLanguage, setCodeLanguage] = useState<'python' | 'javascript' | 'cpp' | 'java'>(() => {
@@ -146,9 +151,6 @@ export default function Visualizer() {
   const [inputFormat, setInputFormat] = useState<'leetcode' | 'json'>(() => {
     return (localStorage.getItem('algoviz-input-format') as 'leetcode' | 'json') || 'leetcode'
   })
-  const [aiStatus, setAiStatus] = useState<AIStatus>('idle')
-  const [aiError, setAiError] = useState('')
-  const [aiRawResponse, setAiRawResponse] = useState('')
   const [showRawResponse, setShowRawResponse] = useState(false)
   const [showDefinition, setShowDefinition] = useState(false)
   const [currentOperationId, setCurrentOperationId] = useState<string>('')
@@ -396,9 +398,7 @@ export default function Visualizer() {
     }
 
     if (!selectedAlgorithm) return
-    setAiStatus('idle')
-    setAiError('')
-    setAiRawResponse('')
+    setAIStatus('idle')
 
     // Set default input when switching to a different algorithm
     const algoChanged = prevAlgoId.current !== selectedAlgorithm.id
@@ -560,40 +560,56 @@ export default function Visualizer() {
   }, [])
 
   const handleAIAnalyze = async () => {
-    // Local Code Compilation & Syntax Validation Check
     const compResult = compileAndValidateCode(code, codeLanguage)
     if (!compResult.success) {
-      setAiStatus('error')
-      setAiError(`[${compResult.errors[0].type}] ${compResult.errors[0].message} (第 ${compResult.errors[0].line} 行)${compResult.errors[0].context ? `\n\n代码上下文:\n\`\`\`\n${compResult.errors[0].context}\n\`\`\`` : ''}`)
-      setAnimationScript(null) // Animation fails to generate
+      setAIStatus('error', `[${compResult.errors[0].type}] ${compResult.errors[0].message} (第 ${compResult.errors[0].line} 行)${compResult.errors[0].context ? `\n\n代码上下文:\n\`\`\`\n${compResult.errors[0].context}\n\`\`\`` : ''}`)
+      setAnimationScript(null)
       return
     }
 
     if (!hasApiConfig) {
-      setAiError(t('controls.aiConfigureHint'))
-      setAiStatus('error')
+      setAIStatus('error', t('controls.aiConfigureHint'))
       return
     }
 
-    setAiStatus('analyzing')
-    setAiError('')
-    setAiRawResponse('')
+    currentAnalysisController?.abort()
+    const controller = new AbortController()
+    currentAnalysisController = controller
 
-    const result: AIResult = await analyzeCode({
-      code,
-      language: codeLanguage,
-      inputData,
-      algorithmName: selectedAlgorithm?.name,
-    })
+    setAIStatus('analyzing')
 
-    if (result.success && result.script) {
-      setAiStatus('success')
-      setAnimationScript(result.script)
-      loadScript(result.script)
-    } else {
-      setAiStatus('error')
-      setAiError(result.error || t('common.error'))
-      setAiRawResponse(result.rawResponse || '')
+    try {
+      const result: AIResult = await analyzeCode({
+        code,
+        language: codeLanguage,
+        inputData,
+        algorithmName: selectedAlgorithm?.name,
+      }, { signal: controller.signal })
+
+      if (controller.signal.aborted) return
+      currentAnalysisController = null
+
+      if (result.success && result.script) {
+        setAIStatus('success')
+        setAnimationScript(result.script)
+        loadScript(result.script)
+        const entry: AIHistoryEntry = {
+          id: Date.now().toString(),
+          timestamp: Date.now(),
+          algorithmId: selectedAlgorithm?.id ?? 'unknown',
+          algorithmName: selectedAlgorithm?.name ?? '未知算法',
+          code,
+          language: codeLanguage,
+          inputData,
+          script: result.script,
+        }
+        addAIHistory(entry)
+      } else {
+        setAIStatus('error', result.error || t('common.error'), result.rawResponse)
+      }
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') return
+      setAIStatus('error', e instanceof Error ? e.message : t('common.error'))
     }
   }
 
@@ -863,18 +879,32 @@ export default function Visualizer() {
                 aiStatus === 'success' ? 'border-green-100 bg-green-50' :
                 'border-red-100 bg-red-50'
               }`}>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    {aiStatus === 'analyzing' && (
+                      <Icon name="loader2" size={14} className="text-warning animate-spin" />
+                    )}
+                    <span className={`text-xs font-semibold ${
+                      aiStatus === 'analyzing' ? 'text-warning' :
+                      aiStatus === 'success' ? 'text-green-600' :
+                      'text-red-500'
+                    }`}>
+                      {aiStatus === 'analyzing' ? t('controls.aiAnalyzing') :
+                       aiStatus === 'success' ? t('controls.aiSuccess') : t('controls.aiFailed')}
+                    </span>
+                  </div>
                   {aiStatus === 'analyzing' && (
-                    <Icon name="loader2" size={14} className="text-warning animate-spin" />
+                    <button
+                      onClick={() => {
+                        currentAnalysisController?.abort()
+                        currentAnalysisController = null
+                        setAIStatus('idle')
+                      }}
+                      className="text-[10px] text-warning underline cursor-pointer border-none bg-transparent"
+                    >
+                      取消
+                    </button>
                   )}
-                  <span className={`text-xs font-semibold ${
-                    aiStatus === 'analyzing' ? 'text-warning' :
-                    aiStatus === 'success' ? 'text-green-600' :
-                    'text-red-500'
-                  }`}>
-                    {aiStatus === 'analyzing' ? t('controls.aiAnalyzing') :
-                     aiStatus === 'success' ? t('controls.aiSuccess') : t('controls.aiFailed')}
-                  </span>
                 </div>
                 {aiError && (
                   <>
