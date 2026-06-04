@@ -10,6 +10,7 @@ import LabelView from './primitives/LabelView'
 import NodeView, { NodeStyles } from './primitives/NodeView'
 import PointerView from './primitives/PointerView'
 import SetView from './primitives/SetView'
+import StringView from './primitives/StringView'
 import VariablesView from './primitives/VariablesView'
 import type { SceneCell, SceneEntity, SceneNode } from './types'
 
@@ -239,6 +240,8 @@ function renderContainers(entities: SceneEntity[]) {
   const loadFactorCell = cells.find(c => c.id === 'hashtable_loadfactor')
   const mathVars = cells.filter(c => c.id.startsWith('mathvar_'))
     .sort((a, b) => (a.col ?? 0) - (b.col ?? 0))
+  // Precise s_<row>_<index> match — avoids colliding with set_/stack_/etc.
+  const stringCells = cells.filter(c => /^s_\d+_\d+$/.test(c.id))
   return (
     <>
       {stackCells.length > 0 && <ContainerView type="stack" cells={stackCells} />}
@@ -249,6 +252,7 @@ function renderContainers(entities: SceneEntity[]) {
       {auxCells.length > 0 && <ContainerView type="auxiliary" cells={auxCells} />}
       {hashBuckets.length > 0 && <HashTableView buckets={hashBuckets} entries={hashEntries} loadFactorCell={loadFactorCell} />}
       {mathVars.length > 0 && <VariablesView vars={mathVars} />}
+      {stringCells.length > 0 && <StringView cells={stringCells} />}
     </>
   )
 }

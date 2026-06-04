@@ -180,6 +180,28 @@ export class AnimationBuilder {
     return this.add([{ type: 'set.contains', value, found }], this.act('highlight', [], found ? 'success' : 'danger'))
   }
 
+  // ── 字符串（string，带下标的字符格 + 双指针/匹配 + 双行对齐，@type 用 array） ──
+  strCreate(text: string): this {
+    this.arrayData = text.split('')
+    return this.add([{ type: 'string.create', text }], this.act('highlight', [], 'primary'))
+  }
+  strCreateDouble(text: string, pattern: string): this {
+    this.arrayData = text.split('')
+    return this.add([{ type: 'string.create_double', text, pattern }], this.act('highlight', [], 'primary'))
+  }
+  strCompare(row: number, i: number, j: number): this {
+    return this.add([{ type: 'string.compare', row, indices: [i, j] }], this.act('compare', [i, j], 'warning'))
+  }
+  strMatch(row: number, index: number): this {
+    return this.add([{ type: 'string.match', row, index }], this.act('mark', [index], 'success'))
+  }
+  strMismatch(row: number, index: number): this {
+    return this.add([{ type: 'string.mismatch', row, index }], this.act('mark', [index], 'danger'))
+  }
+  strMarkRange(row: number, indices: number[]): this {
+    return this.add([{ type: 'string.mark_range', row, indices: [...indices] }], this.act('mark', [...indices], 'primary'))
+  }
+
   // ── note / escape ──
   note(text: string): this {
     return this.add([{ type: 'scene.note', text }], this.act('annotate', [], 'muted'))

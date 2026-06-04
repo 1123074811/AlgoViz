@@ -57,6 +57,16 @@ export function buildGeneratorSystemPrompt(language: string): string {
 - \`b.setContains(value, found)\` 成员判定；found=true 命中标绿、false 未命中标红
 要点：集合无序、无下标，按值操作（不要传 index）；配合 b.desc 说明语义。
 
+### 字符串（string，@type 用 array）
+字符序列专属视觉：每个字符一格、**格下方带下标**（0,1,2…），支持**双指针/匹配指针**与 **text/pattern 双行对齐**（KMP、最长回文、字符串匹配等），匹配/失配高亮。
+- \`b.strCreate(text)\` 单行字符串第一步必调，把 text 渲染成带下标的字符格（row 默认 0）
+- \`b.strCreateDouble(text, pattern)\` 双行第一步必调，上行=text（row 0）、下行=pattern（row 1），左侧自动标 "text"/"pattern"
+- \`b.strCompare(row, i, j)\` 在某一行比较两个下标处的字符（黄色脉冲，双指针/相遇判定常用）
+- \`b.strMatch(row, index)\` 标某下标字符匹配成功（绿色脉冲）
+- \`b.strMismatch(row, index)\` 标某下标字符失配（红色脉冲）
+- \`b.strMarkRange(row, indices)\` 标记一段下标为结果区间（如找到的回文/子串，蓝色）
+要点：下标从 0 起、按 (row, index) 操作；单行用 row 0；双行匹配把主串放 row 0、模式串放 row 1。配合 b.desc 说明每步语义。
+
 ### 纯数学 / 变量面板（无数据结构的算法，@type 用 array）
 适用于 GCD、快速幂、费波那契、数位 DP 等——没有数组/链表/树，只是追踪一组变量的演变。用横排的"寄存器面板"展示各变量当前值。
 - \`b.varInit([{name, value}, ...])\` 第一步必调，列出算法用到的所有变量及初值（如 GCD 的 a、b、r）
