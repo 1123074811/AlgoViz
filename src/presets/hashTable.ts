@@ -1,170 +1,96 @@
 import type { AnimationScript, AnimationStep } from '@/types/animation'
 
+/**
+ * Hash table preset — uses the dedicated `hashtable.*` events (separate chaining)
+ * so it renders with HashTableView (bucket array + collision chains + load factor),
+ * not the array fallback.
+ */
 export function generateHashTable(_pairs?: Record<string, string>): AnimationScript {
   const steps: AnimationStep[] = []
   let sid = 1
   const SIZE = 8
-  const table: string[] = new Array(SIZE).fill('')
-  const initialTable = [...table]
+  const buckets: string[][] = Array.from({ length: SIZE }, () => [])
 
-  // Step 0: Initialize empty hash table
+  const hashOf = (key: string) => key.split('').reduce((s, c) => s + c.charCodeAt(0), 0)
+
+  // Step 0: create the bucket array
   steps.push({
     stepId: sid++, codeLine: 0,
     description: {
-      zh: `哈希表初始化：${SIZE} 个槽位 (index 0~${SIZE - 1})，全部为空`,
-      en: `Hash table init: ${SIZE} slots (index 0~${SIZE - 1}), all empty`,
+      zh: `哈希表初始化：${SIZE} 个桶 (index 0~${SIZE - 1})，用链地址法解决冲突`,
+      en: `Hash table init: ${SIZE} buckets (0~${SIZE - 1}), separate chaining`,
     },
     action: { type: 'highlight', targets: [], color: 'primary' },
-    events: [{ type: 'array.create', values: new Array(SIZE).fill('') }],
+    events: [{ type: 'hashtable.create', capacity: SIZE }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
 
-  // ─── Insertion helpers ──────────────────────────────────────────────
   function put(key: string, value: string) {
-    const hash = key.split('').reduce((s, c) => s + c.charCodeAt(0), 0)
-    let idx = hash % SIZE
-    const originalIdx = idx
-
+    const hash = hashOf(key)
+    const bucket = hash % SIZE
+    const collision = buckets[bucket].length > 0
+    buckets[bucket].push(key)
     steps.push({
       stepId: sid++, codeLine: 3,
       description: {
-        zh: `put("${key}", "${value}"): 计算 hash("${key}") = ${hash}，取模 → index=${idx}`,
-        en: `put("${key}", "${value}"): hash("${key}") = ${hash}, modulo → index=${idx}`,
+        zh: collision
+          ? `put("${key}","${value}")：hash=${hash}，桶 ${bucket} 已占用 → 链地址法追加`
+          : `put("${key}","${value}")：hash=${hash}，桶 ${bucket} 为空 → 直接插入`,
+        en: collision
+          ? `put("${key}","${value}"): hash=${hash}, bucket ${bucket} occupied → chain`
+          : `put("${key}","${value}"): hash=${hash}, bucket ${bucket} empty → insert`,
       },
-      action: { type: 'compare', targets: [idx], color: 'warning' },
-      events: [{ type: 'array.compare', indices: [idx, idx] }],
+      action: { type: 'insert', targets: [bucket], color: collision ? 'warning' : 'success' },
+      events: [{ type: 'hashtable.put', key, value, bucket, collision }],
       stats: { comparisons: sid, swaps: 0, accesses: 1 },
     })
-
-    // Linear probing
-    let probeCount = 0
-    while (table[idx] !== '' && probeCount < SIZE) {
-      probeCount++
-      const prevIdx = idx
-      idx = (idx + 1) % SIZE
-      steps.push({
-        stepId: sid++, codeLine: 5,
-        description: {
-          zh: `槽位[${prevIdx}] 已被 "${table[prevIdx]}" 占用 → 线性探测到 index=${idx}`,
-          en: `Slot[${prevIdx}] occupied by "${table[prevIdx]}" → linear probe to index=${idx}`,
-        },
-        action: { type: 'compare', targets: [prevIdx, idx], color: 'danger' },
-        events: [
-          { type: 'array.compare', indices: [prevIdx, idx] },
-        ],
-        stats: { comparisons: sid, swaps: 0, accesses: probeCount + 1 },
-      })
-    }
-
-    table[idx] = `${key}:${value}`
-    steps.push({
-      stepId: sid++, codeLine: probeCount > 0 ? 6 : 4,
-      description: {
-        zh: probeCount > 0
-          ? `经 ${probeCount} 次探测后，将 "${key}:${value}" 存入槽位[${idx}]`
-          : `槽位[${idx}] 为空，直接将 "${key}:${value}" 存入`,
-        en: probeCount > 0
-          ? `After ${probeCount} probe(s), store "${key}:${value}" at slot[${idx}]`
-          : `Slot[${idx}] empty, store "${key}:${value}" directly`,
-      },
-      action: { type: 'insert', targets: [idx], color: 'success' },
-      events: [
-        { type: 'array.set_value', index: idx, value: `${key}:${value}` },
-      ],
-      stats: { comparisons: sid, swaps: 0, accesses: probeCount + 2 },
-    })
-
-    return idx
   }
 
-  function get(key: string, expectedIdx: number) {
-    const hash = key.split('').reduce((s, c) => s + c.charCodeAt(0), 0)
-    let idx = hash % SIZE
-
+  function get(key: string) {
+    const hash = hashOf(key)
+    const bucket = hash % SIZE
+    const found = buckets[bucket].includes(key)
     steps.push({
       stepId: sid++, codeLine: 9,
       description: {
-        zh: `get("${key}"): 计算 hash("${key}") = ${hash}，取模 → index=${idx}`,
-        en: `get("${key}"): hash("${key}") = ${hash}, modulo → index=${idx}`,
+        zh: `get("${key}")：hash=${hash}，定位桶 ${bucket} → ${found ? '命中' : '未找到'}`,
+        en: `get("${key}"): hash=${hash}, bucket ${bucket} → ${found ? 'found' : 'not found'}`,
       },
-      action: { type: 'compare', targets: [idx], color: 'warning' },
-      events: [{ type: 'array.compare', indices: [idx, idx] }],
-      stats: { comparisons: sid, swaps: 0, accesses: 1 },
-    })
-
-    // Probe until found or empty slot
-    let probeCount = 0
-    while (table[idx] !== '' && probeCount < SIZE) {
-      const entry = table[idx]
-      const storedKey = entry?.split(':')[0]
-      if (storedKey === key) {
-        steps.push({
-          stepId: sid++, codeLine: 11,
-          description: {
-            zh: `找到！槽位[${idx}] = "${entry}"，取出 value="${entry.split(':')[1]}"`,
-            en: `Found! Slot[${idx}] = "${entry}", value="${entry.split(':')[1]}"`,
-          },
-          action: { type: 'mark', targets: [idx], color: 'success' },
-          events: [{ type: 'array.mark_sorted', indices: [idx] }],
-          stats: { comparisons: sid, swaps: 0, accesses: probeCount + 2 },
-        })
-        return
-      }
-      probeCount++
-      idx = (idx + 1) % SIZE
-      steps.push({
-        stepId: sid++, codeLine: 10,
-        description: {
-          zh: `槽位[${idx === 0 ? SIZE - 1 : idx - 1}] 的 key 不匹配 → 继续探测 index=${idx}`,
-          en: `Key mismatch at slot[${idx === 0 ? SIZE - 1 : idx - 1}] → probe to index=${idx}`,
-        },
-        action: { type: 'compare', targets: [idx], color: 'warning' },
-        events: [{ type: 'array.compare', indices: [idx, idx] }],
-        stats: { comparisons: sid, swaps: 0, accesses: probeCount + 2 },
-      })
-    }
-
-    steps.push({
-      stepId: sid++, codeLine: 11,
-      description: {
-        zh: `未找到 key="${key}"（遇到空槽，线性探测终止）`,
-        en: `Key "${key}" not found (empty slot reached, linear probing ends)`,
-      },
-      action: { type: 'mark', targets: [], color: 'danger' },
-      stats: { comparisons: sid, swaps: 0, accesses: probeCount + 2 },
+      action: { type: 'mark', targets: [bucket], color: found ? 'success' : 'danger' },
+      events: [{ type: 'hashtable.get', key, bucket, found }],
+      stats: { comparisons: sid, swaps: 0, accesses: 2 },
     })
   }
 
-  // ─── Demo: Insert key-value pairs ────────────────────────────────────
   const pairs = _pairs && Object.keys(_pairs).length > 0
-    ? Object.entries(_pairs)
-    : [['name', 'Alice'], ['age', '25'], ['city', 'Beijing'], ['email', 'alice@algo']]
+    ? Object.entries(_pairs).map(([k, v]) => [k, String(v)] as [string, string])
+    : ([['name', 'Alice'], ['age', '25'], ['city', 'Beijing'], ['hobby', 'chess']] as [string, string][])
 
-  const lastIdx = pairs.map(([k, v]) => put(k, v)).pop() ?? 0
+  pairs.forEach(([k, v]) => put(k, v))
 
-  // ─── Lookup demo ────────────────────────────────────────────────────
   if (pairs.length > 0) {
-    get(pairs[Math.min(2, pairs.length - 1)][0], lastIdx)
+    get(pairs[Math.min(2, pairs.length - 1)][0])
   }
 
-  // ─── Final state ────────────────────────────────────────────────────
-
+  const n = pairs.length
   steps.push({
     stepId: sid++, codeLine: 14,
     description: {
-      zh: `哈希表操作完成！4 个键值对已存入，负载因子=${4}/${SIZE}=0.5。平均 O(1) 查找`,
-      en: `Hash table done! 4 entries stored, load factor=${4}/${SIZE}=0.5. Average O(1) lookup`,
+      zh: `哈希表操作完成！${n} 个键值对已存入，负载因子=${n}/${SIZE}=${(n / SIZE).toFixed(2)}。平均 O(1) 查找`,
+      en: `Hash table done! ${n} entries, load factor=${n}/${SIZE}=${(n / SIZE).toFixed(2)}. Average O(1)`,
     },
-    action: { type: 'mark', targets: [0, 1, 2, 3, 4, 5, 6, 7], color: 'success' },
-    events: [{ type: 'array.mark_sorted', indices: [0, 1, 2, 5] }],
-    stats: { comparisons: sid, swaps: 0, accesses: 8 },
+    action: { type: 'mark', targets: [], color: 'success' },
+    events: [],
+    stats: { comparisons: sid, swaps: 0, accesses: n },
   })
 
   return {
     algorithm: 'hash_table',
     complexity: { time: { best: 'O(1)', average: 'O(1)', worst: 'O(n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'array' },
-    initialState: { type: 'array', data: initialTable.map(() => 0) },
+    // Empty data so the array-seeding fallback does NOT create arr_* cells —
+    // the hashtable.* events drive the dedicated HashTableView instead.
+    initialState: { type: 'array', data: [] },
     steps: steps as AnimationScript['steps'],
   }
 }
