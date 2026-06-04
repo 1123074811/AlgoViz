@@ -146,6 +146,12 @@ export default function Settings() {
                 <Icon name={showKey ? 'eye-off' : 'eye'} size={16} />
               </button>
             </div>
+            <p className="mt-2 text-[11px] text-amber-600 flex items-start gap-1.5">
+              <svg className="w-3.5 h-3.5 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+              </svg>
+              <span>API Key 以明文存储在浏览器 localStorage，存在 XSS 风险。建议使用本地代理（<code className="font-code bg-amber-50 px-0.5 rounded">npm run proxy</code>），避免在公共网络直接使用。</span>
+            </p>
           </div>
 
           {/* Base URL */}
