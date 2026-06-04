@@ -49,6 +49,14 @@ export function buildGeneratorSystemPrompt(language: string): string {
 - \`b.hashRemove(key, bucket)\` 删除
 要点：自己用简单 hash（如字符串各字符码之和 % capacity）算出 bucket；冲突用链地址法，同一 bucket 再 put 时把 collision 传 true。key 用字符串，value 用数字或字符串。
 
+### 集合（set，@type 用 array）
+强调集合三大语义：**去重、无序、成员判定**。元素装在一个"集合容器（{ }）"里展示。
+- \`b.setCreate(values)\` 第一步必调，传入初始元素数组（重复值会自动去重）
+- \`b.setAdd(value)\` 添加；若已存在则标黄提示"去重忽略"，否则高亮新增（绿色脉冲）
+- \`b.setRemove(value)\` 删除；命中则淡出移除，不存在则提示
+- \`b.setContains(value, found)\` 成员判定；found=true 命中标绿、false 未命中标红
+要点：集合无序、无下标，按值操作（不要传 index）；配合 b.desc 说明语义。
+
 ### 纯数学 / 变量面板（无数据结构的算法，@type 用 array）
 适用于 GCD、快速幂、费波那契、数位 DP 等——没有数组/链表/树，只是追踪一组变量的演变。用横排的"寄存器面板"展示各变量当前值。
 - \`b.varInit([{name, value}, ...])\` 第一步必调，列出算法用到的所有变量及初值（如 GCD 的 a、b、r）

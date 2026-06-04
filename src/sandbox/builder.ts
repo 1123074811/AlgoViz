@@ -166,6 +166,20 @@ export class AnimationBuilder {
     return this.add([{ type: 'math.highlight', name }], this.act('highlight', [], 'warning'))
   }
 
+  // ── 集合（set，去重·无序·成员判定，@type 用 array） ──
+  setCreate(values: Array<number | string>): this {
+    return this.add([{ type: 'set.create', values: [...values] }], this.act('highlight', [], 'primary'))
+  }
+  setAdd(value: number | string): this {
+    return this.add([{ type: 'set.add', value }], this.act('insert', [], 'success'))
+  }
+  setRemove(value: number | string): this {
+    return this.add([{ type: 'set.remove', value }], this.act('delete', [], 'danger'))
+  }
+  setContains(value: number | string, found: boolean): this {
+    return this.add([{ type: 'set.contains', value, found }], this.act('highlight', [], found ? 'success' : 'danger'))
+  }
+
   // ── note / escape ──
   note(text: string): this {
     return this.add([{ type: 'scene.note', text }], this.act('annotate', [], 'muted'))

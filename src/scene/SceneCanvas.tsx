@@ -9,6 +9,7 @@ import HashTableView from './primitives/HashTableView'
 import LabelView from './primitives/LabelView'
 import NodeView, { NodeStyles } from './primitives/NodeView'
 import PointerView from './primitives/PointerView'
+import SetView from './primitives/SetView'
 import VariablesView from './primitives/VariablesView'
 import type { SceneCell, SceneEntity, SceneNode } from './types'
 
@@ -243,7 +244,7 @@ function renderContainers(entities: SceneEntity[]) {
       {stackCells.length > 0 && <ContainerView type="stack" cells={stackCells} />}
       {queueCells.length > 0 && <ContainerView type="queue" cells={queueCells} />}
       {dequeCells.length > 0 && <ContainerView type="queue" cells={dequeCells} />}
-      {setCells.length > 0 && <ContainerView type="set" cells={setCells} />}
+      {setCells.length > 0 && <SetView cells={setCells} />}
       {mapNodes.length > 0 && <ContainerView type="map" cells={[]} nodes={mapNodes} />}
       {auxCells.length > 0 && <ContainerView type="auxiliary" cells={auxCells} />}
       {hashBuckets.length > 0 && <HashTableView buckets={hashBuckets} entries={hashEntries} loadFactorCell={loadFactorCell} />}

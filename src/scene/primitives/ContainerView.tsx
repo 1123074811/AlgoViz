@@ -1,15 +1,40 @@
-import type { SceneCell } from '../types'
+import type { SceneCell, SceneNode } from '../types'
 
 const CONTAINER_STROKE = '#94A3B8'
 const CONTAINER_STROKE_WIDTH = 2
 
 interface ContainerViewProps {
-  type: 'stack' | 'queue' | 'auxiliary'
+  type: 'stack' | 'queue' | 'auxiliary' | 'map'
   cells: SceneCell[]
+  label?: string
+  nodes?: SceneNode[]
 }
 
-/** Draws structural container shapes: U-shape for stack, parallel lines for queue. */
-export default function ContainerView({ type, cells }: ContainerViewProps) {
+/** Draws structural container shapes: U-shape for stack, parallel lines for queue, panel for map. */
+export default function ContainerView({ type, cells, nodes }: ContainerViewProps) {
+  // Map container: rounded rectangle panel around key-value entry nodes
+  if (type === 'map') {
+    if (!nodes || nodes.length === 0) return null
+    const nodeW = nodes[0].size?.width ?? 120
+    const nodeH = nodes[0].size?.height ?? 48
+    const pad = 14
+    const minX = Math.min(...nodes.map(n => n.position.x - nodeW / 2))
+    const maxX = Math.max(...nodes.map(n => n.position.x + nodeW / 2))
+    const minY = Math.min(...nodes.map(n => n.position.y - nodeH / 2))
+    const maxY = Math.max(...nodes.map(n => n.position.y + nodeH / 2))
+    const rx = 10
+    return (
+      <g>
+        <rect x={minX - pad} y={minY - pad} rx={rx} ry={rx}
+          width={maxX - minX + 2 * pad} height={maxY - minY + 2 * pad}
+          fill="#F8FAFC" stroke="#CBD5E1" strokeWidth={1.5} strokeDasharray="4 2" />
+        <text x={minX - pad + 8} y={minY - pad - 6} textAnchor="start" fontSize="11" fill="#64748B" fontFamily="monospace">
+          {'Map'}
+        </text>
+      </g>
+    )
+  }
+
   if (cells.length === 0) return null
 
   const cellW = cells[0].size?.width ?? 44
