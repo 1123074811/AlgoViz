@@ -1,4 +1,4 @@
-import type { AnimationScript, ActionColor } from '@/types/animation'
+import type { AnimationScript, ActionColor, ActionType } from '@/types/animation'
 
 export function generateBellmanFord(input: any): AnimationScript {
   // 1. Parse or default the custom graph data
@@ -70,7 +70,7 @@ export function generateBellmanFord(input: any): AnimationScript {
       stepId: sid++,
       codeLine: ln,
       description: { zh, en },
-      action: { type: type as any, targets: targets.map(Number).filter(v => !isNaN(v)), color },
+      action: { type: type as ActionType, targets: targets.map(Number).filter(v => !isNaN(v)), color },
       stats: { comparisons: comps, swaps: 0, accesses: accs },
       teachingState: {
         graph: {

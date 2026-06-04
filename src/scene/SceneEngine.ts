@@ -357,7 +357,7 @@ function renderAuxiliaryArrays(scene: SceneState, teachingState: TeachingState |
   for (const [id, entity] of Object.entries(scene.entities)) {
     if (id.startsWith('aux_') || id.startsWith('queue_') || id.startsWith('stack_')) continue
     if ('position' in entity && entity.position) {
-      const bottom = entity.position.y + ((entity as any).size?.height ?? 44)
+      const bottom = entity.position.y + ('size' in entity && entity.size ? entity.size.height : 44)
       if (bottom > maxY) maxY = bottom
     }
   }

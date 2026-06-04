@@ -26,7 +26,7 @@ export function generateDynamicLinkedListOp(
         'highlight', [], 'primary', 0, 0, 0
       ),
       events: [{ type: 'linked_list.create', variant, nodes, headId }]
-    } as any)
+    })
 
     // Let's insert after the middle node
     const insertAfterIdx = Math.max(0, Math.floor((arr.length - 1) / 2))
@@ -46,7 +46,7 @@ export function generateDynamicLinkedListOp(
         { type: 'scene.note', text: `分配新节点 ${param} 内存` },
         { type: 'linked_list.insert_after', targetNodeId: prevNodeId, newNode: { id: newNodeId, value: param } }
       ]
-    } as any)
+    })
 
     steps.push({
       ...makeStep(sid++, 4,
@@ -58,7 +58,7 @@ export function generateDynamicLinkedListOp(
         { type: 'scene.clear_highlight' },
         { type: 'scene.highlight', entityId: newNodeId, role: 'current', color: 'success' }
       ]
-    } as any)
+    })
 
   } else if (opId === 'delete') {
     steps.push({
@@ -68,7 +68,7 @@ export function generateDynamicLinkedListOp(
         'highlight', [], 'primary', 0, 0, 0
       ),
       events: [{ type: 'linked_list.create', variant, nodes, headId }]
-    } as any)
+    })
 
     const deleteIdx = arr.indexOf(param)
     if (deleteIdx !== -1) {
@@ -87,7 +87,7 @@ export function generateDynamicLinkedListOp(
             { type: 'scene.highlight', entityId: deleteNodeId, role: 'active', color: 'danger' },
             { type: 'linked_list.delete', nodeId: deleteNodeId }
           ]
-        } as any)
+        })
       } else {
         // Delete middle or tail
         steps.push({
@@ -100,7 +100,7 @@ export function generateDynamicLinkedListOp(
             { type: 'scene.highlight', entityId: prevNodeId, role: 'active', color: 'warning' },
             { type: 'linked_list.delete', nodeId: deleteNodeId }
           ]
-        } as any)
+        })
       }
 
       steps.push({
@@ -112,7 +112,7 @@ export function generateDynamicLinkedListOp(
         events: [
           { type: 'scene.clear_highlight' }
         ]
-      } as any)
+      })
     } else {
       // Node not found
       steps.push({
@@ -124,7 +124,7 @@ export function generateDynamicLinkedListOp(
         events: [
           { type: 'scene.note', text: `未找到节点 ${param}` }
         ]
-      } as any)
+      })
     }
 
   } else {
@@ -136,7 +136,7 @@ export function generateDynamicLinkedListOp(
         'highlight', [], 'primary', 0, 0, 0
       ),
       events: [{ type: 'linked_list.create', variant, nodes, headId }]
-    } as any)
+    })
 
     let found = false
     for (let i = 0; i < arr.length; i++) {
@@ -155,7 +155,7 @@ export function generateDynamicLinkedListOp(
             { type: 'linked_list.visit', nodeId, pointerId: 'cur' },
             { type: 'scene.highlight', entityId: nodeId, role: 'safe', color: 'success' }
           ]
-        } as any)
+        })
         found = true
         break
       } else {
@@ -169,7 +169,7 @@ export function generateDynamicLinkedListOp(
           events: [
             { type: 'linked_list.visit', nodeId, pointerId: 'cur' }
           ]
-        } as any)
+        })
       }
     }
 
@@ -183,7 +183,7 @@ export function generateDynamicLinkedListOp(
         events: [
           { type: 'scene.note', text: `检索未找到 ${param}` }
         ]
-      } as any)
+      })
     }
   }
 
@@ -287,7 +287,7 @@ export function generateDynamicBSTOp(
         'highlight', [], 'primary', 0, 0, 0
       ),
       events: [{ type: 'tree.create', variant: 'bst', rootId: root?.id || '0', nodes, edges }]
-    } as any)
+    })
 
     let curr = root
     if (!curr) {
@@ -299,7 +299,7 @@ export function generateDynamicBSTOp(
           'insert', [], 'success', 0, 0, 1
         ),
         events: [{ type: 'tree.create', variant: 'bst', rootId: '0', nodes: [{ id: '0', value: param }], edges: [] }]
-      } as any)
+      })
     } else {
       while (curr) {
         const val = curr.value
@@ -312,7 +312,7 @@ export function generateDynamicBSTOp(
               'highlight', [], 'warning', 0, 0, sid
             ),
             events: [{ type: 'tree.compare', nodeId: curr.id, value: param, result: 'less' }]
-          } as any)
+          })
           if (curr.left) {
             curr = curr.left
           } else {
@@ -328,7 +328,7 @@ export function generateDynamicBSTOp(
             steps.push({
               ...step,
               events: [{ type: 'tree.insert', parentId: curr.id, node: { id: newId, value: param }, side: 'left' }]
-            } as any)
+            })
             break
           }
         } else {
@@ -339,7 +339,7 @@ export function generateDynamicBSTOp(
               'highlight', [], 'warning', 0, 0, sid
             ),
             events: [{ type: 'tree.compare', nodeId: curr.id, value: param, result: 'greater' }]
-          } as any)
+          })
           if (curr.right) {
             curr = curr.right
           } else {
@@ -355,7 +355,7 @@ export function generateDynamicBSTOp(
             steps.push({
               ...step,
               events: [{ type: 'tree.insert', parentId: curr.id, node: { id: newId, value: param }, side: 'right' }]
-            } as any)
+            })
             break
           }
         }
@@ -370,7 +370,7 @@ export function generateDynamicBSTOp(
         'highlight', [], 'primary', 0, 0, 0
       ),
       events: [{ type: 'tree.create', variant: 'bst', rootId: root?.id || '0', nodes, edges }]
-    } as any)
+    })
 
     let curr = root
     let foundNode: TreeNode | null = null
@@ -387,7 +387,7 @@ export function generateDynamicBSTOp(
             'highlight', [], 'warning', 0, 0, sid
           ),
           events: [{ type: 'tree.compare', nodeId: curr.id, value: param, result: 'less' }]
-        } as any)
+        })
         curr = curr.left
       } else {
         steps.push({
@@ -397,7 +397,7 @@ export function generateDynamicBSTOp(
             'highlight', [], 'warning', 0, 0, sid
           ),
           events: [{ type: 'tree.compare', nodeId: curr.id, value: param, result: 'greater' }]
-        } as any)
+        })
         curr = curr.right
       }
     }
@@ -410,7 +410,7 @@ export function generateDynamicBSTOp(
           'highlight', [], 'danger', 0, 0, sid
         ),
         events: [{ type: 'scene.highlight', entityId: foundNode.id, role: 'active', color: 'danger' }]
-      } as any)
+      })
 
       if (!foundNode.left || !foundNode.right) {
         const step = makeStep(sid++, 8,
@@ -421,7 +421,7 @@ export function generateDynamicBSTOp(
         steps.push({
           ...step,
           events: [{ type: 'tree.delete', nodeId: foundNode.id }]
-        } as any)
+        })
       } else {
         let succ = foundNode.right
         while (succ.left) succ = succ.left
@@ -435,7 +435,7 @@ export function generateDynamicBSTOp(
           events: [
             { type: 'scene.highlight', entityId: succ.id, role: 'active', color: 'warning' }
           ]
-        } as any)
+        })
 
         const step = makeStep(sid++, 11,
           `拷贝后继节点值并物理移除后继节点`,
@@ -447,7 +447,7 @@ export function generateDynamicBSTOp(
           events: [
             { type: 'tree.delete', nodeId: succ.id }
           ]
-        } as any)
+        })
       }
     } else {
       steps.push({
@@ -457,7 +457,7 @@ export function generateDynamicBSTOp(
           'highlight', [], 'primary', 0, 0, sid
         ),
         events: [{ type: 'scene.note', text: `未找到节点 ${param}` }]
-      } as any)
+      })
     }
 
   } else {
@@ -469,7 +469,7 @@ export function generateDynamicBSTOp(
         'highlight', [], 'primary', 0, 0, 0
       ),
       events: [{ type: 'tree.create', variant: 'bst', rootId: root?.id || '0', nodes, edges }]
-    } as any)
+    })
 
     let curr = root
     let found = false
@@ -486,7 +486,7 @@ export function generateDynamicBSTOp(
             { type: 'tree.visit', nodeId: curr.id },
             { type: 'scene.highlight', entityId: curr.id, role: 'safe', color: 'success' }
           ]
-        } as any)
+        })
         found = true
         break
       } else if (param < val) {
@@ -497,7 +497,7 @@ export function generateDynamicBSTOp(
             'highlight', [], 'warning', 0, 0, sid
           ),
           events: [{ type: 'tree.compare', nodeId: curr.id, value: param, result: 'less' }]
-        } as any)
+        })
         curr = curr.left
       } else {
         steps.push({
@@ -507,7 +507,7 @@ export function generateDynamicBSTOp(
             'highlight', [], 'warning', 0, 0, sid
           ),
           events: [{ type: 'tree.compare', nodeId: curr.id, value: param, result: 'greater' }]
-        } as any)
+        })
         curr = curr.right
       }
     }
@@ -520,7 +520,7 @@ export function generateDynamicBSTOp(
           'highlight', [], 'primary', 0, 0, sid
         ),
         events: [{ type: 'scene.note', text: `检索未找到 ${param}` }]
-      } as any)
+      })
     }
   }
 
