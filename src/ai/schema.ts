@@ -235,8 +235,8 @@ export function validateCrossStepConsistency(
               'duplicate_create',
               `实体 "${id}" 在第 ${entityLifecycle.get(id)!.created} 步已创建，第 ${i} 步重复创建（期间无 delete）`,
               `检查是否忘记在中间插入 delete 事件`,
-              'error',
-              false
+              'warning',
+              true
             ))
           }
           entityLifecycle.set(id, { created: i, deleted: null })
@@ -263,8 +263,8 @@ export function validateCrossStepConsistency(
             'use_after_delete',
             `实体 "${refId}" 在第 ${lifecycle.deleted} 步已被删除，第 ${i} 步事件 "${type}" 仍引用它`,
             `删除引用或调整事件顺序`,
-            'error',
-            false
+            'warning',
+            true
           ))
         }
       }
@@ -288,8 +288,8 @@ export function validateCrossStepConsistency(
               'rotate_invalid_node',
               `tree.rotate 的 pivotId "${pivotId}" 在旋转时不存在或已被删除`,
               undefined,
-              'error',
-              false
+              'warning',
+              true
             ))
           }
         }

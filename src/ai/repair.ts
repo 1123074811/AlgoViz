@@ -117,7 +117,10 @@ export function allRecoverable(issues: AIValidationIssue[]): boolean {
   return issues.length > 0 && issues.every(i => i.recoverable)
 }
 
-/** Check if any issue needs AI repair */
+/** Check if any issue needs AI repair.
+ *  Only spend a second AI round-trip when at least one issue is genuinely
+ *  non-recoverable. If every remaining issue is recoverable, local repair plus
+ *  the tolerant normalizer can handle it without another network request. */
 export function needsAIRepair(report: AIErrorReport): boolean {
-  return report.canRetry && report.issues.length > 0
+  return report.canRetry && report.issues.some((i) => !i.recoverable)
 }

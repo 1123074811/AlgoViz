@@ -150,7 +150,11 @@ describe('validateCrossStepConsistency', () => {
       }),
     ]
     const issues = validateCrossStepConsistency(steps, 'linked_list')
-    expect(issues.some(i => i.code === 'duplicate_create')).toBe(true)
+    const dup = issues.find(i => i.code === 'duplicate_create')
+    expect(dup).toBeDefined()
+    // 非致命：降级为 warning/recoverable，不阻断解析
+    expect(dup?.severity).toBe('warning')
+    expect(dup?.recoverable).toBe(true)
   })
 
   // 8. delete 后仍 visit → use_after_delete
@@ -180,7 +184,10 @@ describe('validateCrossStepConsistency', () => {
       }),
     ]
     const issues = validateCrossStepConsistency(steps, 'linked_list')
-    expect(issues.some(i => i.code === 'use_after_delete')).toBe(true)
+    const uad = issues.find(i => i.code === 'use_after_delete')
+    expect(uad).toBeDefined()
+    expect(uad?.severity).toBe('warning')
+    expect(uad?.recoverable).toBe(true)
   })
 
   // 9. tree.rotate 的 pivotId 未创建 → rotate_invalid_node

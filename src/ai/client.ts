@@ -236,19 +236,26 @@ async function requestWithProxyFallback(
   userMessage: string,
   options: ChatRequestOptions = {},
 ): Promise<RequestResult> {
-  const result = await requestChatCompletion(config, systemPrompt, userMessage, options)
-  if (shouldRetryViaProxy(result)) {
-    return requestViaProxy(config, systemPrompt, userMessage, options)
+  // Proxy-first: a browser direct call to the provider almost always fails CORS,
+  // so trying it first just wastes a full round-trip. Go through /api/chat first;
+  // only fall back to a direct call when the proxy endpoint itself is missing or
+  // unreachable (e.g. a static deploy without a backend).
+  const result = await requestViaProxy(config, systemPrompt, userMessage, options)
+  if (shouldFallbackToDirect(result)) {
+    return requestChatCompletion(config, systemPrompt, userMessage, options)
   }
   return result
 }
 
-function shouldRetryViaProxy(result: RequestResult): boolean {
+function shouldFallbackToDirect(result: RequestResult): boolean {
   if (result.success || result.errorReport?.stage !== 'request') return false
+  // Only retry directly when the proxy hop itself failed to reach a real backend.
+  // Auth/model/rate-limit errors would fail identically on a direct call, so don't
+  // double them up.
   return result.errorReport.issues.some((issue) =>
-    issue.code === 'fetch_failed' ||
+    issue.code === 'network_error' ||
     issue.code === 'connection_reset' ||
-    issue.code === 'network_error'
+    issue.code === 'http_404'
   )
 }
 

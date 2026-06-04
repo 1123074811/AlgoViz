@@ -115,11 +115,12 @@ describe('parseAIResponseDetailed', () => {
     expect(result.success).toBe(false)
   })
 
-  // 5. 包含 use_after_delete 跨步错误的 JSON → success: false，error.issues 含对应 code
-  it('包含 use_after_delete 语义错误的脚本应返回 success:false，issues 含 use_after_delete', () => {
+  // 5. 跨步语义不一致（use_after_delete）是非致命警告——脚本仍可渲染，应解析成功。
+  // 这类启发式判定常误杀本可正常播放的脚本，因此降级为 warning/recoverable，
+  // 不再阻断解析（详见 schema.ts validateCrossStepConsistency）。
+  it('包含 use_after_delete 的脚本不应被判死，应返回 success:true', () => {
     const result = parseAIResponseDetailed(JSON.stringify(useAfterDeleteScript))
-    expect(result.success).toBe(false)
-    const hasUseAfterDelete = result.error?.issues?.some(i => i.code === 'use_after_delete')
-    expect(hasUseAfterDelete).toBe(true)
+    expect(result.success).toBe(true)
+    expect(result.script).not.toBeNull()
   })
 })
