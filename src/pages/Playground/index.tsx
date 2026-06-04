@@ -19,13 +19,7 @@ import { recognizeAlgorithm } from '@/presets/recognize'
 
 let playgroundAnalysisController: AbortController | null = null
 
-const DEFAULT_CODE = `def bubble_sort(arr):
-    n = len(arr)
-    for i in range(n):
-        for j in range(n - 1 - i):
-            if arr[j] > arr[j + 1]:
-                arr[j], arr[j + 1] = arr[j + 1], arr[j]
-    return arr`
+const DEFAULT_CODE = ''
 
 const LANGUAGE_OPTIONS = [
   { value: 'python', label: 'Python' },
@@ -78,6 +72,19 @@ export default function Playground() {
     isPlaying, speed, currentStep, totalSteps,
     setSpeed, stepForward, stepBackward, reset, goToEnd, togglePlay,
   } = useAnimationEngine(animationScript)
+
+  const handleNew = useCallback(() => {
+    playgroundAnalysisController?.abort()
+    playgroundAnalysisController = null
+    setCode(DEFAULT_CODE)
+    setInputData('')
+    setLiveAlgoId(null)
+    setGenerator(null)
+    setAnimationScript(null)
+    setAIStatus('idle')
+    setAiErrorReport(null)
+    setAiRepairHistory(null)
+  }, [setAnimationScript, setAIStatus])
 
   const handleEditorMount: OnMount = useCallback((editor) => { editorRef.current = editor }, [])
 
@@ -314,6 +321,11 @@ export default function Playground() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={handleNew}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-border bg-white text-slate-600 hover:bg-slate-50 cursor-pointer transition-colors">
+            <Icon name="code2" size={12} />
+            新建
+          </button>
           <select value={codeLanguage} onChange={(e) => {
             const lang = e.target.value
             setCodeLanguage(lang)
