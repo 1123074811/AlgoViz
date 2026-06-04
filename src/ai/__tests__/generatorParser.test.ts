@@ -14,6 +14,27 @@ describe('parseGeneratorResponse', () => {
     expect(r.generator?.body).not.toContain('@algorithm')
   })
 
+  it('解析 @sample 示例输入（合法 JSON）', () => {
+    const raw = '```js\n// @algorithm bubble_sort\n// @type array\n// @sample [5, 3, 8, 1]\nb.arrayCreate(input)\n```'
+    const r = parseGeneratorResponse(raw)
+    expect(r.success).toBe(true)
+    expect(r.generator?.sampleInput).toBe('[5, 3, 8, 1]')
+    // @sample 行也被从 body 剔除
+    expect(r.generator?.body).not.toContain('@sample')
+  })
+
+  it('@sample 不是合法 JSON 时忽略', () => {
+    const raw = '```js\n// @type array\n// @sample 这不是JSON\nb.compare(0,1)\n```'
+    const r = parseGeneratorResponse(raw)
+    expect(r.success).toBe(true)
+    expect(r.generator?.sampleInput).toBeUndefined()
+  })
+
+  it('无 @sample 时 sampleInput 为 undefined', () => {
+    const r = parseGeneratorResponse(goodResponse)
+    expect(r.generator?.sampleInput).toBeUndefined()
+  })
+
   it('无代码块围栏时回退解析整段', () => {
     const raw = '// @algorithm x\n// @type array\nb.arrayCreate(input)'
     const r = parseGeneratorResponse(raw)

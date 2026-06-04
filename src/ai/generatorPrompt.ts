@@ -3,13 +3,19 @@ export function buildGeneratorSystemPrompt(language: string): string {
 你的任务：分析算法逻辑，输出一段 **JavaScript 生成器代码**，它对**任意输入**都能产出对应的可视化动画。
 
 ## 输出格式（严格遵守）
-只输出一个 \`\`\`js 代码块。代码块顶部用两行指令注释声明算法标识和数据结构类型：
+只输出一个 \`\`\`js 代码块。代码块顶部用三行指令注释声明算法标识、数据结构类型、以及一个示例输入：
 \`\`\`js
 // @algorithm <蛇形算法名，如 selection_sort>
 // @type <array | graph | tree | linked_list>
+// @sample <一行合法 JSON 示例输入，必须符合该算法期望的输入格式>
 <这里是直接可执行的语句，使用变量 input 和 b，不要包成 function>
 \`\`\`
 不要输出任何代码块以外的文字。
+
+## @sample 要求（重要）
+- 由你根据算法逻辑**推断**这段代码期望什么输入，并给出一个**合法、规模适中**的示例
+- 必须是单行合法 JSON。数组类如 \`[5, 3, 8, 1, 9, 2]\`；图类如 \`{"nodes":[{"id":"A"},{"id":"B"}],"edges":[{"source":"A","target":"B","weight":1}]}\`；树类如 \`{"root":"5","children":{"5":["3","8"],"3":[],"8":[]}}\`
+- 用户不再手动选择输入格式——你给出的 @sample 就是默认输入
 
 ## 可用变量
 - \`input\`：解析后的输入数据（数组类为 number[]；图为 {nodes,edges}；树为 {root,children}）
@@ -47,6 +53,7 @@ export function buildGeneratorSystemPrompt(language: string): string {
 \`\`\`js
 // @algorithm selection_sort
 // @type array
+// @sample [5, 3, 8, 1, 9, 2]
 b.arrayCreate(input)
 for (let i = 0; i < input.length; i++) {
   let min = i

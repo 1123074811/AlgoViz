@@ -42,7 +42,8 @@ export default function Playground() {
   const [codeLanguage, setCodeLanguage] = useState(() => {
     return localStorage.getItem('algoviz-editor-code-lang') || 'python'
   })
-  const [inputData, setInputData] = useState('[5, 3, 8, 1, 9, 2]')
+  // Starts empty: the AI infers the expected format and fills a sample on analysis.
+  const [inputData, setInputData] = useState('')
 
   const animationScript = useAlgorithmStore((s) => s.animationScript)
   const setAnimationScript = useAlgorithmStore((s) => s.setAnimationScript)
@@ -193,11 +194,19 @@ export default function Playground() {
       const gen = result.generator
       const recognized = recognizeAlgorithm(gen.algorithm)
 
+      // The AI infers the expected input format and supplies a sample. Auto-fill
+      // it only when the current input box is empty/invalid (respect user input).
+      const currentValid = inputData.trim() !== '' && parseInputData(inputData).valid
+      const effectiveInput = currentValid ? inputData : (gen.sampleInput ?? inputData)
+      if (!currentValid && gen.sampleInput) {
+        setInputData(gen.sampleInput)
+      }
+
       if (recognized) {
         // Phase 1: 内置生成器
         setLiveAlgoId(recognized)
         setGenerator(null)
-        const liveScript = buildLiveScript(recognized, inputData)
+        const liveScript = buildLiveScript(recognized, effectiveInput)
         if (liveScript) setAnimationScript(liveScript)
         setAIStatus('success')
         updateAIHistory(historyId, { status: 'success', script: liveScript ?? undefined })
@@ -206,7 +215,7 @@ export default function Playground() {
         const genType = gen.type === 'matrix' ? 'array' : gen.type
         setLiveAlgoId(null)
         setGenerator({ body: gen.body, type: genType })
-        const parsed = parseInputData(inputData)
+        const parsed = parseInputData(effectiveInput)
         const sandboxResult = parsed.valid
           ? await runGeneratorSandboxed(gen.body, parsed.value, { algorithm: gen.algorithm, type: genType })
           : { ok: false, error: '输入数据无效' }
@@ -279,19 +288,6 @@ export default function Playground() {
       aiRawResponse ? `\n\n### Raw Response\n\`\`\`json\n${aiRawResponse.slice(0, 2000)}${aiRawResponse.length > 2000 ? '\n...(truncated)' : ''}\n\`\`\`` : '',
     ].join('\n')
     navigator.clipboard.writeText(md).catch(() => {})
-  }
-
-  const insertExample = (kind: string) => {
-    const examples: Record<string, string> = {
-      array: '[5, 3, 8, 1, 9, 2]',
-      graph: '{"nodes":[{"id":"A"},{"id":"B"},{"id":"C"}],"edges":[{"source":"A","target":"B","weight":1},{"source":"B","target":"C","weight":2}],"start":"A"}',
-      tree: '{"root":"8","children":{"8":["3","10"],"3":["1","6"],"10":[],"1":[],"6":[]}}',
-      matrix: '[[1, 2, 3], [4, 5, 6], [7, 8, 9]]',
-      linked_list: '{"values":[1,2,3,4],"head":0}',
-    }
-    if (examples[kind]) {
-      setInputData(examples[kind])
-    }
   }
 
   const complexity = animationScript?.complexity
@@ -408,23 +404,10 @@ export default function Playground() {
             title={(
               <div className="flex items-center justify-between w-full">
                 <span>输入数据{inputInfo.valid ? ` · ${inputInfo.summary}` : ''}</span>
-                <select
-                  className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-white text-slate-500 outline-none cursor-pointer"
-                  value=""
-                  onChange={(e) => { if (e.target.value) insertExample(e.target.value) }}
-                  disabled={aiStatus === 'analyzing'}
-                  title="加载示例数据"
-                >
-                  <option value="" disabled>▼ 示例数据</option>
-                  <option value="array">数组: [5,3,8,1]</option>
-                  <option value="graph">图: nodes + edges</option>
-                  <option value="tree">树: root + children</option>
-                  <option value="matrix">矩阵: 二维数组</option>
-                  <option value="linked_list">链表: values + head</option>
-                </select>
+                <span className="text-[10px] text-muted">格式由 AI 分析后自动给出</span>
               </div>
             )}
-            helperText={inputInfo.valid ? `类型: ${inputInfo.kind} · 支持数组、图(nodes+edges)、树(root+children)、矩阵` : inputInfo.message ?? 'JSON 解析错误'}
+            helperText={inputInfo.valid ? `类型: ${inputInfo.kind} · 改输入动画即时更新` : inputInfo.message ?? 'JSON 解析错误'}
             placeholder="[5, 3, 8, 1, 9, 2]"
             disabled={aiStatus === 'analyzing'}
             className="h-28"
