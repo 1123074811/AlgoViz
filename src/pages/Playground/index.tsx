@@ -12,15 +12,9 @@ import Header from '@/components/Layout/Header'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
 import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
 import InputDataPanel from '@/components/Editor/InputDataPanel'
+import { useAlgorithmStore, type AIHistoryEntry } from '@/store/algorithmStore'
 
-interface HistoryEntry {
-  id: string
-  code: string
-  language: string
-  inputData: string
-  script: AnimationScript
-  timestamp: number
-}
+let playgroundAnalysisController: AbortController | null = null
 
 const DEFAULT_CODE = `def bubble_sort(arr):
     n = len(arr)
@@ -37,14 +31,6 @@ const LANGUAGE_OPTIONS = [
   { value: 'java', label: 'Java' },
 ]
 
-function loadHistory(): HistoryEntry[] {
-  try { return JSON.parse(localStorage.getItem('algoviz-playground-history') || '[]') }
-  catch { return [] }
-}
-function saveHistory(entries: HistoryEntry[]) {
-  localStorage.setItem('algoviz-playground-history', JSON.stringify(entries.slice(0, 50)))
-}
-
 export default function Playground() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -54,15 +40,23 @@ export default function Playground() {
     return localStorage.getItem('algoviz-editor-code-lang') || 'python'
   })
   const [inputData, setInputData] = useState('[5, 3, 8, 1, 9, 2]')
-  const [animationScript, setAnimationScript] = useState<AnimationScript | null>(null)
-  const [aiStatus, setAiStatus] = useState<'idle' | 'analyzing' | 'success' | 'error'>('idle')
-  const [aiError, setAiError] = useState('')
+
+  const animationScript = useAlgorithmStore((s) => s.animationScript)
+  const setAnimationScript = useAlgorithmStore((s) => s.setAnimationScript)
+  const aiStatus = useAlgorithmStore((s) => s.aiStatus)
+  const aiError = useAlgorithmStore((s) => s.aiError)
+  const aiRawResponse = useAlgorithmStore((s) => s.aiRawResponse)
+  const setAIStatus = useAlgorithmStore((s) => s.setAIStatus)
+  const aiHistory = useAlgorithmStore((s) => s.aiHistory)
+  const addAIHistory = useAlgorithmStore((s) => s.addAIHistory)
+  const updateAIHistory = useAlgorithmStore((s) => s.updateAIHistory)
+  const removeAIHistory = useAlgorithmStore((s) => s.removeAIHistory)
+  const clearAIHistory = useAlgorithmStore((s) => s.clearAIHistory)
+  const [showHistory, setShowHistory] = useState(true)
+
   const [aiErrorReport, setAiErrorReport] = useState<AIErrorReport | null>(null)
-  const [aiRawResponse, setAiRawResponse] = useState('')
   const [aiRepairHistory, setAiRepairHistory] = useState<AIRepairAttempt[] | null>(null)
   const [showRawResponse, setShowRawResponse] = useState(false)
-  const [history, setHistory] = useState<HistoryEntry[]>(loadHistory)
-  const [showHistory, setShowHistory] = useState(true)
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
 
   const hasApiConfig = getApiConfig() !== null
@@ -78,7 +72,6 @@ export default function Playground() {
   const handleEditorMount: OnMount = useCallback((editor) => { editorRef.current = editor }, [])
 
   const handleAnalyze = async () => {
-    // Local Code Compilation & Syntax Validation Check
     const compResult = compileAndValidateCode(code, codeLanguage)
 
     if (compResult.warnings.length > 0) {
@@ -93,9 +86,7 @@ export default function Playground() {
       ).join('\n\n')
       const warnNote = compResult.warnings.length > 0
         ? `\n\n(${compResult.warnings.length} 个警告)` : ''
-
-      setAiStatus('error')
-      setAiError(`发现 ${compResult.errors.length} 个编译错误:\n\n${allErrors}${warnNote}`)
+      setAIStatus('error', `发现 ${compResult.errors.length} 个编译错误:\n\n${allErrors}${warnNote}`)
       setAiErrorReport({
         stage: 'compilation',
         title: `代码编译错误 (${compResult.errors.length} 个) / Compilation Errors`,
@@ -116,45 +107,78 @@ export default function Playground() {
     }
 
     if (!hasApiConfig) { navigate('/settings'); return }
-    setAiStatus('analyzing'); setAiError(''); setAiErrorReport(null)
-    setAiRawResponse(''); setAiRepairHistory(null); setShowRawResponse(false)
-    const result: AIResult = await analyzeCode({
-      code, language: codeLanguage, inputData,
-      algorithmName: '用户自定义代码',
+
+    // Cancel any previous in-flight request
+    playgroundAnalysisController?.abort()
+    const controller = new AbortController()
+    playgroundAnalysisController = controller
+
+    // Create history entry immediately with status 'analyzing'
+    const historyId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+    addAIHistory({
+      id: historyId,
+      timestamp: Date.now(),
+      algorithmId: 'playground',
+      algorithmName: '自定义代码',
+      code,
+      language: codeLanguage,
+      inputData,
+      status: 'analyzing',
     })
-    if (result.success && result.script) {
-      setAnimationScript(result.script); setAiStatus('success')
-      if (result.repaired) setAiRepairHistory(result.repairHistory ?? null)
-      const entry: HistoryEntry = {
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+
+    setAIStatus('analyzing')
+    setAiErrorReport(null)
+    setAiRepairHistory(null)
+    setShowRawResponse(false)
+
+    try {
+      const result: AIResult = await analyzeCode({
         code, language: codeLanguage, inputData,
-        script: result.script,
-        timestamp: Date.now(),
+        algorithmName: '用户自定义代码',
+      }, { signal: controller.signal })
+
+      if (controller.signal.aborted) return
+      playgroundAnalysisController = null
+
+      if (result.success && result.script) {
+        setAnimationScript(result.script)
+        setAIStatus('success')
+        if (result.repaired) setAiRepairHistory(result.repairHistory ?? null)
+        updateAIHistory(historyId, { status: 'success', script: result.script })
+      } else {
+        setAIStatus('error', result.error || '分析失败', result.rawResponse)
+        setAiErrorReport(result.errorReport ?? null)
+        setAiRepairHistory(result.repairHistory ?? null)
+        updateAIHistory(historyId, { status: 'error', error: result.error || '分析失败' })
       }
-      const updated = [entry, ...history].slice(0, 50)
-      setHistory(updated)
-      saveHistory(updated)
-    } else {
-      setAiError(result.error || '分析失败')
-      setAiErrorReport(result.errorReport ?? null)
-      setAiRawResponse(result.rawResponse ?? '')
-      setAiRepairHistory(result.repairHistory ?? null)
-      setAiStatus('error')
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') {
+        removeAIHistory(historyId)
+        return
+      }
+      const msg = e instanceof Error ? e.message : '未知错误'
+      setAIStatus('error', msg)
+      updateAIHistory(historyId, { status: 'error', error: msg })
     }
   }
 
-  const handleRestore = (entry: HistoryEntry) => {
+  const handleRestore = (entry: AIHistoryEntry) => {
     setCode(entry.code)
     setCodeLanguage(entry.language)
     setInputData(entry.inputData)
-    setAnimationScript(entry.script)
-    setAiStatus('success')
+    if (entry.status === 'success' && entry.script) {
+      setAnimationScript(entry.script)
+      setAIStatus('success')
+    } else {
+      setAnimationScript(null)
+      setAIStatus('idle')
+    }
+    setAiErrorReport(null)
+    setAiRepairHistory(null)
   }
 
   const handleDelete = (id: string) => {
-    const updated = history.filter(h => h.id !== id)
-    setHistory(updated)
-    saveHistory(updated)
+    removeAIHistory(id)
   }
 
   const formatTime = (ts: number) => {
@@ -233,23 +257,27 @@ export default function Playground() {
           <div className="w-full lg:w-52 h-40 lg:h-auto border-b lg:border-b-0 lg:border-r border-border bg-surface flex flex-col shrink-0 overflow-hidden">
             <div className="px-3 py-2 border-b border-border flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-600">历史记录</span>
-              <span className="text-[10px] text-muted">{history.length}</span>
+              <span className="text-[10px] text-muted">{aiHistory.length}</span>
             </div>
             <div className="flex-1 overflow-y-auto">
-              {history.length === 0 ? (
+              {aiHistory.length === 0 ? (
                 <p className="text-[11px] text-slate-400 text-center py-8 px-3">
                   暂无记录<br/>AI 分析后自动保存
                 </p>
               ) : (
                 <div className="p-1.5 space-y-0.5">
-                  {history.map(entry => {
-                    const algoName = entry.script.algorithm || '自定义代码'
+                  {aiHistory.map(entry => {
+                    const algoName = (entry.status === 'success' && entry.script?.algorithm) ? entry.script.algorithm : (entry.algorithmName || '自定义代码')
                     const codePreview = entry.code.split('\n').slice(0, 2).join(' ').slice(0, 40)
                     return (
                       <button key={entry.id} onClick={() => handleRestore(entry)}
                         className="w-full text-left p-2 rounded-md hover:bg-slate-100 transition-colors cursor-pointer border-none bg-transparent group">
                         <div className="flex items-start justify-between gap-1">
-                          <span className="text-[10px] font-semibold text-primary truncate">{algoName}</span>
+                          <div className="flex items-center gap-1 flex-1 min-w-0">
+                            {entry.status === 'analyzing' && <Icon name="loader2" size={10} className="text-violet-400 animate-spin shrink-0" />}
+                            {entry.status === 'error' && <Icon name="alert-circle" size={10} className="text-red-400 shrink-0" />}
+                            <span className="text-[10px] font-semibold text-primary truncate">{algoName}</span>
+                          </div>
                           <button onClick={(e) => { e.stopPropagation(); handleDelete(entry.id) }}
                             className="shrink-0 opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center rounded text-muted hover:text-red-500 cursor-pointer border-none bg-transparent" title="删除">
                             <Icon name="x" size={10} />
@@ -266,9 +294,9 @@ export default function Playground() {
                 </div>
               )}
             </div>
-            {history.length > 0 && (
+            {aiHistory.length > 0 && (
               <div className="p-2 border-t border-border">
-                <button onClick={() => { setHistory([]); saveHistory([]) }}
+                <button onClick={() => clearAIHistory()}
                   className="w-full text-[10px] text-slate-400 hover:text-red-500 cursor-pointer border-none bg-transparent text-center">
                   清空全部历史
                 </button>
@@ -347,7 +375,7 @@ export default function Playground() {
                 {aiErrorReport?.title || 'AI 分析失败'}
               </span>
             </div>
-            <button onClick={() => { setAiStatus('idle'); setAiErrorReport(null); }} className="text-slate-400 hover:text-slate-600 cursor-pointer border-none bg-transparent">
+            <button onClick={() => { setAIStatus('idle'); setAiErrorReport(null); }} className="text-slate-400 hover:text-slate-600 cursor-pointer border-none bg-transparent">
               <Icon name="x" size={12} />
             </button>
           </div>
