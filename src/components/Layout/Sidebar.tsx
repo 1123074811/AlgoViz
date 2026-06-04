@@ -231,18 +231,30 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               <button
                 key={entry.id}
                 onClick={() => {
-                  const algo = algorithms.find((a) => a.id === entry.algorithmId)
-                  if (algo) setSelectedAlgorithm(algo)
-                  setAnimationScript(entry.script ?? null)
-                  navigate('/visualizer')
+                  if (entry.status === 'success' && entry.script) {
+                    const algo = algorithms.find((a) => a.id === entry.algorithmId)
+                    if (algo) setSelectedAlgorithm(algo)
+                    setAnimationScript(entry.script)
+                    navigate('/visualizer')
+                  } else {
+                    navigate('/playground')
+                  }
                 }}
                 className="w-full flex items-center justify-between px-2 py-1.5 rounded-md
                            text-left hover:bg-slate-100 transition-colors cursor-pointer
                            border-none bg-transparent group"
               >
-                <span className="text-xs text-slate-700 truncate flex-1 font-medium">
-                  {entry.algorithmName}
-                </span>
+                <div className="flex items-center gap-1 flex-1 min-w-0">
+                  {entry.status === 'analyzing' && (
+                    <Icon name="loader2" size={11} className="text-violet-400 animate-spin shrink-0" />
+                  )}
+                  {entry.status === 'error' && (
+                    <Icon name="alert-circle" size={11} className="text-red-400 shrink-0" />
+                  )}
+                  <span className="text-xs text-slate-700 truncate font-medium">
+                    {entry.algorithmName}
+                  </span>
+                </div>
                 <span className="text-[10px] text-muted ml-2 shrink-0 group-hover:text-slate-500">
                   {formatHistoryTime(entry.timestamp)}
                 </span>
