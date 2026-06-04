@@ -141,6 +141,20 @@ export class AnimationBuilder {
     return this.add([{ type: 'linked_list.move_pointer', pointerId, toNodeId }], this.act('highlight', [], 'primary'))
   }
 
+  // ── hash table（哈希表 / hash map） ──
+  hashCreate(capacity: number): this {
+    return this.add([{ type: 'hashtable.create', capacity }], this.act('highlight', [], 'primary'))
+  }
+  hashPut(key: string, value: number | string, bucket: number, collision?: boolean): this {
+    return this.add([{ type: 'hashtable.put', key, value, bucket, collision }], this.act('insert', [], collision ? 'warning' : 'success'))
+  }
+  hashGet(key: string, bucket: number, found: boolean): this {
+    return this.add([{ type: 'hashtable.get', key, bucket, found }], this.act('highlight', [], found ? 'success' : 'danger'))
+  }
+  hashRemove(key: string, bucket: number): this {
+    return this.add([{ type: 'hashtable.remove', key, bucket }], this.act('delete', [], 'danger'))
+  }
+
   // ── note / escape ──
   note(text: string): this {
     return this.add([{ type: 'scene.note', text }], this.act('annotate', [], 'muted'))

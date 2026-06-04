@@ -42,6 +42,13 @@ export function buildGeneratorSystemPrompt(language: string): string {
 - \`b.listCreate('singly'|'doubly'|'circular', nodes, headId?)\`；nodes=[{id,value}]
 - \`b.listVisit(id)\` / \`b.listInsertAfter(targetId, {id,value})\` / \`b.listDelete(id)\` / \`b.movePointer(pointerId, toNodeId)\`
 
+### 哈希表（hash map / hash set，@type 用 array）
+- \`b.hashCreate(capacity)\` 第一步必调，创建桶数组，capacity=桶数（如 8）
+- \`b.hashPut(key, value, bucket, collision?)\` 插入；bucket=hash(key)%capacity，collision=该桶已有元素时传 true
+- \`b.hashGet(key, bucket, found)\` 查找
+- \`b.hashRemove(key, bucket)\` 删除
+要点：自己用简单 hash（如字符串各字符码之和 % capacity）算出 bucket；冲突用链地址法，同一 bucket 再 put 时把 collision 传 true。key 用字符串，value 用数字或字符串。
+
 ## 硬性要求
 - 代码必须用 input 的实际值运行，**换输入要能产出不同动画**（不要硬编码步骤）
 - 数组类第一步必须 \`b.arrayCreate(input)\`；图/树类似

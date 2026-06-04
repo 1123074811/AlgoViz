@@ -5,10 +5,11 @@ import { deriveSceneState } from './SceneEngine'
 import CellView from './primitives/CellView'
 import ContainerView from './primitives/ContainerView'
 import EdgeView from './primitives/EdgeView'
+import HashTableView from './primitives/HashTableView'
 import LabelView from './primitives/LabelView'
 import NodeView, { NodeStyles } from './primitives/NodeView'
 import PointerView from './primitives/PointerView'
-import type { SceneCell, SceneEntity } from './types'
+import type { SceneCell, SceneEntity, SceneNode } from './types'
 
 interface SceneCanvasProps {
   script: AnimationScript
@@ -218,16 +219,31 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
 
 function renderContainers(entities: SceneEntity[]) {
   const cells = entities.filter(e => e.type === 'cell') as SceneCell[]
+  const nodes = entities.filter(e => e.type === 'node') as SceneNode[]
   const stackCells = cells.filter(c => c.id.startsWith('stack_'))
     .sort((a, b) => parseInt(a.id.split('_')[1]) - parseInt(b.id.split('_')[1]))
   const queueCells = cells.filter(c => c.id.startsWith('queue_'))
     .sort((a, b) => parseInt(a.id.split('_')[1]) - parseInt(b.id.split('_')[1]))
+  const dequeCells = cells.filter(c => c.id.startsWith('deque_'))
+    .sort((a, b) => parseInt(a.id.split('_')[1]) - parseInt(b.id.split('_')[1]))
+  const setCells = cells.filter(c => c.id.startsWith('set_'))
+    .sort((a, b) => parseInt(a.id.split('_')[1]) - parseInt(b.id.split('_')[1]))
+  const mapNodes = nodes.filter(n => n.id.startsWith('map_') && !n.id.startsWith('phantom_'))
+    .sort((a, b) => parseInt(a.id.split('_')[1]) - parseInt(b.id.split('_')[1]))
   const auxCells = cells.filter(c => c.id.startsWith('aux_'))
+  const hashBuckets = cells.filter(c => c.id.startsWith('hashbucket_'))
+    .sort((a, b) => parseInt(a.id.split('_')[1]) - parseInt(b.id.split('_')[1]))
+  const hashEntries = cells.filter(c => c.id.startsWith('hashentry_'))
+  const loadFactorCell = cells.find(c => c.id === 'hashtable_loadfactor')
   return (
     <>
       {stackCells.length > 0 && <ContainerView type="stack" cells={stackCells} />}
       {queueCells.length > 0 && <ContainerView type="queue" cells={queueCells} />}
+      {dequeCells.length > 0 && <ContainerView type="queue" cells={dequeCells} />}
+      {setCells.length > 0 && <ContainerView type="set" cells={setCells} />}
+      {mapNodes.length > 0 && <ContainerView type="map" cells={[]} nodes={mapNodes} />}
       {auxCells.length > 0 && <ContainerView type="auxiliary" cells={auxCells} />}
+      {hashBuckets.length > 0 && <HashTableView buckets={hashBuckets} entries={hashEntries} loadFactorCell={loadFactorCell} />}
     </>
   )
 }

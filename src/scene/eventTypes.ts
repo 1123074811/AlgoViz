@@ -79,4 +79,32 @@ export type StringAlgorithmEvent =
   | { type: 'string.mark_range'; row: number; indices: number[] }
   | { type: 'string.shift_pattern'; offset: number }
 
-export type AlgorithmEvent = CommonAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent
+export type SetAlgorithmEvent =
+  | { type: 'set.create'; values: Array<number | string>; label?: string }
+  | { type: 'set.add'; value: number | string }
+  | { type: 'set.remove'; value: number | string }
+  | { type: 'set.contains'; value: number | string; found: boolean }
+
+export type MapAlgorithmEvent =
+  | { type: 'map.create'; entries: Array<{ key: string; value: number | string }>; label?: string }
+  | { type: 'map.put'; key: string; value: number | string }
+  | { type: 'map.get'; key: string; value?: number | string; found: boolean }
+  | { type: 'map.remove'; key: string }
+
+export type DequeAlgorithmEvent =
+  | { type: 'deque.create'; values: Array<number | string> }
+  | { type: 'deque.push_front'; value: number | string }
+  | { type: 'deque.push_back'; value: number | string }
+  | { type: 'deque.pop_front' }
+  | { type: 'deque.pop_back' }
+  | { type: 'deque.peek_front'; index: number }
+  | { type: 'deque.peek_back'; index: number }
+
+export type HashTableAlgorithmEvent =
+  | { type: 'hashtable.create'; capacity: number }
+  | { type: 'hashtable.put'; key: string; value: number | string; bucket: number; collision?: boolean }
+  | { type: 'hashtable.get'; key: string; bucket: number; found: boolean }
+  | { type: 'hashtable.remove'; key: string; bucket: number }
+  | { type: 'hashtable.highlight_bucket'; bucket: number }
+
+export type AlgorithmEvent = CommonAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent
