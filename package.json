@@ -11,7 +11,12 @@
     "start": "node server/proxy.cjs",
     "preview": "vite preview"
   },
-  "keywords": ["algorithm", "visualization", "AI", "education"],
+  "keywords": [
+    "algorithm",
+    "visualization",
+    "AI",
+    "education"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
@@ -29,8 +34,8 @@
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",
-    "@types/react": "^19.2.15",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "^18.3.30",
+    "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.15",
