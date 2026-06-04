@@ -1,5 +1,6 @@
-export { analyzeCode, getApiConfig } from './client'
-export type { AIRequestParams, AIResult, ApiConfig, AnalyzeOptions } from './client'
+export { analyzeCode, analyzeCodeGenerator, getApiConfig } from './client'
+export type { AIRequestParams, AIResult, ApiConfig, AnalyzeOptions, GeneratorAnalyzeResult } from './client'
+export type { ParsedGenerator } from './generatorParser'
 export { buildSystemPrompt, buildUserMessage } from './prompts'
 export { parseAIResponse, parseAIResponseDetailed } from './parser'
 export type { ParseResult } from './parser'

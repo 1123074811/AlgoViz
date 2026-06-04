@@ -5,6 +5,8 @@ import { buildSystemPrompt, buildUserMessage } from './prompts'
 import { parseAIResponseDetailed } from './parser'
 import { parseInputData } from './input'
 import { attemptLocalRepair, buildRepairPrompt, needsAIRepair } from './repair'
+import { buildGeneratorSystemPrompt } from './generatorPrompt'
+import { parseGeneratorResponse, type ParsedGenerator } from './generatorParser'
 
 export interface ApiConfig {
   apiKey: string
@@ -246,6 +248,55 @@ export async function analyzeCode(params: AIRequestParams, options: AnalyzeOptio
 
 export async function testApiConnection(config: ApiConfig): Promise<AIConnectionTestResult> {
   return requestViaProxy(normalizeApiConfig(config), '你是连接测试助手。', '请只回复 OK。', { temperature: 0, maxTokens: 64, jsonMode: false })
+}
+
+export interface GeneratorAnalyzeResult {
+  success: boolean
+  generator?: ParsedGenerator
+  error?: string
+  errorReport?: AIErrorReport
+  rawResponse?: string
+}
+
+/** Phase 2: ask the AI to produce an executable generator (input → animation),
+ *  instead of a one-shot static script. */
+export async function analyzeCodeGenerator(
+  params: AIRequestParams,
+  options: AnalyzeOptions = {},
+): Promise<GeneratorAnalyzeResult> {
+  const { signal } = options
+  if (signal?.aborted) return { success: false, error: 'AbortError' }
+
+  const config = getApiConfig()
+  if (!config) {
+    const template = ERROR_TEMPLATES.missingConfig
+    return { success: false, error: template.message, errorReport: { ...template, issues: [], rawResponse: '' } }
+  }
+
+  const parsedInput = parseInputData(params.inputData)
+  if (!parsedInput.valid) {
+    return { success: false, error: parsedInput.message || '输入数据不是合法 JSON' }
+  }
+
+  try {
+    const result = await requestWithProxyFallback(
+      config,
+      buildGeneratorSystemPrompt(params.language),
+      buildUserMessage(params.code, params.language, params.inputData, parsedInput.promptContext, params.algorithmName),
+      { temperature: 0.2, jsonMode: false, signal },
+    )
+    if (!result.success) {
+      return { success: false, error: result.error, errorReport: result.errorReport, rawResponse: result.content }
+    }
+    const parsed = parseGeneratorResponse(result.content)
+    if (!parsed.success) {
+      return { success: false, error: parsed.error, rawResponse: result.content }
+    }
+    return { success: true, generator: parsed.generator, rawResponse: result.content }
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') throw e
+    return { success: false, error: e instanceof Error ? e.message : String(e) }
+  }
 }
 
 async function requestWithProxyFallback(
