@@ -50,6 +50,7 @@ export type MatrixAlgorithmEvent =
   | { type: 'matrix.update_cell'; row: number; col: number; value: number | string }
   | { type: 'matrix.mark_path'; cells: Array<{ row: number; col: number }> }
   | { type: 'matrix.mark_conflict'; cells: Array<{ row: number; col: number }> }
+  | { type: 'matrix.transition'; from: { row: number; col: number }; to: { row: number; col: number } }
 
 export type NQueensAlgorithmEvent =
   | { type: 'n_queens.try_place'; row: number; col: number }
@@ -114,10 +115,15 @@ export type HeapAlgorithmEvent =
   | { type: 'heap.sift'; from: number; to: number }
   | { type: 'heap.peek'; index: number }
 
+export type BitsetAlgorithmEvent =
+  | { type: 'bitset.create'; bits: number; label?: string }
+  | { type: 'bitset.set'; index: number; value: 0 | 1 }
+  | { type: 'bitset.highlight'; index: number }
+
 export type MathAlgorithmEvent =
   | { type: 'math.init'; vars: Array<{ name: string; value: number | string }> }
   | { type: 'math.set'; name: string; value: number | string }
   | { type: 'math.highlight'; name: string }
   | { type: 'math.note'; text: string }
 
-export type AlgorithmEvent = CommonAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | MathAlgorithmEvent
+export type AlgorithmEvent = CommonAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | MathAlgorithmEvent

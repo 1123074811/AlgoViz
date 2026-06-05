@@ -83,6 +83,18 @@ export function buildGeneratorSystemPrompt(language: string): string {
 - \`b.varHighlight(name)\` 仅高亮某变量（不改值），用于强调"正在读取/比较此变量"
 要点：每一步关键计算都要 varSet 反映变量变化，不要只 b.note 文字；变量名用短标识（a、b、r、result）。配合 b.desc 说明这一步在做什么。
 
+### 矩阵 / DP 网格转移箭头（@type 用 array）
+2D 动态规划（LCS、编辑距离、背包、矩阵链等）= 矩阵 + 状态转移箭头。矩阵用 \`b.emit({ type: 'matrix.create', rows, cols, values? })\` 创建，再用 \`matrix.visit_cell\` / \`matrix.update_cell\` 填表，转移关系用：
+- \`b.matrixTransition({row, col}, {row, col})\` 在 from 格与 to 格之间画一条虚线箭头，表示 \`dp[to]\` 由 \`dp[from]\` 转移而来。每步只保留最新一条转移边（自动清掉上一步的）。
+要点：每次更新 dp 单元前，先 matrixTransition 指出它从哪个前驱状态转移来（如 LCS 从左上/上/左），再 matrix.update_cell 写值。配合 b.desc 说明转移方程。
+
+### 位集 / 状压（bitmask，@type 用 array）
+状压 DP / 子集枚举：用一排 0/1 位格（带下标）展示一个 bitmask 的位。
+- \`b.bitsetCreate(bits, label?)\` 第一步必调，bits=位数（全 0 初始），label 可选（默认 "Bitmask"）
+- \`b.bitsetSet(index, value)\` 置位：把第 index 位设为 0 或 1 并高亮（下标从 0 起、低位在左）
+- \`b.bitsetHighlight(index)\` 仅高亮某位（不改值），用于强调"正在检视此位"
+要点：下标从 0 起、低位在左；每次状态位变化都要 bitsetSet 反映。配合 b.desc 说明这一位代表什么。
+
 ## 硬性要求
 - 代码必须用 input 的实际值运行，**换输入要能产出不同动画**（不要硬编码步骤）
 - 数组类第一步必须 \`b.arrayCreate(input)\`；图/树类似

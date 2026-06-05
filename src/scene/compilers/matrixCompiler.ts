@@ -27,6 +27,28 @@ function compileMatrixEvent(event: MatrixAlgorithmEvent | NQueensAlgorithmEvent,
       ]
     case 'matrix.mark_conflict':
       return event.cells.map((cell) => ({ type: 'set_state', entityId: cellId(cell.row, cell.col), state: { role: 'conflict', color: 'danger', pulse: true }, merge: true }))
+    case 'matrix.transition': {
+      // DP 状态转移箭头：dp[to] 由 dp[from] 转移而来。先清掉上一步的转移边，再连一条新边。
+      const from = cellId(event.from.row, event.from.col)
+      const to = cellId(event.to.row, event.to.col)
+      return [
+        ...Object.keys(context.scene.edges).filter((id) => id.startsWith('trans_')).map((edgeId) => ({ type: 'disconnect' as const, edgeId })),
+        {
+          type: 'connect' as const,
+          edge: AuxiliaryUnit.arrow({
+            id: `trans_${from}_${to}`,
+            fromEntity: from,
+            toEntity: to,
+            directed: true,
+            dashed: true,
+            thickness: 2,
+            color: 'primary',
+            pulse: true,
+            variant: 'transition',
+          }),
+        },
+      ]
+    }
     case 'n_queens.try_place':
       ensureBoard(context, event.row, event.col)
       return [{ type: 'set_state', entityId: cellId(event.row, event.col), state: { role: 'candidate', color: 'warning', pulse: true }, merge: true }]

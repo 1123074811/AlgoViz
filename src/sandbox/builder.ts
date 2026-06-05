@@ -173,6 +173,22 @@ export class AnimationBuilder {
     return this.add([{ type: 'heap.peek', index }], this.act('highlight', [index], 'primary'))
   }
 
+  // ── 矩阵 / DP 网格（@type 用 array） ──
+  matrixTransition(from: { row: number; col: number }, to: { row: number; col: number }): this {
+    return this.add([{ type: 'matrix.transition', from, to }], this.act('edge', [], 'primary'))
+  }
+
+  // ── 位集 / 状压（bitmask，@type 用 array） ──
+  bitsetCreate(bits: number, label?: string): this {
+    return this.add([{ type: 'bitset.create', bits, label }], this.act('highlight', [], 'primary'))
+  }
+  bitsetSet(index: number, value: 0 | 1): this {
+    return this.add([{ type: 'bitset.set', index, value }], this.act('highlight', [index], value === 1 ? 'success' : 'muted'))
+  }
+  bitsetHighlight(index: number): this {
+    return this.add([{ type: 'bitset.highlight', index }], this.act('highlight', [index], 'warning'))
+  }
+
   // ── 纯数学 / 变量面板（结构无关算法，@type 用 array） ──
   varInit(vars: Array<{ name: string; value: number | string }>): this {
     return this.add([{ type: 'math.init', vars: vars.map(v => ({ ...v })) }], this.act('highlight', [], 'primary'))

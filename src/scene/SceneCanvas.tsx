@@ -5,6 +5,7 @@ import { deriveSceneState } from './SceneEngine'
 import CellView from './primitives/CellView'
 import ContainerView from './primitives/ContainerView'
 import EdgeView from './primitives/EdgeView'
+import BitsetView from './primitives/BitsetView'
 import HashTableView from './primitives/HashTableView'
 import HeapView from './primitives/HeapView'
 import LabelView from './primitives/LabelView'
@@ -250,6 +251,9 @@ function renderContainers(entities: SceneEntity[]) {
     .sort((a, b) => (a.col ?? 0) - (b.col ?? 0))
   // Precise s_<row>_<index> match — avoids colliding with set_/stack_/etc.
   const stringCells = cells.filter(c => /^s_\d+_\d+$/.test(c.id))
+  const bitCells = cells.filter(c => /^bit_\d+$/.test(c.id))
+    .sort((a, b) => parseInt(a.id.split('_')[1]) - parseInt(b.id.split('_')[1]))
+  const bitsetLabelCell = cells.find(c => c.id === 'bitset_label')
   return (
     <>
       {stackCells.length > 0 && <ContainerView type="stack" cells={stackCells} />}
@@ -262,6 +266,7 @@ function renderContainers(entities: SceneEntity[]) {
       {heapNodes.length > 0 && <HeapView nodes={heapNodes} />}
       {mathVars.length > 0 && <VariablesView vars={mathVars} />}
       {stringCells.length > 0 && <StringView cells={stringCells} />}
+      {bitCells.length > 0 && <BitsetView bits={bitCells} labelCell={bitsetLabelCell} />}
     </>
   )
 }
