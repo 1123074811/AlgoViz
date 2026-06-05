@@ -91,6 +91,7 @@ export interface SceneNode {
   ports: NodePort[]
   state?: SceneEntityState
   meta?: Record<string, unknown>
+  group?: string   // 组合场景中所属结构实例的区域 id；缺省按 id 前缀推断
 }
 
 export interface SceneCell {
@@ -103,6 +104,7 @@ export interface SceneCell {
   col?: number
   state?: SceneEntityState
   meta?: Record<string, unknown>
+  group?: string   // 组合场景中所属结构实例的区域 id；缺省按 id 前缀推断
 }
 
 export interface SceneLabel {
@@ -112,6 +114,7 @@ export interface SceneLabel {
   position: Point
   target?: AnchorRef
   state?: SceneEntityState
+  group?: string   // 组合场景中所属结构实例的区域 id；缺省按 id 前缀推断
 }
 
 export interface SceneGroup {

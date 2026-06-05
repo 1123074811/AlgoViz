@@ -7,6 +7,7 @@ import { compileEvent } from './eventCompiler'
 import { layoutGraph } from './layouts/graphLayout'
 import { layoutLinkedList } from './layouts/linkedListLayout'
 import { layoutTree } from './layouts/treeLayout'
+import { applyRegionLayout } from './regionLayout'
 
 // ── Snapshot cache for incremental replay ──
 
@@ -353,6 +354,11 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
 
   // ── Render auxiliary arrays from teachingState (generic) ──
   scene = renderAuxiliaryArrays(scene, teachingState)
+
+  // 组合场景：仅当显式开启 layout==='composite' 时做区域自动布局（不影响现有脚本）
+  if (script.presentation?.layout === 'composite') {
+    scene = applyRegionLayout(scene)
+  }
 
   return scene
 }

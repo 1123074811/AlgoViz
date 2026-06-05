@@ -9,6 +9,7 @@ import HashTableView from './primitives/HashTableView'
 import LabelView from './primitives/LabelView'
 import NodeView, { NodeStyles } from './primitives/NodeView'
 import PointerView from './primitives/PointerView'
+import RegionView from './primitives/RegionView'
 import SetView from './primitives/SetView'
 import StringView from './primitives/StringView'
 import VariablesView from './primitives/VariablesView'
@@ -145,6 +146,9 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
           </marker>
         </defs>
         <NodeStyles />
+        {Object.values(scene.groups).filter(g => g.id.startsWith('region_')).map(g => (
+          <RegionView key={g.id} region={g} />
+        ))}
         {renderContainers(entities)}
         <g className="pointer-events-auto">
           {edges.map((edge) => <EdgeView key={edge.id} edge={edge} scene={scene} />)}
