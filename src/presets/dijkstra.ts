@@ -1,6 +1,18 @@
 import type { AnimationScript, ActionColor } from '@/types/animation'
+import type { AlgorithmEvent } from '@/scene'
 import type { GraphInput } from './bfsGraph'
 
+/**
+ * W5 组合场景：Dijkstra 重写为「图 + 距离数组 + 最小堆 + 跨结构连线」三结构同框。
+ *
+ * - 图（graph.*）→ 'main' 区域（节点无前缀）
+ * - 距离数组（array.*，每个节点一格，arr_<下标>）→ 'array' 区域
+ * - 最小堆/优先队列（heap.*，heap_<下标>）→ 'heap' 区域
+ * - scene.link 把更新过的距离数组格连到对应图节点
+ *
+ * presentation.layout='composite' 触发 regionLayout 区域自动布局（竖直分区不重叠），
+ * 各编译器只发各自前缀的实体，坐标由 regionLayout 统一平移，预设不手设坐标。
+ */
 export function generateDijkstra(input: GraphInput): AnimationScript {
   const { nodes, edges } = input
   const getLabel = (id: string) => nodes.find(n => n.id === id)?.label ?? id
@@ -17,121 +29,119 @@ export function generateDijkstra(input: GraphInput): AnimationScript {
   let sid = 1
   const INF = Number.MAX_SAFE_INTEGER
   const dist: Record<string, number> = {}
-  const prev: Record<string, string | null> = {}
   const settled = new Set<string>()
 
-  for (const n of nodes) { dist[n.id] = INF; prev[n.id] = null }
+  for (const n of nodes) dist[n.id] = INF
   const startId = nodes[0]?.id ?? '0'
   dist[startId] = 0
 
-  function fmtDist(d: number) { return d === INF ? '∞' : String(d) }
-  function distSnapshot() {
-    const snap: Record<string, number | string> = {}
-    for (const n of nodes) snap[n.id] = dist[n.id] === INF ? '∞' : dist[n.id]
-    return snap
-  }
+  const fmtDist = (d: number) => (d === INF ? '∞' : String(d))
+  // 距离数组初值：源点 0，其余 '∞'（字符串表示无穷）
+  const initialDistCells: Array<number | string> = nodes.map(n => (n.id === startId ? 0 : '∞'))
 
-  // Step 1: Init
+  // 朴素优先队列（数组里放距离数值，与堆可视化一致）。返回最小距离对应的节点。
+  // pq 与可视化堆同步：pq 里每个 entry 既有 node 也有 dist；堆里只放 dist 数值。
+  const pq: Array<{ id: string; d: number }> = [{ id: startId, d: 0 }]
+  const heapValues = () => [...pq].sort((a, b) => a.d - b.d).map(e => e.d)
+
+  // ── Step 1: 同时创建三结构 ──
   steps.push({
     stepId: sid++, codeLine: 3,
     description: {
-      zh: `初始化：dist[${getLabel(startId)}]=0，其余=∞`,
-      en: `Init: dist[${getLabel(startId)}]=0, others=∞`,
+      zh: `初始化三结构：图 + 距离数组（dist[${getLabel(startId)}]=0，其余=∞）+ 最小堆（源点距离 0 入堆）`,
+      en: `Init three structures: graph + dist array (dist[${getLabel(startId)}]=0, rest=∞) + min-heap (push source dist 0)`,
     },
     action: { type: 'highlight', targets: [getIdx(startId)], color: 'primary' },
-    events: [{ type: 'graph.create', nodes, edges, directed: false }],
+    events: [
+      { type: 'graph.create', nodes, edges, directed: false },
+      { type: 'array.create', values: initialDistCells },
+      { type: 'heap.create', values: [0], variant: 'min' },
+    ],
     stats: { comparisons: 0, swaps: 0, accesses: nodes.length },
-    teachingState: { graph: { distances: distSnapshot() } },
   })
 
-  for (let iter = 0; iter < nodes.length; iter++) {
-    // Find unsettled node with smallest distance
-    let minDist = INF, u = ''
-    for (const n of nodes) {
-      if (!settled.has(n.id) && dist[n.id] < minDist) {
-        minDist = dist[n.id]; u = n.id
-      }
+  let comparisons = 0
+  let accesses = nodes.length
+
+  // ── 主循环：每次取堆顶最小距离节点 ──
+  while (pq.length > 0) {
+    // 取出最小距离的待定节点
+    let minIdx = 0
+    for (let i = 1; i < pq.length; i++) {
+      if (pq[i].d < pq[minIdx].d) minIdx = i
     }
-    if (!u) break
+    const { id: u, d: du } = pq.splice(minIdx, 1)[0]
+    comparisons++
+    if (settled.has(u)) continue // 堆里可能有同一节点的旧距离，跳过陈旧条目
+    if (du > dist[u]) continue
     settled.add(u)
+    accesses++
 
-    // Mark settled
-    steps.push({
-      stepId: sid++, codeLine: 5,
-      description: {
-        zh: `选出距离最小节点 ${getLabel(u)} (dist=${fmtDist(dist[u])})，标记为已确定`,
-        en: `Pick nearest node ${getLabel(u)} (dist=${fmtDist(dist[u])}), mark settled`,
-      },
-      action: { type: 'mark', targets: [getIdx(u)], color: 'success' },
-      events: [{ type: 'graph.visit_node', nodeId: u }],
-      stats: { comparisons: iter + 1, swaps: 0, accesses: settled.size },
-      teachingState: { graph: { distances: distSnapshot() } },
-    })
+    // 本轮的关系更新：松弛成功的邻居（array.set_value + heap.push + scene.link）
+    const popEvents: AlgorithmEvent[] = [
+      { type: 'heap.pop' },
+      { type: 'graph.visit_node', nodeId: u },
+    ]
+    const relaxNotes: string[] = []
 
-    // Relax neighbors
     for (const { to: v, weight: w } of (adj.get(u) ?? [])) {
+      accesses++
       if (settled.has(v)) {
-        steps.push({
-          stepId: sid++, codeLine: 8,
-          description: {
-            zh: `检查边 ${getLabel(u)}→${getLabel(v)}：${getLabel(v)} 已确定，跳过`,
-            en: `Check edge ${getLabel(u)}→${getLabel(v)}: ${getLabel(v)} settled, skip`,
-          },
-          action: { type: 'compare', targets: [getIdx(u), getIdx(v)], color: 'muted' },
-          events: [{ type: 'graph.visit_edge', source: u, target: v }],
-          stats: { comparisons: sid, swaps: 0, accesses: settled.size },
-          teachingState: { graph: { distances: distSnapshot() } },
-        })
+        popEvents.push({ type: 'graph.visit_edge', source: u, target: v })
+        popEvents.push({ type: 'graph.relax_edge', source: u, target: v, oldDistance: fmtDist(dist[v]), newDistance: fmtDist(dist[v]), success: false })
         continue
       }
-
       const newDist = dist[u] + w
       const oldDist = dist[v]
       const improved = newDist < oldDist
+      popEvents.push({ type: 'graph.visit_edge', source: u, target: v })
+      popEvents.push({ type: 'graph.relax_edge', source: u, target: v, oldDistance: fmtDist(oldDist), newDistance: fmtDist(improved ? newDist : oldDist), success: improved })
 
       if (improved) {
-        dist[v] = newDist; prev[v] = u
+        dist[v] = newDist
+        pq.push({ id: v, d: newDist })
+        comparisons++
+        // 更新距离数组该邻居格 + 新距离入堆 + 连线（距离格 → 图节点）
+        popEvents.push({ type: 'array.set_value', index: getIdx(v), value: newDist })
+        popEvents.push({ type: 'heap.push', value: newDist })
+        popEvents.push({ type: 'scene.link', from: `arr_${getIdx(v)}`, to: v, label: String(newDist), color: 'success' })
+        relaxNotes.push(`${getLabel(v)}=${newDist}`)
       }
-
-      steps.push({
-        stepId: sid++, codeLine: 8,
-        description: {
-          zh: improved
-            ? `松弛 ${getLabel(u)}→${getLabel(v)}：${dist[u]}+${w}=${newDist} < ${fmtDist(oldDist)}，更新 dist[${getLabel(v)}]=${newDist}`
-            : `松弛 ${getLabel(u)}→${getLabel(v)}：${dist[u]}+${w}=${newDist} ≥ ${fmtDist(oldDist)}，不更新`,
-          en: improved
-            ? `Relax ${getLabel(u)}→${getLabel(v)}: ${dist[u]}+${w}=${newDist} < ${fmtDist(oldDist)}, update!`
-            : `Relax ${getLabel(u)}→${getLabel(v)}: ${dist[u]}+${w}=${newDist} >= ${fmtDist(oldDist)}, no update`,
-        },
-        action: { type: 'compare', targets: [getIdx(u), getIdx(v)], color: improved ? 'success' : 'warning' },
-        events: [
-          { type: 'graph.visit_edge', source: u, target: v },
-          { type: 'graph.relax_edge', source: u, target: v, oldDistance: fmtDist(oldDist), newDistance: fmtDist(dist[v]), success: improved },
-        ],
-        stats: { comparisons: sid, swaps: 0, accesses: settled.size },
-        teachingState: { graph: { distances: distSnapshot(), edgeStates: [{ source: u, target: v, role: improved ? 'relaxed' : 'candidate', color: (improved ? 'success' : 'warning') as ActionColor }] } },
-      })
     }
+
+    steps.push({
+      stepId: sid++, codeLine: 5,
+      description: {
+        zh: relaxNotes.length
+          ? `堆顶取出 ${getLabel(u)} (dist=${fmtDist(du)})，标记确定；松弛更新：${relaxNotes.join('，')}`
+          : `堆顶取出 ${getLabel(u)} (dist=${fmtDist(du)})，标记确定；邻居无可松弛`,
+        en: relaxNotes.length
+          ? `Pop ${getLabel(u)} (dist=${fmtDist(du)}), settle; relaxed: ${relaxNotes.join(', ')}`
+          : `Pop ${getLabel(u)} (dist=${fmtDist(du)}), settle; no neighbor improved`,
+      },
+      action: { type: 'mark', targets: [getIdx(u)], color: 'success' },
+      events: popEvents,
+      stats: { comparisons, swaps: 0, accesses },
+    })
   }
 
-  // Final step
-  const pathNodes = [...settled]
+  // ── 末步：完成 ──
+  const settledList = [...settled]
   steps.push({
     stepId: sid++, codeLine: 14,
     description: {
-      zh: `Dijkstra 完成！起点 ${getLabel(startId)} 到各节点的最短距离已确定`,
-      en: `Dijkstra done! Shortest distances from ${getLabel(startId)} computed`,
+      zh: `Dijkstra 完成！起点 ${getLabel(startId)} 到各节点的最短距离已写入距离数组`,
+      en: `Dijkstra done! Shortest distances from ${getLabel(startId)} written to dist array`,
     },
-    action: { type: 'mark', targets: pathNodes.map(getIdx).filter(i => i >= 0), color: 'success' },
-    events: pathNodes.map(id => ({ type: 'graph.visit_node' as const, nodeId: id })),
-    stats: { comparisons: sid, swaps: 0, accesses: settled.size },
-    teachingState: { graph: { distances: distSnapshot() } },
+    action: { type: 'mark', targets: settledList.map(getIdx).filter(i => i >= 0), color: 'success' as ActionColor },
+    events: settledList.map(id => ({ type: 'graph.visit_node' as const, nodeId: id })),
+    stats: { comparisons, swaps: 0, accesses },
   })
 
   return {
     algorithm: 'dijkstra',
     complexity: { time: { best: 'O((V+E) log V)', average: 'O((V+E) log V)', worst: 'O((V+E) log V)' }, space: 'O(V)' },
-    presentation: { engine: 'scene', module: 'graph' },
+    presentation: { engine: 'scene', module: 'graph', layout: 'composite' },
     initialState: { type: 'graph', data: [], nodes, edges },
     steps,
   }
