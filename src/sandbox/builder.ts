@@ -155,6 +155,24 @@ export class AnimationBuilder {
     return this.add([{ type: 'hashtable.remove', key, bucket }], this.act('delete', [], 'danger'))
   }
 
+  // ── 堆 / 优先队列（heap，完全二叉树布局，@type 用 array） ──
+  heapCreate(values: number[], variant?: 'min' | 'max'): this {
+    this.arrayData = [...values]
+    return this.add([{ type: 'heap.create', values: [...values], variant }], this.act('highlight', [], 'primary'))
+  }
+  heapPush(value: number): this {
+    return this.add([{ type: 'heap.push', value }], this.act('insert', [], 'success'))
+  }
+  heapPop(): this {
+    return this.add([{ type: 'heap.pop' }], this.act('delete', [], 'danger'))
+  }
+  heapSift(from: number, to: number): this {
+    return this.add([{ type: 'heap.sift', from, to }], this.act('swap', [from, to], 'warning'))
+  }
+  heapPeek(index: number): this {
+    return this.add([{ type: 'heap.peek', index }], this.act('highlight', [index], 'primary'))
+  }
+
   // ── 纯数学 / 变量面板（结构无关算法，@type 用 array） ──
   varInit(vars: Array<{ name: string; value: number | string }>): this {
     return this.add([{ type: 'math.init', vars: vars.map(v => ({ ...v })) }], this.act('highlight', [], 'primary'))

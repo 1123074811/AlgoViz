@@ -49,6 +49,15 @@ export function buildGeneratorSystemPrompt(language: string): string {
 - \`b.hashRemove(key, bucket)\` 删除
 要点：自己用简单 hash（如字符串各字符码之和 % capacity）算出 bucket；冲突用链地址法，同一 bucket 再 put 时把 collision 传 true。key 用字符串，value 用数字或字符串。
 
+### 堆 / 优先队列（heap / priority queue，@type 用 array）
+优先队列底层用堆。堆按**完全二叉树**展示：节点 i 的父为 \`floor((i-1)/2)\`、左右子为 \`2i+1\`/\`2i+2\`，下标从 0 起；底部附带"层序数组镜像"。适用于 Dijkstra/Prim 的优先队列、堆排序、Top-K 等。
+- \`b.heapCreate(values, variant?)\` 第一步必调，传入初始数组（已满足堆序），variant='min'（默认）或 'max'，决定标题与语义
+- \`b.heapPush(value)\` 入堆：把新值追加到末尾 index，并连好父子边（随后用 heapSift 上浮）
+- \`b.heapPop()\` 出堆：弹出堆顶（index 0），把末尾元素补到根、移除末尾节点（随后用 heapSift 下沉）
+- \`b.heapSift(from, to)\` 上浮/下沉的一次比较交换：交换 index from 与 to 两个槽位的值并高亮（from/to 是数组下标）
+- \`b.heapPeek(index)\` 高亮某下标节点（如读取堆顶 index 0）
+要点：push 后自己算上浮路径、逐步 heapSift(child, parent)；pop 后自己算下沉路径、逐步 heapSift(parent, child)。下标全程从 0 起、父 i 子 2i+1/2i+2。配合 b.desc 说明每步在比较/交换谁。
+
 ### 集合（set，@type 用 array）
 强调集合三大语义：**去重、无序、成员判定**。元素装在一个"集合容器（{ }）"里展示。
 - \`b.setCreate(values)\` 第一步必调，传入初始元素数组（重复值会自动去重）

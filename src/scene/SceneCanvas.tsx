@@ -6,6 +6,7 @@ import CellView from './primitives/CellView'
 import ContainerView from './primitives/ContainerView'
 import EdgeView from './primitives/EdgeView'
 import HashTableView from './primitives/HashTableView'
+import HeapView from './primitives/HeapView'
 import LabelView from './primitives/LabelView'
 import NodeView, { NodeStyles } from './primitives/NodeView'
 import PointerView from './primitives/PointerView'
@@ -242,6 +243,9 @@ function renderContainers(entities: SceneEntity[]) {
     .sort((a, b) => parseInt(a.id.split('_')[1]) - parseInt(b.id.split('_')[1]))
   const hashEntries = cells.filter(c => c.id.startsWith('hashentry_'))
   const loadFactorCell = cells.find(c => c.id === 'hashtable_loadfactor')
+  // heap_<i> tree nodes (digit-suffixed only — excludes heap_variant marker)
+  const heapNodes = cells.filter(c => /^heap_\d+$/.test(c.id))
+    .sort((a, b) => parseInt(a.id.split('_')[1]) - parseInt(b.id.split('_')[1]))
   const mathVars = cells.filter(c => c.id.startsWith('mathvar_'))
     .sort((a, b) => (a.col ?? 0) - (b.col ?? 0))
   // Precise s_<row>_<index> match — avoids colliding with set_/stack_/etc.
@@ -255,6 +259,7 @@ function renderContainers(entities: SceneEntity[]) {
       {mapNodes.length > 0 && <ContainerView type="map" cells={[]} nodes={mapNodes} />}
       {auxCells.length > 0 && <ContainerView type="auxiliary" cells={auxCells} />}
       {hashBuckets.length > 0 && <HashTableView buckets={hashBuckets} entries={hashEntries} loadFactorCell={loadFactorCell} />}
+      {heapNodes.length > 0 && <HeapView nodes={heapNodes} />}
       {mathVars.length > 0 && <VariablesView vars={mathVars} />}
       {stringCells.length > 0 && <StringView cells={stringCells} />}
     </>

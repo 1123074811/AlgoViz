@@ -5,6 +5,7 @@ import { arrayCompiler } from './compilers/arrayCompiler'
 import { dequeCompiler } from './compilers/dequeCompiler'
 import { graphCompiler } from './compilers/graphCompiler'
 import { hashTableCompiler } from './compilers/hashTableCompiler'
+import { heapCompiler } from './compilers/heapCompiler'
 import { linkedListCompiler } from './compilers/linkedListCompiler'
 import { mapCompiler } from './compilers/mapCompiler'
 import { mathCompiler } from './compilers/mathCompiler'
@@ -15,7 +16,7 @@ import { stackCompiler } from './compilers/stackCompiler'
 import { stringCompiler } from './compilers/stringCompiler'
 import { treeCompiler } from './compilers/treeCompiler'
 
-const compilers = [linkedListCompiler, treeCompiler, arrayCompiler, matrixCompiler, graphCompiler, stackCompiler, queueCompiler, stringCompiler, setCompiler, mapCompiler, dequeCompiler, hashTableCompiler, mathCompiler]
+const compilers = [linkedListCompiler, treeCompiler, arrayCompiler, matrixCompiler, graphCompiler, stackCompiler, queueCompiler, stringCompiler, setCompiler, mapCompiler, dequeCompiler, hashTableCompiler, heapCompiler, mathCompiler]
 
 export function compileEvent(event: AlgorithmEvent, context: CompileContext): SceneCommand[] {
   if (event.type === 'scene.note') return [{ type: 'add_note', text: event.text }]
