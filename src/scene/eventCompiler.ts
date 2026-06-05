@@ -16,6 +16,7 @@ import { setCompiler } from './compilers/setCompiler'
 import { stackCompiler } from './compilers/stackCompiler'
 import { stringCompiler } from './compilers/stringCompiler'
 import { treeCompiler } from './compilers/treeCompiler'
+import { AuxiliaryUnit } from './primitives/DataUnits'
 
 const compilers = [linkedListCompiler, treeCompiler, arrayCompiler, matrixCompiler, graphCompiler, stackCompiler, queueCompiler, stringCompiler, setCompiler, mapCompiler, dequeCompiler, hashTableCompiler, heapCompiler, bitsetCompiler, mathCompiler]
 
@@ -24,6 +25,22 @@ export function compileEvent(event: AlgorithmEvent, context: CompileContext): Sc
   if (event.type === 'scene.wait') return [{ type: 'wait', duration: event.duration ?? 300 }]
   if (event.type === 'scene.highlight') {
     return [{ type: 'set_state', entityId: event.entityId, state: { role: event.role ?? 'active', color: event.color ?? 'primary', pulse: true }, merge: true }]
+  }
+  if (event.type === 'scene.link') {
+    return [{
+      type: 'connect',
+      edge: AuxiliaryUnit.arrow({
+        id: `link_${event.from}_${event.to}`,
+        fromEntity: event.from,
+        toEntity: event.to,
+        curved: true,
+        dashed: true,
+        thickness: 1.2,
+        color: event.color ?? 'primary',
+        label: event.label,
+        pulse: true,
+      }),
+    }]
   }
   if (event.type === 'scene.clear_highlight') {
     delete context.scene.groups.__matrix_dependencies

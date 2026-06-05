@@ -95,6 +95,43 @@ export function buildGeneratorSystemPrompt(language: string): string {
 - \`b.bitsetHighlight(index)\` 仅高亮某位（不改值），用于强调"正在检视此位"
 要点：下标从 0 起、低位在左；每次状态位变化都要 bitsetSet 反映。配合 b.desc 说明这一位代表什么。
 
+## 组合场景（多结构协同）
+当一个算法同时用到多个数据结构时（如 **Dijkstra = 图 + 距离数组 + 优先队列堆**），可以在**同一脚本里依次创建多个结构**（先 graphCreate，再 arrayCreate，再 heapCreate……）。系统检测到 ≥2 种结构后会**自动分区布局**，让各结构互不重叠、各占一块带标题的区域，无需你手动摆位。
+- **跨结构连线**：\`b.link(fromId, toId, {label?, color?})\` 在任意两个实体之间画一条虚线箭头，用来表达"这两个不同结构的实体相关联"（如把距离数组的某格连到对应图节点）。color 默认 'primary'。
+- **各结构实体 id 约定**（link 引用时按此拼）：
+  - 数组格 = \`arr_<i>\`（下标从 0）
+  - 堆节点 = \`heap_<i>\`
+  - 图节点 = \`<节点id>\`（即 graphCreate 传入的 id，无前缀）
+  - 哈希桶 = \`hashbucket_<i>\`
+  - 位集 = \`bit_<i>\`
+  - 字符格 = \`s_<row>_<index>\`
+  - 集合 = \`set_<i>\`
+  - 变量 = \`mathvar_<name>\`
+
+### 组合示例（Dijkstra 风格，精简）
+\`\`\`js
+// @algorithm dijkstra
+// @type graph
+// @sample {"nodes":["A","B","C"],"edges":[["A","B",1],["B","C",2],["A","C",5]],"start":"A"}
+const { nodes, edges, start } = input
+b.graphCreate(nodes.map(id => ({ id })), edges.map(([source, target, weight]) => ({ source, target, weight })))
+const dist = nodes.map(id => id === start ? 0 : Infinity)
+b.arrayCreate(dist.map(d => d === Infinity ? '∞' : d))   // 距离数组
+b.heapCreate([0])                                          // 优先队列（堆）
+const si = nodes.indexOf(start)
+b.desc('起点 ' + start + ' 距离 0').link('arr_' + si, start, { label: 'dist' })
+b.visitNode(start)
+for (const [source, target, weight] of edges) {
+  const ti = nodes.indexOf(target)
+  b.desc('松弛边 ' + source + '→' + target).visitEdge(source, target)
+  b.relaxEdge(source, target, true)
+  b.setValue(ti, weight)                                   // 更新距离数组格
+  b.link('arr_' + ti, target, { label: 'dist', color: 'success' })  // 该格 → 图节点
+  b.heapPush(weight)
+}
+b.heapPop()
+\`\`\`
+
 ## 硬性要求
 - 代码必须用 input 的实际值运行，**换输入要能产出不同动画**（不要硬编码步骤）
 - 数组类第一步必须 \`b.arrayCreate(input)\`；图/树类似

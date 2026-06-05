@@ -5,6 +5,7 @@ export type CommonAlgorithmEvent =
   | { type: 'scene.note'; text: string }
   | { type: 'scene.highlight'; entityId: string; color?: ActionColor; role?: SceneEntityState['role'] }
   | { type: 'scene.clear_highlight'; entityIds?: string[] }
+  | { type: 'scene.link'; from: string; to: string; label?: string; color?: ActionColor }
   | { type: 'scene.wait'; duration?: number }
 
 export type LinkedListAlgorithmEvent =

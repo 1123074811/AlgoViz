@@ -20,6 +20,9 @@ export class AnimationBuilder {
   private treeRoot?: string
   private treeChildren: Record<string, string[]> = {}
   private treeNodes: Array<{ id: string; value: number | string }> = []
+  // tracks which structure families (event prefix before '.') the script used,
+  // to auto-enable composite layout when 2+ distinct structures appear.
+  private usedFamilies = new Set<string>()
 
   constructor(algorithm: string, type: RendererType) {
     this.algorithm = algorithm || 'custom'
@@ -32,6 +35,8 @@ export class AnimationBuilder {
     if (this.steps.length >= MAX_STEPS) {
       throw new Error(`步数超过上限 ${MAX_STEPS}，请减少操作或简化算法`)
     }
+    const family = events[0]?.type.split('.')[0]
+    if (family) this.usedFamilies.add(family)
     const zh = this.pendingDesc || `步骤 ${this.sid}`
     this.steps.push({
       stepId: this.sid++,
@@ -236,6 +241,14 @@ export class AnimationBuilder {
     return this.add([{ type: 'string.mark_range', row, indices: [...indices] }], this.act('mark', [...indices], 'primary'))
   }
 
+  // ── 跨结构连线（组合场景） ──
+  link(fromId: string, toId: string, opts?: { label?: string; color?: ActionColor }): this {
+    return this.add(
+      [{ type: 'scene.link', from: fromId, to: toId, label: opts?.label, color: opts?.color }],
+      this.act('edge', [], opts?.color ?? 'primary'),
+    )
+  }
+
   // ── note / escape ──
   note(text: string): this {
     return this.add([{ type: 'scene.note', text }], this.act('annotate', [], 'muted'))
@@ -249,9 +262,14 @@ export class AnimationBuilder {
       throw new Error('生成器没有产生任何步骤')
     }
     const initialState = this.buildInitialState()
+    // 多结构（去掉 'scene' 后 ≥2 个不同 family）时自动开启 composite 区域布局。
+    // 单结构脚本保持原行为，向后兼容。
+    const structureFamilies = [...this.usedFamilies].filter(f => f !== 'scene')
+    const presentation: AnimationScript['presentation'] = { engine: 'scene', module: this.type }
+    if (structureFamilies.length >= 2) presentation.layout = 'composite'
     return {
       algorithm: this.algorithm,
-      presentation: { engine: 'scene', module: this.type },
+      presentation,
       complexity: { time: { best: 'O(?)', average: 'O(?)', worst: 'O(?)' }, space: 'O(?)' },
       initialState,
       steps: this.steps,
