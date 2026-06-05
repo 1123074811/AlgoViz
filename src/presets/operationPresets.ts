@@ -657,7 +657,7 @@ export const DATA_STRUCTURE_OPERATIONS: Record<string, OperationDef[]> = {
       script: {
         algorithm: 'bfs_graph',
         complexity: { time: { best: 'O(V+E)', average: 'O(V+E)', worst: 'O(V+E)' }, space: 'O(V)' },
-        presentation: { engine: 'scene', module: 'graph' },
+        presentation: { engine: 'scene', module: 'graph', layout: 'composite' },
         initialState: {
           type: 'graph',
           data: [],
