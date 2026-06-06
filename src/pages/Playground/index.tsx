@@ -13,6 +13,7 @@ import Header from '@/components/Layout/Header'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
 import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
 import InputDataPanel from '@/components/Editor/InputDataPanel'
+import ConfirmDialog from '@/components/Common/ConfirmDialog'
 import { useAlgorithmStore, type AIHistoryEntry } from '@/store/algorithmStore'
 import { generatePreset } from '@/presets'
 import { recognizeAlgorithm } from '@/presets/recognize'
@@ -55,6 +56,7 @@ export default function Playground() {
   const [aiErrorReport, setAiErrorReport] = useState<AIErrorReport | null>(null)
   const [aiRepairHistory, setAiRepairHistory] = useState<AIRepairAttempt[] | null>(null)
   const [showRawResponse, setShowRawResponse] = useState(false)
+  const [confirmState, setConfirmState] = useState<{ type: 'delete'; id: string } | { type: 'clearAll' } | null>(null)
   // Live mode: when the AI recognizes a built-in algorithm, the animation is
   // generated locally from the current input — changing input re-runs the
   // generator without another AI call. Null for unrecognized custom algorithms.
@@ -329,7 +331,7 @@ export default function Playground() {
   }
 
   const handleDelete = (id: string) => {
-    removeAIHistory(id)
+    setConfirmState({ type: 'delete', id })
   }
 
   const formatTime = (ts: number) => {
@@ -459,7 +461,7 @@ export default function Playground() {
             </div>
             {aiHistory.length > 0 && (
               <div className="p-2 border-t border-border">
-                <button onClick={() => clearAIHistory()}
+                <button onClick={() => setConfirmState({ type: 'clearAll' })}
                   className="w-full text-[10px] text-slate-400 hover:text-red-500 cursor-pointer border-none bg-transparent text-center">
                   清空全部历史
                 </button>
@@ -633,6 +635,30 @@ export default function Playground() {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmState !== null}
+        title={confirmState?.type === 'delete' ? t('playground.deleteConfirmTitle') : t('playground.clearAllConfirmTitle')}
+        message={confirmState?.type === 'delete' ? t('playground.deleteConfirmMessage') : t('playground.clearAllConfirmMessage')}
+        confirmLabel={confirmState?.type === 'delete' ? t('playground.deleteConfirmTitle') : t('playground.clearAllConfirmTitle')}
+        variant="danger"
+        onConfirm={() => {
+          if (!confirmState) return
+          if (confirmState.type === 'delete') {
+            removeAIHistory(confirmState.id)
+          } else {
+            // Clearing all history → also reset the current view for a clean slate
+            // (the animation lives in the shared store and would otherwise linger).
+            clearAIHistory()
+            setAnimationScript(null)
+            setAIStatus('idle')
+            setLiveAlgoId(null)
+            setGenerator(null)
+          }
+          setConfirmState(null)
+        }}
+        onCancel={() => setConfirmState(null)}
+      />
 
     </div>
   )
