@@ -878,7 +878,7 @@ export { generateBFS, generateDFS, generateDijkstra, generatePrim, generateKrusk
 import { generateRadixSort } from './radixSort'
 import { generateBucketSort } from './bucketSort'
 import type { GraphInput } from './bfsGraph'
-import { generateDynamicLinkedListOp, generateDynamicBSTOp } from './dynamicOperations'
+import { generateDynamicLinkedListOp, generateDynamicBSTOp, generateDynamicBTreeOp, generateDynamicBPlusTreeOp } from './dynamicOperations'
 
 // ─── Input parsing helpers for natural types ───
 
@@ -1214,6 +1214,27 @@ const bstSearchWrapper = (input: any) => {
   return generateDynamicBSTOp('search', arr, param)
 }
 
+const btreeSearchWrapper = (input: any): AnimationScript => {
+  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
+  const param = typeof input?.param === 'number' ? input.param : 17
+  return generateDynamicBTreeOp('search', arr, param)!
+}
+const btreeInsertWrapper = (input: any): AnimationScript => {
+  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
+  const param = typeof input?.param === 'number' ? input.param : 15
+  return generateDynamicBTreeOp('insert', arr, param)!
+}
+const bplusSearchWrapper = (input: any): AnimationScript => {
+  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
+  const param = typeof input?.param === 'number' ? input.param : 45
+  return generateDynamicBPlusTreeOp('search', arr, param)!
+}
+const bplusRangeWrapper = (input: any): AnimationScript => {
+  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
+  const param = typeof input?.param === 'string' ? input.param : '30, 60'
+  return generateDynamicBPlusTreeOp('range_query', arr, param)!
+}
+
 const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   bubble_sort: numGen(generateBubbleSort), selection_sort: numGen(generateSelectionSort),
   insertion_sort: numGen(generateInsertionSort), merge_sort: numGen(generateMergeSort),
@@ -1241,6 +1262,8 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   bst_search: bstSearchWrapper,
   avl_insert: avlTreeWrapper,
   trie: trieWrapper, btree: btreeWrapper, bplus_tree: bplusTreeWrapper,
+  btree_search: btreeSearchWrapper, btree_insert: btreeInsertWrapper,
+  bplus_tree_search: bplusSearchWrapper, bplus_tree_range_query: bplusRangeWrapper,
   hash_table: hashTableWrapper,
   backtracking: backtrackingWrapper,
   radix_sort: numGen(generateRadixSort), bucket_sort: numGen(generateBucketSort),

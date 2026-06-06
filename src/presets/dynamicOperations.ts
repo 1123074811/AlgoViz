@@ -532,3 +532,389 @@ export function generateDynamicBSTOp(
     steps
   }
 }
+
+// ============================================================================
+// 3. B-Tree Dynamic Operations (t=2)
+// ============================================================================
+
+interface BTreeNode {
+  id: string
+  keys: number[]
+  children: string[]
+  leaf: boolean
+}
+
+function buildBTree(arr: number[]): {
+  root: BTreeNode | null
+  nodeMap: Map<string, BTreeNode>
+} {
+  const T = 2
+  let counter = 0
+  const map = new Map<string, BTreeNode>()
+
+  function mkNode(leaf: boolean): BTreeNode {
+    const n: BTreeNode = { id: String(counter++), keys: [], children: [], leaf }
+    map.set(n.id, n)
+    return n
+  }
+
+  function splitChild(parent: BTreeNode, i: number) {
+    const y = map.get(parent.children[i])!
+    const z = mkNode(y.leaf)
+    // y had 2*T-1 = 3 keys: [k0, k1, k2]
+    // After split: y→[k0], mid=k1→parent, z→[k2]
+    z.keys = y.keys.splice(T)       // z gets [k2]
+    const mid = y.keys.pop()!       // mid = k1
+    if (!y.leaf) z.children = y.children.splice(T)
+    parent.keys.splice(i, 0, mid)
+    parent.children.splice(i + 1, 0, z.id)
+  }
+
+  function insertNonFull(node: BTreeNode, key: number) {
+    let i = node.keys.length - 1
+    if (node.leaf) {
+      while (i >= 0 && key < node.keys[i]) i--
+      node.keys.splice(i + 1, 0, key)
+    } else {
+      while (i >= 0 && key < node.keys[i]) i--
+      i++
+      let child = map.get(node.children[i])!
+      if (child.keys.length === 2 * T - 1) {
+        splitChild(node, i)
+        if (key > node.keys[i]) i++
+        child = map.get(node.children[i])!
+      }
+      insertNonFull(child, key)
+    }
+  }
+
+  let root: BTreeNode | null = null
+  for (const key of arr) {
+    if (key === null || key === undefined || isNaN(key)) continue
+    if (!root) {
+      root = mkNode(true)
+      root.keys.push(key)
+    } else {
+      if (root.keys.length === 2 * T - 1) {
+        const nr = mkNode(false)
+        nr.children.push(root.id)
+        // split old root
+        const y = root
+        const z = mkNode(y.leaf)
+        z.keys = y.keys.splice(T)
+        const mid = y.keys.pop()!
+        if (!y.leaf) z.children = y.children.splice(T)
+        nr.keys.push(mid)
+        nr.children.push(z.id)
+        root = nr
+      }
+      insertNonFull(root, key)
+    }
+  }
+  return { root, nodeMap: map }
+}
+
+/** Convert internal B-tree to animation node/edge lists */
+function btreeToAnim(nodeMap: Map<string, BTreeNode>) {
+  const nodes: { id: string; value: string }[] = []
+  const edges: { parentId: string; childId: string; port: string }[] = []
+  for (const [id, n] of nodeMap) {
+    nodes.push({ id, value: `[${n.keys.join(', ')}]` })
+    n.children.forEach((cid, idx) => edges.push({ parentId: id, childId: cid, port: `child_${idx}` }))
+  }
+  return { nodes, edges }
+}
+
+export function generateDynamicBTreeOp(
+  opId: 'insert' | 'search',
+  arr: number[],
+  param: number
+): AnimationScript | undefined {
+  const T = 2
+  if (arr.length === 0) arr = [10, 20, 30, 3, 7, 13, 17, 23, 27, 33, 37]
+  const { root, nodeMap } = buildBTree(arr)
+  if (!root) return undefined
+
+  const { nodes, edges } = btreeToAnim(nodeMap)
+  const steps: AnimationStep[] = []
+  let sid = 1
+
+  if (opId === 'search') {
+    steps.push({
+      ...makeStep(sid++, 0,
+        `B树初始状态 (t=${T})，检索 key=${param}`,
+        `Initial B-Tree (t=${T}), search for key=${param}`,
+        'highlight', [], 'primary', 0, 0, 0
+      ),
+      events: [{ type: 'tree.create', variant: 'btree', rootId: root.id, nodes, edges }],
+    })
+
+    let curr: BTreeNode | null = root
+    while (curr) {
+      let i = 0
+      while (i < curr.keys.length && param > curr.keys[i]) i++
+      if (i < curr.keys.length && curr.keys[i] === param) {
+        steps.push({
+          ...makeStep(sid++, 5,
+            `节点 [${curr.keys}] 中 keys[${i}]==${param} 命中！`,
+            `Node [${curr.keys}]: keys[${i}]==${param}, match!`,
+            'highlight', [], 'success', i + 1, 0, sid
+          ),
+          events: [{ type: 'tree.visit', nodeId: curr.id }],
+        })
+        break
+      }
+      if (curr.leaf) {
+        steps.push({
+          ...makeStep(sid++, 7,
+            `到达叶子 [${curr.keys}]，未找到 ${param}`,
+            `Reached leaf [${curr.keys}], ${param} not found`,
+            'highlight', [], 'primary', i + 1, 0, sid
+          ),
+          events: [{ type: 'tree.visit', nodeId: curr.id }, { type: 'scene.note', text: `未找到 ${param}` }],
+        })
+        break
+      }
+      steps.push({
+        ...makeStep(sid++, 2,
+          `节点 [${curr.keys}] 中比较，进入 child_${i}`,
+          `Node [${curr.keys}]: descend to child_${i}`,
+          'highlight', [], 'primary', i + 1, 0, sid
+        ),
+        events: [{ type: 'tree.visit', nodeId: curr.id }],
+      })
+      curr = nodeMap.get(curr.children[i])!
+    }
+  } else {
+    // insert: build tree without param, then show insertion walk
+    const baseArr = arr.filter(k => k !== param)
+    const pre = buildBTree(baseArr.length > 0 ? baseArr : [10, 20, 30, 3, 7, 13, 17, 23, 27, 33, 37])
+    const preRoot = pre.root!
+    const preNodes = btreeToAnim(pre.nodeMap)
+
+    steps.push({
+      ...makeStep(sid++, 0,
+        `B树初始状态 (t=${T})，准备插入 key=${param}`,
+        `Initial B-Tree (t=${T}), prepare to insert key=${param}`,
+        'highlight', [], 'primary', 0, 0, 0
+      ),
+      events: [{ type: 'tree.create', variant: 'btree', rootId: preRoot.id, nodes: preNodes.nodes, edges: preNodes.edges }],
+    })
+
+    // Walk to leaf
+    let curr: BTreeNode | null = preRoot
+    while (curr && !curr.leaf) {
+      let i = 0
+      while (i < curr.keys.length && param > curr.keys[i]) i++
+      steps.push({
+        ...makeStep(sid++, 17,
+          `节点 [${curr.keys}] 中比较，进入 child_${i}`,
+          `Node [${curr.keys}]: descend to child_${i}`,
+          'highlight', [], 'primary', i + 1, 0, sid
+        ),
+        events: [{ type: 'tree.visit', nodeId: curr.id }],
+      })
+      curr = pre.nodeMap.get(curr.children[i])!
+    }
+    if (curr && curr.leaf) {
+      steps.push({
+        ...makeStep(sid++, 13,
+          `到达叶子 [${curr.keys}]，插入 ${param} → [${[...curr.keys, param].sort((a,b)=>a-b)}]`,
+          `Arrived at leaf [${curr.keys}], insert ${param} → [${[...curr.keys, param].sort((a,b)=>a-b)}]`,
+          'insert', [], 'success', 0, 0, sid
+        ),
+        events: [
+          { type: 'tree.visit', nodeId: curr.id },
+          { type: 'tree.update_metadata', nodeId: curr.id, metadata: { keys: `[${[...curr.keys, param].sort((a,b)=>a-b).join(', ')}]` } },
+        ],
+      })
+      // Show final state
+      steps.push({
+        ...makeStep(sid++, 8,
+          `插入完成, B树保持平衡`,
+          `Insert complete, B-Tree stays balanced`,
+          'mark', [], 'success', 0, 0, 0
+        ),
+        events: [{ type: 'scene.clear_highlight' }],
+      })
+    }
+  }
+
+  return {
+    algorithm: 'btree',
+    complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' },
+    presentation: { engine: 'scene', module: 'tree', variant: 'btree' },
+    initialState: { type: 'tree', data: arr },
+    steps,
+  }
+}
+
+// ============================================================================
+// 4. B+ Tree Dynamic Operations
+// ============================================================================
+
+interface BPNode {
+  id: string; keys: number[]; children: string[]; leaf: boolean; next: string | null
+}
+
+function buildBPlusTree(arr: number[]): { root: BPNode; map: Map<string, BPNode> } {
+  const sorted = [...new Set(arr.filter(k => !isNaN(k)))].sort((a, b) => a - b)
+  if (sorted.length === 0) sorted.push(10, 20, 30, 35, 40, 45, 50, 60)
+
+  let ctr = 0
+  const nextId = (p: string) => `${p}_${ctr++}`
+  const map = new Map<string, BPNode>()
+
+  // Build leaves (max 3 keys each)
+  const leafNodes: BPNode[] = []
+  for (let i = 0; i < sorted.length; i += 3) {
+    const ln: BPNode = { id: nextId('leaf'), keys: sorted.slice(i, i + 3), children: [], leaf: true, next: null }
+    map.set(ln.id, ln)
+    leafNodes.push(ln)
+  }
+  for (let i = 0; i < leafNodes.length - 1; i++) leafNodes[i].next = leafNodes[i + 1].id
+
+  // Build internal levels bottom-up
+  let level = leafNodes
+  while (level.length > 1) {
+    const parents: BPNode[] = []
+    for (let i = 0; i < level.length; i += 3) {
+      const grp = level.slice(i, i + 3)
+      const p: BPNode = {
+        id: nextId('int'),
+        keys: grp.slice(1).map(g => g.keys[0]),
+        children: grp.map(g => g.id),
+        leaf: false,
+        next: null,
+      }
+      map.set(p.id, p)
+      parents.push(p)
+    }
+    level = parents
+  }
+
+  return { root: level[0], map }
+}
+
+function bpToAnim(map: Map<string, BPNode>) {
+  const nodes: { id: string; value: string }[] = []
+  const edges: { parentId: string; childId: string; port: string }[] = []
+  for (const [id, n] of map) {
+    nodes.push({ id, value: `[${n.keys.join(', ')}]` })
+    n.children.forEach((cid, idx) => edges.push({ parentId: id, childId: cid, port: `child_${idx}` }))
+  }
+  return { nodes, edges }
+}
+
+export function generateDynamicBPlusTreeOp(
+  opId: 'search' | 'range_query',
+  arr: number[],
+  param: number | string
+): AnimationScript | undefined {
+  const { root, map } = buildBPlusTree(arr)
+  const { nodes, edges } = bpToAnim(map)
+  const steps: AnimationStep[] = []
+  let sid = 1
+
+  if (opId === 'search') {
+    const key = typeof param === 'number' ? param : parseInt(String(param)) || map.get(root.id)!.keys[0] || 30
+    steps.push({
+      ...makeStep(sid++, 0,
+        `B+树初始状态，搜索 key=${key}`,
+        `Initial B+ Tree, search for key=${key}`,
+        'highlight', [], 'primary', 0, 0, 0
+      ),
+      events: [{ type: 'tree.create', variant: 'btree', rootId: root.id, nodes, edges }],
+    })
+
+    let curr: BPNode | null = root
+    while (curr && !curr.leaf) {
+      let i = 0
+      while (i < curr.keys.length && key >= curr.keys[i]) i++
+      steps.push({
+        ...makeStep(sid++, 4,
+          `内部节点 [${curr.keys}] 中比较，进入 child_${i}`,
+          `Internal [${curr.keys}]: descend to child_${i}`,
+          'highlight', [], 'primary', i + 1, 0, sid
+        ),
+        events: [{ type: 'tree.visit', nodeId: curr.id }],
+      })
+      curr = map.get(curr.children[i])!
+    }
+
+    if (curr && curr.leaf) {
+      const found = curr.keys.includes(key)
+      steps.push({
+        ...makeStep(sid++, found ? 10 : 16,
+          found ? `叶子 [${curr.keys}] 中找到 ${key}！命中` : `叶子 [${curr.keys}] 中未找到 ${key}`,
+          found ? `Found ${key} in leaf [${curr.keys}]!` : `${key} not found in leaf [${curr.keys}]`,
+          found ? 'highlight' : 'highlight', [], found ? 'success' : 'primary', found ? 2 : 2, 0, sid
+        ),
+        events: [
+          { type: 'tree.visit', nodeId: curr.id },
+          ...(found ? [] : [{ type: 'scene.note' as const, text: `未找到 ${key}` }]),
+        ],
+      })
+    }
+  } else {
+    const rangeStr = typeof param === 'string' ? param : '20, 50'
+    const parts = rangeStr.split(',').map(s => parseInt(s.trim()))
+    const low = parts[0], high = parts[1]
+    steps.push({
+      ...makeStep(sid++, 0,
+        `B+树初始状态，范围查询 [${low}, ${high}]`,
+        `Initial B+ Tree, range query [${low}, ${high}]`,
+        'highlight', [], 'primary', 0, 0, 0
+      ),
+      events: [{ type: 'tree.create', variant: 'btree', rootId: root.id, nodes, edges }],
+    })
+
+    // Navigate to start leaf
+    let curr: BPNode | null = root
+    while (curr && !curr.leaf) {
+      let i = 0
+      while (i < curr.keys.length && low >= curr.keys[i]) i++
+      steps.push({
+        ...makeStep(sid++, 4,
+          `内部 [${curr.keys}] 定位 low=${low}，进入 child_${i}`,
+          `Internal [${curr.keys}]: locate low=${low}, descend child_${i}`,
+          'highlight', [], 'primary', i + 1, 0, sid
+        ),
+        events: [{ type: 'tree.visit', nodeId: curr.id }],
+      })
+      curr = map.get(curr.children[i])!
+    }
+
+    // Scan leaf chain
+    const visited: string[] = []
+    let scan: BPNode | null = curr
+    while (scan) {
+      const inRange = scan.keys.filter(k => k >= low && k <= high)
+      if (inRange.length > 0) {
+        visited.push(scan.id)
+      }
+      if (scan.keys.length > 0 && scan.keys[scan.keys.length - 1] > high) break
+      scan = scan.next ? map.get(scan.next) ?? null : null
+    }
+
+    steps.push({
+      ...makeStep(sid++, 10,
+        `沿叶子链表扫描: ${visited.map(id => `[${map.get(id)!.keys}]`).join(' → ')}，查询完成`,
+        `Scan leaf chain: ${visited.map(id => `[${map.get(id)!.keys}]`).join(' → ')}, done`,
+        'highlight', [], 'success', 0, 0, visited.reduce((s, id) => s + map.get(id)!.keys.length, 0)
+      ),
+      events: [
+        ...visited.map(id => ({ type: 'tree.visit' as const, nodeId: id })),
+        { type: 'scene.clear_highlight' as const },
+      ],
+    })
+  }
+
+  return {
+    algorithm: 'bplus_tree',
+    complexity: { time: { best: 'O(log n)', average: 'O(log n + k)', worst: 'O(log n + k)' }, space: 'O(k)' },
+    presentation: { engine: 'scene', module: 'tree', variant: 'btree' },
+    initialState: { type: 'tree', data: arr },
+    steps,
+  }
+}

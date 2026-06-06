@@ -64,6 +64,8 @@ const ALGO_DESC_ZH: Record<string, string> = {
   fenwick_tree: '树状数组 / BIT：支持前缀和查询和单点更新。',
   monotonic_stack: '单调栈：维护栈内元素单调递增或递减，用于查找下一个更大/更小元素。',
   sliding_window: '滑动窗口：维护一个大小可变的窗口，在线性时间内扫描数组。',
+  btree: 'B树：多路平衡搜索树，节点可容纳多个关键码，广泛应用于数据库索引。',
+  bplus_tree: 'B+树：B树变体，数据只存储在叶子层，叶子通过链表连接，支持高效范围查询。',
 }
 
 const ALGO_DESC_EN: Record<string, string> = {
@@ -109,6 +111,8 @@ const ALGO_DESC_EN: Record<string, string> = {
   fenwick_tree: 'Fenwick Tree / BIT: supports prefix sum queries and point updates.',
   monotonic_stack: 'Monotonic Stack: maintains monotonic stack for next greater/smaller element.',
   sliding_window: 'Sliding Window: maintains a variable-size window for linear scans.',
+  btree: 'B-Tree: multi-way balanced search tree where nodes hold multiple keys, widely used in database indexes.',
+  bplus_tree: 'B+ Tree: B-Tree variant storing data only in leaf nodes connected via a linked list, enabling efficient range queries.',
 }
 
 function getAlgorithmDesc(id: string): string {
@@ -126,6 +130,12 @@ function getConcreteAlgoId(algoId: string, opId: string): string {
   }
   if (algoId.startsWith('bst_') || algoId === 'avl_tree' || algoId === 'red_black_tree' || algoId === 'bst' || algoId === 'avl_insert') {
     return `bst_${opId}`
+  }
+  if (algoId === 'btree') {
+    return `btree_${opId}`
+  }
+  if (algoId === 'bplus_tree') {
+    return `bplus_tree_${opId}`
   }
   return algoId
 }
@@ -340,6 +350,8 @@ export default function Visualizer() {
     trie: { value: '["cat", "car", "dog"]', hint: '字典树单词列表' },
     hash_table: { value: '{"key1": "value1", "key2": "value2"}', hint: '初始键值对' },
     union_find: { value: '[[0, 1], [1, 2], [3, 4]]', hint: '并查集连通边列表' },
+    btree: { value: '[10, 20, 30, 3, 7, 13, 17, 23, 27, 33, 37]', hint: 'B树初始关键码数组 (t=2)' },
+    bplus_tree: { value: '[10, 20, 30, 35, 40, 45, 50, 60]', hint: 'B+树初始关键码数组 (t=2)' },
     bfs_graph: {
       value: '{\n  "nodes": [\n    {"id": "0", "label": "A"},\n    {"id": "1", "label": "B"},\n    {"id": "2", "label": "C"},\n    {"id": "3", "label": "D"},\n    {"id": "4", "label": "E"},\n    {"id": "5", "label": "F"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1"},\n    {"source": "0", "target": "2"},\n    {"source": "1", "target": "3"},\n    {"source": "1", "target": "4"},\n    {"source": "2", "target": "5"}\n  ]\n}',
       hint: '无向图 JSON (nodes + edges)。LeetCode格式请切到 LeetCode 模式'
@@ -454,6 +466,10 @@ export default function Visualizer() {
         initialOp = 'delete'
       } else if (selectedAlgorithm.id.endsWith('_search')) {
         initialOp = 'search'
+      } else if (selectedAlgorithm.id === 'btree' || selectedAlgorithm.id === 'bplus_tree') {
+        // B-tree / B+ tree: default to first operation (search)
+        const ops = getOperationsForAlgo(selectedAlgorithm.id)
+        if (ops && ops.length > 0) initialOp = ops[0].id
       }
       
       setCurrentOperationId(initialOp)
@@ -800,10 +816,11 @@ export default function Visualizer() {
                     title={(() => {
                       if (currentOperationId === 'insert') return lang === 'zh' ? '操作输入 (插入节点的值)' : 'Operation Parameter (Value to Insert)'
                       if (currentOperationId === 'delete') return lang === 'zh' ? '操作输入 (删除节点的值)' : 'Operation Parameter (Value to Delete)'
+                      if (currentOperationId === 'range_query') return lang === 'zh' ? '操作输入 (范围查询 low, high)' : 'Operation Parameter (Range Query low, high)'
                       return lang === 'zh' ? '操作输入 (查找节点的值)' : 'Operation Parameter (Value to Search)'
                     })()}
-                    helperText={lang === 'zh' ? '输入一个具体的数值' : 'Enter a specific numeric value'}
-                    placeholder="5"
+                    helperText={currentOperationId === 'range_query' ? (lang === 'zh' ? '输入范围，如 30, 60' : 'Enter range, e.g. 30, 60') : (lang === 'zh' ? '输入一个具体的数值' : 'Enter a specific numeric value')}
+                    placeholder={currentOperationId === 'range_query' ? '30, 60' : '5'}
                     disabled={aiStatus === 'analyzing'}
                     className="h-20 xl:h-24 xl:shrink-0"
                   />
@@ -872,6 +889,7 @@ export default function Visualizer() {
                       if (op.id === 'insert') setOperationParam('5')
                       else if (op.id === 'delete') setOperationParam('14')
                       else if (op.id === 'search') setOperationParam('10')
+                      else if (op.id === 'range_query') setOperationParam('30, 60')
                     }}
                     className={`px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition-all border
                       ${currentOperationId === op.id
