@@ -181,6 +181,11 @@ export default function Playground() {
     setAiErrorReport(null)
     setAiRepairHistory(null)
     setShowRawResponse(false)
+    // Clear any previous animation/live-mode so a stale result (e.g. from another
+    // page sharing the store) doesn't linger if this analysis fails.
+    setAnimationScript(null)
+    setLiveAlgoId(null)
+    setGenerator(null)
 
     try {
       const result = await analyzeCodeGenerator({
@@ -223,9 +228,18 @@ export default function Playground() {
         setLiveAlgoId(null)
         setGenerator({ body: gen.body, type: genType })
         const parsed = parseInputData(effectiveInput)
-        const sandboxResult = parsed.valid
+        let sandboxResult = parsed.valid
           ? await runGeneratorSandboxed(gen.body, parsed.value, { algorithm: gen.algorithm, type: genType })
           : { ok: false, error: '输入数据无效' }
+        // If the generator crashed (often a stale/wrong-shaped leftover input),
+        // retry with the AI's own sample input, which matches the expected format.
+        if (!sandboxResult.ok && gen.sampleInput && gen.sampleInput !== effectiveInput) {
+          const sp = parseInputData(gen.sampleInput)
+          if (sp.valid) {
+            const retry = await runGeneratorSandboxed(gen.body, sp.value, { algorithm: gen.algorithm, type: genType })
+            if (retry.ok) { sandboxResult = retry; setInputData(gen.sampleInput) }
+          }
+        }
         if (sandboxResult.ok && sandboxResult.script) {
           setAnimationScript(sandboxResult.script)
           setAIStatus('success')
