@@ -4,9 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import type { OnMount } from '@monaco-editor/react'
 import { Icon } from '@/icons'
 import { useAnimationEngine } from '@/hooks/useAnimationEngine'
-import { analyzeCodeGenerator, getApiConfig, parseInputData, type AIErrorReport, type AIRepairAttempt } from '@/ai'
-import { runGeneratorSandboxed } from '@/sandbox/runGenerator'
-import type { AnimationScript } from '@/types/animation'
+import { getApiConfig, parseInputData, type AIErrorReport, type AIRepairAttempt } from '@/ai'
 import { compileAndValidateCode } from '@/utils/codeCompiler'
 import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
 import Header from '@/components/Layout/Header'
@@ -15,8 +13,8 @@ import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
 import InputDataPanel from '@/components/Editor/InputDataPanel'
 import ConfirmDialog from '@/components/Common/ConfirmDialog'
 import { useAlgorithmStore, type AIHistoryEntry } from '@/store/algorithmStore'
-import { generatePreset } from '@/presets'
 import { recognizeAlgorithm } from '@/presets/recognize'
+import { useAIGenerator } from '@/hooks/useAIGenerator'
 
 let playgroundAnalysisController: AbortController | null = null
 
@@ -57,18 +55,20 @@ export default function Playground() {
   const [aiRepairHistory, setAiRepairHistory] = useState<AIRepairAttempt[] | null>(null)
   const [showRawResponse, setShowRawResponse] = useState(false)
   const [confirmState, setConfirmState] = useState<{ type: 'delete'; id: string } | { type: 'clearAll' } | null>(null)
-  // Live mode: when the AI recognizes a built-in algorithm, the animation is
-  // generated locally from the current input — changing input re-runs the
-  // generator without another AI call. Null for unrecognized custom algorithms.
-  const [liveAlgoId, setLiveAlgoId] = useState<string | null>(null)
-  // Phase 2: AI-generated generator for custom (unrecognized) algorithms.
-  const [generator, setGenerator] = useState<{ body: string; type: 'array' | 'graph' | 'tree' | 'linked_list' } | null>(null)
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
   const decorationsRef = useRef<string[]>([])
 
   const hasApiConfig = getApiConfig() !== null
 
   const inputInfo = useMemo(() => parseInputData(inputData), [inputData])
+
+  // Live mode (recognized built-in or AI generator) + input-driven live regen.
+  const { liveAlgoId, generator, analyze: analyzeGenerator, reset: resetGenerator, setLive: setLiveGenerator } = useAIGenerator({
+    inputData,
+    parseInput: parseInputData,
+    applyScript: setAnimationScript,
+    setStatus: setAIStatus,
+  })
 
   const {
     visualState, currentStepData,
@@ -81,13 +81,12 @@ export default function Playground() {
     playgroundAnalysisController = null
     setCode(DEFAULT_CODE)
     setInputData('')
-    setLiveAlgoId(null)
-    setGenerator(null)
+    resetGenerator()
     setAnimationScript(null)
     setAIStatus('idle')
     setAiErrorReport(null)
     setAiRepairHistory(null)
-  }, [setAnimationScript, setAIStatus])
+  }, [setAnimationScript, setAIStatus, resetGenerator])
 
   const handleEditorMount: OnMount = useCallback((editor) => { editorRef.current = editor }, [])
 
@@ -119,40 +118,6 @@ export default function Playground() {
     }
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, decos)
   }, [currentStep, animationScript])
-
-  // Build an animation locally from a recognized built-in generator + current input.
-  // Returns null when input is invalid or generation fails (keeps last animation).
-  const buildLiveScript = useCallback((algoId: string, rawInput: string): AnimationScript | null => {
-    const parsed = parseInputData(rawInput)
-    if (!parsed.valid) return null
-    try {
-      return generatePreset(algoId, parsed.value) ?? null
-    } catch {
-      return null
-    }
-  }, [])
-
-  // 输入变化 → 本地重生成（Phase 1 内置生成器 或 Phase 2 AI 生成器），不调 AI
-  useEffect(() => {
-    if (liveAlgoId) {
-      const handle = setTimeout(() => {
-        const script = buildLiveScript(liveAlgoId, inputData)
-        if (script) { setAnimationScript(script); setAIStatus('success') }
-      }, 400)
-      return () => clearTimeout(handle)
-    }
-    if (generator) {
-      let cancelled = false
-      const handle = setTimeout(async () => {
-        const parsed = parseInputData(inputData)
-        if (!parsed.valid) return
-        const result = await runGeneratorSandboxed(generator.body, parsed.value, { algorithm: 'custom', type: generator.type })
-        if (cancelled) return
-        if (result.ok && result.script) { setAnimationScript(result.script); setAIStatus('success') }
-      }, 400)
-      return () => { cancelled = true; clearTimeout(handle) }
-    }
-  }, [inputData, liveAlgoId, generator, buildLiveScript, setAnimationScript, setAIStatus])
 
   const handleAnalyze = async () => {
     const compResult = compileAndValidateCode(code, codeLanguage)
@@ -213,84 +178,37 @@ export default function Playground() {
     setAiErrorReport(null)
     setAiRepairHistory(null)
     setShowRawResponse(false)
-    // Clear any previous animation/live-mode so a stale result (e.g. from another
-    // page sharing the store) doesn't linger if this analysis fails.
+    // Clear any previous animation so a stale result (e.g. from another page
+    // sharing the store) doesn't linger if this analysis fails.
     setAnimationScript(null)
-    setLiveAlgoId(null)
-    setGenerator(null)
+
+    const currentValid = inputData.trim() !== '' && parseInputData(inputData).valid
 
     try {
-      const result = await analyzeCodeGenerator({
-        code, language: codeLanguage, inputData,
-        algorithmName: '用户自定义代码',
-      }, { signal: controller.signal })
+      const result = await analyzeGenerator(
+        { code, language: codeLanguage, inputData, algorithmName: '用户自定义代码', signal: controller.signal },
+        currentValid,
+        setInputData,
+      )
 
       if (controller.signal.aborted) return
       playgroundAnalysisController = null
 
-      if (!result.success || !result.generator) {
-        setAIStatus('error', result.error || '分析失败', result.rawResponse)
+      if (!result.ok) {
         setAiErrorReport(result.errorReport ?? null)
-        updateAIHistory(historyId, { status: 'error', error: result.error || '分析失败' })
+        updateAIHistory(historyId, {
+          status: 'error',
+          error: result.error || '分析失败',
+          ...(result.generatorBody ? { generatorBody: result.generatorBody, generatorType: result.generatorType } : {}),
+        })
         return
       }
 
-      const gen = result.generator
-      const recognized = recognizeAlgorithm(gen.algorithm)
-
-      // The AI infers the expected input format and supplies a sample. Auto-fill
-      // it only when the current input box is empty/invalid (respect user input).
-      const currentValid = inputData.trim() !== '' && parseInputData(inputData).valid
-      const effectiveInput = currentValid ? inputData : (gen.sampleInput ?? inputData)
-      if (!currentValid && gen.sampleInput) {
-        setInputData(gen.sampleInput)
-      }
-
-      if (recognized) {
-        // Phase 1: 内置生成器
-        setLiveAlgoId(recognized)
-        setGenerator(null)
-        const liveScript = buildLiveScript(recognized, effectiveInput)
-        if (liveScript) setAnimationScript(liveScript)
-        setAIStatus('success')
-        updateAIHistory(historyId, { status: 'success', script: liveScript ?? undefined })
-      } else {
-        // Phase 2: AI 生成器
-        const genType = gen.type === 'matrix' ? 'array' : gen.type
-        setLiveAlgoId(null)
-        setGenerator({ body: gen.body, type: genType })
-        const parsed = parseInputData(effectiveInput)
-        let sandboxResult = parsed.valid
-          ? await runGeneratorSandboxed(gen.body, parsed.value, { algorithm: gen.algorithm, type: genType })
-          : { ok: false, error: '输入数据无效' }
-        // If the generator crashed (often a stale/wrong-shaped leftover input),
-        // retry with the AI's own sample input, which matches the expected format.
-        if (!sandboxResult.ok && gen.sampleInput && gen.sampleInput !== effectiveInput) {
-          const sp = parseInputData(gen.sampleInput)
-          if (sp.valid) {
-            const retry = await runGeneratorSandboxed(gen.body, sp.value, { algorithm: gen.algorithm, type: genType })
-            if (retry.ok) { sandboxResult = retry; setInputData(gen.sampleInput) }
-          }
-        }
-        if (sandboxResult.ok && sandboxResult.script) {
-          // Fill in AI-provided complexity (the builder defaults to O(?)).
-          if (gen.timeComplexity || gen.spaceComplexity) {
-            const t = gen.timeComplexity || 'O(?)'
-            sandboxResult.script.complexity = {
-              time: { best: t, average: t, worst: t },
-              space: gen.spaceComplexity || 'O(?)',
-            }
-          }
-          setAnimationScript(sandboxResult.script)
-          setAIStatus('success')
-          updateAIHistory(historyId, { status: 'success', script: sandboxResult.script, generatorBody: gen.body, generatorType: genType })
-        } else {
-          // Surface the generator source so "查看原始响应 / 复制错误详情" can show
-          // the actual AI-written code for diagnosis (e.g. an infinite loop).
-          setAIStatus('error', sandboxResult.error || '生成器执行失败', gen.body)
-          updateAIHistory(historyId, { status: 'error', error: sandboxResult.error || '生成器执行失败', generatorBody: gen.body, generatorType: genType })
-        }
-      }
+      updateAIHistory(historyId, {
+        status: 'success',
+        script: result.script,
+        ...(result.generatorBody ? { generatorBody: result.generatorBody, generatorType: result.generatorType } : {}),
+      })
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') {
         removeAIHistory(historyId)
@@ -309,20 +227,16 @@ export default function Playground() {
     if (entry.status === 'success' && entry.script) {
       const recognized = recognizeAlgorithm(entry.script.algorithm)
       if (recognized) {
-        setLiveAlgoId(recognized)
-        setGenerator(null)
+        setLiveGenerator({ algoId: recognized })
       } else if (entry.generatorBody && entry.generatorType) {
-        setLiveAlgoId(null)
-        setGenerator({ body: entry.generatorBody, type: entry.generatorType })
+        setLiveGenerator({ generator: { body: entry.generatorBody, type: entry.generatorType } })
       } else {
-        setLiveAlgoId(null)
-        setGenerator(null)
+        setLiveGenerator(null)
       }
       setAnimationScript(entry.script)
       setAIStatus('success')
     } else {
-      setLiveAlgoId(null)
-      setGenerator(null)
+      setLiveGenerator(null)
       setAnimationScript(null)
       setAIStatus('idle')
     }
@@ -652,8 +566,7 @@ export default function Playground() {
             clearAIHistory()
             setAnimationScript(null)
             setAIStatus('idle')
-            setLiveAlgoId(null)
-            setGenerator(null)
+            resetGenerator()
           }
           setConfirmState(null)
         }}

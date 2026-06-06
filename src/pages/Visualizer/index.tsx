@@ -5,9 +5,8 @@ import { Icon } from '@/icons'
 import { useAlgorithmStore, type AIHistoryEntry } from '@/store/algorithmStore'
 import { getPreset, generatePreset, hasGenerator } from '@/presets'
 import { useAnimationEngine } from '@/hooks/useAnimationEngine'
-import { analyzeCodeGenerator, getApiConfig, parseInputData } from '@/ai'
-import { runGeneratorSandboxed } from '@/sandbox/runGenerator'
-import { recognizeAlgorithm } from '@/presets/recognize'
+import { getApiConfig, parseInputData } from '@/ai'
+import { useAIGenerator } from '@/hooks/useAIGenerator'
 import type { AnimationScript } from '@/types/animation'
 import { compileAndValidateCode } from '@/utils/codeCompiler'
 import { parseAlgorithmInput, getLeetCodeDefault, getLeetCodePlaceholder } from '@/utils/inputParser'
@@ -158,11 +157,6 @@ export default function Visualizer() {
   const [showDefinition, setShowDefinition] = useState(false)
   const [currentOperationId, setCurrentOperationId] = useState<string>('')
   const [operationParam, setOperationParam] = useState<string>('5')
-  // Live mode: when the AI recognizes a built-in algorithm, the animation is
-  // generated locally; null for unrecognized custom algorithms.
-  const [liveAlgoId, setLiveAlgoId] = useState<string | null>(null)
-  // Phase 2: AI-generated generator for custom (unrecognized) algorithms.
-  const [generator, setGenerator] = useState<{ body: string; type: 'array' | 'graph' | 'tree' | 'linked_list' } | null>(null)
 
   // Resizable Panels States (Left Editor: 35%, Right Info: 22%)
   const [leftWidth, setLeftWidth] = useState(35)
@@ -397,6 +391,37 @@ export default function Visualizer() {
     return parseAlgorithmInput(inputData, inputFormat, selectedAlgorithm.id)
   }, [inputData, selectedAlgorithm?.id, inputFormat])
 
+  // Raw-string variant of parsedInput for the shared AI generator hook (it parses
+  // an explicit string — the current box or the AI's @sample — not just state).
+  const parseInputRaw = useCallback(
+    (raw: string): { valid: boolean; value: unknown } => {
+      const trimmed = raw.trim()
+      if (!trimmed) return { valid: false, value: null }
+      if (inputFormat === 'json') {
+        try { return { valid: true, value: JSON.parse(trimmed) } } catch { return { valid: false, value: null } }
+      }
+      // LeetCode format never throws; treat any non-empty input as parseable.
+      return { valid: true, value: parseAlgorithmInput(trimmed, inputFormat, selectedAlgorithm?.id ?? '') }
+    },
+    [inputFormat, selectedAlgorithm?.id],
+  )
+
+  // Live mode (recognized built-in or AI generator) + input-driven live regen.
+  // applyScript also loadScript()s so the playback engine picks up the new script.
+  const { liveAlgoId, generator, analyze: analyzeGenerator, reset: resetGenerator } = useAIGenerator({
+    inputData,
+    parseInput: parseInputRaw,
+    applyScript: useCallback((s: AnimationScript) => { setAnimationScript(s); loadScript(s) }, [setAnimationScript, loadScript]),
+    setStatus: setAIStatus,
+  })
+
+  // Mirror live mode in a ref so the preset effect can detect it without taking
+  // liveAlgoId/generator as deps (which would re-run the preset path on analysis).
+  const liveModeRef = useRef(false)
+  useEffect(() => {
+    liveModeRef.current = liveAlgoId !== null || generator !== null
+  }, [liveAlgoId, generator])
+
   // Load preset or regenerate when algorithm or input changes
   useEffect(() => {
     // Skip regeneration when we're just syncing inputData back to textarea.
@@ -406,10 +431,18 @@ export default function Visualizer() {
     }
 
     if (!selectedAlgorithm) return
+
+    // In AI live mode, an input change is handled by the useAIGenerator hook (it
+    // re-runs the recognized preset / AI generator). Skip the built-in preset path
+    // so it doesn't overwrite the AI result or reset the 'success' status. When the
+    // user switches to a different algorithm, fall through and clear live mode.
+    const algoChanged = prevAlgoId.current !== selectedAlgorithm.id
+    if (liveModeRef.current && !algoChanged) return
+    if (liveModeRef.current && algoChanged) resetGenerator()
+
     setAIStatus('idle')
 
     // Set default input when switching to a different algorithm
-    const algoChanged = prevAlgoId.current !== selectedAlgorithm.id
     if (algoChanged) {
       prevAlgoId.current = selectedAlgorithm.id
       
@@ -516,7 +549,7 @@ export default function Visualizer() {
       }
     }
     setAnimationScript(null)
-  }, [selectedAlgorithm, inputData, operationParam, setAnimationScript, parsedInput, codeLanguage, currentOperationId, operations])
+  }, [selectedAlgorithm, inputData, operationParam, setAnimationScript, parsedInput, codeLanguage, currentOperationId, operations, resetGenerator, setAIStatus])
 
   // Update Monaco editor decorations based on current step
   useEffect(() => {
@@ -585,110 +618,38 @@ export default function Visualizer() {
     currentAnalysisController = controller
 
     setAIStatus('analyzing')
-    // Clear any previous live-mode so a stale result doesn't linger on failure.
-    setLiveAlgoId(null)
-    setGenerator(null)
+
+    const currentValid = inputData.trim() !== '' && parseInputData(inputData).valid
 
     try {
-      const result = await analyzeCodeGenerator({
-        code,
-        language: codeLanguage,
-        inputData,
-        algorithmName: selectedAlgorithm?.name,
-      }, { signal: controller.signal })
+      const result = await analyzeGenerator(
+        { code, language: codeLanguage, inputData, algorithmName: selectedAlgorithm?.name, signal: controller.signal },
+        currentValid,
+        setInputData,
+      )
 
       if (controller.signal.aborted) return
       currentAnalysisController = null
 
-      if (!result.success || !result.generator) {
-        setAIStatus('error', result.error || t('common.error'), result.rawResponse)
+      if (!result.ok) {
+        // analyze() already set the error status; nothing recorded in history on failure.
+        if (result.error === 'AbortError') return
         return
       }
 
-      const gen = result.generator
-      const recognized = recognizeAlgorithm(gen.algorithm)
-
-      // The AI infers the expected input format and supplies a sample. Auto-fill
-      // it only when the current input box is empty/invalid (respect user input).
-      const currentValid = inputData.trim() !== '' && parseInputData(inputData).valid
-      if (!currentValid && gen.sampleInput) {
-        setInputData(gen.sampleInput)
+      const entry: AIHistoryEntry = {
+        id: Date.now().toString(),
+        timestamp: Date.now(),
+        algorithmId: selectedAlgorithm?.id ?? 'unknown',
+        algorithmName: selectedAlgorithm?.name ?? '未知算法',
+        code,
+        language: codeLanguage,
+        inputData,
+        status: 'success',
+        script: result.script,
+        ...(result.generatorBody ? { generatorBody: result.generatorBody, generatorType: result.generatorType } : {}),
       }
-
-      if (recognized) {
-        // Phase 1: built-in generator — generate locally from the current input.
-        setLiveAlgoId(recognized)
-        setGenerator(null)
-        const data = currentValid ? parsedInput() : (gen.sampleInput ? parseInputData(gen.sampleInput).value : parsedInput())
-        let script: AnimationScript | null = null
-        try { script = generatePreset(recognized, data) ?? null } catch { script = null }
-        if (script) {
-          setAnimationScript(script)
-          loadScript(script)
-        }
-        setAIStatus('success')
-        const entry: AIHistoryEntry = {
-          id: Date.now().toString(),
-          timestamp: Date.now(),
-          algorithmId: selectedAlgorithm?.id ?? 'unknown',
-          algorithmName: selectedAlgorithm?.name ?? '未知算法',
-          code,
-          language: codeLanguage,
-          inputData,
-          status: 'success',
-          script: script ?? undefined,
-        }
-        addAIHistory(entry)
-      } else {
-        // Phase 2: AI generator — execute it in the sandbox.
-        const genType = gen.type === 'matrix' ? 'array' : gen.type
-        setLiveAlgoId(null)
-        setGenerator({ body: gen.body, type: genType })
-        const effectiveInput = currentValid ? inputData : (gen.sampleInput ?? inputData)
-        const parsed = parseInputData(effectiveInput)
-        let sandboxResult = parsed.valid
-          ? await runGeneratorSandboxed(gen.body, parsed.value, { algorithm: gen.algorithm, type: genType })
-          : { ok: false as const, error: '输入数据无效' }
-        // If the generator crashed (often a stale/wrong-shaped leftover input),
-        // retry with the AI's own sample input, which matches the expected format.
-        if (!sandboxResult.ok && gen.sampleInput && gen.sampleInput !== effectiveInput) {
-          const sp = parseInputData(gen.sampleInput)
-          if (sp.valid) {
-            const retry = await runGeneratorSandboxed(gen.body, sp.value, { algorithm: gen.algorithm, type: genType })
-            if (retry.ok) { sandboxResult = retry; setInputData(gen.sampleInput) }
-          }
-        }
-        if (sandboxResult.ok && sandboxResult.script) {
-          // Fill in AI-provided complexity (the builder defaults to O(?)).
-          if (gen.timeComplexity || gen.spaceComplexity) {
-            const tc = gen.timeComplexity || 'O(?)'
-            sandboxResult.script.complexity = {
-              time: { best: tc, average: tc, worst: tc },
-              space: gen.spaceComplexity || 'O(?)',
-            }
-          }
-          setAnimationScript(sandboxResult.script)
-          loadScript(sandboxResult.script)
-          setAIStatus('success')
-          const entry: AIHistoryEntry = {
-            id: Date.now().toString(),
-            timestamp: Date.now(),
-            algorithmId: selectedAlgorithm?.id ?? 'unknown',
-            algorithmName: selectedAlgorithm?.name ?? '未知算法',
-            code,
-            language: codeLanguage,
-            inputData,
-            status: 'success',
-            script: sandboxResult.script,
-            generatorBody: gen.body,
-            generatorType: genType,
-          }
-          addAIHistory(entry)
-        } else {
-          // Surface the generator source so diagnostics can show the AI code.
-          setAIStatus('error', sandboxResult.error || '生成器执行失败', gen.body)
-        }
-      }
+      addAIHistory(entry)
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return
       setAIStatus('error', e instanceof Error ? e.message : t('common.error'))
