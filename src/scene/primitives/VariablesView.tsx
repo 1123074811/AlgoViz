@@ -2,6 +2,7 @@ import type { SceneCell } from '../types'
 
 interface VariablesViewProps {
   vars: SceneCell[]
+  hideTitle?: boolean
 }
 
 const STROKE = '#94A3B8'
@@ -15,7 +16,7 @@ const STROKE_WIDTH = 1.6
  * and its "变量" title. Mirrors HashTableView / ContainerView's "draw shell,
  * not cells" convention.
  */
-export default function VariablesView({ vars }: VariablesViewProps) {
+export default function VariablesView({ vars, hideTitle }: VariablesViewProps) {
   if (vars.length === 0) return null
 
   const sorted = [...vars].sort((a, b) => (a.col ?? 0) - (b.col ?? 0))
@@ -35,12 +36,14 @@ export default function VariablesView({ vars }: VariablesViewProps) {
         rx={10} ry={10}
         fill="none" stroke={STROKE} strokeWidth={STROKE_WIDTH} strokeDasharray="5 3" opacity={0.7}
       />
-      <text
-        x={minX - pad} y={frameY - pad - 6}
-        textAnchor="start" fontSize="11" fill="#64748B" fontFamily="monospace"
-      >
-        变量（寄存器面板）
-      </text>
+      {!hideTitle && (
+        <text
+          x={minX - pad} y={frameY - pad - 6}
+          textAnchor="start" fontSize="11" fill="#64748B" fontFamily="monospace"
+        >
+          变量
+        </text>
+      )}
 
       {/* Per-variable name labels above each register chip */}
       {sorted.map(c => {

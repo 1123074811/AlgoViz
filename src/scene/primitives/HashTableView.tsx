@@ -4,6 +4,7 @@ interface HashTableViewProps {
   buckets: SceneCell[]
   entries: SceneCell[]
   loadFactorCell?: SceneCell
+  hideTitle?: boolean
 }
 
 const STROKE = '#94A3B8'
@@ -17,7 +18,7 @@ const CHAIN_COLOR = '#CBD5E1'
  * connectors (separate chaining), and the load-factor panel. Mirrors the
  * ContainerView "draw shell, not cells" convention.
  */
-export default function HashTableView({ buckets, entries, loadFactorCell }: HashTableViewProps) {
+export default function HashTableView({ buckets, entries, loadFactorCell, hideTitle }: HashTableViewProps) {
   if (buckets.length === 0) return null
 
   const sorted = [...buckets].sort((a, b) => (a.col ?? 0) - (b.col ?? 0))
@@ -57,12 +58,14 @@ export default function HashTableView({ buckets, entries, loadFactorCell }: Hash
         rx={8} ry={8}
         fill="none" stroke={STROKE} strokeWidth={STROKE_WIDTH} strokeDasharray="5 3" opacity={0.7}
       />
-      <text
-        x={minX - pad} y={frameY - pad - 26}
-        textAnchor="start" fontSize="12" fill="#64748B" fontFamily="monospace" fontWeight={600}
-      >
-        Hash Table（链地址法）
-      </text>
+      {!hideTitle && (
+        <text
+          x={minX - pad} y={frameY - pad - 26}
+          textAnchor="start" fontSize="12" fill="#64748B" fontFamily="monospace" fontWeight={600}
+        >
+          哈希表·链地址法
+        </text>
+      )}
 
       {/* Per-bucket index labels (above each bucket) */}
       {sorted.map(b => (
@@ -106,7 +109,7 @@ export default function HashTableView({ buckets, entries, loadFactorCell }: Hash
         <rect x={-60} y={-bucketH / 2} width={120} height={bucketH} rx={8}
           fill="#F8FAFC" stroke="#E2E8F0" strokeWidth={1.2} />
         <text x={0} y={-3} textAnchor="middle" fontSize="10" fill="#94A3B8" fontFamily="monospace">
-          load factor
+          负载因子
         </text>
         <text x={0} y={14} textAnchor="middle" fontSize="14" fill="#475569" fontFamily="monospace" fontWeight={600}>
           {lf}

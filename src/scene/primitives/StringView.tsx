@@ -3,6 +3,7 @@ import type { SceneCell } from '../types'
 interface StringViewProps {
   /** All s_<row>_<index> char cells, any number of rows (1 = single string, 2 = text/pattern). */
   cells: SceneCell[]
+  hideTitle?: boolean
 }
 
 const STROKE = '#94A3B8'
@@ -11,7 +12,7 @@ const INDEX_COLOR = '#94A3B8'
 const LABEL_COLOR = '#6366F1'
 
 /** Default row labels for the common single / double (text-vs-pattern) layouts. */
-const ROW_LABELS = ['text', 'pattern']
+const ROW_LABELS = ['主串', '模式串']
 
 /**
  * Structural overlay for the dedicated string (字符串) visual. The character cell
@@ -22,7 +23,7 @@ const ROW_LABELS = ['text', 'pattern']
  * 等), and the "String" title. Mirrors HashTableView / SetView / VariablesView's
  * "draw shell, not cells" convention.
  */
-export default function StringView({ cells }: StringViewProps) {
+export default function StringView({ cells, hideTitle }: StringViewProps) {
   if (cells.length === 0) return null
 
   // Group char cells by their row (parsed from s_<row>_<index>).
@@ -51,12 +52,14 @@ export default function StringView({ cells }: StringViewProps) {
   return (
     <g>
       {/* Title naming the teaching semantics */}
-      <text
-        x={allMinX - pad} y={Math.min(...cells.map(c => c.position.y)) - cellH / 2 - pad - 8}
-        textAnchor="start" fontSize="11" fill={LABEL_COLOR} fontFamily="monospace"
-      >
-        String（字符序列 · 下标从 0 起）
-      </text>
+      {!hideTitle && (
+        <text
+          x={allMinX - pad} y={Math.min(...cells.map(c => c.position.y)) - cellH / 2 - pad - 8}
+          textAnchor="start" fontSize="11" fill={LABEL_COLOR} fontFamily="monospace"
+        >
+          字符序列
+        </text>
+      )}
 
       {sortedRowKeys.map((rowKey, i) => {
         const rowCells = rows.get(rowKey)!

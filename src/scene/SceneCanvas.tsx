@@ -151,7 +151,7 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
         {Object.values(scene.groups).filter(g => g.id.startsWith('region_')).map(g => (
           <RegionView key={g.id} region={g} />
         ))}
-        {renderContainers(entities)}
+        {renderContainers(entities, Object.values(scene.groups).some(g => g.id.startsWith('region_')))}
         <g className="pointer-events-auto">
           {edges.map((edge) => <EdgeView key={edge.id} edge={edge} scene={scene} />)}
           {entities.map((entity) => entity.type === 'cell' ? <CellView key={entity.id} cell={entity} /> : null)}
@@ -226,7 +226,7 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
   )
 }
 
-function renderContainers(entities: SceneEntity[]) {
+function renderContainers(entities: SceneEntity[], composite: boolean) {
   const cells = entities.filter(e => e.type === 'cell') as SceneCell[]
   const nodes = entities.filter(e => e.type === 'node') as SceneNode[]
   const stackCells = cells.filter(c => c.id.startsWith('stack_'))
@@ -259,14 +259,14 @@ function renderContainers(entities: SceneEntity[]) {
       {stackCells.length > 0 && <ContainerView type="stack" cells={stackCells} />}
       {queueCells.length > 0 && <ContainerView type="queue" cells={queueCells} />}
       {dequeCells.length > 0 && <ContainerView type="queue" cells={dequeCells} />}
-      {setCells.length > 0 && <SetView cells={setCells} />}
+      {setCells.length > 0 && <SetView cells={setCells} hideTitle={composite} />}
       {mapNodes.length > 0 && <ContainerView type="map" cells={[]} nodes={mapNodes} />}
       {auxCells.length > 0 && <ContainerView type="auxiliary" cells={auxCells} />}
-      {hashBuckets.length > 0 && <HashTableView buckets={hashBuckets} entries={hashEntries} loadFactorCell={loadFactorCell} />}
-      {heapNodes.length > 0 && <HeapView nodes={heapNodes} />}
-      {mathVars.length > 0 && <VariablesView vars={mathVars} />}
-      {stringCells.length > 0 && <StringView cells={stringCells} />}
-      {bitCells.length > 0 && <BitsetView bits={bitCells} labelCell={bitsetLabelCell} />}
+      {hashBuckets.length > 0 && <HashTableView buckets={hashBuckets} entries={hashEntries} loadFactorCell={loadFactorCell} hideTitle={composite} />}
+      {heapNodes.length > 0 && <HeapView nodes={heapNodes} hideTitle={composite} />}
+      {mathVars.length > 0 && <VariablesView vars={mathVars} hideTitle={composite} />}
+      {stringCells.length > 0 && <StringView cells={stringCells} hideTitle={composite} />}
+      {bitCells.length > 0 && <BitsetView bits={bitCells} labelCell={bitsetLabelCell} hideTitle={composite} />}
     </>
   )
 }

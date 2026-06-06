@@ -2,6 +2,7 @@ import type { SceneCell } from '../types'
 
 interface HeapViewProps {
   nodes: SceneCell[]
+  hideTitle?: boolean
 }
 
 const STROKE = '#94A3B8'
@@ -20,12 +21,12 @@ const MIRROR_STROKE = '#E2E8F0'
  * level floor(log2(i+1)); children 2i+1, 2i+2), so the mirror just re-sorts the
  * cells by index and renders them in a horizontal row beneath the tree.
  */
-export default function HeapView({ nodes }: HeapViewProps) {
+export default function HeapView({ nodes, hideTitle }: HeapViewProps) {
   if (nodes.length === 0) return null
 
   const sorted = [...nodes].sort((a, b) => indexOf(a) - indexOf(b))
-  const variant = variantOf(sorted[0]) ?? 'min'
-  const title = variant === 'min' ? 'Heap（最小堆 / 优先队列）' : 'Heap（最大堆 / 优先队列）'
+  const variant = variantOf(sorted[0])
+  const title = variant === 'min' ? '最小堆' : variant === 'max' ? '最大堆' : '堆'
 
   // Tree bounding box (for title placement).
   const nodeW = sorted[0].size?.width ?? 44
@@ -46,12 +47,14 @@ export default function HeapView({ nodes }: HeapViewProps) {
   return (
     <g>
       {/* Title above the tree */}
-      <text
-        x={minX} y={minY - 16}
-        textAnchor="start" fontSize="12" fill="#64748B" fontFamily="monospace" fontWeight={600}
-      >
-        {title}
-      </text>
+      {!hideTitle && (
+        <text
+          x={minX} y={minY - 16}
+          textAnchor="start" fontSize="12" fill="#64748B" fontFamily="monospace" fontWeight={600}
+        >
+          {title}
+        </text>
+      )}
 
       {/* Array mirror label */}
       <text

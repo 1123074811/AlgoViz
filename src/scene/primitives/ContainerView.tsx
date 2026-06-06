@@ -29,7 +29,7 @@ export default function ContainerView({ type, cells, nodes }: ContainerViewProps
           width={maxX - minX + 2 * pad} height={maxY - minY + 2 * pad}
           fill="#F8FAFC" stroke="#CBD5E1" strokeWidth={1.5} strokeDasharray="4 2" />
         <text x={minX - pad + 8} y={minY - pad - 6} textAnchor="start" fontSize="11" fill="#64748B" fontFamily="monospace">
-          {'Map'}
+          {'映射'}
         </text>
       </g>
     )
@@ -91,7 +91,7 @@ export default function ContainerView({ type, cells, nodes }: ContainerViewProps
           fill="none" stroke={CONTAINER_STROKE} strokeWidth={CONTAINER_STROKE_WIDTH}
           strokeLinecap="round" strokeLinejoin="round"
         />
-        <text x={leftX - 8} y={topY + 8} textAnchor="end" fontSize="10" fill="#64748B" fontFamily="monospace" dominantBaseline="middle">top ➔</text>
+        <text x={leftX - 8} y={topY + 8} textAnchor="end" fontSize="10" fill="#64748B" fontFamily="monospace" dominantBaseline="middle">栈顶 ➔</text>
       </g>
     )
   }
@@ -112,8 +112,8 @@ export default function ContainerView({ type, cells, nodes }: ContainerViewProps
         <line x1={firstX} y1={bottomY} x2={lastX} y2={bottomY}
           stroke={CONTAINER_STROKE} strokeWidth={CONTAINER_STROKE_WIDTH}
           strokeLinecap="round" />
-        <text x={firstX} y={labelY} textAnchor="start" fontSize="10" fill="#64748B" fontFamily="monospace" dominantBaseline="hanging">front</text>
-        <text x={lastX} y={labelY} textAnchor="end" fontSize="10" fill="#64748B" fontFamily="monospace" dominantBaseline="hanging">rear</text>
+        <text x={firstX} y={labelY} textAnchor="start" fontSize="10" fill="#64748B" fontFamily="monospace" dominantBaseline="hanging">队首</text>
+        <text x={lastX} y={labelY} textAnchor="end" fontSize="10" fill="#64748B" fontFamily="monospace" dominantBaseline="hanging">队尾</text>
       </g>
     )
   }

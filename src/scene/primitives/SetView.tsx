@@ -2,6 +2,7 @@ import type { SceneCell } from '../types'
 
 interface SetViewProps {
   cells: SceneCell[]
+  hideTitle?: boolean
 }
 
 const SET_STROKE = '#6366F1'
@@ -20,7 +21,7 @@ const BRACE_COLOR = '#818CF8'
  * are still drawn by CellView while fading out, so we keep them inside the
  * bounding box during their exit frame.
  */
-export default function SetView({ cells }: SetViewProps) {
+export default function SetView({ cells, hideTitle }: SetViewProps) {
   if (cells.length === 0) return null
 
   const cellW = cells[0].size?.width ?? 44
@@ -68,12 +69,14 @@ export default function SetView({ cells }: SetViewProps) {
       <path d={rightBrace} fill="none" stroke={BRACE_COLOR} strokeWidth={2.2} strokeLinecap="round" />
 
       {/* Title naming the teaching semantics */}
-      <text
-        x={left} y={top - 8}
-        textAnchor="start" fontSize="11" fill="#6366F1" fontFamily="monospace"
-      >
-        Set（去重·无序）
-      </text>
+      {!hideTitle && (
+        <text
+          x={left} y={top - 8}
+          textAnchor="start" fontSize="11" fill="#6366F1" fontFamily="monospace"
+        >
+          集合·去重无序
+        </text>
+      )}
     </g>
   )
 }

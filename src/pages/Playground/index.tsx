@@ -557,7 +557,7 @@ export default function Playground() {
       {animationScript && currentStepData && (
         <div className="absolute top-[7.5rem] right-4 w-56 max-h-[calc(100%-10rem)] overflow-y-auto p-3 rounded-lg border border-border bg-white/95 shadow-lg backdrop-blur z-50 space-y-2 text-xs">
           <div className="p-2 rounded bg-warning-50">
-            <div className="text-[10px] text-warning font-semibold mb-0.5">Step {currentStepData.stepId}</div>
+            <div className="text-[10px] text-warning font-semibold mb-0.5">步骤 {currentStepData.stepId}</div>
             <p className="text-[11px] text-slate-700">{currentStepData.description.zh}</p>
           </div>
           <div className="p-2 rounded bg-surface">

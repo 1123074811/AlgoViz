@@ -3,6 +3,7 @@ import type { SceneCell } from '../types'
 interface BitsetViewProps {
   bits: SceneCell[]
   labelCell?: SceneCell
+  hideTitle?: boolean
 }
 
 const STROKE = '#94A3B8'
@@ -19,7 +20,7 @@ const STROKE_WIDTH = 1.6
  * left), ascending rightward. The index labels below the cells make this
  * explicit so the row reads as bit[0], bit[1], ….
  */
-export default function BitsetView({ bits, labelCell }: BitsetViewProps) {
+export default function BitsetView({ bits, labelCell, hideTitle }: BitsetViewProps) {
   if (bits.length === 0) return null
 
   const sorted = [...bits].sort((a, b) => indexOf(a) - indexOf(b))
@@ -31,7 +32,7 @@ export default function BitsetView({ bits, labelCell }: BitsetViewProps) {
   const frameY = sorted[0].position.y - cellH / 2
   const pad = 6
 
-  const title = (labelCell?.value?.toString() || 'Bitmask') + '（位集 · 低位在左）'
+  const title = labelCell?.value?.toString() || '位集'
 
   return (
     <g>
@@ -42,12 +43,14 @@ export default function BitsetView({ bits, labelCell }: BitsetViewProps) {
         rx={8} ry={8}
         fill="none" stroke={STROKE} strokeWidth={STROKE_WIDTH} strokeDasharray="5 3" opacity={0.7}
       />
-      <text
-        x={minX - pad} y={frameY - pad - 12}
-        textAnchor="start" fontSize="12" fill="#64748B" fontFamily="monospace" fontWeight={600}
-      >
-        {title}
-      </text>
+      {!hideTitle && (
+        <text
+          x={minX - pad} y={frameY - pad - 12}
+          textAnchor="start" fontSize="12" fill="#64748B" fontFamily="monospace" fontWeight={600}
+        >
+          {title}
+        </text>
+      )}
 
       {/* Per-bit index labels (below each cell) */}
       {sorted.map(b => (
