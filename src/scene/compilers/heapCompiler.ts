@@ -19,36 +19,40 @@ export function heapNodeId(index: number) { return `heap_${index}` }
 export function heapEdgeId(child: number) { return `heapedge_${child}` }
 export const HEAP_VARIANT_ID = 'heap_variant' // hidden marker cell carrying min/max
 
-/**
- * Reference depth used to size horizontal spacing. Slot spacing at level L is
- * LEAF_GAP * 2^(MAX_LEVEL - L), so adjacent leaves on level MAX_LEVEL sit LEAF_GAP
- * apart and every parent lands exactly on the midpoint of its two children. Heaps
- * deeper than this (>63 nodes) still render — leaves just get tighter than LEAF_GAP.
- */
-const MAX_LEVEL = 5
-
 /** Level (depth) of a complete-binary-tree node at array index i. */
 function levelOf(i: number): number { return Math.floor(Math.log2(i + 1)) }
 
+/** Deepest level for a heap of `count` nodes (0 for empty/single). */
+function maxLevelFor(count: number): number {
+  return count <= 1 ? 0 : levelOf(count - 1)
+}
+
 /**
- * Complete-binary-tree coordinates for array index i.
- * Each level is centered around ROOT_X; spacing scales by 2^(MAX_LEVEL - level) so
- * a parent's x equals the mean of its two children's x (children 2i+1, 2i+2).
+ * Complete-binary-tree coordinates for array index i, sized to the heap's ACTUAL
+ * depth (`maxLevel`) rather than a fixed reference. Spacing at level L is
+ * LEAF_GAP * 2^(maxLevel - L), so the deepest level's adjacent leaves sit LEAF_GAP
+ * apart and every parent lands on the midpoint of its two children — a 3-node heap
+ * stays compact instead of spanning a full 6-level tree's width.
  */
-function nodePosition(i: number): { x: number; y: number } {
+function nodePosition(i: number, maxLevel: number): { x: number; y: number } {
   const level = levelOf(i)
   const firstInLevel = (1 << level) - 1 // index of leftmost node on this level
   const posInLevel = i - firstInLevel // 0-based slot within the level
   const slotsInLevel = 1 << level
-  const spacing = LEAF_GAP * Math.pow(2, MAX_LEVEL - level)
+  const spacing = LEAF_GAP * Math.pow(2, Math.max(0, maxLevel - level))
   // Center the level's slots symmetrically about ROOT_X.
   const x = ROOT_X + (posInLevel - (slotsInLevel - 1) / 2) * spacing
   const y = ROOT_Y + level * LEVEL_GAP
   return { x, y }
 }
 
-function nodeCell(index: number, value: number, state: SceneCell['state'], variant: 'min' | 'max'): SceneCell {
-  const pos = nodePosition(index)
+/** Move-commands to re-place every existing heap node for a new tree depth. */
+function repositionCommands(indices: number[], maxLevel: number): SceneCommand[] {
+  return indices.map((i) => ({ type: 'move', entityId: heapNodeId(i), to: nodePosition(i, maxLevel) }))
+}
+
+function nodeCell(index: number, value: number, state: SceneCell['state'], variant: 'min' | 'max', maxLevel: number): SceneCell {
+  const pos = nodePosition(index, maxLevel)
   return {
     id: heapNodeId(index),
     type: 'cell',
@@ -127,9 +131,10 @@ function compileHeapEvent(event: HeapAlgorithmEvent, context: CompileContext): S
   switch (event.type) {
     case 'heap.create': {
       const variant = event.variant ?? 'min'
+      const maxLevel = maxLevelFor(event.values.length)
       const cmds: SceneCommand[] = [{ type: 'create_cell', cell: variantMarkerCell(variant) }]
       event.values.forEach((v, i) => {
-        cmds.push({ type: 'create_cell', cell: nodeCell(i, v, { role: 'idle', color: 'primary' }, variant) })
+        cmds.push({ type: 'create_cell', cell: nodeCell(i, v, { role: 'idle', color: 'primary' }, variant, maxLevel) })
         if (i > 0) cmds.push({ type: 'connect', edge: parentEdge(i) })
       })
       cmds.push({ type: 'add_note', text: `创建${variant === 'min' ? '最小' : '最大'}堆（完全二叉树，父 i 子 2i+1/2i+2）` })
@@ -139,9 +144,12 @@ function compileHeapEvent(event: HeapAlgorithmEvent, context: CompileContext): S
     case 'heap.push': {
       const variant = currentVariant(context)
       const index = heapSize(context)
+      const maxLevel = maxLevelFor(index + 1)
       const cmds: SceneCommand[] = [
         ...cleanup,
-        { type: 'create_cell', cell: nodeCell(index, event.value, { role: 'inserted', color: 'success', pulse: true }, variant) },
+        // Re-place existing nodes for the (possibly deeper) tree, then add the new one.
+        ...repositionCommands(heapIndices(context), maxLevel),
+        { type: 'create_cell', cell: nodeCell(index, event.value, { role: 'inserted', color: 'success', pulse: true }, variant, maxLevel) },
       ]
       if (index > 0) cmds.push({ type: 'connect', edge: parentEdge(index) })
       cmds.push({ type: 'add_note', text: `push(${event.value})：追加到末尾 index ${index}，随后上浮` })
@@ -165,6 +173,9 @@ function compileHeapEvent(event: HeapAlgorithmEvent, context: CompileContext): S
       const lastValue = valueAt(context, lastIndex)
       cmds.push({ type: 'set_cell', cellId: heapNodeId(0), value: lastValue, state: { role: 'swapping', color: 'warning', pulse: true } })
       cmds.push({ type: 'remove_entity', entityId: heapNodeId(lastIndex) })
+      // Re-place the remaining nodes for the (possibly shallower) tree.
+      const remaining = heapIndices(context).filter(i => i !== lastIndex)
+      cmds.push(...repositionCommands(remaining, maxLevelFor(remaining.length)))
       cmds.push({ type: 'add_note', text: `pop()：弹出堆顶 ${topValue}，末尾 ${lastValue} 补位到根，随后下沉` })
       return cmds
     }
