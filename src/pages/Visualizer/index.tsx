@@ -5,7 +5,10 @@ import { Icon } from '@/icons'
 import { useAlgorithmStore, type AIHistoryEntry } from '@/store/algorithmStore'
 import { getPreset, generatePreset, hasGenerator } from '@/presets'
 import { useAnimationEngine } from '@/hooks/useAnimationEngine'
-import { analyzeCode, getApiConfig, parseInputData, type AIResult } from '@/ai'
+import { analyzeCodeGenerator, getApiConfig, parseInputData } from '@/ai'
+import { runGeneratorSandboxed } from '@/sandbox/runGenerator'
+import { recognizeAlgorithm } from '@/presets/recognize'
+import type { AnimationScript } from '@/types/animation'
 import { compileAndValidateCode } from '@/utils/codeCompiler'
 import { parseAlgorithmInput, getLeetCodeDefault, getLeetCodePlaceholder } from '@/utils/inputParser'
 import { ALGORITHM_DEFS, type AlgorithmDefinition } from '@/data/algorithmDefs'
@@ -155,6 +158,11 @@ export default function Visualizer() {
   const [showDefinition, setShowDefinition] = useState(false)
   const [currentOperationId, setCurrentOperationId] = useState<string>('')
   const [operationParam, setOperationParam] = useState<string>('5')
+  // Live mode: when the AI recognizes a built-in algorithm, the animation is
+  // generated locally; null for unrecognized custom algorithms.
+  const [liveAlgoId, setLiveAlgoId] = useState<string | null>(null)
+  // Phase 2: AI-generated generator for custom (unrecognized) algorithms.
+  const [generator, setGenerator] = useState<{ body: string; type: 'array' | 'graph' | 'tree' | 'linked_list' } | null>(null)
 
   // Resizable Panels States (Left Editor: 35%, Right Info: 22%)
   const [leftWidth, setLeftWidth] = useState(35)
@@ -577,9 +585,12 @@ export default function Visualizer() {
     currentAnalysisController = controller
 
     setAIStatus('analyzing')
+    // Clear any previous live-mode so a stale result doesn't linger on failure.
+    setLiveAlgoId(null)
+    setGenerator(null)
 
     try {
-      const result: AIResult = await analyzeCode({
+      const result = await analyzeCodeGenerator({
         code,
         language: codeLanguage,
         inputData,
@@ -589,10 +600,33 @@ export default function Visualizer() {
       if (controller.signal.aborted) return
       currentAnalysisController = null
 
-      if (result.success && result.script) {
+      if (!result.success || !result.generator) {
+        setAIStatus('error', result.error || t('common.error'), result.rawResponse)
+        return
+      }
+
+      const gen = result.generator
+      const recognized = recognizeAlgorithm(gen.algorithm)
+
+      // The AI infers the expected input format and supplies a sample. Auto-fill
+      // it only when the current input box is empty/invalid (respect user input).
+      const currentValid = inputData.trim() !== '' && parseInputData(inputData).valid
+      if (!currentValid && gen.sampleInput) {
+        setInputData(gen.sampleInput)
+      }
+
+      if (recognized) {
+        // Phase 1: built-in generator — generate locally from the current input.
+        setLiveAlgoId(recognized)
+        setGenerator(null)
+        const data = currentValid ? parsedInput() : (gen.sampleInput ? parseInputData(gen.sampleInput).value : parsedInput())
+        let script: AnimationScript | null = null
+        try { script = generatePreset(recognized, data) ?? null } catch { script = null }
+        if (script) {
+          setAnimationScript(script)
+          loadScript(script)
+        }
         setAIStatus('success')
-        setAnimationScript(result.script)
-        loadScript(result.script)
         const entry: AIHistoryEntry = {
           id: Date.now().toString(),
           timestamp: Date.now(),
@@ -602,11 +636,58 @@ export default function Visualizer() {
           language: codeLanguage,
           inputData,
           status: 'success',
-          script: result.script,
+          script: script ?? undefined,
         }
         addAIHistory(entry)
       } else {
-        setAIStatus('error', result.error || t('common.error'), result.rawResponse)
+        // Phase 2: AI generator — execute it in the sandbox.
+        const genType = gen.type === 'matrix' ? 'array' : gen.type
+        setLiveAlgoId(null)
+        setGenerator({ body: gen.body, type: genType })
+        const effectiveInput = currentValid ? inputData : (gen.sampleInput ?? inputData)
+        const parsed = parseInputData(effectiveInput)
+        let sandboxResult = parsed.valid
+          ? await runGeneratorSandboxed(gen.body, parsed.value, { algorithm: gen.algorithm, type: genType })
+          : { ok: false as const, error: '输入数据无效' }
+        // If the generator crashed (often a stale/wrong-shaped leftover input),
+        // retry with the AI's own sample input, which matches the expected format.
+        if (!sandboxResult.ok && gen.sampleInput && gen.sampleInput !== effectiveInput) {
+          const sp = parseInputData(gen.sampleInput)
+          if (sp.valid) {
+            const retry = await runGeneratorSandboxed(gen.body, sp.value, { algorithm: gen.algorithm, type: genType })
+            if (retry.ok) { sandboxResult = retry; setInputData(gen.sampleInput) }
+          }
+        }
+        if (sandboxResult.ok && sandboxResult.script) {
+          // Fill in AI-provided complexity (the builder defaults to O(?)).
+          if (gen.timeComplexity || gen.spaceComplexity) {
+            const tc = gen.timeComplexity || 'O(?)'
+            sandboxResult.script.complexity = {
+              time: { best: tc, average: tc, worst: tc },
+              space: gen.spaceComplexity || 'O(?)',
+            }
+          }
+          setAnimationScript(sandboxResult.script)
+          loadScript(sandboxResult.script)
+          setAIStatus('success')
+          const entry: AIHistoryEntry = {
+            id: Date.now().toString(),
+            timestamp: Date.now(),
+            algorithmId: selectedAlgorithm?.id ?? 'unknown',
+            algorithmName: selectedAlgorithm?.name ?? '未知算法',
+            code,
+            language: codeLanguage,
+            inputData,
+            status: 'success',
+            script: sandboxResult.script,
+            generatorBody: gen.body,
+            generatorType: genType,
+          }
+          addAIHistory(entry)
+        } else {
+          // Surface the generator source so diagnostics can show the AI code.
+          setAIStatus('error', sandboxResult.error || '生成器执行失败', gen.body)
+        }
       }
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return
