@@ -119,6 +119,12 @@
       "contest": { "name": "竞赛专题", "desc": "ACM 常用算法模板" }
     }
   },
+  "playground": {
+    "deleteConfirmTitle": "删除记录",
+    "deleteConfirmMessage": "确定要删除这条历史记录吗？此操作不可撤销。",
+    "clearAllConfirmTitle": "清空全部历史",
+    "clearAllConfirmMessage": "确定要清空全部历史记录吗？此操作不可撤销。"
+  },
   "common": {
     "save": "保存",
     "cancel": "取消",
