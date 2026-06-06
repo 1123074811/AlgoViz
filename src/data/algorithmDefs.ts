@@ -260,6 +260,24 @@ const def_bst = DEF('bst', '二叉搜索树', 'BST', '基础数据结构', '—'
   [false, false, false],
   '需要有序存储和快速查找的场景，如数据库索引。', 'Ordered storage with fast lookup, e.g. database indices.')
 
+const def_btree = DEF('btree', 'B树', 'B-Tree', 'Rudolf Bayer, Edward McCreight (1971)', '1971',
+  '一种自平衡的多路搜索树。每个节点可包含多个关键码和子指针，所有叶子节点在同一层。广泛用于数据库和文件系统索引。', 'A self-balancing multi-way search tree. Each node can hold multiple keys and child pointers. All leaves at the same level. Widely used in databases and file system indices.',
+  ['节点最多 m-1 个关键码，最多 m 个子节点（m 为阶）', '根至少 2 个子节点，内节点至少 ⌈m/2⌉ 个子节点', '查找：节点内二分查找确定子节点方向', '插入：找到叶节点插入，若溢出则分裂上推', '删除：借位或合并保持平衡'],
+  ['Node holds up to m-1 keys, up to m children (m = order)', 'Root at least 2 children, internal ≥ ⌈m/2⌉ children', 'Search: binary search within node to find child', 'Insert: find leaf, insert, split if overflow', 'Delete: borrow or merge to maintain balance'],
+  ['O(log n)', 'O(log n)', 'O(log n)', '树高度为 O(log_m n)，节点内二分查找 O(log m)。', 'Tree height O(log_m n). Binary search within node O(log m).'],
+  ['O(n)', '每个节点存储 m-1 个关键码 + m 个子指针。', 'Each node stores m-1 keys + m child pointers.'],
+  [false, false, false],
+  '数据库索引（MySQL InnoDB）、文件系统（NTFS, HFS+）、MongoDB 索引。', 'Database indices (MySQL InnoDB), file systems (NTFS, HFS+), MongoDB indices.')
+
+const def_bplustree = DEF('bplus_tree', 'B+树', 'B+ Tree', 'Rudolf Bayer (1972 变体)', '1972',
+  'B树变体：所有数据存储在叶子节点，内部节点仅存关键码用于路由。叶子节点间通过链表连接，支持高效范围查询。', 'B-Tree variant: all data in leaf nodes, internal nodes only store routing keys. Leaf nodes linked via a linked list for efficient range queries.',
+  ['内部节点仅存储路由关键码，不含数据', '所有数据（键值对）存储在叶子层', '叶子节点之间形成有序链表', '查找/插入/删除同 B树，但数据只到叶子', '范围查询利用叶子链表顺序扫描'],
+  ['Internal nodes store only routing keys, no data', 'All data (key-value pairs) in leaf nodes', 'Leaf nodes form an ordered linked list', 'Search/insert/delete similar to B-Tree, data only in leaves', 'Range queries leverage leaf linked list for sequential scan'],
+  ['O(log n)', 'O(log n)', 'O(log n)', '树高更低（内部节点更紧凑），叶子链表 O(1) 范围扫描。', 'Shorter height (internal nodes more compact). Leaf list O(1) range scan.'],
+  ['O(n)', '与 B树类似，额外叶子链表指针。', 'Similar to B-Tree, plus leaf linked list pointers.'],
+  [false, false, false],
+  '数据库索引首选（MySQL、PostgreSQL）、键值存储（LevelDB）。', 'Primary database index (MySQL, PostgreSQL), key-value stores (LevelDB).')
+
 const def_avl = DEF('avl_tree', 'AVL 树', 'AVL Tree', 'Adelson-Velsky, Landis', '1962',
   '首个自平衡 BST。任意节点左右子树高度差 ≤ 1。通过旋转（LL/RR/LR/RL）维持平衡，保证 O(log n)。', 'First self-balancing BST. Height difference of any node ≤ 1. Maintains balance via rotations (LL/RR/LR/RL), guaranteeing O(log n).',
   ['插入：标准 BST 插入', '向上检查平衡因子 |bf|', '|bf|>1 时执行旋转', 'LL: 右旋 / RR: 左旋 / LR: 左-右 / RL: 右-左'],
@@ -494,7 +512,7 @@ export const ALGORITHM_DEFS: Record<string, AlgorithmDefinition> = {}
 const defs = [
   def_bubble, def_selection, def_insertion, def_shell, def_merge, def_quick, def_heap, def_counting, def_radix, def_bucket,
   def_bfs, def_dfs, def_dijkstra, def_bellman, def_astar, def_floyd, def_prim, def_kruskal, def_topo,
-  def_array, def_linkedlist, def_doubly, def_stack, def_queue, def_bintree, def_bst, def_avl, def_rbt, def_heapds, def_trie, def_unionfind, def_hashtable,
+  def_array, def_linkedlist, def_doubly, def_stack, def_queue, def_bintree, def_bst, def_avl, def_rbt, def_btree, def_bplustree, def_heapds, def_trie, def_unionfind, def_hashtable,
   def_knapsack, def_unbounded, def_lcs, def_lis, def_edit, def_mchain, def_interval,
   def_binary, def_backtrack, def_nqueens, def_sudoku,
   def_kmp, def_manacher, def_segtree, def_fenwick, def_monostack, def_sliding,

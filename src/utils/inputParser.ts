@@ -48,7 +48,7 @@ const MATRIX_ALGOS = new Set([
 
 const TREE_ALGOS = new Set([
   'binary_tree_traverse','bst_insert','bst_delete','bst_search',
-  'avl_insert','trie','heap_ds',
+  'avl_insert','trie','heap_ds','btree','bplus_tree',
 ])
 
 // ─── LeetCode defaults ────────────────────────────────────────────────────

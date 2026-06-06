@@ -127,7 +127,7 @@ export default function Home() {
         {/* Bottom CTA */}
         <section className="text-center pb-8">
           <p className="text-sm text-slate-400">
-            51 个算法 · 4 种语言 · AI 驱动 · 开源项目
+            53 个算法 · 4 种语言 · AI 驱动 · 开源项目
           </p>
         </section>
       </div>

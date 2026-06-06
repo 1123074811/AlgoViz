@@ -559,6 +559,58 @@ class Trie:
     id: 'hash_table', name: '哈希表', nameEn: 'Hash Table', category: 'data-structure', difficulty: 'easy',
     hasPreset: true, defaultLanguage: 'python', defaultCode: '# Python dict = Hash Table\nhash_map = {}\nhash_map["key1"] = "value1"\nprint(hash_map.get("key1"))\nprint(hash_map.get("key2", "default"))',
   },
+  {
+    id: 'btree', name: 'B树', nameEn: 'B-Tree', category: 'data-structure', difficulty: 'hard',
+    hasPreset: true, defaultLanguage: 'python',
+    defaultCode: `class BTreeNode:
+    def __init__(self, t, leaf=False):
+        self.t = t          # 最小度数
+        self.leaf = leaf    # 是否叶子
+        self.keys = []      # 关键码列表
+        self.children = []  # 子节点列表
+
+def insert(root, key):
+    if len(root.keys) == 2 * root.t - 1:
+        # 根分裂
+        new_root = BTreeNode(root.t)
+        new_root.children.append(root)
+        split_child(new_root, 0)
+        insert_non_full(new_root, key)
+        return new_root
+    else:
+        insert_non_full(root, key)
+        return root`,
+  },
+  {
+    id: 'bplus_tree', name: 'B+树', nameEn: 'B+ Tree', category: 'data-structure', difficulty: 'hard',
+    hasPreset: true, defaultLanguage: 'python',
+    defaultCode: `class BPlusNode:
+    def __init__(self, t, leaf=False):
+        self.t = t
+        self.leaf = leaf
+        self.keys = []
+        self.children = []  # 内部：子指针；叶子：None
+        self.next = None    # 叶子层链表
+
+def search(root, key):
+    node = root
+    while not node.leaf:
+        i = 0
+        while i < len(node.keys) and key >= node.keys[i]:
+            i += 1
+        node = node.children[i]
+    # 在叶子中二分查找
+    lo, hi = 0, len(node.keys) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if node.keys[mid] == key:
+            return node.values[mid]  # 找到
+        elif key < node.keys[mid]:
+            hi = mid - 1
+        else:
+            lo = mid + 1
+    return None  # 未找到`,
+  },
 
   // ============ 动态规划 ============
   {

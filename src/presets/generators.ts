@@ -872,6 +872,8 @@ import { generateKruskal } from './kruskal'
 import { generateTopologicalSort } from './topologicalSort'
 import { generateFloyd } from './floyd'
 import { generateAStar } from './aStar'
+import { generateBTree } from './bTree'
+import { generateBPlusTree } from './bPlusTree'
 export { generateBFS, generateDFS, generateDijkstra, generatePrim, generateKruskal, generateTopologicalSort, generateFloyd, generateAStar }
 import { generateRadixSort } from './radixSort'
 import { generateBucketSort } from './bucketSort'
@@ -967,6 +969,9 @@ const trieWrapper = (input: unknown) => {
   if (Array.isArray(input) && input.every(v => typeof v === 'string')) return generateTrie(input as string[])
   return generateTrie()
 }
+const btreeWrapper = (_input: unknown) => generateBTree()
+const bplusTreeWrapper = (_input: unknown) => generateBPlusTree()
+
 const hashTableWrapper = (input: unknown) => {
   if (typeof input === 'object' && input !== null && !Array.isArray(input)) return generateHashTable(input as Record<string, string>)
   return generateHashTable()
@@ -1235,7 +1240,8 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   bst_delete: bstDeleteWrapper,
   bst_search: bstSearchWrapper,
   avl_insert: avlTreeWrapper,
-  trie: trieWrapper, hash_table: hashTableWrapper,
+  trie: trieWrapper, btree: btreeWrapper, bplus_tree: bplusTreeWrapper,
+  hash_table: hashTableWrapper,
   backtracking: backtrackingWrapper,
   radix_sort: numGen(generateRadixSort), bucket_sort: numGen(generateBucketSort),
   leetcode_hot100: leetcodeWrapper, acm_templates: acmWrapper,
