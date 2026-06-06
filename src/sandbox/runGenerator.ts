@@ -7,7 +7,7 @@ export function runGeneratorSandboxed(
   source: string,
   input: unknown,
   meta: GeneratorMeta,
-  timeoutMs = 2000,
+  timeoutMs = 5000,
 ): Promise<GeneratorResult> {
   if (typeof Worker === 'undefined') {
     return Promise.resolve(executeGenerator(source, input, meta))

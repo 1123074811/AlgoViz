@@ -245,8 +245,10 @@ export default function Playground() {
           setAIStatus('success')
           updateAIHistory(historyId, { status: 'success', script: sandboxResult.script, generatorBody: gen.body, generatorType: genType })
         } else {
-          setAIStatus('error', sandboxResult.error || '生成器执行失败')
-          updateAIHistory(historyId, { status: 'error', error: sandboxResult.error || '生成器执行失败' })
+          // Surface the generator source so "查看原始响应 / 复制错误详情" can show
+          // the actual AI-written code for diagnosis (e.g. an infinite loop).
+          setAIStatus('error', sandboxResult.error || '生成器执行失败', gen.body)
+          updateAIHistory(historyId, { status: 'error', error: sandboxResult.error || '生成器执行失败', generatorBody: gen.body, generatorType: genType })
         }
       }
     } catch (e) {
