@@ -300,17 +300,24 @@ export default function Playground() {
   }
 
   const copyErrorDetails = () => {
-    if (!aiErrorReport) return
-    const md = [
-      '## AI Error Report',
-      `- Stage: ${aiErrorReport.stage}`,
-      `- Title: ${aiErrorReport.title}`,
-      '',
-      '### Issues',
-      ...aiErrorReport.issues.map(i => `1. \`${i.path}\`\n   - Code: ${i.code}\n   - Message: ${i.message}${i.suggestion ? `\n   - Suggestion: ${i.suggestion}` : ''}`),
-      aiRawResponse ? `\n\n### Raw Response\n\`\`\`json\n${aiRawResponse.slice(0, 2000)}${aiRawResponse.length > 2000 ? '\n...(truncated)' : ''}\n\`\`\`` : '',
-    ].join('\n')
-    navigator.clipboard.writeText(md).catch(() => {})
+    // Works for both schema/compile errors (aiErrorReport) and sandbox/timeout
+    // failures (just an error message + generator source in aiRawResponse).
+    const parts: string[] = ['## AI 错误详情', `- 错误: ${aiError || aiErrorReport?.message || '未知'}`]
+    if (aiErrorReport) {
+      parts.push(`- Stage: ${aiErrorReport.stage}`, `- Title: ${aiErrorReport.title}`, '', '### Issues',
+        ...aiErrorReport.issues.map(i => `- \`${i.path}\` [${i.code}] ${i.message}${i.suggestion ? ` (建议: ${i.suggestion})` : ''}`))
+    }
+    if (aiRawResponse) {
+      parts.push('', '### 原始响应 / 生成器源码', '```', aiRawResponse.slice(0, 6000) + (aiRawResponse.length > 6000 ? '\n...(已截断)' : ''), '```')
+    }
+    const md = parts.join('\n')
+    navigator.clipboard.writeText(md).then(
+      () => { /* copied */ },
+      () => {
+        // Clipboard API can fail (insecure context / permissions): fall back to showing it.
+        setShowRawResponse(true)
+      },
+    )
   }
 
   const complexity = animationScript?.complexity
