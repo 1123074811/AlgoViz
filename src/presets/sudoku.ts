@@ -1,60 +1,116 @@
 import type { AnimationScript, AnimationStep } from '@/types/animation'
 
-export function generateSudoku(): AnimationScript {
-  const board = [
-    ['5', '3', '.', '.', '7', '.', '.', '.', '.'],
-    ['6', '.', '.', '1', '9', '5', '.', '.', '.'],
-    ['.', '9', '8', '.', '.', '.', '.', '6', '.'],
-    ['8', '.', '.', '.', '6', '.', '.', '.', '3'],
-    ['4', '.', '.', '8', '.', '3', '.', '.', '1'],
-    ['7', '.', '.', '.', '2', '.', '.', '.', '6'],
-    ['.', '6', '.', '.', '.', '.', '2', '8', '.'],
-    ['.', '.', '.', '4', '1', '9', '.', '.', '5'],
-    ['.', '.', '.', '.', '8', '.', '.', '7', '9'],
-  ]
+const DEFAULT_BOARD = [
+  [5, 3, 0, 0, 7, 0, 0, 0, 0],
+  [6, 0, 0, 1, 9, 5, 0, 0, 0],
+  [0, 9, 8, 0, 0, 0, 0, 6, 0],
+  [8, 0, 0, 0, 6, 0, 0, 0, 3],
+  [4, 0, 0, 8, 0, 3, 0, 0, 1],
+  [7, 0, 0, 0, 2, 0, 0, 0, 6],
+  [0, 6, 0, 0, 0, 0, 2, 8, 0],
+  [0, 0, 0, 4, 1, 9, 0, 0, 5],
+  [0, 0, 0, 0, 8, 0, 0, 7, 9],
+]
+
+function parseCell(value: unknown): number {
+  if (value === null || value === undefined || value === '.') return 0
+  const n = Number(value)
+  return Number.isInteger(n) && n >= 1 && n <= 9 ? n : 0
+}
+
+function parseBoard(input: unknown): number[][] {
+  const source = typeof input === 'object' && input !== null && !Array.isArray(input)
+    ? (input as Record<string, unknown>).board
+    : input
+
+  if (Array.isArray(source) && source.length === 9 && source.every(row => Array.isArray(row) && row.length === 9)) {
+    return source.map(row => (row as unknown[]).map(parseCell))
+  }
+
+  if (Array.isArray(source) && source.length === 81) {
+    return Array.from({ length: 9 }, (_, r) => source.slice(r * 9, r * 9 + 9).map(parseCell))
+  }
+
+  return DEFAULT_BOARD.map(row => [...row])
+}
+
+function isValid(board: number[][], row: number, col: number, value: number): boolean {
+  for (let i = 0; i < 9; i++) {
+    if (board[row][i] === value || board[i][col] === value) return false
+  }
+  const sr = Math.floor(row / 3) * 3
+  const sc = Math.floor(col / 3) * 3
+  for (let r = sr; r < sr + 3; r++) {
+    for (let c = sc; c < sc + 3; c++) {
+      if (board[r][c] === value) return false
+    }
+  }
+  return true
+}
+
+function solve(board: number[][]): boolean {
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      if (board[r][c] !== 0) continue
+      for (let value = 1; value <= 9; value++) {
+        if (!isValid(board, r, c, value)) continue
+        board[r][c] = value
+        if (solve(board)) return true
+        board[r][c] = 0
+      }
+      return false
+    }
+  }
+  return true
+}
+
+export function generateSudoku(input?: unknown): AnimationScript {
+  const initialBoard = parseBoard(input)
+  const board = initialBoard.map(row => [...row])
+  const solved = initialBoard.map(row => [...row])
+  const solvedOk = solve(solved)
   const steps: AnimationStep[] = []
   let sid = 1
 
-  const flatInit = board.flat().map(c => c === '.' ? 0 : parseInt(c))
-  const init2D = board.map(row => row.map(c => c === '.' ? 0 : parseInt(c)))
+  const flatInit = initialBoard.flat()
   steps.push({
     stepId: sid++, codeLine: 0,
     description: { zh: '数独初始盘面（0=空格）', en: 'Sudoku initial board (0=empty)' },
     action: { type: 'highlight', targets: [], color: 'primary' },
-    events: [{ type: 'matrix.create', rows: 9, cols: 9, values: init2D }],
+    events: [{ type: 'matrix.create', rows: 9, cols: 9, values: initialBoard.map(row => [...row]) }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
 
-  // Demo solving a few cells
-  const fills = [
-    { r: 0, c: 2, v: 4, zh: '(0,2) 唯一可填 4：同行已有 5,3,7', en: '(0,2) only 4 possible' },
-    { r: 0, c: 3, v: 6, zh: '(0,3) 唯一可填 6', en: '(0,3) only 6' },
-    { r: 0, c: 6, v: 1, zh: '(0,6) 填 1', en: '(0,6) place 1' },
-    { r: 0, c: 8, v: 8, zh: '(0,8) 填 8，第0行完成', en: '(0,8) place 8, row 0 done' },
-    { r: 1, c: 1, v: 4, zh: '(1,1) 填 4', en: '(1,1) place 4' },
-    { r: 1, c: 2, v: 7, zh: '(1,2) 填 7', en: '(1,2) place 7' },
-    { r: 1, c: 6, v: 8, zh: '(1,6) 填 8', en: '(1,6) place 8' },
-    { r: 1, c: 7, v: 3, zh: '(1,7) 填 3', en: '(1,7) place 3' },
-    { r: 1, c: 8, v: 2, zh: '(1,8) 填 2，第1行完成', en: '(1,8) place 2, row 1 done' },
-  ]
+  const fills = solvedOk
+    ? initialBoard.flatMap((row, r) => row.map((value, c) => ({ r, c, before: value, after: solved[r][c] })))
+      .filter(cell => cell.before === 0 && cell.after !== 0)
+      .slice(0, 12)
+    : []
 
-  for (const f of fills) {
-    const idx = f.r * 9 + f.c
-    board[f.r][f.c] = String(f.v)
+  for (const fill of fills) {
+    const idx = fill.r * 9 + fill.c
+    board[fill.r][fill.c] = fill.after
     steps.push({
       stepId: sid++, codeLine: 6,
-      description: { zh: f.zh, en: f.en },
+      description: {
+        zh: `(${fill.r},${fill.c}) 可填 ${fill.after}：同行、同列、同宫均不冲突`,
+        en: `(${fill.r},${fill.c}) place ${fill.after}: no row, column, or box conflict`,
+      },
       action: { type: 'insert', targets: [idx], color: 'success' },
-      events: [{ type: 'matrix.update_cell', row: f.r, col: f.c, value: f.v }],
+      events: [{ type: 'matrix.update_cell', row: fill.r, col: fill.c, value: fill.after }],
       stats: { comparisons: sid, swaps: 0, accesses: 0 },
     })
   }
 
   steps.push({
     stepId: sid++, codeLine: 12,
-    description: { zh: '回溯法继续求解...数独求解算法演示', en: 'Backtracking continues... Sudoku solver demo' },
-    action: { type: 'mark', targets: [], color: 'success' },
-    events: [{ type: 'matrix.visit_cell', row: 0, col: 0 }],
+    description: solvedOk
+      ? { zh: '回溯法继续求解，逐步填满所有空格', en: 'Backtracking continues until all empty cells are filled' }
+      : { zh: '当前盘面无有效解，回溯会撤销冲突分支', en: 'The current board has no valid solution; backtracking rejects conflicting branches' },
+    action: { type: 'mark', targets: [], color: solvedOk ? 'success' : 'danger' },
+    events: solvedOk
+      ? [{ type: 'matrix.visit_cell', row: 0, col: 0 }]
+      : [{ type: 'matrix.mark_conflict', cells: [{ row: 0, col: 0 }] }],
     stats: { comparisons: sid, swaps: 0, accesses: 0 },
   })
 
@@ -62,7 +118,7 @@ export function generateSudoku(): AnimationScript {
     algorithm: 'sudoku',
     complexity: { time: { best: 'O(1)', average: 'O(9^m)', worst: 'O(9^m)' }, space: 'O(m)' },
     presentation: { engine: 'scene', module: 'matrix', variant: 'sudoku' },
-    initialState: { type: 'matrix', data: flatInit },
+    initialState: { type: 'matrix', data: flatInit, matrix: initialBoard },
     steps: steps as AnimationScript['steps'],
   }
 }

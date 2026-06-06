@@ -804,7 +804,7 @@ export function generateBinarySearch(arr: number[], target?: number): AnimationS
         ...makeStep(sid++, 5, noteZh, `Found target! arr[${mid}]=${t}`, 'mark', [mid], 'success', comps, 0, acc),
         ...evt([{ type: 'array.mark_sorted', indices: [mid] }]),
       })}
-      return { algorithm: 'binary_search', presentation: { engine: 'scene' as const, module: 'array' as const }, complexity: { time: { best: 'O(1)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(1)' }, initialState: { type: 'array', data: sorted }, steps }
+      return { algorithm: 'binary_search', presentation: { engine: 'scene' as const, module: 'array' as const }, complexity: { time: { best: 'O(1)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(1)' }, result: mid, initialState: { type: 'array', data: sorted }, steps }
     } else if (sorted[mid] < t) {
       { const noteZh = `${sorted[mid]} < ${t}，left = ${mid + 1}`
       steps.push({
@@ -827,7 +827,7 @@ export function generateBinarySearch(arr: number[], target?: number): AnimationS
     ...evt([{ type: 'scene.note', text: noteZh }]),
   })}
 
-  return { algorithm: 'binary_search', presentation: { engine: 'scene' as const, module: 'array' as const }, complexity: { time: { best: 'O(1)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(1)' }, initialState: { type: 'array', data: sorted }, steps }
+  return { algorithm: 'binary_search', presentation: { engine: 'scene' as const, module: 'array' as const }, complexity: { time: { best: 'O(1)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(1)' }, result: -1, initialState: { type: 'array', data: sorted }, steps }
 }
 
 // ============ Generator registry ============
@@ -864,6 +864,7 @@ import { generateBacktracking } from './backtracking'
 import { generateArray } from './arrayDS'
 import { generateLeetCode } from './leetcode'
 import { generateACM } from './acm'
+import { generateGCD } from './gcd'
 import { generateBFS } from './bfsGraph'
 import { generateDFS } from './dfsGraph'
 import { generateDijkstra } from './dijkstra'
@@ -924,6 +925,17 @@ function parseStrs(input: unknown, d1: string, d2?: string): [string, string] {
 
 // ─── Wrappers with natural input types ───
 
+const binarySearchWrapper = (input: unknown) => {
+  // parseArrayTargetCodeVars returns { nums, target, data, param } when a target is present
+  const obj = (input && typeof input === 'object' && !Array.isArray(input)) ? input as Record<string, unknown> : undefined
+  const arr = Array.isArray(obj?.data) ? obj!.data as number[]
+    : Array.isArray(obj?.nums) ? obj!.nums as number[]
+    : parseArr(input)
+  const target = typeof obj?.target === 'number' ? obj.target as number
+    : typeof obj?.param === 'number' ? obj.param as number
+    : undefined
+  return generateBinarySearch(arr, target)
+}
 const slidingWindowWrapper = (input: unknown) => generateSlidingWindow(parseArr(input), Math.min(3, parseArr(input).length))
 const monotonicStackWrapper = (input: unknown) => generateMonotonicStack(parseArr(input))
 const knapsackWrapper = (input: unknown) => {
@@ -950,7 +962,7 @@ const unboundedKnapsackWrapper = (input: unknown) => {
   return generateUnboundedKnapsack(arr.slice(0, 3), arr.slice(0, 3).map(v => v * 2), Math.max(...arr.slice(0, 3)) + 2)
 }
 const matrixChainWrapper = (input: unknown) => generateMatrixChain(parseArr(input).slice(0, 5).map(n => Math.max(5, n)))
-const sudokuWrapper = (_input: unknown) => generateSudoku()
+const sudokuWrapper = (input: unknown) => generateSudoku(input)
 const manacherWrapper = (input: unknown) => generateManacher(parseStr(input, 'babad'))
 const segmentTreeWrapper = (input: unknown) => generateSegmentTree(parseArr(input).slice(0, 6))
 const intervalDPWrapper = (input: unknown) => generateIntervalDP(parseArr(input).slice(0, 5))
@@ -969,16 +981,17 @@ const trieWrapper = (input: unknown) => {
   if (Array.isArray(input) && input.every(v => typeof v === 'string')) return generateTrie(input as string[])
   return generateTrie()
 }
-const btreeWrapper = (_input: unknown) => generateBTree()
-const bplusTreeWrapper = (_input: unknown) => generateBPlusTree()
+const btreeWrapper = (input: unknown) => generateBTree(input)
+const bplusTreeWrapper = (input: unknown) => generateBPlusTree(input)
 
 const hashTableWrapper = (input: unknown) => {
   if (typeof input === 'object' && input !== null && !Array.isArray(input)) return generateHashTable(input as Record<string, string>)
   return generateHashTable()
 }
 const backtrackingWrapper = (input: unknown) => generateBacktracking(parseArr(input))
-const leetcodeWrapper = (_input: unknown) => generateLeetCode()
-const acmWrapper = (_input: unknown) => generateACM()
+const leetcodeWrapper = (input: unknown) => generateLeetCode(input)
+const gcdWrapper = (input: unknown) => generateGCD(input)
+const acmWrapper = (input: unknown) => generateACM(input)
 function parseGraphInput(input: unknown): GraphInput {
   // ── 1. Handle string input (raw code / LeetCode format) ──────────────
   if (typeof input === 'string' && input.trim().length > 0) {
@@ -1240,7 +1253,7 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   insertion_sort: numGen(generateInsertionSort), merge_sort: numGen(generateMergeSort),
   quick_sort: numGen(generateQuickSort), heap_sort: numGen(generateHeapSort),
   shell_sort: numGen(generateShellSort), counting_sort: numGen(generateCountingSort),
-  binary_search: numGen(generateBinarySearch), sliding_window: slidingWindowWrapper,
+  binary_search: binarySearchWrapper, sliding_window: slidingWindowWrapper,
   monotonic_stack: monotonicStackWrapper, knapsack_01: knapsackWrapper,
   lcs: lcsWrapper, n_queens: nQueensWrapper, lis: lisWrapper,
   edit_distance: editDistanceWrapper, kmp: kmpWrapper,
@@ -1267,13 +1280,207 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   hash_table: hashTableWrapper,
   backtracking: backtrackingWrapper,
   radix_sort: numGen(generateRadixSort), bucket_sort: numGen(generateBucketSort),
-  leetcode_hot100: leetcodeWrapper, acm_templates: acmWrapper,
+  leetcode_hot100: leetcodeWrapper, gcd_euclidean: gcdWrapper, acm_templates: acmWrapper,
 }
 
 export function generatePreset(algoId: string, inputData: unknown): AnimationScript | undefined {
   const gen = GENERATORS[algoId]
-  if (gen) return gen(inputData)
+  if (gen) return withInferredResult(algoId, inputData, gen(inputData))
   return undefined
+}
+
+function withInferredResult(algoId: string, inputData: unknown, script: AnimationScript): AnimationScript {
+  if (script.result !== undefined) return script
+  const result = inferPresetResult(algoId, inputData, script)
+  return result === undefined ? script : { ...script, result }
+}
+
+function inferPresetResult(algoId: string, inputData: unknown, script: AnimationScript): AnimationScript['result'] | undefined {
+  switch (algoId) {
+    case 'binary_search': {
+      const obj = (inputData && typeof inputData === 'object' && !Array.isArray(inputData)) ? inputData as Record<string, unknown> : undefined
+      const arr = (Array.isArray(obj?.data) ? obj!.data as number[] : Array.isArray(obj?.nums) ? obj!.nums as number[] : parseArr(inputData))
+        .map(Number)
+        .filter(v => !Number.isNaN(v))
+        .sort((a, b) => a - b)
+      const target = typeof obj?.target === 'number' ? obj.target as number
+        : typeof obj?.param === 'number' ? obj.param as number
+        : arr[Math.floor(arr.length / 2)]
+      return arr.indexOf(target)
+    }
+    case 'gcd_euclidean': {
+      const arr = parseArr(inputData)
+      const a = Math.abs(arr[0] ?? 48)
+      const b = Math.abs(arr[1] ?? 18)
+      return gcd(a, b)
+    }
+    case 'lis': {
+      const arr = parseArr(inputData)
+      return lisLength(arr)
+    }
+    case 'lcs': {
+      const [a, b] = parseStrs(inputData, 'ABCBDAB', 'BDCABA')
+      return lcsLength(a, b)
+    }
+    case 'edit_distance': {
+      const [a, b] = parseStrs(inputData, 'horse', 'ros')
+      return editDistance(a, b)
+    }
+    case 'kmp': {
+      const [text, pattern] = parseStrs(inputData, 'ABABABCABABABCABAB', 'ABABC')
+      return text.indexOf(pattern)
+    }
+    case 'manacher': {
+      return longestPalindrome(parseStr(inputData, 'babad'))
+    }
+    case 'knapsack_01': {
+      const arr = parseArr(inputData).slice(0, 4)
+      return knapsack01(arr, arr.map((_, i) => (arr[i] || 1) * 2), Math.max(...arr) + 3)
+    }
+    case 'unbounded_knapsack': {
+      const arr = parseArr(inputData).slice(0, 3)
+      return unboundedKnapsack(arr, arr.map(v => v * 2), Math.max(...arr) + 2)
+    }
+    case 'matrix_chain': {
+      return matrixChainCost(parseArr(inputData).slice(0, 5).map(n => Math.max(5, n)))
+    }
+    case 'n_queens': {
+      return nQueensCount(Math.max(4, Math.min(8, parseNum(inputData, 4))))
+    }
+    case 'bfs_graph':
+    case 'dfs_graph':
+    case 'topological_sort':
+      return scriptTraversalResult(script)
+    default:
+      return undefined
+  }
+}
+
+function gcd(a: number, b: number): number {
+  while (b !== 0) [a, b] = [b, a % b]
+  return a
+}
+
+function lisLength(arr: number[]): number {
+  const tails: number[] = []
+  for (const value of arr) {
+    let left = 0, right = tails.length
+    while (left < right) {
+      const mid = Math.floor((left + right) / 2)
+      if (tails[mid] < value) left = mid + 1
+      else right = mid
+    }
+    tails[left] = value
+  }
+  return tails.length
+}
+
+function lcsLength(a: string, b: string): number {
+  const dp = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0))
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1])
+    }
+  }
+  return dp[a.length][b.length]
+}
+
+function editDistance(a: string, b: string): number {
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => Array.from({ length: b.length + 1 }, (_v, j) => i === 0 ? j : j === 0 ? i : 0))
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]) + 1
+    }
+  }
+  return dp[a.length][b.length]
+}
+
+function longestPalindrome(text: string): string {
+  let bestStart = 0, bestLen = 0
+  const expand = (leftStart: number, rightStart: number) => {
+    let left = leftStart, right = rightStart
+    while (left >= 0 && right < text.length && text[left] === text[right]) {
+      left--
+      right++
+    }
+    const len = right - left - 1
+    if (len > bestLen) {
+      bestStart = left + 1
+      bestLen = len
+    }
+  }
+  for (let i = 0; i < text.length; i++) {
+    expand(i, i)
+    expand(i, i + 1)
+  }
+  return text.slice(bestStart, bestStart + bestLen)
+}
+
+function knapsack01(weights: number[], values: number[], capacity: number): number {
+  const dp = Array(capacity + 1).fill(0)
+  for (let i = 0; i < weights.length; i++) {
+    for (let c = capacity; c >= weights[i]; c--) {
+      dp[c] = Math.max(dp[c], dp[c - weights[i]] + values[i])
+    }
+  }
+  return dp[capacity]
+}
+
+function unboundedKnapsack(weights: number[], values: number[], capacity: number): number {
+  const dp = Array(capacity + 1).fill(0)
+  for (let i = 0; i < weights.length; i++) {
+    for (let c = weights[i]; c <= capacity; c++) {
+      dp[c] = Math.max(dp[c], dp[c - weights[i]] + values[i])
+    }
+  }
+  return dp[capacity]
+}
+
+function matrixChainCost(dims: number[]): number {
+  if (dims.length < 2) return 0
+  const n = dims.length - 1
+  const dp = Array.from({ length: n }, () => Array(n).fill(0))
+  for (let len = 2; len <= n; len++) {
+    for (let i = 0; i + len - 1 < n; i++) {
+      const j = i + len - 1
+      dp[i][j] = Infinity
+      for (let k = i; k < j; k++) {
+        dp[i][j] = Math.min(dp[i][j], dp[i][k] + dp[k + 1][j] + dims[i] * dims[k + 1] * dims[j + 1])
+      }
+    }
+  }
+  return dp[0][n - 1]
+}
+
+function nQueensCount(n: number): number {
+  let count = 0
+  const cols = new Set<number>()
+  const diag1 = new Set<number>()
+  const diag2 = new Set<number>()
+  const place = (row: number) => {
+    if (row === n) {
+      count++
+      return
+    }
+    for (let col = 0; col < n; col++) {
+      if (cols.has(col) || diag1.has(row - col) || diag2.has(row + col)) continue
+      cols.add(col); diag1.add(row - col); diag2.add(row + col)
+      place(row + 1)
+      cols.delete(col); diag1.delete(row - col); diag2.delete(row + col)
+    }
+  }
+  place(0)
+  return count
+}
+
+function scriptTraversalResult(script: AnimationScript): Array<number | string | boolean> | undefined {
+  const output = script.steps
+    .flatMap(step => step.events ?? [])
+    .filter(event => event.type === 'graph.visit_node')
+    .map(event => (event as { nodeId: string }).nodeId)
+  return output.length > 0 ? output : undefined
 }
 
 export function hasGenerator(algoId: string): boolean {

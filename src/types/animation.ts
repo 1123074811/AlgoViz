@@ -184,6 +184,7 @@ export interface AnimationScript {
   algorithm: string
   complexity: Complexity
   initialState: InitialState
+  result?: number | string | boolean | Array<number | string | boolean>
   presentation?: PresentationConfig
   steps: AnimationStep[]
 }

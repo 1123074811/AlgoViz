@@ -1,39 +1,99 @@
 import type { AnimationScript } from '@/types/animation'
 
-export function generateBPlusTree(): AnimationScript {
+const DEFAULT_KEYS = [10, 20, 30, 35, 40, 45, 50, 60]
+
+function parseKeys(input: unknown): { keys: number[]; target?: number; range?: [number, number] } {
+  const objectInput = typeof input === 'object' && input !== null && !Array.isArray(input)
+    ? input as Record<string, unknown>
+    : null
+  const source = Array.isArray(input)
+    ? input
+    : objectInput?.keys ?? objectInput?.nums ?? objectInput?.data
+
+  const values = Array.isArray(source)
+    ? source.map(Number).filter(Number.isFinite)
+    : []
+  const keys = Array.from(new Set((values.length > 0 ? values : DEFAULT_KEYS).map(v => Math.trunc(v))))
+    .sort((a, b) => a - b)
+    .slice(0, 18)
+
+  const target = typeof objectInput?.target === 'number'
+    ? Math.trunc(objectInput.target)
+    : typeof objectInput?.key === 'number'
+      ? Math.trunc(objectInput.key)
+      : undefined
+  const rangeSource = objectInput?.range
+  const range = Array.isArray(rangeSource) && rangeSource.length >= 2
+    ? [Number(rangeSource[0]), Number(rangeSource[1])].filter(Number.isFinite) as number[]
+    : []
+
+  return {
+    keys,
+    target,
+    range: range.length === 2 ? [Math.min(range[0], range[1]), Math.max(range[0], range[1])] : undefined,
+  }
+}
+
+function keyList(keys: number[]): string {
+  return `[${keys.join(', ')}]`
+}
+
+function chunkKeys(keys: number[]): number[][] {
+  const leafSize = keys.length <= 6 ? 2 : 3
+  const leaves: number[][] = []
+  for (let i = 0; i < keys.length; i += leafSize) {
+    leaves.push(keys.slice(i, i + leafSize))
+  }
+  return leaves
+}
+
+function leafIndexForKey(leaves: number[][], key: number): number {
+  const found = leaves.findIndex((leaf, index) => {
+    const next = leaves[index + 1]?.[0]
+    return next === undefined ? key >= leaf[0] : key < next
+  })
+  return Math.max(0, found)
+}
+
+export function generateBPlusTree(input?: unknown): AnimationScript {
+  const { keys, target, range } = parseKeys(input)
+  const leaves = chunkKeys(keys)
+  const routingKeys = leaves.slice(1).map(leaf => leaf[0])
+  const searchKey = target ?? keys[Math.floor(keys.length / 2)] ?? DEFAULT_KEYS[0]
+  const searchLeafIndex = leafIndexForKey(leaves, searchKey)
+  const searchLeaf = leaves[searchLeafIndex] ?? leaves[0] ?? []
+  const rangeBounds: [number, number] = range ?? [
+    keys[Math.max(0, Math.floor(keys.length / 3))] ?? searchKey,
+    keys[Math.min(keys.length - 1, Math.floor((keys.length * 2) / 3))] ?? searchKey,
+  ]
+  const rangeLeafIds = leaves
+    .map((leaf, index) => ({ leaf, index }))
+    .filter(({ leaf }) => leaf.some(key => key >= rangeBounds[0] && key <= rangeBounds[1]))
+    .map(({ index }) => `leaf_${index}`)
+
   const steps: AnimationScript['steps'] = []
   let sid = 1
 
   steps.push({
     stepId: sid++, codeLine: 0,
     description: {
-      zh: 'B+树 — 内部节点仅存路由关键码，所有数据存于叶子节点，叶子间通过链表相连',
-      en: 'B+ Tree — internal nodes store only routing keys, all data in leaf nodes linked via a list',
+      zh: `B+树 — 根据输入关键码构建叶子链：${keyList(keys)}`,
+      en: `B+ Tree — build linked leaves from input keys: ${keyList(keys)}`,
     },
     action: { type: 'highlight', targets: [], color: 'primary' },
     events: [{
-      type: 'tree.create', variant: 'btree', rootId: 'internal_0',
+      type: 'tree.create',
+      variant: 'btree',
+      rootId: 'internal_0',
       nodes: [
-        { id: 'internal_0', value: '[30, 60]' },
-        { id: 'internal_1', value: '[10, 20]' },
-        { id: 'internal_2', value: '[40, 50]' },
-        { id: 'internal_3', value: '[70, 80]' },
-        { id: 'leaf_0', value: '1·5·10' },
-        { id: 'leaf_1', value: '15·20' },
-        { id: 'leaf_2', value: '30·35·40' },
-        { id: 'leaf_3', value: '45·50·60' },
-        { id: 'leaf_4', value: '65·70·75·80' },
+        { id: 'internal_0', value: keyList(routingKeys) },
+        ...leaves.map((leaf, index) => ({ id: `leaf_${index}`, value: leaf.join('·') })),
       ],
-      edges: [
-        { parentId: 'internal_0', childId: 'internal_1', port: 'child_0' },
-        { parentId: 'internal_0', childId: 'internal_2', port: 'child_1' },
-        { parentId: 'internal_0', childId: 'internal_3', port: 'child_2' },
-        { parentId: 'internal_1', childId: 'leaf_0', port: 'child_0' },
-        { parentId: 'internal_1', childId: 'leaf_1', port: 'child_1' },
-        { parentId: 'internal_2', childId: 'leaf_2', port: 'child_0' },
-        { parentId: 'internal_2', childId: 'leaf_3', port: 'child_1' },
-        { parentId: 'internal_3', childId: 'leaf_4', port: 'child_0' },
-      ],
+      edges: leaves.map((_, index) => ({
+        parentId: 'internal_0',
+        childId: `leaf_${index}`,
+        port: `child_${index}`,
+      })),
     }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
   })
@@ -41,55 +101,44 @@ export function generateBPlusTree(): AnimationScript {
   steps.push({
     stepId: sid++, codeLine: 2,
     description: {
-      zh: 'search(45) → 从根 internal_0 开始: 30 ≤ 45 < 60，进入 child_1 → internal_2',
-      en: 'search(45) → from root: 30 ≤ 45 < 60, go child_1 → internal_2',
+      zh: `search(${searchKey}) → 从根路由关键码 ${keyList(routingKeys)} 定位到 leaf_${searchLeafIndex}`,
+      en: `search(${searchKey}) → use root routing keys ${keyList(routingKeys)} to choose leaf_${searchLeafIndex}`,
     },
     action: { type: 'highlight', targets: [0], color: 'primary' },
     events: [{ type: 'tree.visit', nodeId: 'internal_0' }],
-    stats: { comparisons: 2, swaps: 0, accesses: 1 },
+    stats: { comparisons: Math.max(1, routingKeys.length), swaps: 0, accesses: 1 },
   })
 
   steps.push({
     stepId: sid++, codeLine: 3,
     description: {
-      zh: 'search(45) → internal_2 [40, 50]: 40 ≤ 45 < 50，进入 leaf_3',
-      en: 'search(45) → internal_2 [40, 50]: 40 ≤ 45 < 50, go to leaf_3',
+      zh: `search(${searchKey}) → 在 leaf_${searchLeafIndex} ${keyList(searchLeaf)} 中${searchLeaf.includes(searchKey) ? '找到' : '查找'} ${searchKey}`,
+      en: `search(${searchKey}) → inspect leaf_${searchLeafIndex} ${keyList(searchLeaf)}`,
     },
-    action: { type: 'highlight', targets: [3], color: 'primary' },
-    events: [{ type: 'tree.visit', nodeId: 'internal_2' }],
-    stats: { comparisons: 2, swaps: 0, accesses: 1 },
-  })
-
-  steps.push({
-    stepId: sid++, codeLine: 4,
-    description: {
-      zh: 'search(45) → 在叶子 leaf_3 [45=Ivy, 50=Jack, 60=Kate] 中找到 45 → "Ivy"',
-      en: 'search(45) → found in leaf leaf_3, returns "Ivy"',
-    },
-    action: { type: 'highlight', targets: [7], color: 'success' },
-    events: [{ type: 'tree.visit', nodeId: 'leaf_3' }],
-    stats: { comparisons: 2, swaps: 0, accesses: 1 },
+    action: { type: 'highlight', targets: [searchLeafIndex + 1], color: searchLeaf.includes(searchKey) ? 'success' : 'warning' },
+    events: [{ type: 'tree.visit', nodeId: `leaf_${searchLeafIndex}` }],
+    stats: { comparisons: Math.max(1, searchLeaf.length), swaps: 0, accesses: 1 },
   })
 
   steps.push({
     stepId: sid++, codeLine: 5,
     description: {
-      zh: 'range_query(30, 60) → 在 leaf_2 找到起点 30，沿叶子链表扫描到 60 停止',
-      en: 'range_query(30, 60) → find start at leaf_2, follow leaf linked list to 60',
+      zh: `range_query(${rangeBounds[0]}, ${rangeBounds[1]}) → 沿叶子链扫描 ${rangeLeafIds.join(' → ') || '空区间'}`,
+      en: `range_query(${rangeBounds[0]}, ${rangeBounds[1]}) → scan leaves ${rangeLeafIds.join(' -> ') || 'empty range'}`,
     },
-    action: { type: 'highlight', targets: [6, 7], color: 'success' },
-    events: [
-      { type: 'tree.visit', nodeId: 'leaf_2' },
-      { type: 'tree.visit', nodeId: 'leaf_3' },
-    ],
-    stats: { comparisons: 0, swaps: 0, accesses: 8 },
+    action: { type: 'highlight', targets: [], color: 'success' },
+    events: rangeLeafIds.map(nodeId => ({ type: 'tree.visit' as const, nodeId })),
+    stats: { comparisons: 0, swaps: 0, accesses: rangeLeafIds.reduce((sum, id) => {
+      const index = Number(id.replace('leaf_', ''))
+      return sum + (leaves[index]?.length ?? 0)
+    }, 0) },
   })
 
   steps.push({
     stepId: sid++, codeLine: 6,
     description: {
       zh: 'B+树优势：范围查询利用叶子链表 O(k) 扫描，无需回溯内部节点',
-      en: 'B+ Tree advantage: range queries use leaf linked list O(k) scan, no need to revisit internal nodes',
+      en: 'B+ Tree advantage: range queries use linked leaves for O(k) scan without revisiting internal nodes',
     },
     action: { type: 'mark', targets: [], color: 'success' },
     events: [{ type: 'scene.clear_highlight' }],
@@ -100,7 +149,7 @@ export function generateBPlusTree(): AnimationScript {
     algorithm: 'bplus_tree',
     complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'tree' },
-    initialState: { type: 'tree', data: [] },
+    initialState: { type: 'tree', data: keys },
     steps,
   }
 }
