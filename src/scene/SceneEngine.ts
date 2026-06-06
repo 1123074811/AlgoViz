@@ -8,10 +8,14 @@ import { layoutGraph } from './layouts/graphLayout'
 import { layoutLinkedList } from './layouts/linkedListLayout'
 import { layoutTree } from './layouts/treeLayout'
 import { applyRegionLayout } from './regionLayout'
+import { createAlgorithmOverlayState } from './overlays/overlayCompiler'
 
 // ── Snapshot cache for incremental replay ──
 
 const SNAPSHOT_INTERVAL = 20 // Save a snapshot every N steps
+const MIN_AUX_CELL_W = 56
+const MAX_AUX_CELL_W = 170
+const AUX_CELL_GAP = 8
 
 interface SnapshotEntry {
   step: number
@@ -61,6 +65,62 @@ function deepCloneScene(scene: SceneState): SceneState {
     ...(scene.camera && { camera: { ...scene.camera } }),
     ...(scene.selectedIds && { selectedIds: [...scene.selectedIds] }),
     ...(scene.notes && { notes: [...scene.notes] }),
+    ...(scene.overlays && {
+      overlays: {
+        callStack: scene.overlays.callStack
+          ? {
+              ...scene.overlays.callStack,
+              frames: scene.overlays.callStack.frames.map((frame) => ({ ...frame })),
+              highlightedFrameIds: [...scene.overlays.callStack.highlightedFrameIds],
+            }
+          : undefined,
+        dpTables: Object.fromEntries(
+          Object.entries(scene.overlays.dpTables).map(([key, table]) => [
+            key,
+            {
+              ...table,
+              rowLabels: [...table.rowLabels],
+              colLabels: [...table.colLabels],
+              cells: table.cells.map((row) => row.map((cell) => ({ ...cell, highlights: [...cell.highlights] }))),
+              dependencies: table.dependencies.map((dependency) => ({
+                ...dependency,
+                from: { ...dependency.from },
+                to: { ...dependency.to },
+              })),
+              formulas: table.formulas.map((formula) => ({
+                ...formula,
+                target: { ...formula.target },
+              })),
+              traceback: table.traceback.map((coord) => ({ ...coord })),
+              roll: table.roll
+                ? {
+                    ...table.roll,
+                    window: table.roll.window ? { ...table.roll.window } : undefined,
+                  }
+                : undefined,
+            },
+          ]),
+        ),
+        grids: Object.fromEntries(
+          Object.entries(scene.overlays.grids).map(([key, grid]) => [
+            key,
+            {
+              ...grid,
+              cells: Object.fromEntries(
+                Object.entries(grid.cells).map(([cellKey, cell]) => [cellKey, { ...cell }]),
+              ),
+              frontier: grid.frontier.map(([row, col]) => [row, col]),
+              path: grid.path.map(([row, col]) => [row, col]),
+              arrows: grid.arrows.map((arrow) => ({
+                ...arrow,
+                from: [...arrow.from],
+                to: [...arrow.to],
+              })),
+            },
+          ]),
+        ),
+      },
+    }),
   }
 }
 
@@ -73,6 +133,11 @@ function deepCloneScene(scene: SceneState): SceneState {
  * seeded entities (same ids), so this is a safe no-harm fallback.
  */
 function seedInitialStructures(scene: SceneState, script: AnimationScript): SceneState {
+  const firstStepEvents = script.steps[0]?.events ?? []
+  const hasVariableInit = script.presentation?.module === 'variables'
+    || firstStepEvents.some(event => event.type === 'math.init')
+  if (hasVariableInit) return scene
+
   if (script.initialState.type === 'array' && (script.initialState.data?.length ?? 0) > 0) {
     const commands = compileEvent(
       { type: 'array.create', values: script.initialState.data } as AlgorithmEvent,
@@ -122,6 +187,7 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
   if (currentStep === 0 && script.steps.length > 0) {
     const firstStepEvents = script.steps[0].events ?? []
     const createEvents = firstStepEvents.filter((event) =>
+      event.type === 'math.init' ||
       event.type.endsWith('.create') ||
       event.type.endsWith('_double') ||
       event.type === 'linked_list.create' ||
@@ -382,7 +448,6 @@ function renderAuxiliaryArrays(scene: SceneState, teachingState: TeachingState |
     if (label.position.y > maxY) maxY = label.position.y
   }
 
-  const CELL_W = 52
   const CELL_H = 38
   const LABEL_H = 26
   const ARRAY_GAP = 84  // gap between auxiliary arrays
@@ -410,8 +475,9 @@ function renderAuxiliaryArrays(scene: SceneState, teachingState: TeachingState |
     const arr = auxArrays[ai]
     const startY = maxY + 60 + ai * ARRAY_GAP
     const count = arr.data.length
+    const cellWidths = arr.data.map(estimateAuxiliaryCellWidth)
     // Center the row
-    const totalWidth = count * CELL_W
+    const totalWidth = cellWidths.reduce((sum, width) => sum + width, 0) + Math.max(0, count - 1) * AUX_CELL_GAP
     const startX = 500 - totalWidth / 2
 
     // Label - perfectly centered over the array
@@ -429,11 +495,13 @@ function renderAuxiliaryArrays(scene: SceneState, teachingState: TeachingState |
     }
 
     // Cells
+    let cursorX = startX
     for (let ci = 0; ci < count; ci++) {
       const val = arr.data[ci]
       const isActive = arr.activeIndices?.includes(ci)
       const cellColor = arr.colorMap?.[ci]
       const cellId = `aux_${arr.id}_${ci}`
+      const width = cellWidths[ci]
 
       scene = {
         ...scene,
@@ -442,8 +510,8 @@ function renderAuxiliaryArrays(scene: SceneState, teachingState: TeachingState |
           [cellId]: {
             id: cellId,
             type: 'cell',
-            position: { x: startX + ci * CELL_W + CELL_W / 2, y: startY },
-            size: { width: CELL_W - 4, height: CELL_H },
+            position: { x: cursorX + width / 2, y: startY },
+            size: { width, height: CELL_H },
             value: val?.toString() ?? '',
             col: ci,
             state: {
@@ -454,10 +522,19 @@ function renderAuxiliaryArrays(scene: SceneState, teachingState: TeachingState |
           },
         },
       }
+      cursorX += width + AUX_CELL_GAP
     }
   }
 
   return scene
+}
+
+function estimateAuxiliaryCellWidth(value: number | string): number {
+  const text = value?.toString() ?? ''
+  const width = Array.from(text).reduce((sum, char) => {
+    return sum + (char.charCodeAt(0) > 255 ? 15 : 8)
+  }, 24)
+  return Math.max(MIN_AUX_CELL_W, Math.min(MAX_AUX_CELL_W, Math.ceil(width)))
 }
 
 export function applyCommands(scene: SceneState, commands: SceneCommand[]): SceneState {
@@ -466,6 +543,41 @@ export function applyCommands(scene: SceneState, commands: SceneCommand[]): Scen
 
 function applyCommand(scene: SceneState, command: SceneCommand): SceneState {
   switch (command.type) {
+    case 'overlay.callstack.set':
+    case 'overlay.callstack.patch':
+      return {
+        ...scene,
+        overlays: {
+          ...(scene.overlays ?? createAlgorithmOverlayState()),
+          callStack: command.model,
+        },
+      }
+    case 'dp-table.model': {
+      const overlays = scene.overlays ?? createAlgorithmOverlayState()
+      return {
+        ...scene,
+        overlays: {
+          ...overlays,
+          dpTables: {
+            ...overlays.dpTables,
+            [command.tableId]: command.model,
+          },
+        },
+      }
+    }
+    case 'grid.model': {
+      const overlays = scene.overlays ?? createAlgorithmOverlayState()
+      return {
+        ...scene,
+        overlays: {
+          ...overlays,
+          grids: {
+            ...overlays.grids,
+            [command.gridId]: command.model,
+          },
+        },
+      }
+    }
     case 'create_node':
       return { ...scene, entities: { ...scene.entities, [command.node.id]: command.node } }
     case 'create_cell':

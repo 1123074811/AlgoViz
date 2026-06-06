@@ -1,6 +1,12 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import type { AnimationScript, ActionColor, TeachingState, VisualRole, TreeInitialNode } from '@/types/animation'
 
+interface PlaybackState {
+  script: AnimationScript | null
+  currentStep: number
+  isPlaying: boolean
+}
+
 export interface VisualState {
   arrayData: number[]
   colorMap: Map<number, ActionColor>
@@ -21,12 +27,29 @@ export interface VisualState {
 }
 
 export function useAnimationEngine(script: AnimationScript | null) {
-  const [currentStep, setCurrentStep] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(false)
+  const [playback, setPlayback] = useState<PlaybackState>(() => ({
+    script,
+    currentStep: 0,
+    isPlaying: false,
+  }))
   const [speed, setSpeed] = useState(1)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const totalSteps = script?.steps.length ?? 0
+  const effectivePlayback = playback.script === script
+    ? playback
+    : { script, currentStep: 0, isPlaying: false }
+  const currentStep = Math.min(effectivePlayback.currentStep, totalSteps)
+  const isPlaying = effectivePlayback.isPlaying && currentStep < totalSteps
+
+  const updatePlayback = useCallback((updater: (state: PlaybackState) => PlaybackState) => {
+    setPlayback((prev) => {
+      const base = prev.script === script
+        ? prev
+        : { script, currentStep: 0, isPlaying: false }
+      return updater(base)
+    })
+  }, [script])
 
   // Replay all steps up to currentStep to derive array state and persistent colors
   const visualState = useMemo<VisualState>(() => {
@@ -118,17 +141,12 @@ export function useAnimationEngine(script: AnimationScript | null) {
       edgeColorMap: persistentEdgeColors.size > 0 ? persistentEdgeColors : undefined,
       nodeRoleMap: nodeRoleMap.size > 0 ? nodeRoleMap : undefined,
     }
-  }, [script, currentStep])
+  }, [script, currentStep, totalSteps])
 
   // Current step details
   const currentStepData = script
     ? script.steps[Math.min(currentStep, script.steps.length) - 1] ?? null
     : null
-
-  useEffect(() => {
-    setIsPlaying(false)
-    setCurrentStep(0)
-  }, [script])
 
   // Clear interval helper
   const clearTimer = useCallback(() => {
@@ -147,56 +165,56 @@ export function useAnimationEngine(script: AnimationScript | null) {
 
     const ms = 1500 / speed
     intervalRef.current = setInterval(() => {
-      setCurrentStep((prev) => {
-        if (prev >= script.steps.length) {
-          setIsPlaying(false)
-          return prev
+      updatePlayback((prev) => {
+        if (prev.currentStep >= script.steps.length) {
+          return { ...prev, isPlaying: false }
         }
-        return prev + 1
+        const nextStep = prev.currentStep + 1
+        return {
+          ...prev,
+          currentStep: nextStep,
+          isPlaying: nextStep < script.steps.length,
+        }
       })
     }, ms)
 
     return clearTimer
-  }, [isPlaying, speed, script, clearTimer])
-
-  // Stop playing when reaching the end
-  useEffect(() => {
-    if (currentStep >= totalSteps && totalSteps > 0) {
-      setIsPlaying(false)
-    }
-  }, [currentStep, totalSteps])
+  }, [isPlaying, speed, script, clearTimer, updatePlayback])
 
   const stepForward = useCallback(() => {
-    setCurrentStep((prev) => Math.min(prev + 1, totalSteps))
-  }, [totalSteps])
+    updatePlayback((prev) => ({
+      ...prev,
+      currentStep: Math.min(prev.currentStep + 1, totalSteps),
+    }))
+  }, [totalSteps, updatePlayback])
 
   const stepBackward = useCallback(() => {
-    setCurrentStep((prev) => Math.max(prev - 1, 0))
-  }, [])
+    updatePlayback((prev) => ({
+      ...prev,
+      currentStep: Math.max(prev.currentStep - 1, 0),
+    }))
+  }, [updatePlayback])
 
   const reset = useCallback(() => {
-    setIsPlaying(false)
-    setCurrentStep(0)
-  }, [])
+    updatePlayback((prev) => ({ ...prev, isPlaying: false, currentStep: 0 }))
+  }, [updatePlayback])
 
   const goToEnd = useCallback(() => {
-    setIsPlaying(false)
-    setCurrentStep(totalSteps)
-  }, [totalSteps])
+    updatePlayback((prev) => ({ ...prev, isPlaying: false, currentStep: totalSteps }))
+  }, [totalSteps, updatePlayback])
 
   const togglePlay = useCallback(() => {
-    setIsPlaying((prev) => {
-      if (!prev && currentStep >= totalSteps) {
-        setCurrentStep(0)
-        return true
+    updatePlayback((prev) => {
+      const normalizedStep = Math.min(prev.currentStep, totalSteps)
+      if (!prev.isPlaying && normalizedStep >= totalSteps) {
+        return { ...prev, currentStep: 0, isPlaying: true }
       }
-      return !prev
+      return { ...prev, currentStep: normalizedStep, isPlaying: !prev.isPlaying }
     })
-  }, [currentStep, totalSteps])
+  }, [totalSteps, updatePlayback])
 
-  const loadScript = useCallback((_script: AnimationScript) => {
-    setIsPlaying(false)
-    setCurrentStep(0)
+  const loadScript = useCallback((nextScript: AnimationScript) => {
+    setPlayback({ script: nextScript, currentStep: 0, isPlaying: false })
   }, [])
 
   return {

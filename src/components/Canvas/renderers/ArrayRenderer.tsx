@@ -70,7 +70,7 @@ export default function ArrayRenderer({ visualState, currentStepData }: ArrayRen
 
       return { key: elementId, left, width: barWidth, y: baseline - heightPct, height: heightPct, color, value, index }
     })
-  }, [arrayData, colorMap, elementIds, topReserve, bottomReserve, barArea, baseline])
+  }, [arrayData, colorMap, elementIds, barArea, baseline])
 
   // Interpolation-based animation from prev to current layout
   useLayoutEffect(() => {
@@ -88,8 +88,6 @@ export default function ArrayRenderer({ visualState, currentStepData }: ArrayRen
       return
     }
 
-    // Capture current target and previous state
-    const targetLayout = new Map(bars.map((b) => [b.key, b] as const))
     const startLayout = new Map<number, BarLayout>()
     for (const b of bars) {
       const p = prev.get(b.key)

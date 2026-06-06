@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AnimationScript, AnimationStep } from '@/types/animation'
 import { deriveSceneState } from './SceneEngine'
@@ -15,6 +15,7 @@ import RegionView from './primitives/RegionView'
 import SetView from './primitives/SetView'
 import StringView from './primitives/StringView'
 import VariablesView from './primitives/VariablesView'
+import AlgorithmOverlays from './overlays/AlgorithmOverlays'
 import type { SceneCell, SceneEntity, SceneNode } from './types'
 
 interface SceneCanvasProps {
@@ -33,21 +34,39 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
   const pointers = Object.values(scene.pointers)
   const labels = Object.values(scene.labels)
   const latestNote = scene.notes?.[scene.notes.length - 1]
-  const isEmpty = entities.length === 0 && edges.length === 0 && pointers.length === 0 && labels.length === 0
+  const hasOverlays = Boolean(
+    scene.overlays?.callStack ||
+    Object.keys(scene.overlays?.dpTables ?? {}).length > 0 ||
+    Object.keys(scene.overlays?.grids ?? {}).length > 0,
+  )
+  const isEmpty = entities.length === 0 && edges.length === 0 && pointers.length === 0 && labels.length === 0 && !hasOverlays
 
   // 1. Zoom and Pan state
-  const [zoom, setZoom] = useState(1)
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
+  const [viewport, setViewport] = useState(() => ({
+    script,
+    zoom: 1,
+    panOffset: { x: 0, y: 0 },
+  }))
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const initialPanOffset = useRef({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Reset zoom and pan when script changes
-  useEffect(() => {
-    setZoom(1)
-    setPanOffset({ x: 0, y: 0 })
-  }, [script])
+  const activeViewport = viewport.script === script
+    ? viewport
+    : { script, zoom: 1, panOffset: { x: 0, y: 0 } }
+  const { zoom, panOffset } = activeViewport
+
+  const updateViewport = (
+    updater: (state: typeof activeViewport) => typeof activeViewport,
+  ) => {
+    setViewport((prev) => {
+      const base = prev.script === script
+        ? prev
+        : { script, zoom: 1, panOffset: { x: 0, y: 0 } }
+      return updater(base)
+    })
+  }
 
   // 2. Compute viewBox dimensions (centered on content with 1.6 aspect ratio)
   const { xStart, yStart, width, height } = computeViewBoxDimensions(entities, labels)
@@ -64,16 +83,15 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
 
   // 3. Zoom / Pan handlers
   const handleZoomIn = () => {
-    setZoom(z => Math.min(4.0, z * 1.2))
+    updateViewport((state) => ({ ...state, zoom: Math.min(4.0, state.zoom * 1.2) }))
   }
 
   const handleZoomOut = () => {
-    setZoom(z => Math.max(0.5, z / 1.2))
+    updateViewport((state) => ({ ...state, zoom: Math.max(0.5, state.zoom / 1.2) }))
   }
 
   const handleReset = () => {
-    setZoom(1)
-    setPanOffset({ x: 0, y: 0 })
+    updateViewport((state) => ({ ...state, zoom: 1, panOffset: { x: 0, y: 0 } }))
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -93,10 +111,13 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
     const ratioX = viewBoxWidth / (rect.width || 1)
     const ratioY = viewBoxHeight / (rect.height || 1)
 
-    setPanOffset({
-      x: initialPanOffset.current.x - dx * ratioX,
-      y: initialPanOffset.current.y - dy * ratioY
-    })
+    updateViewport((state) => ({
+      ...state,
+      panOffset: {
+        x: initialPanOffset.current.x - dx * ratioX,
+        y: initialPanOffset.current.y - dy * ratioY,
+      },
+    }))
   }
 
   const handleMouseUpOrLeave = () => {
@@ -108,7 +129,7 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
     e.preventDefault()
     const zoomFactor = 1.15
     const nextZoom = e.deltaY < 0 ? zoom * zoomFactor : zoom / zoomFactor
-    setZoom(Math.max(0.5, Math.min(4.0, nextZoom)))
+    updateViewport((state) => ({ ...state, zoom: Math.max(0.5, Math.min(4.0, nextZoom)) }))
   }
 
   return (
@@ -152,9 +173,11 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
           <RegionView key={g.id} region={g} />
         ))}
         {renderContainers(entities, Object.values(scene.groups).some(g => g.id.startsWith('region_')))}
+        {renderArrayWindowOverlay(entities, 'backdrop')}
         <g className="pointer-events-auto">
           {edges.map((edge) => <EdgeView key={edge.id} edge={edge} scene={scene} />)}
           {entities.map((entity) => entity.type === 'cell' ? <CellView key={entity.id} cell={entity} /> : null)}
+          {renderArrayWindowOverlay(entities, 'boundary')}
           {entities.map((entity) => entity.type === 'node' ? <NodeView key={entity.id} node={entity} /> : null)}
           {labels.map((label) => <LabelView key={label.id} label={label} />)}
           {pointers.map((pointer, index) => <PointerView key={pointer.id} pointer={pointer} scene={scene} index={index} />)}
@@ -168,6 +191,7 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
           }
         `}</style>
       </svg>
+      <AlgorithmOverlays overlays={scene.overlays} />
 
       {/* Floating Zoom / Pan Controls */}
       <div 
@@ -223,6 +247,117 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
         ) : null
       })()}
     </div>
+  )
+}
+
+function renderArrayWindowOverlay(entities: SceneEntity[], layer: 'backdrop' | 'boundary') {
+  const windowCells = entities
+    .filter((entity): entity is SceneCell =>
+      entity.type === 'cell' &&
+      /^arr_\d+$/.test(entity.id) &&
+      entity.state?.role === 'window'
+    )
+    .sort((a, b) => parseInt(a.id.replace('arr_', '')) - parseInt(b.id.replace('arr_', '')))
+
+  if (windowCells.length === 0) return null
+
+  const segments: SceneCell[][] = []
+  for (const cell of windowCells) {
+    const index = parseInt(cell.id.replace('arr_', ''))
+    const lastSegment = segments[segments.length - 1]
+    const previous = lastSegment?.[lastSegment.length - 1]
+    const previousIndex = previous ? parseInt(previous.id.replace('arr_', '')) : null
+    if (!lastSegment || previousIndex === null || index !== previousIndex + 1) {
+      segments.push([cell])
+    } else {
+      lastSegment.push(cell)
+    }
+  }
+
+  return (
+    <g className="array-window-overlays" pointerEvents="none">
+      {segments.map((segment, segmentIndex) => {
+        const first = segment[0]
+        const last = segment[segment.length - 1]
+        const firstWidth = first.size?.width ?? 44
+        const lastWidth = last.size?.width ?? 44
+        const height = Math.max(...segment.map(cell => cell.size?.height ?? 44))
+        const left = first.position.x - firstWidth / 2
+        const right = last.position.x + lastWidth / 2
+        const top = first.position.y - height / 2
+        const overlayWidth = right - left
+        const color = first.state?.color === 'success'
+          ? { stroke: '#10B981', fill: '#D1FAE5', rail: '#6EE7B7' }
+          : { stroke: '#2563EB', fill: '#DBEAFE', rail: '#93C5FD' }
+        const railY = height + 8
+        const boundaryTop = -2
+        const boundaryBottom = height + 10
+
+        return (
+          <g
+            key={`array-window-${layer}-${segmentIndex}`}
+            className="array-window-overlay"
+            style={{ transform: `translate(${left}px, ${top}px)` }}
+          >
+            {layer === 'backdrop' && (
+              <>
+                <rect
+                  x={-3}
+                  y={-4}
+                  width={overlayWidth + 6}
+                  height={height + 8}
+                  rx={10}
+                  fill={color.fill}
+                  opacity={0.34}
+                />
+                <line
+                  x1={-4}
+                  y1={railY}
+                  x2={overlayWidth + 4}
+                  y2={railY}
+                  stroke={color.rail}
+                  strokeWidth={1.2}
+                  strokeLinecap="round"
+                  opacity={0.58}
+                />
+              </>
+            )}
+            {layer === 'boundary' && (
+              <>
+                <line
+                  x1={-5}
+                  y1={boundaryTop}
+                  x2={-5}
+                  y2={boundaryBottom}
+                  stroke={color.stroke}
+                  strokeWidth={3.4}
+                  strokeLinecap="round"
+                  className="array-window-boundary"
+                />
+                <line
+                  x1={overlayWidth + 5}
+                  y1={boundaryTop}
+                  x2={overlayWidth + 5}
+                  y2={boundaryBottom}
+                  stroke={color.stroke}
+                  strokeWidth={3.4}
+                  strokeLinecap="round"
+                  className="array-window-boundary"
+                />
+              </>
+            )}
+          </g>
+        )
+      })}
+      <style>{`
+        .array-window-overlay {
+          transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .array-window-boundary {
+          filter: drop-shadow(0 2px 4px rgb(37 99 235 / 0.22));
+        }
+      `}</style>
+    </g>
   )
 }
 

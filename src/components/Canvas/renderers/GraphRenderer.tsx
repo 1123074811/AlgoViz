@@ -13,6 +13,8 @@ const COLOR_MAP: Record<string, string> = {
 }
 
 const layoutCache = new Map<string, Map<string, { x: number; y: number }>>()
+const EMPTY_NODES: NonNullable<VisualState['nodes']> = []
+const EMPTY_EDGES: NonNullable<VisualState['edges']> = []
 
 function stableKey(nodes: { id: string }[]): string {
   return nodes.map(n => n.id).sort().join(',')
@@ -21,8 +23,8 @@ function stableKey(nodes: { id: string }[]): string {
 export default function GraphRenderer({ visualState }: GraphRendererProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const { colorMap, edgeColorMap, teachingState } = visualState
-  const nodes = visualState.nodes || []
-  const edges = visualState.edges || []
+  const nodes = visualState.nodes ?? EMPTY_NODES
+  const edges = visualState.edges ?? EMPTY_EDGES
 
   const gState = teachingState?.graph
   const queue = gState?.queue
@@ -165,7 +167,7 @@ export default function GraphRenderer({ visualState }: GraphRendererProps) {
           .text(String(dist))
       }
     })
-  }, [nodes, edges, colorMap, edgeColorMap, teachingState])
+  }, [nodes, edges, colorMap, edgeColorMap, distances, edgeStates, nodeStates])
 
   if (nodes.length === 0) {
     return <div className="flex items-center justify-center h-full text-muted text-sm">No graph data to visualize</div>
