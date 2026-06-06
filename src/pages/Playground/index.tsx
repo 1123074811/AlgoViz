@@ -62,6 +62,7 @@ export default function Playground() {
   // Phase 2: AI-generated generator for custom (unrecognized) algorithms.
   const [generator, setGenerator] = useState<{ body: string; type: 'array' | 'graph' | 'tree' | 'linked_list' } | null>(null)
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
+  const decorationsRef = useRef<string[]>([])
 
   const hasApiConfig = getApiConfig() !== null
 
@@ -87,6 +88,35 @@ export default function Playground() {
   }, [setAnimationScript, setAIStatus])
 
   const handleEditorMount: OnMount = useCallback((editor) => { editorRef.current = editor }, [])
+
+  // Highlight the source line the current animation step maps to (step.codeLine,
+  // set by b.line() in the generator). Mirrors the Visualizer's code-line arrow.
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor || !animationScript) {
+      if (editor) decorationsRef.current = editor.deltaDecorations(decorationsRef.current, [])
+      return
+    }
+    const steps = animationScript.steps
+    const currentCodeLine = steps[currentStep - 1]?.codeLine ?? -1
+    const decos: Parameters<typeof editor.deltaDecorations>[1] = []
+    const visited = new Set<number>()
+    for (let i = 0; i < Math.min(currentStep - 1, steps.length); i++) {
+      const cl = steps[i]?.codeLine ?? -1
+      if (cl >= 0) visited.add(cl)
+    }
+    for (const line of visited) {
+      if (line !== currentCodeLine) {
+        decos.push({ range: { startLineNumber: line + 1, startColumn: 1, endLineNumber: line + 1, endColumn: 1 },
+          options: { isWholeLine: true, className: 'visited-line', glyphMarginClassName: 'visited-glyph' } })
+      }
+    }
+    if (currentCodeLine >= 0) {
+      decos.push({ range: { startLineNumber: currentCodeLine + 1, startColumn: 1, endLineNumber: currentCodeLine + 1, endColumn: 1 },
+        options: { isWholeLine: true, className: 'active-line', glyphMarginClassName: 'active-glyph' } })
+    }
+    decorationsRef.current = editor.deltaDecorations(decorationsRef.current, decos)
+  }, [currentStep, animationScript])
 
   // Build an animation locally from a recognized built-in generator + current input.
   // Returns null when input is invalid or generation fails (keeps last animation).
@@ -326,6 +356,13 @@ export default function Playground() {
 
   return (
     <div className="h-full flex flex-col bg-white">
+      <style>{`
+        .active-line { background: rgba(245, 158, 11, 0.12) !important; border-left: 3px solid #F59E0B; }
+        .visited-line { background: rgba(37, 99, 235, 0.04) !important; border-left: 3px solid #93C5FD; }
+        .active-glyph { background: transparent !important; width: 18px !important; margin-left: 2px; }
+        .active-glyph::after { content: '▶'; position: absolute; left: 1px; top: 50%; transform: translateY(-50%); color: #F59E0B; font-size: 10px; }
+        .visited-glyph { background: #93C5FD; width: 3px !important; margin-left: 4px; border-radius: 2px; }
+      `}</style>
       <Header />
       {/* Sub-header bar */}
       <div className="h-10 border-b border-border flex items-center justify-between px-4 shrink-0 bg-surface">

@@ -20,39 +20,94 @@ function coerceArray(values: unknown): (number | string)[] {
   return []
 }
 
-/** Derive a readable Chinese description from an event when the AI omits b.desc(). */
+/** Derive a readable Chinese description from an event when the AI omits b.desc().
+ *  Covers every event family so a step never falls back to a meaningless "步骤 N". */
 function defaultDescFor(event: AlgorithmEvent | undefined): string {
   if (!event) return ''
   const e = event as Record<string, unknown>
+  const idx = (k = 'indices') => (e[k] as number[] | undefined)?.join('、')
   switch (event.type) {
+    // array
     case 'array.create': return '初始化数组'
-    case 'array.compare': return `比较索引 ${(e.indices as number[])?.join(' 与 ')}`
-    case 'array.swap': return `交换索引 ${(e.indices as number[])?.join(' 与 ')}`
+    case 'array.compare': return `比较索引 ${idx()}`
+    case 'array.swap': return `交换索引 ${idx()}`
     case 'array.move': return `移动 ${e.from} → ${e.to}`
     case 'array.set_value': return `更新索引 ${e.index} 的值为 ${e.value}`
-    case 'array.mark_sorted': return `标记索引 ${(e.indices as number[])?.join(',')} 已确定`
+    case 'array.mark_sorted': return `标记索引 ${idx()} 已确定`
     case 'array.partition': return `以索引 ${e.pivotIndex} 为基准划分`
+    // graph
+    case 'graph.create': return '构建图'
     case 'graph.visit_node': return `访问节点 ${e.nodeId}`
     case 'graph.visit_edge': return `检查边 ${e.source}→${e.target}`
     case 'graph.relax_edge': return `松弛边 ${e.source}→${e.target}`
     case 'graph.enqueue': return `节点 ${e.nodeId} 入队`
     case 'graph.dequeue': return `节点 ${e.nodeId} 出队`
+    // tree
+    case 'tree.create': return '构建树'
+    case 'tree.visit': return `访问节点 ${e.nodeId}`
+    case 'tree.insert': return `插入节点 ${(e.node as { value?: unknown })?.value ?? ''}`
+    case 'tree.compare': return `与节点 ${e.nodeId} 比较`
+    case 'tree.rotate': return `旋转（${e.rotation}）`
+    // linked_list
+    case 'linked_list.create': return '构建链表'
+    case 'linked_list.visit': return `访问节点 ${e.nodeId}`
+    case 'linked_list.insert_after': return `在 ${e.targetNodeId} 后插入`
+    case 'linked_list.delete': return `删除节点 ${e.nodeId}`
+    case 'linked_list.move_pointer': return `移动指针 ${e.pointerId}`
+    // stack
+    case 'stack.create': return '初始化栈'
     case 'stack.push': return `${e.value} 入栈`
     case 'stack.pop': return '弹出栈顶'
+    case 'stack.peek': return '查看栈顶'
+    // queue
+    case 'queue.create': return '初始化队列'
     case 'queue.enqueue': return `${e.value} 入队`
-    case 'queue.dequeue': return '出队'
+    case 'queue.dequeue': return '队首出队'
+    case 'queue.peek_front': return '查看队首'
+    // deque
+    case 'deque.create': return '初始化双端队列'
+    case 'deque.push_front': return `${e.value} 加入队首`
+    case 'deque.push_back': return `${e.value} 加入队尾`
+    case 'deque.pop_front': return '移除队首'
+    case 'deque.pop_back': return '移除队尾'
+    // heap
+    case 'heap.create': return '建堆'
     case 'heap.push': return `${e.value} 入堆`
     case 'heap.pop': return '弹出堆顶'
     case 'heap.sift': return `堆调整：索引 ${e.from} ↔ ${e.to}`
+    case 'heap.peek': return '查看堆顶'
+    // hashtable
+    case 'hashtable.create': return '初始化哈希表'
     case 'hashtable.put': return `存入 ${e.key} → 桶 ${e.bucket}`
     case 'hashtable.get': return `查找 ${e.key}`
+    case 'hashtable.remove': return `删除 ${e.key}`
+    // set
+    case 'set.create': return '初始化集合'
     case 'set.add': return `加入 ${e.value}`
+    case 'set.remove': return `移除 ${e.value}`
     case 'set.contains': return `判断是否包含 ${e.value}`
-    case 'string.compare': return `比较字符 ${(e.indices as number[])?.join(',')}`
+    // string
+    case 'string.create': case 'string.create_double': return '初始化字符串'
+    case 'string.compare': return `比较字符 ${idx()}`
     case 'string.match': return `字符匹配于 ${e.index}`
     case 'string.mismatch': return `字符失配于 ${e.index}`
+    case 'string.mark_range': return `标记区间 ${idx()}`
+    // matrix
+    case 'matrix.create': return '初始化矩阵'
+    case 'matrix.visit_cell': return `访问格子 (${e.row},${e.col})`
+    case 'matrix.update_cell': return `更新格子 (${e.row},${e.col}) = ${e.value}`
+    case 'matrix.mark_path': return '标记路径'
+    case 'matrix.transition': return '状态转移'
+    // math / bitset
+    case 'math.init': return '初始化变量'
     case 'math.set': return `${e.name} = ${e.value}`
+    case 'math.highlight': return `关注变量 ${e.name}`
+    case 'bitset.create': return '初始化位集'
+    case 'bitset.set': return `位 ${e.index} 置为 ${e.value}`
+    case 'bitset.highlight': return `关注位 ${e.index}`
+    // scene
     case 'scene.note': return String(e.text ?? '')
+    case 'scene.link': return `连接 ${e.from} → ${e.to}`
     default: return ''
   }
 }
@@ -63,6 +118,7 @@ export class AnimationBuilder {
   private steps: AnimationStep[] = []
   private sid = 1
   private pendingDesc = ''
+  private pendingLine = -1 // -1 = unset (no code-line highlight)
   private algorithm: string
   private type: RendererType
   // captured from the first create call, used to build initialState
@@ -83,6 +139,10 @@ export class AnimationBuilder {
 
   desc(zh: string): this { this.pendingDesc = zh; return this }
 
+  /** Mark which source-code line subsequent steps map to (1-based, as shown in the
+   *  editor). Drives the "current line" arrow. Persists until changed. */
+  line(n: number): this { this.pendingLine = Math.max(0, Math.floor(n) - 1); return this }
+
   private add(events: AlgorithmEvent[], action: Action): this {
     if (this.steps.length >= MAX_STEPS) {
       throw new Error(`步数超过上限 ${MAX_STEPS}，请减少操作或简化算法`)
@@ -94,7 +154,7 @@ export class AnimationBuilder {
     const zh = this.pendingDesc || defaultDescFor(events[0]) || `步骤 ${this.sid}`
     this.steps.push({
       stepId: this.sid++,
-      codeLine: 0,
+      codeLine: this.pendingLine,
       description: { zh, en: zh },
       action,
       stats: { comparisons: 0, swaps: 0, accesses: 0 },
