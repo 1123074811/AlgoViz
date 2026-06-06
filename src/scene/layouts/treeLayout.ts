@@ -108,12 +108,20 @@ function getLeftAndRightChildren(scene: SceneState, nodeId: string): { leftId: s
   return { leftId, rightId }
 }
 
+/** Horizontal whitespace kept between two adjacent node boxes. */
+const H_GAP = 28
+/** How far a single-child binary parent leans away from its lone child. */
+const LEAN = 48
+
 /**
- * Layout tree nodes with adaptive spacing.
+ * Layout tree nodes with width-aware leaf packing.
  *
- * Horizontal and vertical gaps are computed from tree depth and leaf count,
- * so large trees don't overflow and small trees aren't too sparse.
- * The root is centered horizontally around x=500.
+ * Instead of positioning each node by fixed offsets from its parent (which lets
+ * wide sibling subtrees overlap), we pack the leaves left-to-right using each
+ * node's *actual* rendered width, then center every internal node over the span
+ * of its children. This guarantees no two node boxes overlap regardless of how
+ * wide a B/B+ tree node's key list is. The tree is finally shifted so the root
+ * sits at x=500.
  */
 export function layoutTree(scene: SceneState): Record<string, Point> {
   const nodes = getTreeNodeEntities(scene)
@@ -123,59 +131,73 @@ export function layoutTree(scene: SceneState): Record<string, Point> {
   if (!rootId) return {}
 
   const depth = computeDepth(scene, rootId, nodes)
-
-  // Widest node in the tree drives a minimum horizontal clearance so wide
-  // rectangular nodes (B/B+ tree) never overlap. Circular trees keep their
-  // compact spacing because their node widths are small.
-  const maxNodeWidth = nodes.reduce((m, n) => Math.max(m, nodeWidth(n)), 0)
-  const minClearance = maxNodeWidth + 24 // (leftW+rightW)/2 + GAP, conservative upper bound
-
-  // Symmetric binary tree layout gaps
   const vGap = Math.max(120, Math.min(145, 500 / Math.max(depth, 1)))
-  const hGap = Math.max(85, Math.min(110, 360 / Math.max(depth, 1)), minClearance)
   const startY = 80
 
+  const nodeById = new Map(nodes.map(n => [n.id, n]))
   const positions: Record<string, Point> = {}
+  const visiting = new Set<string>() // cycle guard for malformed graphs
+  let cursor = 0 // running x for the next leaf slot
 
-  function layoutNode(nodeId: string, x: number, d: number) {
-    positions[nodeId] = { x, y: startY + d * vGap }
-    
+  /** Place a node and its subtree, returning the node's center x. */
+  function place(nodeId: string, d: number): number {
+    const node = nodeById.get(nodeId)
+    const y = startY + d * vGap
+    if (!node || visiting.has(nodeId)) {
+      const w = node ? nodeWidth(node) : 48
+      const x = cursor + w / 2
+      cursor += w + H_GAP
+      if (node) positions[nodeId] = { x, y }
+      return x
+    }
+    visiting.add(nodeId)
+
     const { leftId, rightId } = getLeftAndRightChildren(scene, nodeId)
-    
-    if (leftId || rightId) {
-      // Binary Tree Mode: precise left/right symmetric offset
-      const hSpacing = hGap * Math.pow(1.85, Math.max(0, depth - d - 1))
-      if (leftId) {
-        layoutNode(leftId, x - hSpacing, d + 1)
-      }
-      if (rightId) {
-        layoutNode(rightId, x + hSpacing, d + 1)
-      }
+    let x: number
+
+    if (leftId !== null || rightId !== null) {
+      // Binary mode: keep left/right semantics; center over both children, or
+      // lean away from a lone child so the missing side stays visually open.
+      const lx = leftId ? place(leftId, d + 1) : null
+      const rx = rightId ? place(rightId, d + 1) : null
+      if (lx !== null && rx !== null) x = (lx + rx) / 2
+      else if (lx !== null) x = lx + LEAN
+      else x = (rx as number) - LEAN
     } else {
-      // General Tree Mode (e.g. Trie, Multi-branch trees): layout all children symmetrically
-      const children = getChildren(scene, nodeId)
-      if (children.length > 0) {
-        const branchGap = hGap * Math.pow(1.5, Math.max(0, depth - d - 1))
-        const totalWidth = (children.length - 1) * branchGap
-        const startX = x - totalWidth / 2
-        children.forEach((childId, index) => {
-          layoutNode(childId, startX + index * branchGap, d + 1)
-        })
+      const children = getChildren(scene, nodeId).filter(c => nodeById.has(c))
+      if (children.length === 0) {
+        // Leaf: consume a width-sized slot off the cursor.
+        const w = nodeWidth(node)
+        x = cursor + w / 2
+        cursor += w + H_GAP
+      } else {
+        // Internal node: center over the span of its children.
+        const xs = children.map(c => place(c, d + 1))
+        x = (xs[0] + xs[xs.length - 1]) / 2
       }
+    }
+
+    positions[nodeId] = { x, y }
+    visiting.delete(nodeId)
+    return x
+  }
+
+  place(rootId, 0)
+
+  // Handle any unvisited nodes (disconnected during transitions): pack them on
+  // a fresh row beneath the tree so they never sit on top of laid-out nodes.
+  let orphanIndex = 0
+  for (const node of nodes) {
+    if (!positions[node.id]) {
+      positions[node.id] = { x: 100 + orphanIndex * 120, y: startY + (depth + 1) * vGap }
+      orphanIndex++
     }
   }
 
-  // Layout recursively starting from root at center x=500
-  layoutNode(rootId, 500, 0)
-
-  // Handle any unvisited nodes (nodes that might be disconnected during transitions)
-  const visited = new Set(Object.keys(positions))
-  let orphanIndex = 0
-  for (const node of nodes) {
-    if (!visited.has(node.id)) {
-      positions[node.id] = { x: 100 + orphanIndex * 120, y: startY + depth * vGap }
-      orphanIndex++
-    }
+  // Center the tree so the root sits at x=500.
+  const shift = 500 - positions[rootId].x
+  for (const id of Object.keys(positions)) {
+    positions[id] = { x: positions[id].x + shift, y: positions[id].y }
   }
 
   return positions
