@@ -182,6 +182,113 @@ export const DataUnit = {
   },
 
   /**
+   * 创建集合成员单元 (Set Member Cell)
+   * 椭圆容器内的基础元素，支持增删查操作
+   */
+  setCell(options: {
+    id: string
+    value: string | number
+    index: number
+    role?: SceneEntityState['role']
+    color?: ActionColor
+    pulse?: boolean
+    x?: number
+    y?: number
+  }): SceneCell {
+    return {
+      id: options.id,
+      type: 'cell',
+      position: { x: options.x ?? 0, y: options.y ?? 0 },
+      size: { width: 44, height: 44 },
+      value: options.value,
+      col: options.index,
+      state: {
+        role: options.role ?? 'idle',
+        color: options.color ?? 'muted',
+        pulse: options.pulse ?? false,
+      }
+    }
+  },
+
+  /**
+   * 创建映射条目节点 (Map Entry Node)
+   * 双字段 key | value 矩形节点，视觉上区别于数组 cell
+   */
+  mapEntry(options: {
+    id: string
+    key: string
+    value: string | number
+    role?: SceneEntityState['role']
+    color?: ActionColor
+    pulse?: boolean
+    x?: number
+    y?: number
+  }): SceneNode {
+    const fields: NodeField[] = [
+      { id: 'key', label: 'key', value: options.key, role: 'key' },
+      { id: 'value', label: 'value', value: options.value, role: 'value' },
+    ]
+    return {
+      id: options.id,
+      type: 'node',
+      variant: 'map.entry',
+      position: { x: options.x ?? 0, y: options.y ?? 0 },
+      size: { width: 120, height: 48 },
+      fields,
+      ports: [],
+      state: {
+        role: options.role ?? 'idle',
+        color: options.color ?? 'muted',
+        pulse: options.pulse ?? false,
+      },
+      meta: { key: options.key, rawValue: options.value },
+    }
+  },
+
+  /**
+   * 创建 B树节点单元 (B-Tree Node)
+   * 多关键码宽节点，支持多个子节点端口
+   */
+  btreeNode(options: {
+    id: string
+    keys: Array<number | string>
+    variant?: 'btree'
+    role?: SceneEntityState['role']
+    color?: ActionColor
+    pulse?: boolean
+    x?: number
+    y?: number
+  }): SceneNode {
+    const keyCount = options.keys.length
+    const nodeWidth = Math.max(80, keyCount * 52 + 20)
+    const fields: NodeField[] = options.keys.map((k, i) => ({
+      id: `key_${i}`,
+      label: `k${i}`,
+      value: k,
+      role: 'data' as const,
+    }))
+    const ports: NodePort[] = [
+      { id: 'parent', side: 'top', role: 'parent' },
+      ...options.keys.map((_, i) => ({ id: `child_${i}`, side: 'bottom' as const, role: 'child' as const, index: i })),
+      { id: `child_${keyCount}`, side: 'bottom' as const, role: 'child' as const, index: keyCount },
+    ]
+    return {
+      id: options.id,
+      type: 'node',
+      variant: 'tree.btree',
+      position: { x: options.x ?? 0, y: options.y ?? 0 },
+      size: { width: nodeWidth, height: 52 },
+      fields,
+      ports,
+      state: {
+        role: options.role ?? 'idle',
+        color: options.color ?? 'muted',
+        pulse: options.pulse ?? false,
+      }
+    }
+  },
+
+  /**
    * 创建矩阵 / DP 表格单元 (Matrix DP Cell)
    * 带有行列坐标，专门用于动态规划的状态转移展示
    */
