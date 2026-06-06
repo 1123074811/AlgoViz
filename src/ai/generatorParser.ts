@@ -6,6 +6,9 @@ export interface ParsedGenerator {
   body: string
   /** AI-suggested sample input (raw JSON string), used to auto-fill an empty input box. */
   sampleInput?: string
+  /** AI-provided time/space complexity (e.g. "O(n)"), shown on the algorithm card. */
+  timeComplexity?: string
+  spaceComplexity?: string
 }
 
 export interface GeneratorParseResult {
@@ -26,6 +29,10 @@ export function parseGeneratorResponse(raw: string): GeneratorParseResult {
   const algoMatch = code.match(/\/\/\s*@algorithm\s+([A-Za-z0-9_]+)/)
   const typeMatch = code.match(/\/\/\s*@type\s+([A-Za-z_]+)/)
   const sampleMatch = code.match(/\/\/\s*@sample\s+(.+)/)
+  const timeMatch = code.match(/\/\/\s*@time\s+(.+)/)
+  const spaceMatch = code.match(/\/\/\s*@space\s+(.+)/)
+  const timeComplexity = timeMatch ? timeMatch[1].trim() : undefined
+  const spaceComplexity = spaceMatch ? spaceMatch[1].trim() : undefined
 
   const algorithm = algoMatch ? algoMatch[1] : 'custom'
   const typeStr = typeMatch ? typeMatch[1] : 'array'
@@ -46,7 +53,7 @@ export function parseGeneratorResponse(raw: string): GeneratorParseResult {
   // Body = code minus the directive comment lines.
   const body = code
     .split('\n')
-    .filter(line => !/^\s*\/\/\s*@(algorithm|type|sample)\b/.test(line))
+    .filter(line => !/^\s*\/\/\s*@(algorithm|type|sample|time|space)\b/.test(line))
     .join('\n')
     .trim()
 
@@ -57,5 +64,5 @@ export function parseGeneratorResponse(raw: string): GeneratorParseResult {
     return { success: false, error: '生成器未调用构建器 b（输出格式不符）' }
   }
 
-  return { success: true, generator: { algorithm, type, body, sampleInput } }
+  return { success: true, generator: { algorithm, type, body, sampleInput, timeComplexity, spaceComplexity } }
 }

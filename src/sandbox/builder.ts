@@ -20,6 +20,16 @@ function coerceArray(values: unknown): (number | string)[] {
   return []
 }
 
+/** Per-event contribution to cumulative stats (比较 / 交换 / 访问). */
+function statDelta(type: string): { c: number; s: number; a: number } {
+  if (/\.(compare|contains|relax_edge)$/.test(type)) return { c: 1, s: 0, a: 2 }
+  if (/\.(get|peek|peek_front|peek_back|visit|visit_node|visit_cell|highlight)$/.test(type)) return { c: 0, s: 0, a: 1 }
+  if (/\.swap$/.test(type)) return { c: 0, s: 1, a: 2 }
+  if (/\.sift$/.test(type)) return { c: 1, s: 1, a: 2 }
+  if (/\.(create|init)$/.test(type) || /^scene\./.test(type)) return { c: 0, s: 0, a: 0 }
+  return { c: 0, s: 0, a: 1 } // generic data-touching op (push/pop/set/update/insert...)
+}
+
 /** Derive a readable Chinese description from an event when the AI omits b.desc().
  *  Covers every event family so a step never falls back to a meaningless "步骤 N". */
 function defaultDescFor(event: AlgorithmEvent | undefined): string {
@@ -119,6 +129,10 @@ export class AnimationBuilder {
   private sid = 1
   private pendingDesc = ''
   private pendingLine = -1 // -1 = unset (no code-line highlight)
+  // Running cumulative stats, auto-derived from emitted events.
+  private comparisons = 0
+  private swaps = 0
+  private accesses = 0
   private algorithm: string
   private type: RendererType
   // captured from the first create call, used to build initialState
@@ -152,12 +166,16 @@ export class AnimationBuilder {
     // When the AI omits b.desc(), derive a meaningful description from the operation
     // itself instead of a meaningless "步骤 N" placeholder.
     const zh = this.pendingDesc || defaultDescFor(events[0]) || `步骤 ${this.sid}`
+    const d = statDelta(events[0]?.type ?? '')
+    this.comparisons += d.c
+    this.swaps += d.s
+    this.accesses += d.a
     this.steps.push({
       stepId: this.sid++,
       codeLine: this.pendingLine,
       description: { zh, en: zh },
       action,
-      stats: { comparisons: 0, swaps: 0, accesses: 0 },
+      stats: { comparisons: this.comparisons, swaps: this.swaps, accesses: this.accesses },
       events,
     })
     this.pendingDesc = ''

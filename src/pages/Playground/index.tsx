@@ -271,6 +271,14 @@ export default function Playground() {
           }
         }
         if (sandboxResult.ok && sandboxResult.script) {
+          // Fill in AI-provided complexity (the builder defaults to O(?)).
+          if (gen.timeComplexity || gen.spaceComplexity) {
+            const t = gen.timeComplexity || 'O(?)'
+            sandboxResult.script.complexity = {
+              time: { best: t, average: t, worst: t },
+              space: gen.spaceComplexity || 'O(?)',
+            }
+          }
           setAnimationScript(sandboxResult.script)
           setAIStatus('success')
           updateAIHistory(historyId, { status: 'success', script: sandboxResult.script, generatorBody: gen.body, generatorType: genType })

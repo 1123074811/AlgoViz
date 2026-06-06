@@ -8,6 +8,8 @@ export function buildGeneratorSystemPrompt(language: string): string {
 // @algorithm <蛇形算法名，如 selection_sort>
 // @type <array | graph | tree | linked_list>
 // @sample <一行合法 JSON 示例输入，必须符合该算法期望的输入格式>
+// @time <时间复杂度，如 O(n log n)>
+// @space <空间复杂度，如 O(1)>
 <这里是直接可执行的语句，使用变量 input 和 b，不要包成 function>
 \`\`\`
 不要输出任何代码块以外的文字。
@@ -172,6 +174,8 @@ b.heapPop()
 // @algorithm selection_sort
 // @type array
 // @sample [5, 3, 8, 1, 9, 2]
+// @time O(n²)
+// @space O(1)
 b.arrayCreate(input)
 for (let i = 0; i < input.length; i++) {
   let min = i
