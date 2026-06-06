@@ -42,6 +42,19 @@ export function buildGeneratorSystemPrompt(language: string): string {
 - \`b.listCreate('singly'|'doubly'|'circular', nodes, headId?)\`；nodes=[{id,value}]
 - \`b.listVisit(id)\` / \`b.listInsertAfter(targetId, {id,value})\` / \`b.listDelete(id)\` / \`b.movePointer(pointerId, toNodeId)\`
 
+### 栈（单调栈、括号匹配、接雨水等，@type 用 array）
+- \`b.stackCreate(values?)\` 创建栈（可空）/ \`b.stackPush(value)\` 入栈 / \`b.stackPop()\` 出栈 / \`b.stackPeek(index)\` 看某位置
+- 单调栈算法：每次 while 弹栈、压栈都发对应 stackPop/stackPush，并 b.desc 说明为什么弹/压
+
+### 队列 / 双端队列（BFS、滑动窗口，@type 用 array）
+- 队列：\`b.queueCreate(values?)\` / \`b.queueEnqueue(value)\` / \`b.queueDequeue()\` / \`b.queuePeekFront(index)\`
+- 双端队列：\`b.dequeCreate(values?)\` / \`b.dequePushFront(value)\` / \`b.dequePushBack(value)\` / \`b.dequePopFront()\` / \`b.dequePopBack()\`
+
+### 矩阵 / 2D DP 网格（@type 用 matrix）
+- \`b.matrixCreate(rows, cols, values?)\` 第一步必调；values 为二维数组（可省略=全 0）
+- \`b.matrixVisit(row, col)\` 访问格子 / \`b.matrixUpdate(row, col, value)\` 更新格子值 / \`b.matrixMarkPath(cells)\` 标记路径（cells=[{row,col}]）
+- \`b.matrixTransition({row,col}, {row,col})\` 画 DP 状态转移箭头（from→to）
+
 ### 哈希表（hash map / hash set，@type 用 array）
 - \`b.hashCreate(capacity)\` 第一步必调，创建桶数组，capacity=桶数（如 8）
 - \`b.hashPut(key, value, bucket, collision?)\` 插入；bucket=hash(key)%capacity，collision=该桶已有元素时传 true

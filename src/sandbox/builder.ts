@@ -304,6 +304,65 @@ export class AnimationBuilder {
     )
   }
 
+  // ── stack（单调栈、括号匹配、接雨水等）──
+  stackCreate(values: (number | string)[] = []): this {
+    return this.add([{ type: 'stack.create', values: coerceArray(values) }], this.act('highlight', [], 'primary'))
+  }
+  stackPush(value: number | string): this {
+    return this.add([{ type: 'stack.push', value }], this.act('insert', [], 'success'))
+  }
+  stackPop(): this {
+    return this.add([{ type: 'stack.pop' }], this.act('delete', [], 'danger'))
+  }
+  stackPeek(index: number): this {
+    return this.add([{ type: 'stack.peek', index }], this.act('highlight', [], 'warning'))
+  }
+
+  // ── queue（BFS、滑动窗口等）──
+  queueCreate(values: (number | string)[] = []): this {
+    return this.add([{ type: 'queue.create', values: coerceArray(values) }], this.act('highlight', [], 'primary'))
+  }
+  queueEnqueue(value: number | string): this {
+    return this.add([{ type: 'queue.enqueue', value }], this.act('insert', [], 'success'))
+  }
+  queueDequeue(): this {
+    return this.add([{ type: 'queue.dequeue' }], this.act('delete', [], 'danger'))
+  }
+  queuePeekFront(index: number): this {
+    return this.add([{ type: 'queue.peek_front', index }], this.act('highlight', [], 'warning'))
+  }
+
+  // ── deque（滑动窗口最大值等）──
+  dequeCreate(values: (number | string)[] = []): this {
+    return this.add([{ type: 'deque.create', values: coerceArray(values) }], this.act('highlight', [], 'primary'))
+  }
+  dequePushFront(value: number | string): this {
+    return this.add([{ type: 'deque.push_front', value }], this.act('insert', [], 'success'))
+  }
+  dequePushBack(value: number | string): this {
+    return this.add([{ type: 'deque.push_back', value }], this.act('insert', [], 'success'))
+  }
+  dequePopFront(): this {
+    return this.add([{ type: 'deque.pop_front' }], this.act('delete', [], 'danger'))
+  }
+  dequePopBack(): this {
+    return this.add([{ type: 'deque.pop_back' }], this.act('delete', [], 'danger'))
+  }
+
+  // ── matrix（DP 网格、网格遍历等）──
+  matrixCreate(rows: number, cols: number, values?: Array<Array<number | string>>): this {
+    return this.add([{ type: 'matrix.create', rows, cols, values }], this.act('highlight', [], 'primary'))
+  }
+  matrixVisit(row: number, col: number): this {
+    return this.add([{ type: 'matrix.visit_cell', row, col }], this.act('highlight', [], 'warning'))
+  }
+  matrixUpdate(row: number, col: number, value: number | string): this {
+    return this.add([{ type: 'matrix.update_cell', row, col, value }], this.act('highlight', [], 'primary'))
+  }
+  matrixMarkPath(cells: Array<{ row: number; col: number }>): this {
+    return this.add([{ type: 'matrix.mark_path', cells }], this.act('mark', [], 'success'))
+  }
+
   // ── note / escape ──
   note(text: string): this {
     return this.add([{ type: 'scene.note', text }], this.act('annotate', [], 'muted'))
