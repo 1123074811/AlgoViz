@@ -28,6 +28,13 @@ export function buildGeneratorSystemPrompt(language: string): string {
 - \`b.line(行号)\`：标注接下来的步骤对应**源代码第几行**（行号见用户代码每行行首的数字，从 1 起）。动画播放时代码旁会有 ▶ 箭头跟着走。**每个关键操作前都要先 b.line(对应行号)**——这是让箭头会动的关键，箭头停在第一行就是因为没逐步调用它。可链式 \`b.line(7).desc('...').compare(i,j)\`。
 - \`b.note(文本)\`：旁注
 
+### 通用指针（双指针/快慢指针/窗口边界/链表指针）
+- \`b.pointerCreate(pointerId, target, label?)\` 创建命名指针并放到目标位置；pointerId 用短英文如 'left'、'right'、'slow'、'fast'、'head'、'tail'，label 可用中文展示名
+- \`b.pointerMove(pointerId, target)\` 移动已有指针；适用于双指针相向/同向移动、快慢指针推进、滑动窗口 left/right 边界变化、链表 cur/prev/next 跳转
+- \`b.pointerHighlight(pointerId)\` 高亮某个指针，用于强调当前比较、读取或即将移动的指针
+- \`b.pointerClear(pointerId)\` 清除一个指定指针，使它暂时指向空目标
+要点：数组/字符串下标目标可用数字 index；链表/图/树节点目标用节点 id。双指针、快慢指针、滑动窗口边界、链表指针等"位置变量"变化时，优先用 pointerCreate/pointerMove/pointerHighlight 明确呈现，不要只写 b.note。
+
 ### 数组（排序/查找/双指针/滑动窗口）
 - \`b.arrayCreate(values)\` 第一步必调，传完整初始数组
 - \`b.compare(i, j)\` / \`b.swap(i, j)\` / \`b.move(from, to)\`
@@ -156,6 +163,7 @@ b.heapPop()
 
 ## 质量底线（违反则动画无意义）
 - **必须可视化代码真实用到的数据结构**：代码用了栈就建栈（b.stackPush/stackPop 或单调栈语义）、用了哈希表就建哈希表、用了双指针就在数组上移动指针。不要把一个用栈的算法画成几个无关的数组高亮。
+- **位置变量要显式可视化**：双指针、快慢指针、滑动窗口左右边界应优先用 \`b.pointerCreate\`/\`b.pointerMove\`/\`b.pointerHighlight\` 表达，不要只用 \`b.note\` 描述。
 - **每一个关键步骤都要有意义的 b.desc**：说清这一步在比较/入栈/更新什么、为什么。**严禁产出空描述或"步骤 N"占位**。
 - 步骤要连贯还原算法执行过程，不要只高亮零星几格就结束。
 

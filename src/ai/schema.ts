@@ -12,7 +12,7 @@ const VALID_EVENT_TYPES = new Set([
   'scene.note', 'scene.highlight', 'scene.clear_highlight', 'scene.wait',
   'linked_list.create', 'linked_list.visit', 'linked_list.move_pointer', 'linked_list.insert_after', 'linked_list.insert_before', 'linked_list.delete', 'linked_list.reverse_link', 'linked_list.set_head', 'linked_list.set_tail',
   'tree.create', 'tree.visit', 'tree.compare', 'tree.insert', 'tree.delete', 'tree.rotate', 'tree.update_metadata',
-  'array.create', 'array.compare', 'array.swap', 'array.move', 'array.mark_sorted', 'array.partition',
+  'array.create', 'array.compare', 'array.swap', 'array.move', 'array.mark_sorted', 'array.window', 'array.partition',
   'graph.create', 'graph.visit_node', 'graph.visit_edge', 'graph.relax_edge', 'graph.enqueue', 'graph.dequeue',
   'matrix.create', 'matrix.visit_cell', 'matrix.update_cell', 'matrix.mark_path', 'matrix.mark_conflict',
   'n_queens.try_place', 'n_queens.place', 'n_queens.conflict', 'n_queens.backtrack', 'n_queens.solution',
@@ -365,7 +365,19 @@ export function normalizeAnimationScript(raw: unknown): AnimationScript | null {
   if (steps.length === 0) return null
 
   const presentation = normalizePresentation(obj.presentation as Record<string, unknown> | undefined)
-  return { algorithm, complexity, initialState, ...(presentation && { presentation }), steps }
+  const result = normalizeResult(obj.result)
+  return { algorithm, complexity, initialState, ...(result !== undefined && { result }), ...(presentation && { presentation }), steps }
+}
+
+function normalizeResult(value: unknown): AnimationScript['result'] | undefined {
+  if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') return value
+  if (Array.isArray(value)) {
+    const result = value.filter((item): item is number | string | boolean =>
+      typeof item === 'number' || typeof item === 'string' || typeof item === 'boolean'
+    )
+    return result.length > 0 ? result : undefined
+  }
+  return undefined
 }
 
 function normalizePresentation(p?: Record<string, unknown>): AnimationScript['presentation'] | undefined {
@@ -515,6 +527,9 @@ function validateEvent(event: unknown, path: string): AIValidationIssue[] {
   }
   if (type === 'array.swap' || type === 'array.compare') {
     if (!Array.isArray(e.indices) || e.indices.length !== 2) issues.push(issue(`${path}.indices`, 'required', `${type} 必须包含长度为 2 的 indices`))
+  }
+  if (type === 'array.window') {
+    if (!Array.isArray(e.indices) || e.indices.some(index => typeof index !== 'number')) issues.push(issue(`${path}.indices`, 'required', 'array.window 必须包含数字 indices 数组'))
   }
   if (type === 'graph.create') {
     if (!Array.isArray(e.nodes) || e.nodes.length === 0) issues.push(issue(`${path}.nodes`, 'required', 'graph.create 必须包含非空 nodes'))

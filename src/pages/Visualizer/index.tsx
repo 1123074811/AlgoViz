@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { OnMount } from '@monaco-editor/react'
 import { Icon } from '@/icons'
@@ -10,13 +10,13 @@ import { useAIGenerator } from '@/hooks/useAIGenerator'
 import type { AnimationScript } from '@/types/animation'
 import { compileAndValidateCode } from '@/utils/codeCompiler'
 import { parseAlgorithmInput, getLeetCodeDefault, getLeetCodePlaceholder } from '@/utils/inputParser'
-import { ALGORITHM_DEFS, type AlgorithmDefinition } from '@/data/algorithmDefs'
+import { ALGORITHM_DEFS } from '@/data/algorithmDefs'
 import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
 import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
 import InputDataPanel from '@/components/Editor/InputDataPanel'
 import { getSceneDiagnosticSummary, getSceneEventStats, usesSceneEngine } from '@/scene'
-import { getOperationsForAlgo, type OperationDef } from '@/presets/operationPresets'
+import { getOperationsForAlgo } from '@/presets/operationPresets'
 import { getCodeTemplate, type CodeLang } from './codeTemplates'
 import DefinitionCard from './DefinitionCard'
 
@@ -155,17 +155,17 @@ export default function Visualizer() {
   const setAIStatus = useAlgorithmStore((s) => s.setAIStatus)
   const addAIHistory = useAlgorithmStore((s) => s.addAIHistory)
 
-  const [code, setCode] = useState('')
-  const [codeLanguage, setCodeLanguage] = useState<'python' | 'javascript' | 'cpp' | 'java'>(() => {
-    return (localStorage.getItem('algoviz-editor-code-lang') as 'python' | 'javascript' | 'cpp' | 'java') || 'python'
+  const [codeByScope, setCodeByScope] = useState<Record<string, string>>({})
+  const [codeLanguage, setCodeLanguage] = useState<CodeLang>(() => {
+    return (localStorage.getItem('algoviz-editor-code-lang') as CodeLang) || 'python'
   })
-  const [inputData, setInputData] = useState('')
+  const [inputDataByScope, setInputDataByScope] = useState<Record<string, string>>({})
   const [inputFormat, setInputFormat] = useState<'leetcode' | 'json'>(() => {
     return (localStorage.getItem('algoviz-input-format') as 'leetcode' | 'json') || 'leetcode'
   })
   const [showRawResponse, setShowRawResponse] = useState(false)
   const [showDefinition, setShowDefinition] = useState(false)
-  const [currentOperationId, setCurrentOperationId] = useState<string>('')
+  const [operationIdByAlgo, setOperationIdByAlgo] = useState<Record<string, string>>({})
   const [operationParam, setOperationParam] = useState<string>('5')
 
   // Resizable Panels States (Left Editor: 35%, Right Info: 22%)
@@ -281,7 +281,6 @@ export default function Visualizer() {
 
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
   const decorationsRef = useRef<string[]>([])
-  const internalInputUpdate = useRef(false)
   const prevAlgoId = useRef<string | null>(null)
 
   const {
@@ -303,7 +302,7 @@ export default function Visualizer() {
   const hasApiConfig = getApiConfig() !== null
 
   // Map algorithm → default input + type hint
-  const DEFAULT_INPUTS: Record<string, { value: string; hint: string }> = {
+  const DEFAULT_INPUTS = useMemo<Record<string, { value: string; hint: string }>>(() => ({
     // 排序 — 经典乱序数组
     bubble_sort:     { value: '[5, 3, 8, 1, 9, 2, 7, 4]', hint: '整数数组，元素互不相等' },
     selection_sort:  { value: '[5, 3, 8, 1, 9, 2, 7, 4]', hint: '整数数组，元素互不相等' },
@@ -317,6 +316,7 @@ export default function Visualizer() {
     bucket_sort:     { value: '[53, 38, 101, 12, 99, 2, 77]', hint: '整数数组，值域均匀时效果好' },
     // 搜索与滑动
     binary_search:   { value: '[1, 3, 5, 7, 9, 11, 13, 15]', hint: '有序整数数组（必须已排序）' },
+    gcd_euclidean:   { value: '{\n  "a": 48,\n  "b": 18\n}', hint: '两个整数 a 与 b，演示辗转相除过程' },
     sliding_window:  { value: '[2, 1, 5, 1, 3, 2]', hint: '整数数组，窗口 k=3' },
     monotonic_stack: { value: '[2, 1, 5, 6, 2, 3]', hint: '整数数组，找下一个更大的元素' },
     // DP 类
@@ -332,6 +332,7 @@ export default function Visualizer() {
     manacher:      { value: '"babad"', hint: '回文字符串，最长回文=aba/bab' },
     // 图/树/回溯 — 用数字表示
     n_queens:      { value: '4', hint: '整数 N，推荐 4~8' },
+    sudoku:        { value: '[[5,3,0,0,7,0,0,0,0],[6,0,0,1,9,5,0,0,0],[0,9,8,0,0,0,0,6,0],[8,0,0,0,6,0,0,0,3],[4,0,0,8,0,3,0,0,1],[7,0,0,0,2,0,0,0,6],[0,6,0,0,0,0,2,8,0],[0,0,0,4,1,9,0,0,5],[0,0,0,0,8,0,0,7,9]]', hint: '9×9 数独棋盘，0 表示空格' },
     backtracking:  { value: '[1, 2, 3]', hint: '整数数组，全排列/子集输入' },
     // 高级数据结构与基础结构操作
     segment_tree:  { value: '[1, 3, 5, 7, 9, 11]', hint: '整数数组，支持区间查询' },
@@ -352,6 +353,8 @@ export default function Visualizer() {
     union_find: { value: '[[0, 1], [1, 2], [3, 4]]', hint: '并查集连通边列表' },
     btree: { value: '[10, 20, 30, 3, 7, 13, 17, 23, 27, 33, 37]', hint: 'B树初始关键码数组 (t=2)' },
     bplus_tree: { value: '[10, 20, 30, 35, 40, 45, 50, 60]', hint: 'B+树初始关键码数组 (t=2)' },
+    leetcode_hot100: { value: '{"nums":[2,7,11,15],"target":9}', hint: 'Two Sum 示例：nums + target' },
+    acm_templates: { value: '[2, 3, 5, 7, 11, 13]', hint: '竞赛模板演示数组' },
     bfs_graph: {
       value: '{\n  "nodes": [\n    {"id": "0", "label": "A"},\n    {"id": "1", "label": "B"},\n    {"id": "2", "label": "C"},\n    {"id": "3", "label": "D"},\n    {"id": "4", "label": "E"},\n    {"id": "5", "label": "F"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1"},\n    {"source": "0", "target": "2"},\n    {"source": "1", "target": "3"},\n    {"source": "1", "target": "4"},\n    {"source": "2", "target": "5"}\n  ]\n}',
       hint: '无向图 JSON (nodes + edges)。LeetCode格式请切到 LeetCode 模式'
@@ -388,7 +391,53 @@ export default function Visualizer() {
       value: '{\n  "nodes": [\n    {"id": "0", "label": "S"},\n    {"id": "1", "label": "A"},\n    {"id": "2", "label": "B"},\n    {"id": "3", "label": "C"},\n    {"id": "4", "label": "D"}\n  ],\n  "edges": [\n    {"source": "0", "target": "1", "weight": 5},\n    {"source": "0", "target": "2", "weight": 4},\n    {"source": "1", "target": "3", "weight": 3},\n    {"source": "2", "target": "1", "weight": -2},\n    {"source": "2", "target": "3", "weight": 7},\n    {"source": "3", "target": "4", "weight": 2},\n    {"source": "1", "target": "4", "weight": 6}\n  ]\n}',
       hint: '带权有向图 JSON (支持自定义顶点与权值)'
     },
-  }
+  }), [])
+
+  const inputScopeKey = `${selectedAlgorithm?.id ?? 'none'}:${inputFormat}`
+  const defaultInputData = selectedAlgorithm?.id
+    ? inputFormat === 'leetcode'
+      ? getLeetCodeDefault(selectedAlgorithm.id) ?? ''
+      : DEFAULT_INPUTS[selectedAlgorithm.id]?.value ?? ''
+    : ''
+  const inputData = inputDataByScope[inputScopeKey] ?? defaultInputData
+  const setInputData = useCallback((nextValue: string) => {
+    setInputDataByScope((prev) => (
+      prev[inputScopeKey] === nextValue ? prev : { ...prev, [inputScopeKey]: nextValue }
+    ))
+  }, [inputScopeKey])
+
+  const defaultOperationId = (() => {
+    if (!selectedAlgorithm) return ''
+    if (selectedAlgorithm.id.endsWith('_insert') || selectedAlgorithm.id === 'avl_insert') return 'insert'
+    if (selectedAlgorithm.id.endsWith('_delete')) return 'delete'
+    if (selectedAlgorithm.id.endsWith('_search')) return 'search'
+    if (selectedAlgorithm.id === 'btree' || selectedAlgorithm.id === 'bplus_tree') return operations?.[0]?.id ?? ''
+    return ''
+  })()
+  const currentOperationId = selectedAlgorithm
+    ? operationIdByAlgo[selectedAlgorithm.id] ?? defaultOperationId
+    : ''
+  const setCurrentOperationId = useCallback((nextValue: string) => {
+    if (!selectedAlgorithm?.id) return
+    setOperationIdByAlgo((prev) => (
+      prev[selectedAlgorithm.id] === nextValue ? prev : { ...prev, [selectedAlgorithm.id]: nextValue }
+    ))
+  }, [selectedAlgorithm])
+  const currentOperation = currentOperationId
+    ? operations?.find((op) => op.id === currentOperationId)
+    : undefined
+  const codeScopeKey = `${selectedAlgorithm?.id ?? 'none'}:${currentOperationId || 'main'}:${codeLanguage}`
+  const defaultCode = currentOperation
+    ? currentOperation.code[codeLanguage] || currentOperation.code.python || ''
+    : selectedAlgorithm
+      ? getCodeTemplate(selectedAlgorithm.id, codeLanguage)
+      : ''
+  const code = codeByScope[codeScopeKey] ?? defaultCode
+  const setCode = useCallback((nextValue: string) => {
+    setCodeByScope((prev) => (
+      prev[codeScopeKey] === nextValue ? prev : { ...prev, [codeScopeKey]: nextValue }
+    ))
+  }, [codeScopeKey])
 
   // Parse input data from text — returns the natural type for the algorithm
   const parsedInput = useCallback((): unknown => {
@@ -401,7 +450,7 @@ export default function Visualizer() {
       return [5, 3, 8, 1, 9, 2]
     }
     return parseAlgorithmInput(inputData, inputFormat, selectedAlgorithm.id)
-  }, [inputData, selectedAlgorithm?.id, inputFormat])
+  }, [inputData, selectedAlgorithm, inputFormat, DEFAULT_INPUTS])
 
   // Raw-string variant of parsedInput for the shared AI generator hook (it parses
   // an explicit string — the current box or the AI's @sample — not just state).
@@ -415,7 +464,7 @@ export default function Visualizer() {
       // LeetCode format never throws; treat any non-empty input as parseable.
       return { valid: true, value: parseAlgorithmInput(trimmed, inputFormat, selectedAlgorithm?.id ?? '') }
     },
-    [inputFormat, selectedAlgorithm?.id],
+    [inputFormat, selectedAlgorithm],
   )
 
   // Live mode (recognized built-in or AI generator) + input-driven live regen.
@@ -436,12 +485,6 @@ export default function Visualizer() {
 
   // Load preset or regenerate when algorithm or input changes
   useEffect(() => {
-    // Skip regeneration when we're just syncing inputData back to textarea.
-    if (internalInputUpdate.current) {
-      internalInputUpdate.current = false
-      return
-    }
-
     if (!selectedAlgorithm) return
 
     // In AI live mode, an input change is handled by the useAIGenerator hook (it
@@ -457,30 +500,6 @@ export default function Visualizer() {
     // Set default input when switching to a different algorithm
     if (algoChanged) {
       prevAlgoId.current = selectedAlgorithm.id
-      
-      // Determine initial sub-operation based on concrete algorithm operation
-      let initialOp = ''
-      if (selectedAlgorithm.id.endsWith('_insert') || selectedAlgorithm.id === 'avl_insert') {
-        initialOp = 'insert'
-      } else if (selectedAlgorithm.id.endsWith('_delete')) {
-        initialOp = 'delete'
-      } else if (selectedAlgorithm.id.endsWith('_search')) {
-        initialOp = 'search'
-      } else if (selectedAlgorithm.id === 'btree' || selectedAlgorithm.id === 'bplus_tree') {
-        // B-tree / B+ tree: default to first operation (search)
-        const ops = getOperationsForAlgo(selectedAlgorithm.id)
-        if (ops && ops.length > 0) initialOp = ops[0].id
-      }
-      
-      setCurrentOperationId(initialOp)
-      // Set default input based on format: LeetCode or JSON
-      if (inputFormat === 'leetcode') {
-        const lcDefault = getLeetCodeDefault(selectedAlgorithm.id)
-        if (lcDefault) setInputData(lcDefault)
-      } else {
-        const defInput = DEFAULT_INPUTS[selectedAlgorithm.id]
-        if (defInput) setInputData(defInput.value)
-      }
     }
 
     // If a custom operation is selected, load its code and script dynamically if dynamic generator is available
@@ -492,10 +511,6 @@ export default function Visualizer() {
         const script = generatePreset(concreteAlgoId, { data: baseData, param: paramVal })
         if (script) {
           setAnimationScript(script)
-          const op = operations?.find(o => o.id === currentOperationId)
-          if (op) {
-            setCode(op.code[codeLanguage] || op.code.python || '')
-          }
           return
         }
       }
@@ -504,42 +519,17 @@ export default function Visualizer() {
       const op = operations?.find(o => o.id === currentOperationId)
       if (op) {
         setAnimationScript(op.script)
-        setCode(op.code[codeLanguage] || op.code.python || '')
         return
       }
     }
 
-    setCode(getCodeTemplate(selectedAlgorithm.id, codeLanguage))
-
     if (selectedAlgorithm.hasPreset) {
       // Try generator first (dynamic, responds to input changes)
       if (hasGenerator(selectedAlgorithm.id)) {
-        // Use default input directly when algorithm just changed (before inputData state updates)
-        const data = algoChanged && DEFAULT_INPUTS[selectedAlgorithm.id]
-          ? JSON.parse(DEFAULT_INPUTS[selectedAlgorithm.id].value)
-          : parsedInput()
+        const data = parsedInput()
         const script = generatePreset(selectedAlgorithm.id, data)
         if (script) {
           setAnimationScript(script)
-          // Sync input textarea: only when JSON format, not LeetCode code format
-          if (inputFormat === 'json') {
-            if (Array.isArray(data) && data.every(v => typeof v === 'number') && script.initialState.data.length > 0) {
-              const newVal = JSON.stringify(script.initialState.data)
-              if (newVal !== inputData) {
-                internalInputUpdate.current = true
-                setInputData(newVal)
-              }
-            } else if (script.initialState.nodes && !Array.isArray(data)) {
-              const isDetailedGraph = data && typeof data === 'object' && 'nodes' in data && 'edges' in data
-              if (!isDetailedGraph) {
-                const newVal = JSON.stringify({ nodes: script.initialState.nodes.length, edges: script.initialState.edges?.length })
-                if (newVal !== inputData) {
-                  internalInputUpdate.current = true
-                  setInputData(newVal)
-                }
-              }
-            }
-          }
           return
         }
       }
@@ -547,25 +537,15 @@ export default function Visualizer() {
       const preset = getPreset(selectedAlgorithm.id)
       if (preset) {
         setAnimationScript(preset)
-        // Sync input display
-        if (preset.initialState.data.length > 0) {
-          const newVal = JSON.stringify(preset.initialState.data)
-          if (newVal !== inputData) {
-            internalInputUpdate.current = true
-            setInputData(newVal)
-          }
-        } else if (preset.initialState.nodes) {
-          const newVal = JSON.stringify({ nodes: preset.initialState.nodes.length, edges: preset.initialState.edges?.length })
-          if (newVal !== inputData) {
-            internalInputUpdate.current = true
-            setInputData(newVal)
-          }
-        }
         return
       }
     }
     setAnimationScript(null)
-  }, [selectedAlgorithm, inputData, operationParam, setAnimationScript, parsedInput, codeLanguage, currentOperationId, operations, resetGenerator, setAIStatus])
+  }, [selectedAlgorithm, inputData, operationParam, setAnimationScript, parsedInput, currentOperationId, operations, resetGenerator, setAIStatus])
+
+  const handleEditorMount: OnMount = useCallback((editor) => {
+    editorRef.current = editor
+  }, [])
 
   // Update Monaco editor decorations based on current step
   useEffect(() => {
@@ -611,11 +591,6 @@ export default function Visualizer() {
 
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations)
   }, [currentStep, animationScript])
-
-  const handleEditorMount: OnMount = useCallback((editor) => {
-    editorRef.current = editor
-  }, [])
-
   const handleAIAnalyze = async () => {
     const compResult = compileAndValidateCode(code, codeLanguage)
     if (!compResult.success) {
@@ -690,7 +665,6 @@ export default function Visualizer() {
     )
   }
 
-  const steps = animationScript?.steps ?? []
   const complexity = animationScript?.complexity
   const isSceneEngineActive = usesSceneEngine(animationScript)
   const sceneEventStats = getSceneEventStats(animationScript)
@@ -725,17 +699,9 @@ export default function Visualizer() {
                 <select
                   value={codeLanguage}
                   onChange={(e) => {
-                    const lang = e.target.value as 'python' | 'javascript' | 'cpp' | 'java'
+                    const lang = e.target.value as CodeLang
                     setCodeLanguage(lang)
                     localStorage.setItem('algoviz-editor-code-lang', lang)
-                    if (currentOperationId) {
-                      const op = operations?.find((o) => o.id === currentOperationId)
-                      if (op) {
-                        setCode(op.code[lang] || op.code.python || '')
-                      }
-                    } else {
-                      setCode(getCodeTemplate(selectedAlgorithm.id, lang))
-                    }
                   }}
                   className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-border
                              bg-white text-slate-600 outline-none cursor-pointer
@@ -846,13 +812,20 @@ export default function Visualizer() {
                 />
               )}
               {/* Output result */}
-              {currentStep >= totalSteps && totalSteps > 0 && visualState.arrayData.length > 0 && (
+              {currentStep >= totalSteps && totalSteps > 0 && (
+                animationScript?.result !== undefined ||
+                (visualState.arrayData.length > 0 && ((animationScript?.algorithm ?? '').includes('sort') || (animationScript?.algorithm ?? '') === 'array'))
+              ) && (
                 <div className="h-20 border-t border-border bg-green-50 p-2.5 shrink-0 mt-auto">
                   <div className="text-xs font-semibold text-green-700 mb-1">
                     {lang === 'zh' ? '输出结果' : 'Output'}
                   </div>
                   <div className="text-xs font-code text-green-600 leading-relaxed break-all overflow-auto max-h-12">
-                    [{visualState.arrayData.join(', ')}]
+                    {animationScript?.result !== undefined
+                      ? Array.isArray(animationScript.result)
+                        ? `[${animationScript.result.join(', ')}]`
+                        : String(animationScript.result)
+                      : `[${visualState.arrayData.join(', ')}]`}
                   </div>
                 </div>
               )}

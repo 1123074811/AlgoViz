@@ -152,6 +152,47 @@ int binarySearch(vector<int>& arr, int target) {
     }
 }`,
   },
+  gcd_euclidean: {
+    python: `def gcd(a, b):
+    a, b = abs(a), abs(b)
+    while b != 0:
+        r = a % b
+        a = b
+        b = r
+    return a`,
+    javascript: `function gcd(a, b) {
+    a = Math.abs(Math.trunc(a));
+    b = Math.abs(Math.trunc(b));
+    while (b !== 0) {
+        const r = a % b;
+        a = b;
+        b = r;
+    }
+    return a;
+}`,
+    cpp: `int gcd(int a, int b) {
+    if (a < 0) a = -a;
+    if (b < 0) b = -b;
+    while (b != 0) {
+        int r = a % b;
+        a = b;
+        b = r;
+    }
+    return a;
+}`,
+    java: `public class EuclideanGCD {
+    public static int gcd(int a, int b) {
+        a = Math.abs(a);
+        b = Math.abs(b);
+        while (b != 0) {
+            int r = a % b;
+            a = b;
+            b = r;
+        }
+        return a;
+    }
+}`,
+  },
   insertion_sort: {
     python: `def insertion_sort(arr):
     for i in range(1, len(arr)):

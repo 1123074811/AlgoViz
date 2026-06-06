@@ -1,10 +1,16 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icon } from '@/icons'
 import Header from '@/components/Layout/Header'
 import { testApiConnection } from '@/ai/client'
 
 type ConnectionStatus = 'idle' | 'testing' | 'connected' | 'failed'
+
+interface ApiConfigForm {
+  apiKey: string
+  baseUrl: string
+  model: string
+}
 
 /** Latest model pricing (USD per 1M tokens), updated May 2026 */
 const MODEL_PRICING: Record<string, { input: number; output: number; label: string }> = {
@@ -24,27 +30,36 @@ const MODEL_PRICING: Record<string, { input: number; output: number; label: stri
 const ESTIMATED_SYSTEM_PROMPT_TOKENS = 800
 const ESTIMATED_PER_STEP_TOKENS = 80
 const ESTIMATED_OVERHEAD_TOKENS = 200
+const DEFAULT_API_CONFIG: ApiConfigForm = {
+  apiKey: '',
+  baseUrl: 'https://api.deepseek.com',
+  model: 'deepseek-v4-pro',
+}
+
+function loadSavedConfig(): ApiConfigForm {
+  try {
+    const saved = localStorage.getItem('algoviz-api-config')
+    if (!saved) return DEFAULT_API_CONFIG
+    const config = JSON.parse(saved) as Partial<ApiConfigForm>
+    return {
+      apiKey: config.apiKey || DEFAULT_API_CONFIG.apiKey,
+      baseUrl: config.baseUrl || DEFAULT_API_CONFIG.baseUrl,
+      model: config.model || DEFAULT_API_CONFIG.model,
+    }
+  } catch {
+    return DEFAULT_API_CONFIG
+  }
+}
 
 export default function Settings() {
   const { t } = useTranslation()
-  const [apiKey, setApiKey] = useState('')
-  const [baseUrl, setBaseUrl] = useState('https://api.deepseek.com')
-  const [model, setModel] = useState('deepseek-v4-pro')
+  const [initialConfig] = useState<ApiConfigForm>(() => loadSavedConfig())
+  const [apiKey, setApiKey] = useState(initialConfig.apiKey)
+  const [baseUrl, setBaseUrl] = useState(initialConfig.baseUrl)
+  const [model, setModel] = useState(initialConfig.model)
   const [status, setStatus] = useState<ConnectionStatus>('idle')
   const [showKey, setShowKey] = useState(false)
   const [responseTime, setResponseTime] = useState<number | null>(null)
-
-  useEffect(() => {
-    const saved = localStorage.getItem('algoviz-api-config')
-    if (saved) {
-      try {
-        const config = JSON.parse(saved)
-        if (config.apiKey) setApiKey(config.apiKey)
-        if (config.baseUrl) setBaseUrl(config.baseUrl)
-        if (config.model) setModel(config.model)
-      } catch { /* ignore corrupt data */ }
-    }
-  }, [])
 
   const saveConfig = useCallback(() => {
     if (!apiKey.trim()) return

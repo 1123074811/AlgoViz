@@ -23,6 +23,36 @@ describe('parseGeneratorResponse', () => {
     expect(r.generator?.body).not.toContain('@sample')
   })
 
+  it('保留含 pointer builder 调用的生成器代码体', () => {
+    const raw = [
+      '```js',
+      '// @algorithm two_pointer_scan',
+      '// @type array',
+      '// @sample {"nums":[1,2,3,4],"target":5}',
+      'const nums = input.nums || input',
+      'b.arrayCreate(nums)',
+      "b.pointerCreate('left', 0, '左指针')",
+      "b.pointerCreate('right', nums.length - 1, '右指针')",
+      "b.pointerMove('left', 1)",
+      "b.pointerHighlight('right')",
+      "b.pointerClear('left')",
+      '```',
+    ].join('\n')
+
+    const r = parseGeneratorResponse(raw)
+    expect(r.success).toBe(true)
+    expect(r.generator?.algorithm).toBe('two_pointer_scan')
+    expect(r.generator?.type).toBe('array')
+    expect(r.generator?.sampleInput).toBe('{"nums":[1,2,3,4],"target":5}')
+    expect(r.generator?.body).toContain("b.pointerCreate('left', 0, '左指针')")
+    expect(r.generator?.body).toContain("b.pointerMove('left', 1)")
+    expect(r.generator?.body).toContain("b.pointerHighlight('right')")
+    expect(r.generator?.body).toContain("b.pointerClear('left')")
+    expect(r.generator?.body).not.toContain('@algorithm')
+    expect(r.generator?.body).not.toContain('@type')
+    expect(r.generator?.body).not.toContain('@sample')
+  })
+
   it('@sample 不是合法 JSON 时忽略', () => {
     const raw = '```js\n// @type array\n// @sample 这不是JSON\nb.compare(0,1)\n```'
     const r = parseGeneratorResponse(raw)
