@@ -565,13 +565,55 @@ class Trie:
     defaultCode: `class BTreeNode:
     def __init__(self, t, leaf=False):
         self.t = t          # 最小度数
-        self.leaf = leaf    # 是否叶子
+        self.leaf = leaf    # 是否叶子节点
         self.keys = []      # 关键码列表
         self.children = []  # 子节点列表
 
+def search(node, key):
+    i = 0
+    while i < len(node.keys) and key > node.keys[i]:
+        i += 1
+    if i < len(node.keys) and node.keys[i] == key:
+        return (node, i)        # 在当前节点找到
+    if node.leaf:
+        return None              # 叶子层未找到
+    return search(node.children[i], key)
+
+def split_child(parent, i):
+    t = parent.t
+    y = parent.children[i]
+    z = BTreeNode(t, y.leaf)
+    # 将 y 的后半部分关键码移到 z
+    z.keys = y.keys[t:]
+    y.keys = y.keys[:t - 1]
+    if not y.leaf:
+        z.children = y.children[t:]
+        y.children = y.children[:t]
+    # 将 z 插入到 parent 中
+    parent.children.insert(i + 1, z)
+    parent.keys.insert(i, y.keys[t - 1])
+
+def insert_non_full(node, key):
+    i = len(node.keys) - 1
+    if node.leaf:
+        node.keys.append(None)
+        while i >= 0 and key < node.keys[i]:
+            node.keys[i + 1] = node.keys[i]
+            i -= 1
+        node.keys[i + 1] = key
+    else:
+        while i >= 0 and key < node.keys[i]:
+            i -= 1
+        i += 1
+        if len(node.children[i].keys) == 2 * node.t - 1:
+            split_child(node, i)
+            if key > node.keys[i]:
+                i += 1
+        insert_non_full(node.children[i], key)
+
 def insert(root, key):
     if len(root.keys) == 2 * root.t - 1:
-        # 根分裂
+        # 根分裂：创建新根，保持树平衡
         new_root = BTreeNode(root.t)
         new_root.children.append(root)
         split_child(new_root, 0)
@@ -586,30 +628,94 @@ def insert(root, key):
     hasPreset: true, defaultLanguage: 'python',
     defaultCode: `class BPlusNode:
     def __init__(self, t, leaf=False):
-        self.t = t
-        self.leaf = leaf
-        self.keys = []
-        self.children = []  # 内部：子指针；叶子：None
-        self.next = None    # 叶子层链表
+        self.t = t          # 最小度数
+        self.leaf = leaf    # 是否叶子节点
+        self.keys = []      # 关键码列表
+        self.children = []  # 子节点（内部）/ 数据指针（叶子）
+        self.next = None    # 叶子层链表指针
 
 def search(root, key):
+    """在 B+ 树中搜索 key，返回对应的值，未找到返回 None"""
     node = root
     while not node.leaf:
         i = 0
         while i < len(node.keys) and key >= node.keys[i]:
             i += 1
         node = node.children[i]
-    # 在叶子中二分查找
+    # 在叶子节点中二分查找
     lo, hi = 0, len(node.keys) - 1
     while lo <= hi:
         mid = (lo + hi) // 2
         if node.keys[mid] == key:
-            return node.values[mid]  # 找到
+            return node.children[mid]  # 找到
         elif key < node.keys[mid]:
             hi = mid - 1
         else:
             lo = mid + 1
-    return None  # 未找到`,
+    return None
+
+def range_query(root, low, high):
+    """范围查询：返回 [low, high] 区间内所有 (key, value) 对"""
+    node = root
+    while not node.leaf:
+        i = 0
+        while i < len(node.keys) and low >= node.keys[i]:
+            i += 1
+        node = node.children[i]
+    result = []
+    while node is not None:
+        for i in range(len(node.keys)):
+            k = node.keys[i]
+            if k > high:
+                return result
+            if k >= low:
+                result.append((k, node.children[i]))
+        node = node.next
+    return result
+
+def split_child(parent, i):
+    """分裂 parent 的第 i 个子节点"""
+    t = parent.t
+    y = parent.children[i]
+    z = BPlusNode(t, y.leaf)
+    z.keys = y.keys[t:]
+    z.children = y.children[t:]
+    y.keys = y.keys[:t]
+    y.children = y.children[:t]
+    if y.leaf:
+        z.next = y.next
+        y.next = z
+    parent.children.insert(i + 1, z)
+    parent.keys.insert(i, z.keys[0])
+
+def insert_non_full(node, key, value):
+    i = len(node.keys) - 1
+    if node.leaf:
+        while i >= 0 and key < node.keys[i]:
+            i -= 1
+        i += 1
+        node.keys.insert(i, key)
+        node.children.insert(i, value)
+    else:
+        while i >= 0 and key < node.keys[i]:
+            i -= 1
+        i += 1
+        if len(node.children[i].keys) == 2 * node.t:
+            split_child(node, i)
+            if key > node.keys[i]:
+                i += 1
+        insert_non_full(node.children[i], key, value)
+
+def insert(root, key, value):
+    if len(root.keys) == 2 * root.t:
+        new_root = BPlusNode(root.t)
+        new_root.children.append(root)
+        split_child(new_root, 0)
+        insert_non_full(new_root, key, value)
+        return new_root
+    else:
+        insert_non_full(root, key, value)
+        return root`,
   },
 
   // ============ 动态规划 ============

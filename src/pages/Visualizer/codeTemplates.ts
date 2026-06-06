@@ -3384,6 +3384,649 @@ def sieve(n):
     traverse(root.right);
 }`,
   },
+  btree: {
+    python: `class BTreeNode:
+    def __init__(self, t, leaf=False):
+        self.t = t          # 最小度数
+        self.leaf = leaf    # 是否叶子节点
+        self.keys = []      # 关键码列表
+        self.children = []  # 子节点指针
+
+def search(node, key):
+    i = 0
+    while i < len(node.keys) and key > node.keys[i]:
+        i += 1
+    if i < len(node.keys) and node.keys[i] == key:
+        return (node, i)        # 在当前节点找到
+    if node.leaf:
+        return None              # 叶子层未找到
+    return search(node.children[i], key)
+
+def split_child(parent, i):
+    t = parent.t
+    y = parent.children[i]
+    z = BTreeNode(t, y.leaf)
+    # 将 y 的后半部分关键码移到 z
+    z.keys = y.keys[t:]
+    y.keys = y.keys[:t - 1]
+    # 如果不是叶子，移动对应的子指针
+    if not y.leaf:
+        z.children = y.children[t:]
+        y.children = y.children[:t]
+    # 将 z 插入到 parent 的 children 中
+    parent.children.insert(i + 1, z)
+    parent.keys.insert(i, y.keys[t - 1])
+
+def insert_non_full(node, key):
+    i = len(node.keys) - 1
+    if node.leaf:
+        node.keys.append(None)
+        while i >= 0 and key < node.keys[i]:
+            node.keys[i + 1] = node.keys[i]
+            i -= 1
+        node.keys[i + 1] = key
+    else:
+        while i >= 0 and key < node.keys[i]:
+            i -= 1
+        i += 1
+        if len(node.children[i].keys) == 2 * node.t - 1:
+            split_child(node, i)
+            if key > node.keys[i]:
+                i += 1
+        insert_non_full(node.children[i], key)
+
+def insert(root, key):
+    if len(root.keys) == 2 * root.t - 1:
+        # 根分裂：创建新根
+        new_root = BTreeNode(root.t)
+        new_root.children.append(root)
+        split_child(new_root, 0)
+        insert_non_full(new_root, key)
+        return new_root
+    else:
+        insert_non_full(root, key)
+        return root`,
+    javascript: `class BTreeNode {
+    constructor(t, leaf = false) {
+        this.t = t;          // 最小度数
+        this.leaf = leaf;    // 是否叶子节点
+        this.keys = [];      // 关键码列表
+        this.children = [];  // 子节点指针
+    }
+}
+
+function search(node, key) {
+    let i = 0;
+    while (i < node.keys.length && key > node.keys[i]) i++;
+    if (i < node.keys.length && node.keys[i] === key) return { node, i };
+    if (node.leaf) return null;
+    return search(node.children[i], key);
+}
+
+function splitChild(parent, i) {
+    const t = parent.t;
+    const y = parent.children[i];
+    const z = new BTreeNode(t, y.leaf);
+    z.keys = y.keys.splice(t);
+    const mid = y.keys.pop();
+    if (!y.leaf) z.children = y.children.splice(t);
+    parent.children.splice(i + 1, 0, z);
+    parent.keys.splice(i, 0, mid);
+}
+
+function insertNonFull(node, key) {
+    let i = node.keys.length - 1;
+    if (node.leaf) {
+        while (i >= 0 && key < node.keys[i]) i--;
+        node.keys.splice(i + 1, 0, key);
+    } else {
+        while (i >= 0 && key < node.keys[i]) i--;
+        i++;
+        if (node.children[i].keys.length === 2 * node.t - 1) {
+            splitChild(node, i);
+            if (key > node.keys[i]) i++;
+        }
+        insertNonFull(node.children[i], key);
+    }
+}
+
+function insert(root, key) {
+    if (root.keys.length === 2 * root.t - 1) {
+        const newRoot = new BTreeNode(root.t);
+        newRoot.children.push(root);
+        splitChild(newRoot, 0);
+        insertNonFull(newRoot, key);
+        return newRoot;
+    } else {
+        insertNonFull(root, key);
+        return root;
+    }
+}`,
+    cpp: `#include <vector>
+using namespace std;
+
+class BTreeNode {
+public:
+    int t;                      // 最小度数
+    bool leaf;
+    vector<int> keys;
+    vector<BTreeNode*> children;
+    BTreeNode(int t, bool leaf = false) : t(t), leaf(leaf) {}
+};
+
+// 在节点中搜索 key，返回 (node, index) 或 nullptr
+pair<BTreeNode*, int> search(BTreeNode* node, int key) {
+    int i = 0;
+    while (i < node->keys.size() && key > node->keys[i]) i++;
+    if (i < node->keys.size() && node->keys[i] == key)
+        return {node, i};
+    if (node->leaf) return {nullptr, -1};
+    return search(node->children[i], key);
+}
+
+void splitChild(BTreeNode* parent, int i) {
+    int t = parent->t;
+    BTreeNode* y = parent->children[i];
+    BTreeNode* z = new BTreeNode(t, y->leaf);
+    // 后半部分关键码移到 z
+    z->keys.assign(y->keys.begin() + t, y->keys.end());
+    int mid = y->keys[t - 1];
+    y->keys.resize(t - 1);
+    // 如果不是叶子，移动子指针
+    if (!y->leaf) {
+        z->children.assign(y->children.begin() + t, y->children.end());
+        y->children.resize(t);
+    }
+    parent->children.insert(parent->children.begin() + i + 1, z);
+    parent->keys.insert(parent->keys.begin() + i, mid);
+}
+
+void insertNonFull(BTreeNode* node, int key) {
+    int i = node->keys.size() - 1;
+    if (node->leaf) {
+        node->keys.push_back(0);
+        while (i >= 0 && key < node->keys[i]) {
+            node->keys[i + 1] = node->keys[i];
+            i--;
+        }
+        node->keys[i + 1] = key;
+    } else {
+        while (i >= 0 && key < node->keys[i]) i--;
+        i++;
+        if (node->children[i]->keys.size() == 2 * node->t - 1) {
+            splitChild(node, i);
+            if (key > node->keys[i]) i++;
+        }
+        insertNonFull(node->children[i], key);
+    }
+}
+
+BTreeNode* insert(BTreeNode* root, int key) {
+    if (root->keys.size() == 2 * root->t - 1) {
+        BTreeNode* newRoot = new BTreeNode(root->t);
+        newRoot->children.push_back(root);
+        splitChild(newRoot, 0);
+        insertNonFull(newRoot, key);
+        return newRoot;
+    } else {
+        insertNonFull(root, key);
+        return root;
+    }
+}`,
+    java: `import java.util.*;
+
+class BTreeNode {
+    int t;                       // 最小度数
+    boolean leaf;
+    List<Integer> keys;
+    List<BTreeNode> children;
+
+    BTreeNode(int t, boolean leaf) {
+        this.t = t;
+        this.leaf = leaf;
+        this.keys = new ArrayList<>();
+        this.children = new ArrayList<>();
+    }
+}
+
+public class BTree {
+    // 在节点中搜索 key，返回索引或 -1
+    public int searchInNode(BTreeNode node, int key) {
+        int i = 0;
+        while (i < node.keys.size() && key > node.keys.get(i)) i++;
+        if (i < node.keys.size() && node.keys.get(i) == key) return i;
+        if (node.leaf) return -1;
+        return searchInNode(node.children.get(i), key);
+    }
+
+    void splitChild(BTreeNode parent, int i) {
+        int t = parent.t;
+        BTreeNode y = parent.children.get(i);
+        BTreeNode z = new BTreeNode(t, y.leaf);
+        // 后半部分关键码移到 z
+        for (int j = t; j < y.keys.size(); j++)
+            z.keys.add(y.keys.get(j));
+        int mid = y.keys.get(t - 1);
+        y.keys = new ArrayList<>(y.keys.subList(0, t - 1));
+        // 如果不是叶子，移动子指针
+        if (!y.leaf) {
+            for (int j = t; j < y.children.size(); j++)
+                z.children.add(y.children.get(j));
+            y.children = new ArrayList<>(y.children.subList(0, t));
+        }
+        parent.children.add(i + 1, z);
+        parent.keys.add(i, mid);
+    }
+
+    void insertNonFull(BTreeNode node, int key) {
+        int i = node.keys.size() - 1;
+        if (node.leaf) {
+            node.keys.add(0);
+            while (i >= 0 && key < node.keys.get(i)) {
+                node.keys.set(i + 1, node.keys.get(i));
+                i--;
+            }
+            node.keys.set(i + 1, key);
+        } else {
+            while (i >= 0 && key < node.keys.get(i)) i--;
+            i++;
+            if (node.children.get(i).keys.size() == 2 * node.t - 1) {
+                splitChild(node, i);
+                if (key > node.keys.get(i)) i++;
+            }
+            insertNonFull(node.children.get(i), key);
+        }
+    }
+
+    public BTreeNode insert(BTreeNode root, int key) {
+        if (root.keys.size() == 2 * root.t - 1) {
+            BTreeNode newRoot = new BTreeNode(root.t, false);
+            newRoot.children.add(root);
+            splitChild(newRoot, 0);
+            insertNonFull(newRoot, key);
+            return newRoot;
+        } else {
+            insertNonFull(root, key);
+            return root;
+        }
+    }
+}`,
+  },
+  bplus_tree: {
+    python: `class BPlusNode:
+    def __init__(self, t, leaf=False):
+        self.t = t          # 最小度数
+        self.leaf = leaf    # 是否叶子节点
+        self.keys = []      # 关键码列表
+        self.children = []  # 子节点（内部节点）/ 数据指针（叶子节点）
+        self.next = None    # 叶子层链表指针（仅叶子节点使用）
+
+def search(root, key):
+    """在 B+ 树中搜索 key，返回对应的值，未找到返回 None"""
+    node = root
+    # 从根走到叶子层
+    while not node.leaf:
+        i = 0
+        while i < len(node.keys) and key >= node.keys[i]:
+            i += 1
+        node = node.children[i]
+    # 在叶子节点中二分查找
+    lo, hi = 0, len(node.keys) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if node.keys[mid] == key:
+            return node.children[mid]  # children 存数据
+        elif key < node.keys[mid]:
+            hi = mid - 1
+        else:
+            lo = mid + 1
+    return None
+
+def range_query(root, low, high):
+    """范围查询：返回 [low, high] 区间内所有 (key, value) 对"""
+    node = root
+    while not node.leaf:
+        i = 0
+        while i < len(node.keys) and low >= node.keys[i]:
+            i += 1
+        node = node.children[i]
+    # 在起始叶子中定位，然后沿 next 扫描
+    result = []
+    while node is not None:
+        for i in range(len(node.keys)):
+            k = node.keys[i]
+            if k > high:
+                return result
+            if k >= low:
+                result.append((k, node.children[i]))
+        node = node.next
+    return result
+
+def split_child(parent, i):
+    """分裂 parent 的第 i 个子节点"""
+    t = parent.t
+    y = parent.children[i]
+    z = BPlusNode(t, y.leaf)
+    z.keys = y.keys[t:]
+    z.children = y.children[t:]
+    y.keys = y.keys[:t]
+    y.children = y.children[:t]
+    if y.leaf:
+        z.next = y.next
+        y.next = z
+    parent.children.insert(i + 1, z)
+    parent.keys.insert(i, z.keys[0])
+
+def insert_non_full(node, key, value):
+    i = len(node.keys) - 1
+    if node.leaf:
+        # 叶子中保持有序插入
+        while i >= 0 and key < node.keys[i]:
+            i -= 1
+        i += 1
+        node.keys.insert(i, key)
+        node.children.insert(i, value)
+    else:
+        while i >= 0 and key < node.keys[i]:
+            i -= 1
+        i += 1
+        if len(node.children[i].keys) == 2 * node.t:
+            split_child(node, i)
+            if key > node.keys[i]:
+                i += 1
+        insert_non_full(node.children[i], key, value)
+
+def insert(root, key, value):
+    if len(root.keys) == 2 * root.t:
+        new_root = BPlusNode(root.t)
+        new_root.children.append(root)
+        split_child(new_root, 0)
+        insert_non_full(new_root, key, value)
+        return new_root
+    else:
+        insert_non_full(root, key, value)
+        return root`,
+    javascript: `class BPlusNode {
+    constructor(t, leaf = false) {
+        this.t = t;          // 最小度数
+        this.leaf = leaf;    // 是否叶子节点
+        this.keys = [];      // 关键码列表
+        this.children = [];  // 子节点 / 数据指针
+        this.next = null;    // 叶子层链表指针
+    }
+}
+
+function search(root, key) {
+    let node = root;
+    while (!node.leaf) {
+        let i = 0;
+        while (i < node.keys.length && key >= node.keys[i]) i++;
+        node = node.children[i];
+    }
+    // 二分查找叶子节点
+    let lo = 0, hi = node.keys.length - 1;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (node.keys[mid] === key) return node.children[mid];
+        if (key < node.keys[mid]) hi = mid - 1;
+        else lo = mid + 1;
+    }
+    return null;
+}
+
+function rangeQuery(root, low, high) {
+    let node = root;
+    while (!node.leaf) {
+        let i = 0;
+        while (i < node.keys.length && low >= node.keys[i]) i++;
+        node = node.children[i];
+    }
+    const result = [];
+    while (node) {
+        for (let i = 0; i < node.keys.length; i++) {
+            const k = node.keys[i];
+            if (k > high) return result;
+            if (k >= low) result.push([k, node.children[i]]);
+        }
+        node = node.next;
+    }
+    return result;
+}
+
+function splitChild(parent, i) {
+    const t = parent.t;
+    const y = parent.children[i];
+    const z = new BPlusNode(t, y.leaf);
+    z.keys = y.keys.splice(t);
+    z.children = y.children.splice(t);
+    if (y.leaf) { z.next = y.next; y.next = z; }
+    parent.children.splice(i + 1, 0, z);
+    parent.keys.splice(i, 0, z.keys[0]);
+}
+
+function insertNonFull(node, key, value) {
+    let i = node.keys.length - 1;
+    if (node.leaf) {
+        while (i >= 0 && key < node.keys[i]) i--;
+        i++;
+        node.keys.splice(i, 0, key);
+        node.children.splice(i, 0, value);
+    } else {
+        while (i >= 0 && key < node.keys[i]) i--;
+        i++;
+        if (node.children[i].keys.length === 2 * node.t) {
+            splitChild(node, i);
+            if (key > node.keys[i]) i++;
+        }
+        insertNonFull(node.children[i], key, value);
+    }
+}
+
+function insert(root, key, value) {
+    if (root.keys.length === 2 * root.t) {
+        const newRoot = new BPlusNode(root.t);
+        newRoot.children.push(root);
+        splitChild(newRoot, 0);
+        insertNonFull(newRoot, key, value);
+        return newRoot;
+    }
+    insertNonFull(root, key, value);
+    return root;
+}`,
+    cpp: `#include <vector>
+#include <utility>
+using namespace std;
+
+class BPlusNode {
+public:
+    int t;
+    bool leaf;
+    vector<int> keys;
+    vector<BPlusNode*> children;  // 内部：子指针 / 叶子：数据指针(存为索引)
+    BPlusNode* next;              // 叶子层链表
+    BPlusNode(int t, bool leaf = false) : t(t), leaf(leaf), next(nullptr) {}
+};
+
+// 搜索，返回索引(在 children 中的位置)或 -1
+int search(BPlusNode* root, int key) {
+    BPlusNode* node = root;
+    while (!node->leaf) {
+        int i = 0;
+        while (i < node->keys.size() && key >= node->keys[i]) i++;
+        node = node->children[i];
+    }
+    int lo = 0, hi = node->keys.size() - 1;
+    while (lo <= hi) {
+        int mid = (lo + hi) / 2;
+        if (node->keys[mid] == key) return mid;
+        if (key < node->keys[mid]) hi = mid - 1;
+        else lo = mid + 1;
+    }
+    return -1;
+}
+
+vector<pair<int, int>> rangeQuery(BPlusNode* root, int low, int high) {
+    BPlusNode* node = root;
+    while (!node->leaf) {
+        int i = 0;
+        while (i < node->keys.size() && low >= node->keys[i]) i++;
+        node = node->children[i];
+    }
+    vector<pair<int, int>> result;
+    while (node) {
+        for (int i = 0; i < node->keys.size(); i++) {
+            int k = node->keys[i];
+            if (k > high) return result;
+            if (k >= low) result.push_back({k, (int)(intptr_t)node->children[i]});
+        }
+        node = node->next;
+    }
+    return result;
+}
+
+void splitChild(BPlusNode* parent, int i) {
+    int t = parent->t;
+    BPlusNode* y = parent->children[i];
+    BPlusNode* z = new BPlusNode(t, y->leaf);
+    z->keys.assign(y->keys.begin() + t, y->keys.end());
+    z->children.assign(y->children.begin() + t, y->children.end());
+    y->keys.resize(t);
+    y->children.resize(t);
+    if (y->leaf) { z->next = y->next; y->next = z; }
+    parent->children.insert(parent->children.begin() + i + 1, z);
+    parent->keys.insert(parent->keys.begin() + i, z->keys[0]);
+}
+
+void insertNonFull(BPlusNode* node, int key, int value) {
+    int i = node->keys.size() - 1;
+    if (node->leaf) {
+        while (i >= 0 && key < node->keys[i]) i--;
+        i++;
+        node->keys.insert(node->keys.begin() + i, key);
+        node->children.insert(node->children.begin() + i, (BPlusNode*)(intptr_t)value);
+    } else {
+        while (i >= 0 && key < node->keys[i]) i--;
+        i++;
+        if (node->children[i]->keys.size() == 2 * node->t) {
+            splitChild(node, i);
+            if (key > node->keys[i]) i++;
+        }
+        insertNonFull(node->children[i], key, value);
+    }
+}
+
+BPlusNode* insert(BPlusNode* root, int key, int value) {
+    if (root->keys.size() == 2 * root->t) {
+        BPlusNode* newRoot = new BPlusNode(root->t);
+        newRoot->children.push_back(root);
+        splitChild(newRoot, 0);
+        insertNonFull(newRoot, key, value);
+        return newRoot;
+    }
+    insertNonFull(root, key, value);
+    return root;
+}`,
+    java: `import java.util.*;
+
+class BPlusNode {
+    int t;
+    boolean leaf;
+    List<Integer> keys;
+    List<BPlusNode> children;  // 内部：子指针 / 叶子：数据指针
+    BPlusNode next;            // 叶子层链表
+
+    BPlusNode(int t, boolean leaf) {
+        this.t = t;
+        this.leaf = leaf;
+        this.keys = new ArrayList<>();
+        this.children = new ArrayList<>();
+        this.next = null;
+    }
+}
+
+public class BPlusTree {
+    public int search(BPlusNode root, int key) {
+        BPlusNode node = root;
+        while (!node.leaf) {
+            int i = 0;
+            while (i < node.keys.size() && key >= node.keys.get(i)) i++;
+            node = node.children.get(i);
+        }
+        int lo = 0, hi = node.keys.size() - 1;
+        while (lo <= hi) {
+            int mid = (lo + hi) / 2;
+            if (node.keys.get(mid) == key) return mid;
+            if (key < node.keys.get(mid)) hi = mid - 1;
+            else lo = mid + 1;
+        }
+        return -1;
+    }
+
+    public List<int[]> rangeQuery(BPlusNode root, int low, int high) {
+        BPlusNode node = root;
+        while (!node.leaf) {
+            int i = 0;
+            while (i < node.keys.size() && low >= node.keys.get(i)) i++;
+            node = node.children.get(i);
+        }
+        List<int[]> result = new ArrayList<>();
+        while (node != null) {
+            for (int i = 0; i < node.keys.size(); i++) {
+                int k = node.keys.get(i);
+                if (k > high) return result;
+                if (k >= low) result.add(new int[]{k, i});
+            }
+            node = node.next;
+        }
+        return result;
+    }
+
+    void splitChild(BPlusNode parent, int i) {
+        int t = parent.t;
+        BPlusNode y = parent.children.get(i);
+        BPlusNode z = new BPlusNode(t, y.leaf);
+        for (int j = t; j < y.keys.size(); j++)
+            z.keys.add(y.keys.get(j));
+        for (int j = t; j < y.children.size(); j++)
+            z.children.add(y.children.get(j));
+        y.keys = new ArrayList<>(y.keys.subList(0, t));
+        y.children = new ArrayList<>(y.children.subList(0, t));
+        if (y.leaf) { z.next = y.next; y.next = z; }
+        parent.children.add(i + 1, z);
+        parent.keys.add(i, z.keys.get(0));
+    }
+
+    void insertNonFull(BPlusNode node, int key, int value) {
+        int i = node.keys.size() - 1;
+        if (node.leaf) {
+            while (i >= 0 && key < node.keys.get(i)) i--;
+            i++;
+            node.keys.add(i, key);
+            node.children.add(i, null); // placeholder for data
+        } else {
+            while (i >= 0 && key < node.keys.get(i)) i--;
+            i++;
+            if (node.children.get(i).keys.size() == 2 * node.t) {
+                splitChild(node, i);
+                if (key > node.keys.get(i)) i++;
+            }
+            insertNonFull(node.children.get(i), key, value);
+        }
+    }
+
+    public BPlusNode insert(BPlusNode root, int key, int value) {
+        if (root.keys.size() == 2 * root.t) {
+            BPlusNode newRoot = new BPlusNode(root.t, false);
+            newRoot.children.add(root);
+            splitChild(newRoot, 0);
+            insertNonFull(newRoot, key, value);
+            return newRoot;
+        }
+        insertNonFull(root, key, value);
+        return root;
+    }
+}`,
+  },
 };
 
 export function getCodeTemplate(algoId: string, lang: CodeLang): string {
