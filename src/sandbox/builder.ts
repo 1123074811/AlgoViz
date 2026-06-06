@@ -20,6 +20,43 @@ function coerceArray(values: unknown): (number | string)[] {
   return []
 }
 
+/** Derive a readable Chinese description from an event when the AI omits b.desc(). */
+function defaultDescFor(event: AlgorithmEvent | undefined): string {
+  if (!event) return ''
+  const e = event as Record<string, unknown>
+  switch (event.type) {
+    case 'array.create': return '初始化数组'
+    case 'array.compare': return `比较索引 ${(e.indices as number[])?.join(' 与 ')}`
+    case 'array.swap': return `交换索引 ${(e.indices as number[])?.join(' 与 ')}`
+    case 'array.move': return `移动 ${e.from} → ${e.to}`
+    case 'array.set_value': return `更新索引 ${e.index} 的值为 ${e.value}`
+    case 'array.mark_sorted': return `标记索引 ${(e.indices as number[])?.join(',')} 已确定`
+    case 'array.partition': return `以索引 ${e.pivotIndex} 为基准划分`
+    case 'graph.visit_node': return `访问节点 ${e.nodeId}`
+    case 'graph.visit_edge': return `检查边 ${e.source}→${e.target}`
+    case 'graph.relax_edge': return `松弛边 ${e.source}→${e.target}`
+    case 'graph.enqueue': return `节点 ${e.nodeId} 入队`
+    case 'graph.dequeue': return `节点 ${e.nodeId} 出队`
+    case 'stack.push': return `${e.value} 入栈`
+    case 'stack.pop': return '弹出栈顶'
+    case 'queue.enqueue': return `${e.value} 入队`
+    case 'queue.dequeue': return '出队'
+    case 'heap.push': return `${e.value} 入堆`
+    case 'heap.pop': return '弹出堆顶'
+    case 'heap.sift': return `堆调整：索引 ${e.from} ↔ ${e.to}`
+    case 'hashtable.put': return `存入 ${e.key} → 桶 ${e.bucket}`
+    case 'hashtable.get': return `查找 ${e.key}`
+    case 'set.add': return `加入 ${e.value}`
+    case 'set.contains': return `判断是否包含 ${e.value}`
+    case 'string.compare': return `比较字符 ${(e.indices as number[])?.join(',')}`
+    case 'string.match': return `字符匹配于 ${e.index}`
+    case 'string.mismatch': return `字符失配于 ${e.index}`
+    case 'math.set': return `${e.name} = ${e.value}`
+    case 'scene.note': return String(e.text ?? '')
+    default: return ''
+  }
+}
+
 /** Accumulates builder calls into a standard AnimationScript. Used by AI-generated
  *  generators to describe an algorithm's animation without writing raw JSON. */
 export class AnimationBuilder {
@@ -52,7 +89,9 @@ export class AnimationBuilder {
     }
     const family = events[0]?.type.split('.')[0]
     if (family) this.usedFamilies.add(family)
-    const zh = this.pendingDesc || `步骤 ${this.sid}`
+    // When the AI omits b.desc(), derive a meaningful description from the operation
+    // itself instead of a meaningless "步骤 N" placeholder.
+    const zh = this.pendingDesc || defaultDescFor(events[0]) || `步骤 ${this.sid}`
     this.steps.push({
       stepId: this.sid++,
       codeLine: 0,
