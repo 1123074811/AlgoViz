@@ -55,6 +55,53 @@ function compileArrayEvent(event: ArrayAlgorithmEvent, context: CompileContext):
       return [{ type: 'set_cell', cellId: cellId(event.index), value: event.value, state: { role: 'current', color: 'primary', pulse: true } }]
     case 'array.mark_sorted':
       return event.indices.map(index => ({ type: 'set_state' as const, entityId: cellId(index), state: { role: 'sorted' as const, color: 'success' as const, pulse: false }, merge: true }))
+    case 'array.window': {
+      const windowSet = new Set(event.indices)
+      const allIds = Object.keys(context.scene.entities).filter(k => k.startsWith('arr_'))
+      const reset = allIds
+        .filter(id => !windowSet.has(parseInt(id.replace('arr_', ''))))
+        .map(id => {
+          const index = parseInt(id.replace('arr_', ''))
+          const isLeaving = index === event.leaving
+          return {
+            type: 'set_state' as const,
+            entityId: id,
+            state: {
+              role: isLeaving ? 'comparing' as const : 'idle' as const,
+              color: isLeaving ? 'warning' as const : 'muted' as const,
+              pulse: isLeaving,
+              badge: undefined,
+              note: undefined,
+              windowPosition: undefined,
+            },
+            merge: true,
+          }
+        })
+      const windowColor = event.isNewMax ? 'success' as const : 'primary' as const
+      const highlight = event.indices.map((index, offset) => {
+        const windowPosition: 'start' | 'middle' | 'end' | 'single' = event.indices.length === 1
+          ? 'single'
+          : offset === 0
+            ? 'start'
+            : offset === event.indices.length - 1
+              ? 'end'
+              : 'middle'
+        return {
+          type: 'set_state' as const,
+          entityId: cellId(index),
+          state: {
+            role: 'window' as const,
+            color: windowColor,
+            pulse: index === event.entering,
+            badge: undefined,
+            note: undefined,
+            windowPosition,
+          },
+          merge: true,
+        }
+      })
+      return [...reset, ...highlight]
+    }
     case 'array.partition':
       return [
         { type: 'set_state', entityId: cellId(event.pivotIndex), state: { role: 'current', color: 'primary', badge: 'pivot' }, merge: true },

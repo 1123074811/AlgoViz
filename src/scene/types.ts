@@ -1,4 +1,5 @@
 import type { ActionColor } from '@/types/animation'
+import type { AlgorithmOverlayState } from './overlays/overlayCompiler'
 
 export interface Point {
   x: number
@@ -25,6 +26,7 @@ export interface SceneState {
   camera?: SceneCamera
   selectedIds?: string[]
   notes?: string[]
+  overlays?: AlgorithmOverlayState
 }
 
 export type SceneEntity = SceneNode | SceneCell | SceneLabel | SceneGroup | ScenePointer
@@ -42,6 +44,7 @@ export type SceneEntityRole =
   | 'sorted'
   | 'candidate'
   | 'current'
+  | 'window'
   | 'empty_placeholder'
   | 'header'
 
@@ -53,6 +56,7 @@ export interface SceneEntityState {
   disabled?: boolean
   badge?: string
   note?: string
+  windowPosition?: 'start' | 'middle' | 'end' | 'single'
 }
 
 export type NodeFieldRole = 'data' | 'key' | 'value' | 'index' | 'metadata' | 'pointer_slot' | 'custom'

@@ -28,6 +28,7 @@ const REQUIRED_FIELDS: Record<string, string[]> = {
   'array.create': ['values'],
   'array.compare': ['indices'],
   'array.swap': ['indices'],
+  'array.window': ['indices'],
   'matrix.create': ['rows', 'cols'],
   'matrix.visit_cell': ['row', 'col'],
   'matrix.update_cell': ['row', 'col', 'value'],

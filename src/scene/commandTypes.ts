@@ -1,4 +1,5 @@
 import type { AnchorRef, NodeField, NodePort, Point, SceneCell, SceneEdge, SceneEntityState, SceneNode } from './types'
+import type { AlgorithmOverlaySceneCommand } from './overlays'
 
 export type SceneCommand =
   | CreateNodeCommand
@@ -17,6 +18,7 @@ export type SceneCommand =
   | WaitCommand
   | AddNoteCommand
   | SetCellCommand
+  | AlgorithmOverlaySceneCommand
 
 export interface CreateNodeCommand {
   type: 'create_node'

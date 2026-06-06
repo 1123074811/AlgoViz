@@ -35,7 +35,10 @@ function compileTreeEvent(event: TreeAlgorithmEvent, context: CompileContext): S
 function compileCreate(event: Extract<TreeAlgorithmEvent, { type: 'tree.create' }>): SceneCommand[] {
   const commands: SceneCommand[] = []
   event.nodes.forEach((node) => {
-    commands.push({ type: 'create_node', node: createTreeNode(node.id, node.value, event.variant), animation: 'scale' })
+    const sceneNode = event.variant === 'btree'
+      ? DataUnit.btreeNode({ id: node.id, keys: parseBTreeKeys(node.value) })
+      : createTreeNode(node.id, node.value, event.variant)
+    commands.push({ type: 'create_node', node: sceneNode, animation: 'scale' })
   })
   event.edges.forEach((edge) => {
     const port = edge.port ?? 'child'
@@ -75,10 +78,49 @@ function compileInsert(event: Extract<TreeAlgorithmEvent, { type: 'tree.insert' 
 function compileUpdateMetadata(event: Extract<TreeAlgorithmEvent, { type: 'tree.update_metadata' }>, context: CompileContext): SceneCommand[] {
   const node = context.scene.entities[event.nodeId]
   if (node?.type !== 'node') return []
+  const metadataKeys = event.metadata?.keys
+  if (node.variant === 'tree.btree' && metadataKeys !== undefined) {
+    const nextNode = DataUnit.btreeNode({
+      id: node.id,
+      keys: parseBTreeKeys(metadataKeys),
+      x: node.position.x,
+      y: node.position.y,
+      color: 'primary',
+    })
+    return [
+      { type: 'create_node', node: nextNode, animation: 'scale' },
+      { type: 'set_state', entityId: event.nodeId, state: { role: 'active', color: 'primary', pulse: true }, merge: true },
+    ]
+  }
+
   const fields = node.fields.filter((field) => field.id !== 'height' && field.id !== 'balanceFactor')
   if (event.height !== undefined) fields.push({ id: 'height', label: 'h', value: event.height, role: 'metadata' })
   if (event.balanceFactor !== undefined) fields.push({ id: 'balanceFactor', label: 'bf', value: event.balanceFactor, role: 'metadata' })
   return [{ type: 'set_fields', nodeId: event.nodeId, fields }, { type: 'set_state', entityId: event.nodeId, state: { role: 'active', color: 'primary' }, merge: true }]
+}
+
+function parseBTreeKeys(value: unknown): Array<number | string> {
+  if (Array.isArray(value)) return value.filter(v => typeof v === 'number' || typeof v === 'string') as Array<number | string>
+  if (typeof value === 'number') return [value]
+  if (typeof value !== 'string') return [String(value)]
+
+  const raw = value.trim()
+  if (!raw) return ['']
+  if (raw.startsWith('[') && raw.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parseBTreeKeys(parsed)
+    } catch {
+      return raw.slice(1, -1).split(',').map(part => parseKey(part.trim())).filter(part => part !== '')
+    }
+  }
+  if (raw.includes('·')) return raw.split('·').map(part => parseKey(part.trim())).filter(part => part !== '')
+  return [parseKey(raw)]
+}
+
+function parseKey(value: string): number | string {
+  const n = Number(value)
+  return Number.isFinite(n) && value !== '' ? n : value
 }
 
 function compileDelete(event: Extract<TreeAlgorithmEvent, { type: 'tree.delete' }>, context: CompileContext): SceneCommand[] {

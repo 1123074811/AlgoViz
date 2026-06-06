@@ -1,5 +1,6 @@
 import type { ActionColor } from '@/types/animation'
 import type { SceneEntityState } from './types'
+import type { CallStackEvent, DPEvent, GridEvent } from './overlays'
 
 export type CommonAlgorithmEvent =
   | { type: 'scene.note'; text: string }
@@ -7,6 +8,12 @@ export type CommonAlgorithmEvent =
   | { type: 'scene.clear_highlight'; entityIds?: string[] }
   | { type: 'scene.link'; from: string; to: string; label?: string; color?: ActionColor }
   | { type: 'scene.wait'; duration?: number }
+
+export type PointerAlgorithmEvent =
+  | { type: 'pointer.create'; pointerId: string; label?: string; targetId?: string; portId?: string }
+  | { type: 'pointer.move'; pointerId: string; targetId: string | null; portId?: string; label?: string }
+  | { type: 'pointer.clear'; pointerId: string }
+  | { type: 'pointer.highlight'; pointerId: string; color?: ActionColor }
 
 export type LinkedListAlgorithmEvent =
   | { type: 'linked_list.create'; variant: 'singly' | 'doubly' | 'circular'; nodes: Array<{ id: string; value: number | string }>; headId?: string; tailId?: string }
@@ -35,6 +42,7 @@ export type ArrayAlgorithmEvent =
   | { type: 'array.move'; from: number; to: number }
   | { type: 'array.set_value'; index: number; value: number | string }
   | { type: 'array.mark_sorted'; indices: number[] }
+  | { type: 'array.window'; indices: number[]; entering?: number; leaving?: number; isNewMax?: boolean }
   | { type: 'array.partition'; pivotIndex: number; left: number; right: number }
 
 export type GraphAlgorithmEvent =
@@ -127,4 +135,4 @@ export type MathAlgorithmEvent =
   | { type: 'math.highlight'; name: string }
   | { type: 'math.note'; text: string }
 
-export type AlgorithmEvent = CommonAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | MathAlgorithmEvent
+export type AlgorithmEvent = CommonAlgorithmEvent | PointerAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | MathAlgorithmEvent | CallStackEvent | DPEvent | GridEvent
