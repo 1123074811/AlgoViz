@@ -132,8 +132,15 @@ for (const [source, target, weight] of edges) {
 b.heapPop()
 \`\`\`
 
+## 多输入算法（重要）
+有些算法需要多个输入（如 two_sum 的 nums+target、binary_search 的 arr+target、kmp 的 text+pattern）。这时：
+- \`@type\` 用主结构类型（如 array），\`@sample\` 用**对象**把所有输入命名打包，例如 two_sum：\`// @sample {"nums":[2,7,11,15],"target":9}\`
+- 生成器体里用**带回退的解构**读取：\`const nums = input.nums || input; const target = input.target;\`——这样即使用户传了裸数组也不至于崩
+- 主结构（如 nums）传给 \`b.arrayCreate(nums)\`；target 这类标量只参与逻辑、用 \`b.desc\` 说明，不必单独建结构
+
 ## 硬性要求
 - 代码必须用 input 的实际值运行，**换输入要能产出不同动画**（不要硬编码步骤）
+- 访问 input 的字段前先做空值回退（\`input.xxx || 默认\`），不要假设 input 一定是某种形状
 - 数组类第一步必须 \`b.arrayCreate(input)\`；图/树类似
 - 每个关键操作都要发对应方法（比较、交换、访问...），不要只 b.note 文字
 - 总步数控制在 ~300 以内；可在循环里 break/限制规模

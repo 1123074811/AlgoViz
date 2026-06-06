@@ -5,6 +5,21 @@ const MAX_STEPS = 600
 
 type Action = AnimationStep['action']
 
+/** Tolerate common AI mistakes: passing the whole input object (e.g. {nums:[...],
+ *  target}) or a non-array to a create method. Extracts the intended array instead
+ *  of crashing with a cryptic "Cannot read properties of null". */
+function coerceArray(values: unknown): (number | string)[] {
+  if (Array.isArray(values)) return values as (number | string)[]
+  if (values && typeof values === 'object') {
+    const o = values as Record<string, unknown>
+    for (const k of ['nums', 'values', 'arr', 'array', 'data', 'list', 'items', 'a']) {
+      if (Array.isArray(o[k])) return o[k] as (number | string)[]
+    }
+  }
+  if (typeof values === 'number' || typeof values === 'string') return [values]
+  return []
+}
+
 /** Accumulates builder calls into a standard AnimationScript. Used by AI-generated
  *  generators to describe an algorithm's animation without writing raw JSON. */
 export class AnimationBuilder {
@@ -56,8 +71,9 @@ export class AnimationBuilder {
 
   // ── array ──
   arrayCreate(values: (number | string)[]): this {
-    this.arrayData = [...values]
-    return this.add([{ type: 'array.create', values: [...values] }], this.act('highlight', [], 'primary'))
+    const v = coerceArray(values)
+    this.arrayData = [...v]
+    return this.add([{ type: 'array.create', values: [...v] }], this.act('highlight', [], 'primary'))
   }
   compare(i: number, j: number): this {
     return this.add([{ type: 'array.compare', indices: [i, j] }], this.act('compare', [i, j], 'warning'))
