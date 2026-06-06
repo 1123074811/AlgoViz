@@ -1,488 +1,40 @@
-# AlgoViz —— AI 驱动的算法可视化学习平台
+# AlgoViz
 
-AlgoViz 是一个面向算法学习、课堂演示与代码理解的纯前端算法可视化平台。项目基于 **React 18 + TypeScript + Vite** 构建，核心目标是让用户不仅能观看预制算法动画，还能将自己编写的算法代码交给 AI 分析，由 AI 生成标准化的结构化动画脚本，再由前端渲染引擎逐步播放。
+AI 驱动的算法可视化学习平台。项目基于 React 18、TypeScript、Vite 和 SVG 场景引擎构建，面向算法学习、课堂演示、刷题复盘和自定义代码理解。
 
-与传统“预先写死动画”的算法学习网站不同，AlgoViz 的核心创新是：
+AlgoViz 的核心思路是把算法执行过程统一表达为结构化 `AnimationScript`：内置算法由本地生成器稳定生成动画，自定义代码可交给 OpenAI 兼容模型分析，模型返回动画脚本或可执行动画生成器，前端再通过 Scene Engine 渲染为逐步可播放的可视化过程。
 
-> **AI 实时分析用户代码，输出 AnimationScript JSON，前端根据 JSON 动态驱动可视化动画与步骤讲解。**
+## 当前能力
 
----
-
-## 目录
-
-- [项目定位](#项目定位)
-- [核心特性](#核心特性)
-- [技术栈](#技术栈)
-- [系统架构](#系统架构)
-- [AnimationScript 规范](#animationscript-规范)
-- [功能模块](#功能模块)
-- [项目结构](#项目结构)
-- [快速开始](#快速开始)
-- [AI 配置说明](#ai-配置说明)
-- [预制动画库](#预制动画库)
-- [算法目录](#算法目录)
-- [界面与交互设计](#界面与交互设计)
-- [国际化](#国际化)
-- [图标系统](#图标系统)
-- [状态管理与数据流](#状态管理与数据流)
-- [开发脚本](#开发脚本)
-- [当前实现状态](#当前实现状态)
-- [阶段成果](#阶段成果)
-
----
-
-## 项目定位
-
-AlgoViz 面向以下场景：
-
-- **算法初学者**：通过逐步动画理解排序、搜索、图论、动态规划、数据结构等算法。
-- **教师与助教**：用于课堂演示算法执行过程、复杂度和关键状态变化。
-- **面试刷题者**：辅助理解 LeetCode 高频算法模板和常见数据结构操作。
-- **开发者与研究者**：验证自己的算法代码执行逻辑，并将代码行为转换为可视化步骤。
-
-项目采用纯前端架构，无自建后端服务器。AI 请求由浏览器直接调用用户自行配置的 OpenAI 兼容接口。
-
----
-
-## 核心特性
-
-### 1. AI 驱动的代码可视化
-
-用户可以在 **AI 代码实验室** 中输入 Python、JavaScript、C++ 或 Java 代码，并提供初始输入数据。系统会调用用户配置的 OpenAI 兼容模型，让 AI 逐步模拟代码执行过程，返回结构化 `AnimationScript` JSON。
-
-前端解析该 JSON 后，会自动渲染：
-
-- 当前执行步骤说明
-- 当前操作类型
-- 数据结构状态变化
-- 比较 / 交换 / 访问次数统计
-- 算法复杂度信息
-- 动画播放进度
-
-### 2. 预制动画快速通道
-
-对于常见算法，项目内置预制动画脚本或生成器，无需调用 AI 即可快速播放。
-
-优势：
-
-- 响应速度快
-- 无 token 成本
-- 步骤稳定可控
-- 适合教学演示
-
-### 3. 场景化动画引擎 (Scene Engine)
-
-项目采用事件驱动的场景动画引擎，核心渲染入口为 `src/scene/SceneCanvas.tsx`。AI 或预制脚本输出算法语义事件（如 `array.swap`、`tree.rotate`、`stack.push`），由各数据结构编译器编译为场景命令（创建/删除/连接/状态变更），最终由统一的 SVG 场景画布渲染。
-
-| 编译器 | 事件前缀 | 覆盖算法 |
-|---|---|---|
-| `arrayCompiler` | `array.*` | 排序、搜索、滑动窗口、单调栈 |
-| `treeCompiler` | `tree.*` | BST、AVL、红黑树、Trie、堆 |
-| `graphCompiler` | `graph.*` | BFS、DFS、Dijkstra、Prim、Kruskal、拓扑排序 |
-| `matrixCompiler` | `matrix.*` / `n_queens.*` | DP 表格、N 皇后、数独 |
-| `linkedListCompiler` | `linked_list.*` | 单链表、双向链表、循环链表 |
-| `stackCompiler` | `stack.*` | 栈操作（push/pop/peek） |
-| `queueCompiler` | `queue.*` | 队列操作（enqueue/dequeue/peek） |
-| `stringCompiler` | `string.*` | KMP、Manacher、字符串匹配 |
-
-旧版 `VisualizationCanvas.tsx` + 独立渲染器仍保留用于兼容，但新算法统一走 Scene Engine 路径。
-
-### 4. 中英双语
-
-项目使用 `i18next` 和 `react-i18next` 提供中英双语资源，语言配置保存在浏览器本地。
-
-### 5. 简约学术风设计
-
-视觉风格遵循学术教材的简约克制美学，兼顾信息密度与视觉优雅：
-
-- 白色主背景，蓝色主色
-- 绿色表示完成/插入，橙色表示当前高亮，红色表示冲突/删除，灰色表示非活跃
-- **开口 V 形箭头**：无填充学术风箭头标记，替代传统实心三角
-- **曲线轨迹**：节点交换、入栈出栈、入队出队、树旋转等操作均以二次贝塞尔曲线弧线展示移动轨迹
-- **虚线流动动画**：轨迹箭头采用细线虚线 + 流动动画，结构边为实线
-- **圆形/矩形精确裁剪**：箭头末端按实体几何形状精确裁剪并留 5px 间距，避免视觉重叠
-- **矩阵下标**：行列索引以纯文本渲染，不被单元格边框包裹
-
----
+- 算法目录覆盖排序、图算法、数据结构、动态规划、搜索回溯、进阶专题、面试高频和竞赛模板。
+- 主可视化工作区支持算法搜索、分类筛选、代码编辑、输入数据配置、播放控制、步骤说明、复杂度与统计信息展示。
+- AI 代码实验室支持 Python、JavaScript、C++、Java 代码输入，并把分析记录保存在本地历史中。
+- AI 调用优先走同源 `/api/chat` 代理，开发环境由 Vite 插件提供，生产环境由 `server/proxy.cjs` 提供。
+- AI 分析支持两条路径：直接生成 `AnimationScript`，或生成可复用的动画生成器并在 Web Worker 沙箱中执行。
+- Scene Engine 支持事件驱动动画、复合结构分区布局、统一 SVG 画布、算法事件时间线和多数据结构编译器。
+- i18next 提供中英双语，语言选择和 API 配置保存在浏览器 `localStorage`。
+- Vitest 覆盖 AI 解析/修复、Scene Engine、编译器、沙箱生成器和 store 等核心模块。
 
 ## 技术栈
 
-| 层级 | 技术选型 |
+| 层级 | 技术 |
 |---|---|
-| 构建工具 | Vite |
+| 构建工具 | Vite 8 |
 | 前端框架 | React 18 |
-| 类型系统 | TypeScript |
+| 类型系统 | TypeScript 6 |
 | 路由 | React Router v6 |
 | 状态管理 | Zustand |
-| 样式 | Tailwind CSS + CSS Variables |
-| 可视化 | SVG 场景引擎 (Scene Engine) + 事件编译器 + 自适应布局 |
-| 代码编辑器 | Monaco Editor |
-| 国际化 | i18next + react-i18next |
-| AI 调用 | 用户自配置 OpenAI 兼容 Chat Completions 接口 |
-| 图标 | Lucide React，部分依赖保留 Heroicons |
-
----
-
-## 系统架构
-
-### 整体工作流
-
-```text
-用户选择算法 / 输入自定义代码
-        ↓
-输入数据配置
-        ↓
-判断是否存在预制动画或生成器
-        ↓
-是：直接生成 AnimationScript
-        ↓
-否：调用 AI 分析代码
-        ↓
-AI 返回 AnimationScript JSON
-        ↓
-前端解析与校验 JSON
-        ↓
-useAnimationEngine 派生当前可视状态
-        ↓
-VisualizationCanvas 选择对应渲染器
-        ↓
-用户看到动画、步骤说明、复杂度与统计信息
-```
-
-### AI 动画引擎分层
-
-| 分层 | 代码位置 | 作用 |
-|---|---|---|
-| AI 客户端 | `src/ai/client.ts` | 读取 API 配置，调用 OpenAI 兼容接口，编排解析、错误处理与修复流程 |
-| Prompt 模板 | `src/ai/prompts.ts` | 约束 AI 输出严格 AnimationScript JSON |
-| JSON 解析器 | `src/ai/parser.ts` | 提取 AI 返回内容，调用 Schema 校验并返回结构化解析结果 |
-| Schema 校验 | `src/ai/schema.ts` | 校验并规范化 AnimationScript，保留图、树、矩阵、链表和教学状态字段 |
-| 输入解析 | `src/ai/input.ts` | 识别数组、图、树、矩阵、链表等输入数据结构并生成 Prompt 上下文 |
-| 错误模型 | `src/ai/errors.ts` | 定义结构化 AI 错误报告、校验问题和修复记录 |
-| 自动修复 | `src/ai/repair.ts` | 执行本地 JSON 修复，并构造 AI 二次修复请求 |
-| 类型定义 | `src/types/animation.ts` | 定义 AnimationScript、Step、Action 等类型 |
-| 动画引擎 Hook | `src/hooks/useAnimationEngine.ts` | 根据当前步骤派生可视状态，控制播放 |
-| 场景引擎 | `src/scene/SceneEngine.ts` | 根据动画脚本与当前步骤派生完整场景状态 |
-| 事件编译器 | `src/scene/compilers/*.ts` | 将算法语义事件编译为场景命令 |
-| 场景图元 | `src/scene/primitives/*.tsx` | NodeView、CellView、EdgeView、ContainerView 等渲染组件 |
-| 布局引擎 | `src/scene/layouts/*.ts` | 树/图/链表自适应布局算法 |
-| 渲染入口 | `src/scene/SceneCanvas.tsx` | 统一 SVG 画布，渲染节点/边/指针/容器/标签 |
-| 预制脚本/生成器 | `src/presets/` | 为常见算法提供稳定动画数据 |
-
----
-
-## AnimationScript 规范
-
-`AnimationScript` 是 AlgoViz 的核心数据协议。无论动画来自预制脚本、生成器还是 AI，最终都需要转换为该结构。
-
-### TypeScript 类型
-
-核心类型定义位于：
-
-```text
-src/types/animation.ts
-```
-
-主要结构：
-
-```ts
-export type RendererType = 'array' | 'graph' | 'tree' | 'matrix' | 'linked_list'
-
-export type ActionType =
-  | 'highlight'
-  | 'swap'
-  | 'compare'
-  | 'move'
-  | 'insert'
-  | 'delete'
-  | 'mark'
-  | 'annotate'
-  | 'edge'
-
-export type ActionColor =
-  | 'primary'
-  | 'success'
-  | 'warning'
-  | 'danger'
-  | 'muted'
-```
-
-### JSON 示例
-
-```json
-{
-  "algorithm": "quicksort",
-  "complexity": {
-    "time": {
-      "best": "O(n log n)",
-      "average": "O(n log n)",
-      "worst": "O(n²)"
-    },
-    "space": "O(log n)"
-  },
-  "initialState": {
-    "type": "array",
-    "data": [5, 3, 8, 1, 9, 2]
-  },
-  "steps": [
-    {
-      "stepId": 1,
-      "codeLine": 0,
-      "description": {
-        "zh": "选择基准元素 pivot = 5",
-        "en": "Select pivot element = 5"
-      },
-      "action": {
-        "type": "highlight",
-        "targets": [0],
-        "color": "primary"
-      },
-      "stats": {
-        "comparisons": 0,
-        "swaps": 0,
-        "accesses": 1
-      }
-    }
-  ]
-}
-```
-
-### action.type 枚举
-
-| 类型 | 含义 | 常见场景 |
-|---|---|---|
-| `highlight` | 高亮元素 | 当前访问、当前基准、当前节点 |
-| `swap` | 交换两个位置 | 排序算法 |
-| `compare` | 比较元素 | 排序、搜索、路径松弛 |
-| `move` | 移动元素 | 插入排序、链表移动 |
-| `insert` | 插入元素 | 数据结构操作 |
-| `delete` | 删除元素 | 链表、树、哈希表 |
-| `mark` | 标记状态 | 已完成、已访问、已确定 |
-| `annotate` | 添加说明 | 特殊状态标注 |
-| `edge` | 高亮边 | 图、树结构遍历 |
-
-### action.color 枚举
-
-| 颜色 | 语义 |
-|---|---|
-| `primary` | 默认主色，强调当前关注点 |
-| `success` | 成功、完成、已访问 |
-| `warning` | 当前执行、临时高亮 |
-| `danger` | 冲突、错误、交换、比较失败 |
-| `muted` | 非活跃、已跳过、背景状态 |
-
-### AI 输出要求
-
-内置 Prompt 要求 AI：
-
-1. 逐步模拟算法执行过程。
-2. 将每一步转化为标准 `AnimationScript` JSON。
-3. 只输出 JSON，不输出解释文字。
-4. `codeLine` 需要精确对应用户代码行号。
-5. `description` 必须同时包含 `zh` 和 `en` 字段。
-6. `stats` 需要记录累计的比较、交换、访问次数。
-
-当前项目中的 Prompt 实现位于：
-
-```text
-src/ai/prompts.ts
-```
-
----
-
-## 功能模块
-
-### 1. 首页 Home
-
-代码位置：
-
-```text
-src/pages/Home/index.tsx
-```
-
-主要能力：
-
-- 展示项目定位与核心创新。
-- 提供“开始学习”和“AI 代码实验室”入口。
-- 展示算法分类卡片。
-- 根据分类跳转到可视化页面。
-
-### 2. 主可视化页面 Visualizer
-
-代码位置：
-
-```text
-src/pages/Visualizer/index.tsx
-```
-
-主要能力：
-
-- 左侧侧边栏展示算法目录。
-- 支持搜索算法。
-- 支持按分类筛选。
-- 支持难度标签。
-- 支持 Monaco Editor 展示/编辑算法代码。
-- 支持输入数据配置。
-- 支持优先使用预制动画或本地生成器。
-- 支持在缺少预制动画时调用 AI 分析。
-- 支持播放、暂停、上一步、下一步、重置、跳到结尾。
-- 支持步骤说明、复杂度、统计数据展示。
-
-### 3. AI 代码实验室 Playground
-
-代码位置：
-
-```text
-src/pages/Playground/index.tsx
-```
-
-主要能力：
-
-- 支持用户自由输入算法代码。
-- 支持语言切换：Python、JavaScript、C++、Java。
-- 支持输入 JSON 数组作为初始数据。
-- 调用 AI 生成 `AnimationScript`。
-- 渲染 AI 返回的动画。
-- 保存最近分析历史到 `localStorage`。
-- 支持从历史记录恢复代码、输入数据和动画脚本。
-
-### 4. 设置页 Settings
-
-代码位置：
-
-```text
-src/pages/Settings/index.tsx
-```
-
-主要能力：
-
-- 配置 API Key。
-- 配置 Base URL。
-- 配置模型名称。
-- 提供 OpenAI、DeepSeek、Moonshot 等 Base URL 快捷项。
-- 测试 Chat Completions 接口连通性。
-- 显示连接状态与响应时间。
-- 根据模型估算单次请求 token 和成本。
-
-配置保存在浏览器本地：
-
-```text
-localStorage key: algoviz-api-config
-```
-
-> 注意：当前项目无后端，API Key 不会上传到项目服务器。但当前代码以 JSON 形式保存在 `localStorage`，如需更高安全级别，可后续接入 Web Crypto API 做本地加密。
-
-### 5. 布局与导航
-
-相关代码：
-
-```text
-src/components/Layout/Header.tsx
-src/components/Layout/MainLayout.tsx
-src/components/Layout/Sidebar.tsx
-```
-
-主要能力：
-
-- 顶部导航栏。
-- 首页 / 可视化 / AI 实验室 / 设置页路由入口。
-- 中英文切换。
-- 可折叠侧边栏。
-- 分类导航与搜索。
-
----
-
-## 项目结构
-
-当前项目核心目录如下：
-
-```text
-AlgoViz/
-├── index.html
-├── package.json
-├── postcss.config.js
-├── tailwind.config.js
-├── tsconfig.json
-├── vite.config.ts
-└── src/
-    ├── App.tsx
-    ├── main.tsx
-    ├── index.css
-    ├── ai/                          # AI 分析引擎
-    │   ├── client.ts                # API 调用 + 代理回退
-    │   ├── parser.ts                # JSON 提取与解析
-    │   ├── prompts.ts               # Prompt 模板
-    │   ├── schema.ts                # AnimationScript 校验
-    │   ├── repair.ts                # 本地/AI 自动修复
-    │   ├── errors.ts                # 结构化错误报告
-    │   └── input.ts                 # 输入数据结构识别
-    ├── scene/                       # 场景动画引擎 (核心)
-    │   ├── SceneEngine.ts           # 场景状态派生 + 命令应用
-    │   ├── SceneCanvas.tsx          # 统一 SVG 画布渲染
-    │   ├── EventTimeline.tsx        # 事件时间线组件
-    │   ├── eventCompiler.ts         # 编译器路由
-    │   ├── eventTypes.ts            # 算法事件类型定义
-    │   ├── commandTypes.ts          # 场景命令类型定义
-    │   ├── types.ts                 # 场景实体/边/状态类型
-    │   ├── compilers/               # 各数据结构事件编译器
-    │   │   ├── arrayCompiler.ts
-    │   │   ├── treeCompiler.ts
-    │   │   ├── graphCompiler.ts
-    │   │   ├── matrixCompiler.ts
-    │   │   ├── linkedListCompiler.ts
-    │   │   ├── stackCompiler.ts
-    │   │   ├── queueCompiler.ts
-    │   │   └── stringCompiler.ts
-    │   ├── primitives/              # 场景图元渲染组件
-    │   │   ├── NodeView.tsx          # 节点 (圆形/矩形)
-    │   │   ├── CellView.tsx          # 单元格 (数组/矩阵)
-    │   │   ├── EdgeView.tsx          # 边 + 曲线轨迹 + 箭头
-    │   │   ├── ContainerView.tsx     # 容器 (栈U形/队列管道)
-    │   │   ├── PointerView.tsx       # 指针箭头
-    │   │   ├── LabelView.tsx         # 文本标签
-    │   │   └── DataUnits.ts          # 实体/边工厂函数
-    │   ├── layouts/                 # 自适应布局算法
-    │   │   ├── treeLayout.ts         # 端口感知二叉树 + 多分支布局
-    │   │   ├── graphLayout.ts        # 稳定圆形 + 分层流式布局
-    │   │   └── linkedListLayout.ts   # 链表水平布局
-    │   └── variants/               # 节点/边视觉变体
-    ├── components/
-    │   ├── Canvas/                  # 旧版渲染器 (兼容保留)
-    │   ├── Controls/                # 播放控制栏
-    │   ├── Editor/                  # 代码/输入编辑器
-    │   └── Layout/                  # 页面布局
-    ├── data/
-    │   └── algorithmDefs.ts
-    ├── hooks/
-    │   └── useAnimationEngine.ts
-    ├── i18n/
-    ├── icons/
-    ├── pages/
-    │   ├── Home/
-    │   ├── Playground/
-    │   ├── Settings/
-    │   └── Visualizer/
-    ├── presets/                     # 预制动画脚本与生成器
-    │   ├── index.ts
-    │   ├── generators.ts            # 动态生成器 (50+ 算法)
-    │   ├── operationPresets.ts       # 数据结构操作预设
-    │   └── *.ts                     # 各算法独立预设
-    ├── store/
-    │   └── algorithmStore.ts
-    ├── types/
-    │   └── animation.ts
-    └── utils/
-        ├── codeCompiler.ts
-        └── inputParser.ts
-```
-
----
+| 样式 | Tailwind CSS、CSS Variables |
+| 动画与交互 | SVG Scene Engine、Framer Motion |
+| 代码编辑 | Monaco Editor |
+| 国际化 | i18next、react-i18next |
+| 图标 | lucide-react，部分 Heroicons 依赖保留 |
+| 图/布局辅助 | d3 |
+| 测试 | Vitest、jsdom、coverage-v8 |
 
 ## 快速开始
 
 ### 环境要求
-
-建议使用：
 
 - Node.js 18+
 - npm 9+
@@ -493,469 +45,439 @@ AlgoViz/
 npm install
 ```
 
-### 启动开发服务器
+### 开发模式
 
 ```bash
 npm run dev
 ```
 
-启动后，在浏览器中访问 Vite 输出的本地地址，通常为：
+Vite 默认运行在：
 
 ```text
 http://localhost:5173
 ```
 
-### 构建生产版本
+开发模式下，Vite 会同时挂载 `/api/chat` 代理，浏览器请求模型服务时会先走同源代理，避免大多数 CORS 问题。
+
+### 生产构建
 
 ```bash
 npm run build
 ```
 
-### 本地预览生产构建
+### 预览构建产物
 
 ```bash
 npm run preview
 ```
 
----
+### 生产代理与静态服务
 
-## AI 配置说明
-
-AlgoViz 支持 OpenAI 兼容的 Chat Completions API。
-
-### 配置入口
-
-进入：
-
-```text
-/settings
+```bash
+npm run start
 ```
 
-需要填写：
+或：
 
-| 字段 | 说明 | 默认值 |
+```bash
+npm run proxy
+```
+
+`server/proxy.cjs` 默认监听 `3001` 端口。若 `dist/` 存在，它会同时提供静态文件和 `/api/chat` 代理；若 `dist/` 不存在，它只作为代理服务和健康检查入口使用。
+
+## 开发脚本
+
+| 命令 | 说明 |
+|---|---|
+| `npm run dev` | 启动 Vite 开发服务器，包含开发期 `/api/chat` 代理 |
+| `npm run build` | 先执行 TypeScript 编译，再执行 Vite 生产构建 |
+| `npm run preview` | 本地预览 Vite 构建产物 |
+| `npm run proxy` | 启动 Node 代理/静态服务 |
+| `npm run start` | 同 `npm run proxy` |
+| `npm run test` | 以 run 模式执行 Vitest |
+| `npm run test:watch` | 启动 Vitest 监听模式 |
+| `npm run test:ui` | 启动 Vitest UI |
+| `npm run coverage` | 生成测试覆盖率，当前覆盖重点为 `src/scene/**` 和 `src/ai/**` |
+| `npm run lint` | 对 `src` 执行 ESLint |
+| `npm run format` | 使用 Prettier 格式化 `src` |
+
+## 页面路由
+
+| 路径 | 页面 | 说明 |
 |---|---|---|
-| API Key | 用户自己的模型服务密钥 | 空 |
-| Base URL | OpenAI 兼容接口地址 | `https://api.openai.com/v1` |
-| Model | 模型名称 | `gpt-4o` |
+| `/` | Home | 首页与项目入口 |
+| `/visualizer` | Visualizer | 主算法可视化工作区 |
+| `/playground` | Playground | AI 代码实验室 |
+| `/settings` | Settings | AI API 配置中心 |
 
-### 支持的接口格式
+路由定义位于 `src/App.tsx`。页面组件使用 `React.lazy` 懒加载，`/visualizer` 包裹在 `MainLayout` 中。
 
-项目调用路径为：
+## 项目结构
+
+```text
+AlgoViz/
+├── docs/                         # 阶段计划、Scene Engine 文档、Superpowers 规格与计划
+├── server/
+│   └── proxy.cjs                 # 生产代理和静态文件服务
+├── src/
+│   ├── ai/                       # AI 客户端、Prompt、解析、Schema、修复、生成器解析
+│   ├── components/               # 通用组件、布局、编辑器、播放控制、旧版 Canvas 渲染器
+│   ├── data/                     # 算法定义补充数据
+│   ├── hooks/                    # 动画播放引擎与 AI 生成器 Hook
+│   ├── i18n/                     # i18next 初始化与中英语言包
+│   ├── icons/                    # 图标封装
+│   ├── pages/                    # Home、Visualizer、Playground、Settings
+│   ├── presets/                  # 内置算法动态生成器与算法识别
+│   ├── sandbox/                  # AI 生成器 Builder、Worker 沙箱、执行器
+│   ├── scene/                    # Scene Engine、事件编译器、布局、图元、诊断与测试
+│   ├── store/                    # Zustand store 与测试
+│   ├── types/                    # AnimationScript 类型定义
+│   └── utils/                    # 输入解析、代码模板辅助
+├── index.html
+├── package.json
+├── vite.config.ts
+├── vitest.config.ts
+├── eslint.config.js
+├── tailwind.config.js
+└── tsconfig.json
+```
+
+## 系统架构
+
+### 整体流程
+
+```text
+用户选择内置算法 / 输入自定义代码
+        ↓
+配置输入数据
+        ↓
+内置算法：本地动态生成器生成 AnimationScript
+自定义代码：AI 生成 AnimationScript 或动画生成器
+        ↓
+解析、校验、修复或沙箱执行
+        ↓
+AnimationScript steps + events
+        ↓
+Scene Engine 将算法事件编译为场景命令
+        ↓
+SceneCanvas 渲染 SVG 场景
+        ↓
+用户播放、暂停、单步调试、查看步骤说明和统计信息
+```
+
+### AI 请求链路
+
+核心文件：
+
+- `src/ai/client.ts`
+- `src/ai/prompts.ts`
+- `src/ai/generatorPrompt.ts`
+- `src/ai/parser.ts`
+- `src/ai/generatorParser.ts`
+- `src/ai/schema.ts`
+- `src/ai/repair.ts`
+- `server/proxy.cjs`
+- `vite.config.ts`
+
+当前请求策略是代理优先：
+
+```text
+浏览器 fetch('/api/chat')
+        ↓
+Vite 开发代理 / Node 生产代理
+        ↓
+{baseUrl}/chat/completions
+```
+
+如果代理端点缺失或不可达，客户端会在有限条件下回退到浏览器直连。认证错误、模型错误、限流等服务端错误不会重复直连。
+
+### AI 生成器模式
+
+除一次性生成完整 JSON 外，项目还支持让 AI 生成一个可复用的 JavaScript 动画生成器。生成器响应会被解析为：
+
+```js
+// @algorithm bubble_sort
+// @type array
+// @sample [5,3,8,1]
+// @time O(n^2)
+// @space O(1)
+
+b.arrayCreate(input)
+b.desc('比较相邻元素').compare(0, 1)
+```
+
+解析后由 `src/sandbox/runGenerator.ts` 在 Web Worker 中执行，默认 5 秒超时。生成器只能通过 `AnimationBuilder` 提供的方法产生步骤，最终构建为标准 `AnimationScript`。
+
+输入数据变化后，如果已经有内置算法识别结果或 AI 生成器，页面会本地重新生成动画，不会每次都重新请求 AI。
+
+## AnimationScript
+
+核心类型位于 `src/types/animation.ts`。所有内置生成器、AI JSON 和 AI 生成器最终都会归一到该协议。
+
+```ts
+export interface AnimationScript {
+  algorithm: string
+  complexity: Complexity
+  initialState: InitialState
+  presentation?: PresentationConfig
+  steps: AnimationStep[]
+}
+```
+
+当前重点字段：
+
+| 字段 | 说明 |
+|---|---|
+| `algorithm` | 算法标识或名称 |
+| `complexity` | 时间/空间复杂度 |
+| `initialState` | 初始数据结构，支持 array、graph、tree、matrix、linked_list |
+| `presentation` | 场景引擎配置，如 `engine: 'scene'`、`layout: 'composite'` |
+| `steps` | 动画步骤列表 |
+| `steps[].action` | 旧版渲染器兼容动作 |
+| `steps[].events` | Scene Engine 使用的算法语义事件 |
+| `steps[].teachingState` | 变量、范围、图/树状态、注释等教学状态 |
+| `steps[].stats` | 累计比较、交换、访问次数 |
+
+示例：
+
+```json
+{
+  "algorithm": "bubble_sort",
+  "presentation": { "engine": "scene", "module": "array" },
+  "complexity": {
+    "time": { "best": "O(n)", "average": "O(n^2)", "worst": "O(n^2)" },
+    "space": "O(1)"
+  },
+  "initialState": { "type": "array", "data": [5, 3, 8, 1] },
+  "steps": [
+    {
+      "stepId": 1,
+      "codeLine": 0,
+      "description": { "zh": "初始化数组", "en": "Initialize array" },
+      "action": { "type": "highlight", "targets": [], "color": "primary" },
+      "events": [{ "type": "array.create", "values": [5, 3, 8, 1] }],
+      "stats": { "comparisons": 0, "swaps": 0, "accesses": 0 }
+    }
+  ]
+}
+```
+
+## Scene Engine
+
+Scene Engine 是当前主要渲染路径。旧版 `src/components/Canvas/VisualizationCanvas.tsx` 和独立渲染器仍保留，用于兼容旧脚本。
+
+### 数据流
+
+```text
+AnimationStep.events
+        ↓
+compileEvent(event, context)
+        ↓
+SceneCommand[]
+        ↓
+SceneEngine 应用命令并派生 SceneState
+        ↓
+SceneCanvas 渲染实体、边、标签、指针、区域和辅助结构
+```
+
+### 事件编译器
+
+当前 `src/scene/eventCompiler.ts` 注册的编译器包括：
+
+| 编译器 | 事件前缀 |
+|---|---|
+| `arrayCompiler` | `array.*` |
+| `treeCompiler` | `tree.*` |
+| `graphCompiler` | `graph.*` |
+| `matrixCompiler` | `matrix.*` / 部分 DP 网格事件 |
+| `linkedListCompiler` | `linked_list.*` |
+| `stackCompiler` | `stack.*` |
+| `queueCompiler` | `queue.*` |
+| `dequeCompiler` | `deque.*` |
+| `stringCompiler` | `string.*` |
+| `setCompiler` | `set.*` |
+| `mapCompiler` | `map.*` |
+| `hashTableCompiler` | `hashtable.*` |
+| `heapCompiler` | `heap.*` |
+| `bitsetCompiler` | `bitset.*` |
+| `mathCompiler` | `math.*` |
+
+此外，`scene.note`、`scene.wait`、`scene.highlight`、`scene.link`、`scene.clear_highlight` 等通用事件在 `compileEvent` 中直接处理。
+
+### 场景图元
+
+主要图元位于 `src/scene/primitives/`：
+
+- `CellView`：数组、矩阵、字符串单元格
+- `NodeView`：树、图、链表节点
+- `EdgeView`：结构边、曲线轨迹、虚线箭头
+- `ContainerView`：栈、队列、双端队列等容器
+- `PointerView`：指针和引用关系
+- `LabelView`：标签、说明文本
+- `RegionView`：复合场景分区
+- `StringView`、`SetView`、`HashTableView`、`HeapView`、`BitsetView`、`VariablesView`：专用结构视图
+
+### 复合场景布局
+
+`src/scene/regionLayout.ts` 会把多结构脚本按实体分组，生成区域框和标题，避免数组、栈、队列、变量面板、主结构等内容相互重叠。
+
+`AnimationBuilder` 会根据生成器使用到的事件族自动判断是否启用：
+
+```ts
+presentation.layout = 'composite'
+```
+
+## 内置算法与生成器
+
+`src/presets/index.ts` 中的静态 preset 注册表目前为空，当前内置能力主要由动态生成器提供。
+
+主要入口：
+
+- `src/presets/generators.ts`
+- `src/presets/recognize.ts`
+- `src/presets/operationPresets.ts`
+- 各算法独立文件，如 `dijkstra.ts`、`segmentTree.ts`、`hashTable.ts`、`bTree.ts`
+
+当前覆盖方向：
+
+| 分类 | 示例 |
+|---|---|
+| 排序 | 冒泡、选择、插入、希尔、归并、快排、堆排、计数、基数、桶排 |
+| 图算法 | BFS、DFS、Dijkstra、Bellman-Ford、A*、Floyd、Prim、Kruskal、拓扑排序 |
+| 数据结构 | 数组、链表、双向链表、循环链表、栈、队列、双端队列、堆、并查集、哈希表、集合、映射、二叉树、BST、AVL、红黑树、Trie、B 树、B+ 树 |
+| 动态规划 | 0/1 背包、完全背包、LCS、LIS、编辑距离、矩阵链乘、区间 DP |
+| 搜索回溯 | 二分查找、回溯、N 皇后、数独 |
+| 进阶专题 | KMP、Manacher、线段树、树状数组、单调栈、滑动窗口、位集、数学变量面板 |
+| 题单/模板 | LeetCode Hot 100、ACM 模板 |
+
+算法目录状态主要定义在 `src/store/algorithmStore.ts`，补充说明数据位于 `src/data/algorithmDefs.ts`。
+
+## AI 配置
+
+进入 `/settings` 配置：
+
+| 字段 | 当前默认值 |
+|---|---|
+| Base URL | `https://api.deepseek.com` |
+| Model | `deepseek-v4-pro` |
+| API Key | 用户自行填写 |
+
+页面内置快捷服务：
+
+- OpenAI：`https://api.openai.com/v1`
+- Anthropic：`https://api.anthropic.com/v1`
+- Gemini：`https://generativelanguage.googleapis.com/v1beta/openai`
+- DeepSeek：`https://api.deepseek.com`
+
+客户端会把最终请求发送到：
 
 ```text
 {baseUrl}/chat/completions
 ```
 
-请求方式：
-
-```http
-POST /chat/completions
-Authorization: Bearer <API_KEY>
-Content-Type: application/json
-```
-
-### CORS 注意事项
-
-因为项目是纯前端应用，浏览器会直接请求模型服务。如果模型服务没有开放浏览器跨域访问，可能出现 CORS 或 `Failed to fetch` 错误。
-
-可选解决方式：
-
-- 使用支持浏览器跨域的 API 服务。
-- 使用本地代理或边缘函数代理请求。
-- 将项目部署到允许访问目标 API 的环境中。
-
----
-
-## 预制动画库
-
-预制动画位于：
+配置保存在：
 
 ```text
-src/presets/
+localStorage key: algoviz-api-config
 ```
 
-入口文件：
+注意：
 
-```text
-src/presets/index.ts
-src/presets/generators.ts
-```
+- API Key 当前以明文 JSON 保存在浏览器 `localStorage`，仅适合本地开发和个人使用。
+- 开发期推荐使用 `npm run dev` 自带的同源代理。
+- 生产部署推荐使用 `npm run build` 后由 `npm run start` 启动代理，或自行接入更安全的后端/边缘函数。
+- 设置页中的 token 和成本估算来自本地静态表，仅用于 UI 参考，实际费用以模型服务商为准。
 
-项目包含两类预制能力：
+## 本地持久化
 
-### 1. 静态 Preset
-
-部分算法直接导出固定 `AnimationScript`，例如：
-
-- 冒泡排序
-- 选择排序
-- 插入排序
-- 归并排序
-- 快速排序
-- 二分查找
-- BFS
-- DFS
-- Dijkstra
-- Prim
-- Kruskal
-- 拓扑排序
-- Floyd
-- Bellman-Ford
-- A* 搜索
-
-### 2. 动态 Generator
-
-`generators.ts` 会根据输入数组动态生成步骤，覆盖更多算法与数据结构，例如：
-
-- 排序算法：冒泡、选择、插入、希尔、归并、快排、堆排、计数、基数、桶排
-- 搜索：二分查找、回溯、N 皇后、数独
-- 动态规划：0/1 背包、完全背包、LCS、LIS、编辑距离、矩阵链乘、区间 DP
-- 高级专题：KMP、Manacher、线段树、树状数组、单调栈、滑动窗口
-- 数据结构：数组、链表、双向链表、栈、队列、堆、并查集、二叉树、BST、AVL、红黑树、Trie、哈希表
-- 专题集合：LeetCode Hot 100、ACM 模板
-
----
-
-## 算法目录
-
-算法目录数据主要定义在：
-
-```text
-src/store/algorithmStore.ts
-src/data/algorithmDefs.ts
-```
-
-### 分类
-
-当前目录包含以下分类：
-
-| 分类 | 说明 |
+| key | 说明 |
 |---|---|
-| 排序算法 | 冒泡、选择、插入、希尔、归并、快排、堆排、计数、基数、桶排 |
-| 图算法 | BFS、DFS、Dijkstra、Bellman-Ford、A*、Floyd、Prim、Kruskal、拓扑排序 |
-| 数据结构 | 数组、链表、双向链表、栈、队列、二叉树、BST、AVL、红黑树、堆、Trie、并查集、哈希表 |
-| 动态规划 | 0/1 背包、完全背包、LCS、LIS、编辑距离、矩阵链乘、区间 DP |
-| 搜索与回溯 | 二分查找、回溯、N 皇后、数独求解 |
-| 进阶专题 | KMP、Manacher、线段树、树状数组、单调栈、滑动窗口 |
-| 面试高频 | LeetCode Hot 100 精选 |
-| 竞赛专题 | ACM 常用算法模板 |
+| `algoviz-api-config` | API Key、Base URL、模型名称 |
+| `algoviz-lang` | 当前界面语言 |
+| `algoviz-ai-history` | AI 分析历史，最多保留 20 条 |
 
-### 难度标签
+AI 历史记录会保存代码、语言、输入数据、状态、生成脚本或生成器源码。Visualizer 和 Playground 都会使用统一的 AI 生成器流程，但各自负责把结果写入适合当前页面的历史记录。
 
-| 难度 | 含义 |
-|---|---|
-| easy | 基础 |
-| medium | 中等 |
-| hard | 困难 |
+## 测试
 
-侧边栏支持：
+测试配置位于 `vitest.config.ts`，环境为 `jsdom`，全局测试 API 已启用。
 
-- 分类筛选
-- 中英文名称搜索
-- 序号搜索
-- 折叠 / 展开
-- 当前选中状态高亮
+覆盖重点：
 
----
+- `src/ai/__tests__/`：响应解析、Schema 校验、修复、生成器解析、请求中止
+- `src/scene/__tests__/`：Scene Engine、区域布局、文本度量、复合迁移、数组种子状态
+- `src/scene/compilers/__tests__/`：bitset、hash table、heap、math、set、string 等编译器
+- `src/sandbox/__tests__/`：AnimationBuilder、生成器执行、复合 builder
+- `src/presets/__tests__/`：算法识别与部分复合预设
+- `src/store/__tests__/`：Zustand store 行为
 
-## 界面与交互设计
+运行：
 
-### 页面路由
-
-项目路由定义在 `src/App.tsx`：
-
-| 路径 | 页面 | 说明 |
-|---|---|---|
-| `/` | Home | 首页与功能介绍 |
-| `/visualizer` | Visualizer | 主算法可视化工作区 |
-| `/playground` | Playground | AI 代码实验室 |
-| `/settings` | Settings | AI API 配置中心 |
-
-当前项目没有单独的 `IconGallery` 页面，符合“取消图标预览页”的约束。
-
-### 主工作区布局
-
-主可视化页采用教学平台常见的多栏布局：
-
-- **左侧**：算法目录与筛选。
-- **中间左侧**：代码编辑器与输入数据。
-- **中间主体**：可视化画布。
-- **右侧浮层 / 信息区域**：当前步骤、统计数据、复杂度。
-- **底部控制栏**：播放控制与速度控制。
-
-### 播放控制
-
-`useAnimationEngine` 提供以下控制能力：
-
-- `reset`：重置到初始状态。
-- `stepBackward`：上一步。
-- `togglePlay`：播放 / 暂停。
-- `stepForward`：下一步。
-- `goToEnd`：跳到最后一步。
-- `setSpeed`：设置播放速度。
-
-默认播放间隔约为：
-
-```text
-1500ms / speed
+```bash
+npm run test
 ```
 
----
+覆盖率：
 
-## 国际化
-
-国际化初始化位于：
-
-```text
-src/i18n/index.ts
+```bash
+npm run coverage
 ```
 
-语言资源位于：
+## 样式与交互
 
-```text
-src/i18n/locales/zh.json
-src/i18n/locales/en.json
-```
+全局样式入口为 `src/index.css`，Tailwind 配置在 `tailwind.config.js`。
 
-当前支持：
+当前视觉方向是简约教学工具风格：
 
-- 中文 `zh`
-- 英文 `en`
+- 主背景保持清爽，强调代码、画布和步骤信息的可读性。
+- 主色用于当前焦点，绿色表示完成/成功，橙色表示当前步骤，红色表示冲突/删除，灰色表示非活跃。
+- Scene Engine 使用开口 V 形箭头、曲线轨迹、虚线流动效果和几何裁剪，避免结构边与运动轨迹混淆。
+- 复合场景通过区域布局呈现主结构、辅助队列/栈、变量面板等信息。
+- 可视化工作区包含可拖拽分栏，便于在代码、画布和步骤信息之间调整空间。
 
-语言选择保存在：
+## 扩展指南
 
-```text
-localStorage key: algoviz-lang
-```
+### 新增内置算法
 
----
+1. 在 `src/presets/` 新增生成器，返回标准 `AnimationScript`。
+2. 在 `src/presets/index.ts` 或相关生成器入口注册导出。
+3. 在 `src/store/algorithmStore.ts` 补充算法目录项。
+4. 如需说明卡片，在 `src/data/algorithmDefs.ts` 补充定义、流程、复杂度和适用场景。
+5. 为关键事件或边界输入补充 Vitest 用例。
 
-## 图标系统
+### 新增 Scene 事件族
 
-图标封装位于：
+1. 在 `src/scene/eventTypes.ts` 添加事件类型。
+2. 在 `src/scene/compilers/` 新增编译器，把事件转换为 `SceneCommand[]`。
+3. 在 `src/scene/eventCompiler.ts` 注册编译器。
+4. 如需新图元，在 `src/scene/primitives/` 添加视图组件。
+5. 在 `src/sandbox/builder.ts` 为 AI 生成器暴露友好的 builder 方法。
+6. 增加编译器测试和必要的 Scene Engine 回归测试。
 
-```text
-src/icons/index.tsx
-```
+### 调整 AI 输出
 
-当前主要使用 `lucide-react`：
-
-- 默认尺寸：`20`
-- 默认线宽：`1.5`
-- 颜色继承父级 `currentColor`
-- 通过统一 `Icon` 组件按名称调用
-
-示例：
-
-```tsx
-<Icon name="play" size={16} />
-```
-
-分类图标映射：
-
-| 分类 | 图标 |
-|---|---|
-| sorting | `arrow-up-down` |
-| graph | `git-graph` |
-| data-structure | `database` |
-| dp | `hash` |
-| search-backtrack | `search` |
-| advanced | `brain` |
-| interview | `zap` |
-| contest | `filter` |
-
----
-
-## 状态管理与数据流
-
-项目使用 Zustand 管理全局算法状态。
-
-核心文件：
-
-```text
-src/store/algorithmStore.ts
-```
-
-主要状态包括：
-
-- 当前算法列表
-- 当前选中算法
-- 当前分类
-- 搜索关键词
-- 当前语言
-- 当前动画脚本
-- 播放步骤状态相关数据
-
-局部页面状态则由 React `useState`、`useMemo`、`useCallback` 管理，例如 Playground 中的：
-
-- 当前代码
-- 当前语言
-- 输入数据
-- AI 分析状态
-- 分析历史
-- 当前动画脚本
-
----
-
-## 样式规范
-
-全局样式入口：
-
-```text
-src/index.css
-```
-
-Tailwind 扩展配置：
-
-```text
-tailwind.config.js
-```
-
-核心 CSS Variables：
-
-```css
-:root {
-  --color-primary: #2563EB;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-danger: #EF4444;
-  --color-muted: #94A3B8;
-  --color-bg: #FFFFFF;
-  --color-surface: #F8FAFC;
-  --color-border: #E2E8F0;
-  --font-code: 'JetBrains Mono', monospace;
-  --font-body: 'Inter', 'Noto Sans SC', sans-serif;
-}
-```
-
-颜色语义：
-
-| 变量 | 用途 |
-|---|---|
-| `--color-primary` | 主按钮、选中状态、重点元素 |
-| `--color-success` | 完成、正确、已访问 |
-| `--color-warning` | 当前步骤、当前元素 |
-| `--color-danger` | 冲突、错误、交换、失败 |
-| `--color-muted` | 非活跃状态、辅助信息 |
-| `--color-surface` | 面板、侧栏、浅色背景 |
-| `--color-border` | 边框与分割线 |
-
----
-
-## 开发脚本
-
-`package.json` 中定义了以下脚本：
-
-| 命令 | 说明 |
-|---|---|
-| `npm run dev` | 启动 Vite 开发服务器 |
-| `npm run build` | 先运行 TypeScript 编译，再执行 Vite 生产构建 |
-| `npm run preview` | 本地预览生产构建结果 |
-
----
-
-## 当前实现状态
-
-根据当前代码结构，项目已实现：
-
-- React 18 + TypeScript + Vite 项目脚手架。
-- Tailwind CSS 与 CSS Variables 简约学术风样式体系。
-- 首页、可视化页、AI 代码实验室、设置页。
-- React Router v6 路由。
-- Zustand 算法状态管理。
-- Monaco Editor 代码编辑器集成。
-- i18next 中英双语。
-- Lucide 图标封装。
-- OpenAI 兼容接口调用 + 代理回退机制。
-- AI System Prompt 模板与多输入结构 Prompt 上下文。
-- AI 返回 JSON 提取、Schema 校验、规范化和自动修复。
-- 结构化 AI 错误报告、修复建议、原始响应查看和修复历史展示。
-- AnimationScript 类型系统。
-- **场景化动画引擎 (Scene Engine)**：事件驱动、编译器架构、统一 SVG 画布。
-- **8 个数据结构编译器**：数组、树、图、矩阵、链表、栈、队列、字符串。
-- **场景图元渲染**：NodeView、CellView、EdgeView、ContainerView、PointerView、LabelView。
-- **自适应布局引擎**：端口感知二叉树布局、稳定圆形/分层流式图布局、链表水平布局。
-- **曲线轨迹动画**：节点交换、入栈出栈、入队出队、树旋转等操作均以贝塞尔弧线展示。
-- **学术风箭头**：开口 V 形箭头标记、细线虚线轨迹、精确裁剪间距。
-- **辅助数据结构**：图/树遍历时自动渲染 Queue/Stack 辅助容器。
-- **操作栏**：结构型数据结构支持 Insert/Delete/Search 等操作切换。
-- 播放控制 Hook。
-- 50+ 算法预制脚本与动态生成器。
-- Playground 分析历史本地保存。
-- API 连接测试与 token 成本预估。
-- 可拖拽分栏布局（编辑器/画布/信息面板）。
-
----
+1. 修改 `src/ai/prompts.ts` 或 `src/ai/generatorPrompt.ts`。
+2. 若响应格式变化，同步更新 `src/ai/parser.ts`、`src/ai/generatorParser.ts` 和 `src/ai/schema.ts`。
+3. 为失败样例补充解析、修复或生成器测试。
 
 ## 当前限制
 
-- 项目是纯前端应用，AI 调用受浏览器 CORS 策略影响。
-- 当前 API Key 保存在浏览器 `localStorage`，没有后端转发；生产级安全可进一步接入本地加密或代理层。
-- AI 输出质量仍依赖模型能力，复杂代码可能出现步骤不完整或语义不精确。
-- 系统已提供本地修复和 AI 二次修复，但不保证所有非标准输出都能恢复。
-- 当前动画状态主要通过逐步回放 `AnimationScript.steps` 派生，复杂图形结构和高级操作可继续扩展。
+- 浏览器端仍会保存 API Key，生产级使用建议接入后端托管密钥。
+- AI 生成器使用 Web Worker 和超时隔离，但仍应视为不可信模型输出，只适合本地/受控环境。
+- AI 对复杂代码的执行理解依赖模型能力，生成步骤可能不完整或语义不精确。
+- `RendererType` 的核心类型仍以 array、graph、tree、matrix、linked_list 为主，set、map、heap、bitset、math 等结构通过 Scene 事件和复合布局扩展。
+- 旧版 Canvas 渲染器仍保留，部分历史脚本可能不会使用最新 Scene 事件能力。
 
----
+## 相关文档
 
-## 阶段成果
-
-### Phase 1：项目基础能力完善（已完成）
-
-- 完善图标规范和分类图标覆盖。
-- 优化响应式布局，增强平板端体验。
-- 统一代码编辑器、输入数据区和控制栏交互。
-
-### Phase 2：预制动画引擎增强（已完成）
-
-- 优化排序算法动画细节。
-- 增强图算法和树结构的状态表达。
-- 为更多算法补充稳定、教学友好的步骤说明。
-
-### Phase 3：AI 动画引擎增强（已完成）
-
-- 详细实施计划：[docs/phase-3-implementation-plan.md](docs/phase-3-implementation-plan.md)
-- 增强 AI 输出 JSON Schema 校验。
-- 增加更明确的错误提示和修复建议。
-- 支持更多输入数据结构，例如图、树、矩阵对象。
-- 支持 AI 失败后自动重试或请求格式修复。
-
-### Phase 4：场景化动画引擎（已完成）
-
-- 详细优化方案：[docs/scene-engine-optimization-plan.md](docs/scene-engine-optimization-plan.md)
-- 使用与维护说明：[docs/scene-engine-usage.md](docs/scene-engine-usage.md)
-- 实现事件驱动的 Scene Engine，AI/预制脚本输出算法语义事件，前端编译为场景命令。
-- 8 个数据结构编译器（数组、树、图、矩阵、链表、栈、队列、字符串）。
-- 统一 SVG 场景画布 + 6 种图元渲染组件。
-- 端口感知二叉树布局、稳定圆形/分层流式图布局、链表水平布局。
-- 简约学术风视觉：开口 V 形箭头、曲线轨迹、虚线流动动画、精确裁剪间距。
-- 辅助数据结构动态渲染（Queue/Stack 容器）。
-- 结构型数据结构操作栏（Insert/Delete/Search 切换）。
-- 可拖拽分栏布局。
-
-### 扩展方向
-
-- 新增更多算法编译器（如并查集、哈希表等）。
-- 增强动画过渡效果（节点平滑位移、淡入淡出）。
-- 支持用户自定义事件与场景图元。
-- 移动端触控优化。
-
----
-
-## 贡献建议
-
-如果你希望继续扩展 AlgoViz，可以优先从以下方向入手：
-
-1. **新增算法编译器**：在 `src/scene/compilers/` 中新增编译器，将算法事件编译为场景命令，并注册到 `eventCompiler.ts`。
-2. **新增算法生成器**：在 `src/presets/` 中新增生成函数，并注册到 `generators.ts`。
-3. **扩展场景图元**：在 `src/scene/primitives/` 中添加新的渲染组件（如高亮框、标注气泡等）。
-4. **完善算法元数据**：在 `src/data/algorithmDefs.ts` 中补充定义、流程、复杂度和适用场景。
-5. **增强 AI Prompt**：在 `src/ai/prompts.ts` 中优化输出约束。
-6. **强化解析器**：在 `src/ai/parser.ts` 中增加更严格的 Schema 校验与错误恢复。
-7. **改进 UI 体验**：优化 `Visualizer` 和 `Playground` 的响应式布局与信息密度。
-
----
+- [Phase 1 实施计划](docs/phase-1-implementation-plan.md)
+- [Phase 2 实施计划](docs/phase-2-implementation-plan.md)
+- [Phase 3 实施计划](docs/phase-3-implementation-plan.md)
+- [Scene Engine 优化方案](docs/scene-engine-optimization-plan.md)
+- [Scene Engine 使用说明](docs/scene-engine-usage.md)
+- [复合场景架构规格](docs/superpowers/specs/2026-06-04-composite-scene-architecture.md)
+- [AI 历史与导航持久化规格](docs/superpowers/specs/2026-06-04-ai-history-and-navigation-persistence.md)
 
 ## License
 
-本项目在 `package.json` 中声明为 MIT License。
+MIT
