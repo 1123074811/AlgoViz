@@ -8,7 +8,7 @@ export default [
     ignores: ['dist/**', 'node_modules/**', 'coverage/**'],
   },
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}', 'server/**/*.ts', '*.config.ts'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
@@ -26,6 +26,25 @@ export default [
       ...reactHooks.configs.recommended.rules,
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    files: ['server/**/*.cjs'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      sourceType: 'commonjs',
+      globals: {
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        console: 'readonly',
+        module: 'readonly',
+        process: 'readonly',
+        require: 'readonly',
+      },
+    },
+    rules: {
+      'no-undef': 'error',
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     },
   },
   prettierConfig,
