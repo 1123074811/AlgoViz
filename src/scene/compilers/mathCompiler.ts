@@ -50,7 +50,9 @@ function makeVarCell(name: string, value: number | string, slot: number, x: numb
     type: 'cell',
     position: { x: x + w / 2, y: PANEL_Y },
     size: { width: w, height: CELL_H },
-    value: `${name}=${value}`,
+    // Cell shows only the value; the variable name is drawn above by VariablesView
+    // (avoids the redundant、易截断的 "name=value" string).
+    value: String(value),
     col: slot,
     state: { role: pulse ? 'active' : 'idle', color, pulse },
     meta: { name, value },

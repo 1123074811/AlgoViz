@@ -205,9 +205,12 @@ export function buildUserMessage(code: string, language: string, inputData: stri
     lines.push('')
   }
 
-  lines.push('代码:')
+  // Prefix each line with its 1-based number so the generator can call
+  // b.line(行号) accurately to drive the "current line" arrow.
+  const numbered = code.split('\n').map((l, i) => `${i + 1}: ${l}`).join('\n')
+  lines.push('代码（行首数字是行号，供 b.line(行号) 引用）:')
   lines.push('```')
-  lines.push(code)
+  lines.push(numbered)
   lines.push('```')
 
   if (inputData.trim()) {

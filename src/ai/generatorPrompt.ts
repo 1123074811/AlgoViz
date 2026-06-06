@@ -23,7 +23,7 @@ export function buildGeneratorSystemPrompt(language: string): string {
 
 ### 通用
 - \`b.desc(中文描述)\`：为紧接着的那个操作设置说明
-- \`b.line(行号)\`：标注接下来的步骤对应**源代码第几行**（行号=编辑器里看到的行号，从 1 起）。动画播放时会在代码旁高亮该行的箭头。**强烈建议**在每个关键操作前调用 \`b.line(...)\`，让动画与代码同步。
+- \`b.line(行号)\`：标注接下来的步骤对应**源代码第几行**（行号见用户代码每行行首的数字，从 1 起）。动画播放时代码旁会有 ▶ 箭头跟着走。**每个关键操作前都要先 b.line(对应行号)**——这是让箭头会动的关键，箭头停在第一行就是因为没逐步调用它。可链式 \`b.line(7).desc('...').compare(i,j)\`。
 - \`b.note(文本)\`：旁注
 
 ### 数组（排序/查找/双指针/滑动窗口）
@@ -175,16 +175,16 @@ b.heapPop()
 b.arrayCreate(input)
 for (let i = 0; i < input.length; i++) {
   let min = i
-  b.desc('外层 i=' + i + '，假定最小为 ' + input[i]).compare(i, i)
+  b.line(3).desc('外层 i=' + i + '，假定最小为 ' + input[i]).compare(i, i)
   for (let j = i + 1; j < input.length; j++) {
-    b.desc('比较 arr[' + j + '] 与当前最小 arr[' + min + ']').compare(j, min)
+    b.line(5).desc('比较 arr[' + j + '] 与当前最小 arr[' + min + ']').compare(j, min)
     if (input[j] < input[min]) min = j
   }
   if (min !== i) {
     const t = input[i]; input[i] = input[min]; input[min] = t
-    b.desc('交换 ' + i + ' 和 ' + min).swap(i, min)
+    b.line(8).desc('交换 ' + i + ' 和 ' + min).swap(i, min)
   }
-  b.desc('arr[' + i + '] 归位').markSorted([i])
+  b.line(9).desc('arr[' + i + '] 归位').markSorted([i])
 }
 \`\`\``
 }

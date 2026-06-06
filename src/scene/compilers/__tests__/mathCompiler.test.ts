@@ -32,11 +32,12 @@ describe('mathCompiler', () => {
     expect(vars).toHaveLength(2)
 
     const a = cell(scene, 'mathvar_a')
-    expect(a?.value).toBe('a=48')
+    // Cell shows only the value; the name lives in meta (VariablesView draws it above).
+    expect(a?.value).toBe('48')
     expect((a?.meta as { name?: string })?.name).toBe('a')
     expect((a?.meta as { value?: number })?.value).toBe(48)
 
-    expect(cell(scene, 'mathvar_b')?.value).toBe('b=18')
+    expect(cell(scene, 'mathvar_b')?.value).toBe('18')
 
     // horizontally packed: b sits to the right of a
     expect(cell(scene, 'mathvar_b')!.position.x).toBeGreaterThan(cell(scene, 'mathvar_a')!.position.x)
@@ -48,7 +49,7 @@ describe('mathCompiler', () => {
     scene = step(scene, { type: 'math.set', name: 'a', value: 18 })
 
     const a = cell(scene, 'mathvar_a')
-    expect(a?.value).toBe('a=18')
+    expect(a?.value).toBe('18')
     expect((a?.meta as { value?: number })?.value).toBe(18)
     expect(a?.state?.pulse).toBe(true)
 
@@ -63,7 +64,7 @@ describe('mathCompiler', () => {
 
     expect(Object.keys(scene.entities).filter(k => k.startsWith('mathvar_'))).toHaveLength(3)
     const r = cell(scene, 'mathvar_r')
-    expect(r?.value).toBe('r=12')
+    expect(r?.value).toBe('12')
     // appended to the right of b
     expect(r!.position.x).toBeGreaterThan(cell(scene, 'mathvar_b')!.position.x)
   })
@@ -74,7 +75,7 @@ describe('mathCompiler', () => {
     scene = step(scene, { type: 'math.highlight', name: 'a' })
 
     const a = cell(scene, 'mathvar_a')
-    expect(a?.value).toBe('a=48')
+    expect(a?.value).toBe('48')
     expect(a?.state?.role).toBe('current')
     expect(a?.state?.pulse).toBe(true)
 
