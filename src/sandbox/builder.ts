@@ -1,5 +1,6 @@
 import type { AnimationScript, AnimationStep, RendererType, ActionColor } from '@/types/animation'
 import type { AlgorithmEvent } from '@/scene/eventTypes'
+import type { CallStackBindings, CallStackFrameStatus, CallStackValue } from '@/scene/overlays'
 
 const MAX_STEPS = 600
 
@@ -64,6 +65,11 @@ function defaultDescFor(event: AlgorithmEvent | undefined): string {
     case 'linked_list.insert_after': return `在 ${e.targetNodeId} 后插入`
     case 'linked_list.delete': return `删除节点 ${e.nodeId}`
     case 'linked_list.move_pointer': return `移动指针 ${e.pointerId}`
+    // pointer
+    case 'pointer.create': return `创建指针 ${e.pointerId}`
+    case 'pointer.move': return `移动指针 ${e.pointerId}`
+    case 'pointer.clear': return `清除指针 ${e.pointerId}`
+    case 'pointer.highlight': return `高亮指针 ${e.pointerId}`
     // stack
     case 'stack.create': return '初始化栈'
     case 'stack.push': return `${e.value} 入栈`
@@ -118,6 +124,28 @@ function defaultDescFor(event: AlgorithmEvent | undefined): string {
     // scene
     case 'scene.note': return String(e.text ?? '')
     case 'scene.link': return `连接 ${e.from} → ${e.to}`
+    // call stack / grid / DP overlays
+    case 'callstack.create': return '初始化调用栈'
+    case 'callstack.push': return `调用 ${(e.frame as { functionName?: unknown })?.functionName ?? '函数'}`
+    case 'callstack.update': return `更新调用帧 ${e.frameId ?? ''}`
+    case 'callstack.return': return `函数返回 ${e.value ?? ''}`
+    case 'callstack.pop': return '弹出调用帧'
+    case 'callstack.highlight': return `高亮调用帧 ${e.frameId ?? ''}`
+    case 'grid.create': return '初始化网格'
+    case 'grid.set_cell': return `更新格子 (${e.row},${e.col})`
+    case 'grid.visit': return `访问格子 (${e.row},${e.col})`
+    case 'grid.frontier': return '更新网格边界集合'
+    case 'grid.path': return '标记网格路径'
+    case 'grid.wall': return `${e.enabled ? '设置' : '移除'}障碍 (${e.row},${e.col})`
+    case 'grid.weight': return `设置格子 (${e.row},${e.col}) 权重`
+    case 'grid.arrow': return '标记网格转移方向'
+    case 'dp.create': return '初始化 DP 表'
+    case 'dp.set': return `更新 DP 状态 (${e.row},${e.col})`
+    case 'dp.highlight': return '高亮 DP 状态'
+    case 'dp.dependency': return '标记 DP 状态依赖'
+    case 'dp.formula': return '展示 DP 转移公式'
+    case 'dp.traceback': return '回溯 DP 答案路径'
+    case 'dp.roll': return '更新滚动数组窗口'
     default: return ''
   }
 }
@@ -277,6 +305,24 @@ export class AnimationBuilder {
   }
   movePointer(pointerId: string, toNodeId: string | null): this {
     return this.add([{ type: 'linked_list.move_pointer', pointerId, toNodeId }], this.act('highlight', [], 'primary'))
+  }
+
+  // ── 通用 pointer（可指向任意 Scene 实体 / 端口） ──
+  private pointerTarget(target: string | number | null | undefined): string | undefined {
+    if (typeof target === 'number') return `arr_${target}`
+    return target ?? undefined
+  }
+  pointerCreate(pointerId: string, target?: string | number | null, label?: string, portId?: string): this {
+    return this.add([{ type: 'pointer.create', pointerId, label, targetId: this.pointerTarget(target), portId }], this.act('highlight', [], 'primary'))
+  }
+  pointerMove(pointerId: string, target: string | number | null, label?: string, portId?: string): this {
+    return this.add([{ type: 'pointer.move', pointerId, targetId: this.pointerTarget(target) ?? null, label, portId }], this.act('highlight', [], 'primary'))
+  }
+  pointerClear(pointerId: string): this {
+    return this.add([{ type: 'pointer.clear', pointerId }], this.act('highlight', [], 'muted'))
+  }
+  pointerHighlight(pointerId: string, color: ActionColor = 'primary'): this {
+    return this.add([{ type: 'pointer.highlight', pointerId, color }], this.act('highlight', [], color))
   }
 
   // ── hash table（哈希表 / hash map） ──
@@ -441,6 +487,145 @@ export class AnimationBuilder {
     return this.add([{ type: 'matrix.mark_path', cells }], this.act('mark', [], 'success'))
   }
 
+  // ── call stack（递归 / 回溯 / 分治）──
+  callStackCreate(title = 'Call Stack', id = 'callstack'): this {
+    return this.add([{ type: 'callstack.create', id, title }], this.act('highlight', [], 'primary'))
+  }
+  callPush(
+    functionName: string,
+    parameters: CallStackBindings = {},
+    locals: CallStackBindings = {},
+    frameId?: string,
+  ): this {
+    return this.add(
+      [{ type: 'callstack.push', frame: { id: frameId, functionName, parameters, locals } }],
+      this.act('insert', [], 'success'),
+    )
+  }
+  callUpdate(
+    frameId: string,
+    updates: {
+      parameters?: CallStackBindings
+      locals?: CallStackBindings
+      status?: CallStackFrameStatus
+    },
+  ): this {
+    return this.add(
+      [{ type: 'callstack.update', frameId, updates }],
+      this.act('highlight', [], 'primary'),
+    )
+  }
+  callReturn(frameId: string, value?: CallStackValue, pop = false): this {
+    return this.add(
+      [{ type: 'callstack.return', frameId, value, pop }],
+      this.act('highlight', [], 'success'),
+    )
+  }
+  callPop(frameId?: string): this {
+    return this.add(
+      [{ type: 'callstack.pop', frameId }],
+      this.act('delete', [], 'danger'),
+    )
+  }
+  callHighlight(frameId: string, active = false, clear = true): this {
+    return this.add(
+      [{ type: 'callstack.highlight', frameId, active, clear }],
+      this.act('highlight', [], 'warning'),
+    )
+  }
+
+  // ── grid（迷宫 / 棋盘 / 地图寻路）──
+  gridCreate(values: unknown[][], options?: { id?: string; title?: string; cellSize?: number }): this {
+    const rows = values.length
+    const cols = values.reduce((max, row) => Math.max(max, row.length), 0)
+    return this.add(
+      [{ type: 'grid.create', gridId: options?.id, title: options?.title, rows, cols, values, cellSize: options?.cellSize }],
+      this.act('highlight', [], 'primary'),
+    )
+  }
+  gridSet(row: number, col: number, value?: unknown, state?: 'default' | 'active' | 'visited' | 'frontier' | 'path' | 'wall' | 'start' | 'target' | 'weighted' | 'warning' | 'error'): this {
+    return this.add(
+      [{ type: 'grid.set_cell', row, col, value, state }],
+      this.act('highlight', [], 'primary'),
+    )
+  }
+  gridVisit(row: number, col: number, order?: number): this {
+    return this.add([{ type: 'grid.visit', row, col, order }], this.act('highlight', [], 'warning'))
+  }
+  gridFrontier(cells: Array<[number, number]>): this {
+    return this.add([{ type: 'grid.frontier', cells }], this.act('highlight', [], 'primary'))
+  }
+  gridPath(cells: Array<[number, number]>): this {
+    return this.add([{ type: 'grid.path', cells }], this.act('mark', [], 'success'))
+  }
+  gridWall(row: number, col: number, enabled = true): this {
+    return this.add([{ type: 'grid.wall', row, col, enabled }], this.act('mark', [], enabled ? 'danger' : 'muted'))
+  }
+  gridWeight(row: number, col: number, weight: number): this {
+    return this.add([{ type: 'grid.weight', row, col, weight }], this.act('highlight', [], 'warning'))
+  }
+  gridArrow(from: [number, number], to: [number, number], label?: string): this {
+    return this.add([{ type: 'grid.arrow', from, to, label }], this.act('edge', [], 'primary'))
+  }
+
+  // ── DP table（状态表 / 依赖 / 回溯）──
+  dpCreate(
+    tableId: string,
+    rows: number,
+    cols: number,
+    options?: { title?: string; rowLabels?: string[]; colLabels?: string[]; values?: Array<Array<string | number | boolean | null>>; defaultValue?: string | number | boolean | null },
+  ): this {
+    return this.add(
+      [{
+        type: 'dp.create',
+        id: tableId,
+        rows,
+        cols,
+        title: options?.title,
+        rowLabels: options?.rowLabels,
+        colLabels: options?.colLabels,
+        values: options?.values,
+        defaultValue: options?.defaultValue,
+      }],
+      this.act('highlight', [], 'primary'),
+    )
+  }
+  dpSet(tableId: string, row: number, col: number, value: string | number | boolean | null, formula?: string): this {
+    return this.add(
+      [{ type: 'dp.set', id: tableId, row, col, value, formula }],
+      this.act('highlight', [], 'primary'),
+    )
+  }
+  dpHighlight(tableId: string, cells: Array<{ row: number; col: number }>, kind: 'current' | 'dependency' | 'candidate' | 'answer' = 'current'): this {
+    return this.add(
+      [{ type: 'dp.highlight', id: tableId, cells, kind }],
+      this.act('highlight', [], kind === 'answer' ? 'success' : 'warning'),
+    )
+  }
+  dpDependency(
+    tableId: string,
+    sources: Array<{ row: number; col: number }>,
+    target: { row: number; col: number },
+    label?: string,
+  ): this {
+    return this.add(
+      [{ type: 'dp.dependency', id: tableId, sources, target, label }],
+      this.act('edge', [], 'primary'),
+    )
+  }
+  dpFormula(tableId: string, target: { row: number; col: number }, text: string): this {
+    return this.add(
+      [{ type: 'dp.formula', id: tableId, target, text }],
+      this.act('annotate', [], 'primary'),
+    )
+  }
+  dpTraceback(tableId: string, path: Array<{ row: number; col: number }>): this {
+    return this.add(
+      [{ type: 'dp.traceback', id: tableId, path }],
+      this.act('mark', [], 'success'),
+    )
+  }
+
   // ── note / escape ──
   note(text: string): this {
     return this.add([{ type: 'scene.note', text }], this.act('annotate', [], 'muted'))
@@ -456,7 +641,7 @@ export class AnimationBuilder {
     const initialState = this.buildInitialState()
     // 多结构（去掉 'scene' 后 ≥2 个不同 family）时自动开启 composite 区域布局。
     // 单结构脚本保持原行为，向后兼容。
-    const structureFamilies = [...this.usedFamilies].filter(f => f !== 'scene')
+    const structureFamilies = [...this.usedFamilies].filter(f => f !== 'scene' && f !== 'pointer')
     const presentation: AnimationScript['presentation'] = { engine: 'scene', module: this.type }
     if (structureFamilies.length >= 2) presentation.layout = 'composite'
     return {

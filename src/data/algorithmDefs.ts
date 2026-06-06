@@ -498,6 +498,15 @@ const def_leetcode = DEF('leetcode_hot100', 'LeetCode Hot 100', 'LeetCode Top 10
   [false, false, false],
   '技术面试准备。', 'Technical interview preparation.')
 
+const def_gcd = DEF('gcd_euclidean', '欧几里得算法/GCD', 'Euclidean GCD', 'Euclid', '~300 BCE',
+  '通过反复执行 a % b 并令 a=b、b=r，在 b 变为 0 时得到最大公约数。', 'Repeatedly computes a % b, then assigns a=b and b=r. When b becomes 0, a is the greatest common divisor.',
+  ['规范化输入为非负整数 a,b', '当 b≠0 时计算 r=a%b', '令 a=b', '令 b=r', 'b=0 时答案为 a'],
+  ['Normalize inputs to non-negative integers a,b', 'While b≠0, compute r=a%b', 'Set a=b', 'Set b=r', 'When b=0, answer is a'],
+  ['O(1)', 'O(log min(a,b))', 'O(log min(a,b))', '每轮余数会缩小问题规模，最坏情况出现在连续斐波那契数。', 'Each remainder shrinks the problem; the worst case occurs on consecutive Fibonacci numbers.'],
+  ['O(1)', '只维护 a、b、r 三个变量。', 'Only a, b, and r are maintained.'],
+  [false, true, false],
+  '分数约分、数论基础、同余与模运算、竞赛模板。', 'Fraction reduction, elementary number theory, congruence/modular arithmetic, contest templates.')
+
 const def_acm = DEF('acm_templates', 'ACM 算法模板', 'ACM Templates', 'ACM/ICPC 竞赛', '1970s',
   'ACM/ICPC 常用算法模板集合：快速幂、素数筛、二分答案、离散化、组合数等。', 'Collection of common ACM/ICPC algorithm templates: fast exponentiation, prime sieve, binary search on answer, discretization, combinatorics.',
   ['快速幂：幂次二分 O(log n)', '素数筛：埃氏筛 O(n log log n)', '二分答案：在单调函数上找最优值', '前缀和/差分数组 O(1) 区间查询'],
@@ -516,6 +525,6 @@ const defs = [
   def_knapsack, def_unbounded, def_lcs, def_lis, def_edit, def_mchain, def_interval,
   def_binary, def_backtrack, def_nqueens, def_sudoku,
   def_kmp, def_manacher, def_segtree, def_fenwick, def_monostack, def_sliding,
-  def_leetcode, def_acm,
+  def_leetcode, def_gcd, def_acm,
 ]
 for (const d of defs) ALGORITHM_DEFS[d.id] = d

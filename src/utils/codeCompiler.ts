@@ -99,13 +99,14 @@ export function compileAndValidateCode(code: string, language: string): Compilat
   if (language === 'javascript' || language === 'js' || language === 'typescript' || language === 'ts') {
     // Real parse via new Function (JS only, not TS)
     if (language === 'javascript' || language === 'js') {
-      try { new Function(code) } catch (err: any) {
+      try { new Function(code) } catch (err: unknown) {
+        const error = err instanceof Error ? err : new Error(String(err))
         let lineNum = 1
-        const stack = err.stack || ''
+        const stack = error.stack || ''
         const m = stack.match(/<anonymous>:(\d+):/)
         if (m) lineNum = Math.max(1, parseInt(m[1]) - 2)
-        else { const mm = err.message.match(/line (\d+)/i); if (mm) lineNum = parseInt(mm[1]) }
-        errors.push(diag('error', 'SyntaxError', `JavaScript 编译错误：${err.message}`, Math.min(lineNum, lines.length), undefined, lines[lineNum - 1]?.trim()))
+        else { const mm = error.message.match(/line (\d+)/i); if (mm) lineNum = parseInt(mm[1]) }
+        errors.push(diag('error', 'SyntaxError', `JavaScript 编译错误：${error.message}`, Math.min(lineNum, lines.length), undefined, lines[lineNum - 1]?.trim()))
       }
     }
 

@@ -18,7 +18,6 @@ export interface GeneratorResult {
 export function executeGenerator(source: string, input: unknown, meta: GeneratorMeta): GeneratorResult {
   try {
     const b = new AnimationBuilder(meta.algorithm, meta.type)
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval, no-new-func
     const fn = new Function('input', 'b', source) as (input: unknown, b: AnimationBuilder) => void
     fn(input, b)
     return { ok: true, script: b.build() }

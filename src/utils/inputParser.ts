@@ -18,6 +18,11 @@ export function parseAlgorithmInput(
 
 /** Detect the appropriate LeetCode-format hint for each algorithm */
 export function getLeetCodePlaceholder(algoId: string): string {
+  if (algoId === 'gcd_euclidean') return 'a = 48, b = 18'
+  if (algoId === 'sudoku') return 'board = [[5,3,0,0,7,0,0,0,0],[6,0,0,1,9,5,0,0,0],[0,9,8,0,0,0,0,6,0],[8,0,0,0,6,0,0,0,3],[4,0,0,8,0,3,0,0,1],[7,0,0,0,2,0,0,0,6],[0,6,0,0,0,0,2,8,0],[0,0,0,4,1,9,0,0,5],[0,0,0,0,8,0,0,7,9]]'
+  if (algoId === 'btree' || algoId === 'bplus_tree') return 'keys = [10, 20, 30, 3, 7, 13, 17, 23, 27, 33, 37]'
+  if (algoId === 'leetcode_hot100') return 'nums = [2, 7, 11, 15], target = 9'
+  if (algoId === 'acm_templates') return 'nums = [2, 3, 5, 7, 11, 13]'
   if (GRAPH_ALGOS.has(algoId)) return 'n = 5, edges = [[0,1,4],[0,2,2],[1,3,5]]'
   if (STRING_ALGOS.has(algoId)) return 's = "babad" 或 text = "ABABC", pattern = "ABABC"'
   if (MATRIX_ALGOS.has(algoId)) return 'weights = [2,3,4], values = [3,4,5], capacity = 8'
@@ -104,9 +109,11 @@ const LEETCODE_DEFAULTS: Record<string, string> = {
   bst_delete: 'nums = [8, 3, 10, 1, 6, 14]',
   bst_search: 'nums = [8, 3, 10, 1, 6, 14]',
   avl_insert: 'nums = [8, 3, 10, 1, 6, 14]',
+  btree: 'keys = [10, 20, 30, 3, 7, 13, 17, 23, 27, 33, 37]',
+  bplus_tree: 'keys = [10, 20, 30, 35, 40, 45, 50, 60]',
   // Backtracking / puzzles
   n_queens: 'n = 4',
-  sudoku: 'board = [[5,3,.,.,7,.,.,.,.],[6,.,.,1,9,5,.,.,.],[.,9,8,.,.,.,.,6,.],[8,.,.,.,6,.,.,.,3],[4,.,.,8,.,3,.,.,1],[7,.,.,.,2,.,.,.,6],[.,6,.,.,.,.,2,8,.],[.,.,.,4,1,9,.,.,5],[.,.,.,.,8,.,.,7,9]]',
+  sudoku: 'board = [[5,3,0,0,7,0,0,0,0],[6,0,0,1,9,5,0,0,0],[0,9,8,0,0,0,0,6,0],[8,0,0,0,6,0,0,0,3],[4,0,0,8,0,3,0,0,1],[7,0,0,0,2,0,0,0,6],[0,6,0,0,0,0,2,8,0],[0,0,0,4,1,9,0,0,5],[0,0,0,0,8,0,0,7,9]]',
   backtracking: 'nums = [1, 2, 3]',
   // Misc
   segment_tree: 'nums = [1, 3, 5, 7, 9, 11]',
@@ -114,6 +121,7 @@ const LEETCODE_DEFAULTS: Record<string, string> = {
   linked_list_insert: 'nums = [1, 2, 3], param = 5',
   linked_list_delete: 'nums = [1, 2, 3], param = 3',
   linked_list_search: 'nums = [1, 2, 3], param = 3',
+  gcd_euclidean: 'a = 48, b = 18',
   leetcode_hot100: 'nums = [2, 7, 11, 15], target = 9',
   acm_templates: 'nums = [2, 3, 5, 7, 11, 13]',
   _default: 'nums = [5, 3, 8, 1, 9, 2]',
@@ -144,6 +152,15 @@ function parseCodeInput(raw: string, algoId: string): unknown {
   }
   if (TREE_ALGOS.has(algoId)) {
     return parseTreeCodeVars(vars, s)
+  }
+  if (algoId === 'binary_search') {
+    return parseArrayTargetCodeVars(vars)
+  }
+  if (algoId === 'leetcode_hot100') {
+    return parseArrayTargetCodeVars(vars)
+  }
+  if (algoId === 'gcd_euclidean') {
+    return parseGcdCodeVars(vars)
   }
 
   // Default: return the first array found, or the raw string
@@ -348,11 +365,45 @@ function parseMatrixCodeVars(vars: ParsedVars, _algoId: string, _s: string): unk
 function parseTreeCodeVars(vars: ParsedVars, _s: string): unknown {
   // root for binary tree
   if (Array.isArray(vars.root)) return vars.root.map(v => v === null || v === 'null' ? 0 : Number(v))
+  // keys for B-Tree / B+ Tree
+  if (Array.isArray(vars.keys)) return vars.keys
   // nums
   if (Array.isArray(vars.nums)) return vars.nums
   // words for trie
   if (Array.isArray(vars.words)) return vars.words
   // Fallback
+  if (Array.isArray(vars._array)) return vars._array
+  return vars
+}
+
+function parseArrayTargetCodeVars(vars: ParsedVars): unknown {
+  const nums = Array.isArray(vars.nums)
+    ? vars.nums
+    : Array.isArray(vars.arr)
+      ? vars.arr
+      : Array.isArray(vars.array)
+        ? vars.array
+        : Array.isArray(vars._array)
+          ? vars._array
+          : undefined
+  const target = typeof vars.target === 'number'
+    ? vars.target
+    : typeof vars.param === 'number'
+      ? vars.param
+      : undefined
+
+  if (nums && target !== undefined) return { nums, target, data: nums, param: target }
+  if (nums) return nums
+  return vars
+}
+
+function parseGcdCodeVars(vars: ParsedVars): unknown {
+  const a = typeof vars.a === 'number' ? vars.a : typeof vars.x === 'number' ? vars.x : undefined
+  const b = typeof vars.b === 'number' ? vars.b : typeof vars.y === 'number' ? vars.y : undefined
+  if (a !== undefined && b !== undefined) return { a, b }
+  if (Array.isArray(vars.nums)) return vars.nums
+  if (Array.isArray(vars.arr)) return vars.arr
+  if (Array.isArray(vars.array)) return vars.array
   if (Array.isArray(vars._array)) return vars._array
   return vars
 }

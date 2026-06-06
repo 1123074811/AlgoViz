@@ -1012,6 +1012,17 @@ def interval_dp(nums):
 
   // ============ 竞赛专题 ============
   {
+    id: 'gcd_euclidean', name: '欧几里得算法/GCD', nameEn: 'Euclidean GCD', category: 'contest', difficulty: 'easy',
+    hasPreset: true, defaultLanguage: 'python',
+    defaultCode: `def gcd(a, b):
+    a, b = abs(int(a)), abs(int(b))
+    while b != 0:
+        r = a % b
+        a = b
+        b = r
+    return a`,
+  },
+  {
     id: 'acm_templates', name: 'ACM 算法模板', nameEn: 'ACM Templates', category: 'contest', difficulty: 'hard',
     hasPreset: true, defaultLanguage: 'python', defaultCode: `# ACM 常用算法模板
 # 快速幂、组合数、素数筛、二分答案等
