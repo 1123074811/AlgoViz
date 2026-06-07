@@ -37,6 +37,46 @@ function stripTrailingPyComment(line: string): string {
   return line.trimEnd()
 }
 
+/**
+ * Per-line "code residue": the line with comments and string/docstring/template
+ * contents removed, tracking multi-line states across lines. Used to detect
+ * natural-language prose (e.g. a pasted LeetCode attribution footer) that would
+ * otherwise pass the structural checks. Chinese inside comments/strings/docstrings
+ * is preserved-as-removed, so only bare non-code text is left in the residue.
+ */
+function extractCodeResidue(lines: string[], language: string): string[] {
+  const isPy = language === 'python' || language === 'py'
+  const cLike = ['javascript', 'js', 'typescript', 'ts', 'cpp', 'java'].includes(language)
+  type S = 'code' | 'block' | 'tdq' | 'tsq' | 'tmpl'
+  let state: S = 'code'
+  const out: string[] = []
+  for (const raw of lines) {
+    let res = ''
+    let i = 0
+    while (i < raw.length) {
+      const ch = raw[i], nx = raw[i + 1], nn = raw[i + 2]
+      if (state === 'block') { if (ch === '*' && nx === '/') { state = 'code'; i += 2 } else i++; continue }
+      if (state === 'tdq') { if (ch === '"' && nx === '"' && nn === '"') { state = 'code'; i += 3 } else i++; continue }
+      if (state === 'tsq') { if (ch === "'" && nx === "'" && nn === "'") { state = 'code'; i += 3 } else i++; continue }
+      if (state === 'tmpl') { if (ch === '`') { state = 'code'; i++ } else i++; continue }
+      if (isPy && ch === '#') break
+      if (cLike && ch === '/' && nx === '/') break
+      if (cLike && ch === '/' && nx === '*') { state = 'block'; i += 2; continue }
+      if (isPy && ch === '"' && nx === '"' && nn === '"') { state = 'tdq'; i += 3; continue }
+      if (isPy && ch === "'" && nx === "'" && nn === "'") { state = 'tsq'; i += 3; continue }
+      if (cLike && ch === '`') { state = 'tmpl'; i++; continue }
+      if (ch === '"') { i++; while (i < raw.length && raw[i] !== '"') { if (raw[i] === '\\') i++; i++ } i++; continue }
+      if (ch === "'") { i++; while (i < raw.length && raw[i] !== "'") { if (raw[i] === '\\') i++; i++ } i++; continue }
+      res += ch; i++
+    }
+    out.push(res)
+  }
+  return out
+}
+
+// CJK punctuation, ideographs (ext-A + unified) and full/half-width forms.
+const CJK_RE = /[　-〿㐀-䶿一-鿿＀-￯]/
+
 function hasTopLevelColon(line: string): boolean {
   let depth = 0, sq = false, dq = false
   for (let i = 0; i < line.length; i++) {
@@ -107,6 +147,21 @@ export function compileAndValidateCode(code: string, language: string): Compilat
   }
   for (const top of bracketStack) {
     errors.push(diag('error', 'SyntaxError', `未闭合的括号 '${top.char}'`, top.line, top.col, lines[top.line - 1]?.trim()))
+  }
+
+  // ====================================
+  // 1b. Non-code prose detection
+  // ====================================
+  // Natural-language text (e.g. a pasted LeetCode "作者/链接/来源/著作权" footer)
+  // passes the structural checks but isn't code. Flag CJK that appears OUTSIDE
+  // strings/comments — legitimate Chinese in comments/strings/docstrings is fine.
+  const residue = extractCodeResidue(lines, language)
+  for (let l = 0; l < residue.length; l++) {
+    if (CJK_RE.test(residue[l])) {
+      errors.push(diag('error', 'SyntaxError',
+        '疑似非代码文本（中文/全角字符出现在代码处）。请将说明放入注释或字符串，或删除粘贴的题解版权说明',
+        l + 1, undefined, lines[l].trim()))
+    }
   }
 
   // ====================================

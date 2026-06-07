@@ -91,4 +91,36 @@ describe('compileAndValidateCode', () => {
     const result = compileAndValidateCode('for i in range(10)\n    print(i)', 'python')
     expect(result.errors.some(e => e.type === 'SyntaxError' && e.message.includes('冒号'))).toBe(true)
   })
+
+  it('rejects pasted LeetCode prose footer as non-code text', () => {
+    const code = [
+      'class Solution:',
+      '    def f(self): return 1',
+      '',
+      '作者：Krahets',
+      '链接：https://leetcode.cn/problems/x/',
+      '来源：力扣（LeetCode）',
+      '著作权归作者所有，商业转载请联系作者获得授权。',
+    ].join('\n')
+    const result = compileAndValidateCode(code, 'python')
+    expect(result.success).toBe(false)
+    expect(result.errors.some(e => e.message.includes('非代码文本'))).toBe(true)
+  })
+
+  it('allows Chinese inside comments / strings / docstrings', () => {
+    const code = [
+      'def f():',
+      '    """这是中文文档字符串，应被允许。"""',
+      '    s = "你好，世界"  # 中文注释也允许',
+      '    return s',
+    ].join('\n')
+    const result = compileAndValidateCode(code, 'python')
+    expect(result.errors.filter(e => e.message.includes('非代码文本'))).toEqual([])
+  })
+
+  it('allows Chinese in JS comments and template strings', () => {
+    const code = 'function f() {\n  // 中文注释\n  const t = `模板：${1}`;\n  return t;\n}'
+    const result = compileAndValidateCode(code, 'javascript')
+    expect(result.errors.filter(e => e.message.includes('非代码文本'))).toEqual([])
+  })
 })
