@@ -423,6 +423,32 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
   // ── Render auxiliary arrays from teachingState (generic) ──
   scene = renderAuxiliaryArrays(scene, teachingState)
 
+  // ── Decay transient variable annotations (delta / pulse) ──
+  // A variable's "+x / -x / ->x" delta and its pulse highlight should only show on
+  // the step that actually changed/read it — not linger across later steps (incl.
+  // non-math steps), which misleads users into thinking it keeps changing.
+  {
+    const touched = new Set<string>()
+    for (const ev of activeStep?.events ?? []) {
+      if (ev.type === 'math.set' || ev.type === 'math.highlight') {
+        touched.add('mathvar_' + (ev as { name: string }).name)
+      }
+    }
+    let changed = false
+    const nextEntities: Record<string, SceneEntity> = { ...scene.entities }
+    for (const [id, ent] of Object.entries(scene.entities)) {
+      if (!id.startsWith('mathvar_') || ent.type !== 'cell' || touched.has(id)) continue
+      const meta = (ent.meta ?? {}) as Record<string, unknown>
+      const hasDelta = meta.delta !== undefined
+      if (!hasDelta && !ent.state?.pulse) continue
+      const restMeta = { ...meta }
+      delete restMeta.delta
+      nextEntities[id] = { ...ent, meta: restMeta, state: { role: 'idle', color: 'muted', pulse: false } }
+      changed = true
+    }
+    if (changed) scene = { ...scene, entities: nextEntities }
+  }
+
   // 组合场景：仅当显式开启 layout==='composite' 时做区域自动布局（不影响现有脚本）
   if (script.presentation?.layout === 'composite') {
     scene = applyRegionLayout(scene)
