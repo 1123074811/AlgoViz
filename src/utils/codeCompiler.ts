@@ -149,40 +149,15 @@ export function compileAndValidateCode(code: string, language: string): Compilat
       }
     }
 
-    // JS/TS warnings
+    // JS/TS warnings — only genuine security risks are surfaced; pure style
+    // opinions (var/with/==/delete/console/unused) are intentionally omitted to
+    // avoid noise on educational reference code.
     for (let l = 0; l < lines.length; l++) {
       const line = lines[l].trim()
       if (line === '' || line.startsWith('//') || line.startsWith('/*')) continue
 
-      if (/\bvar\s+\w/.test(line)) {
-        warnings.push(diag('warning', 'StyleWarning', '建议使用 let 或 const 代替 var（var 有函数级作用域提升问题）', l + 1))
-      }
       if (/\beval\s*\(/.test(line)) {
         warnings.push(diag('warning', 'SecurityWarning', 'eval() 存在安全风险，应避免使用', l + 1))
-      }
-      if (/\bwith\s*\(/.test(line)) {
-        warnings.push(diag('warning', 'StyleWarning', 'with 语句在严格模式下被禁止，且容易引起作用域混淆', l + 1))
-      }
-      if (/==(?!=)/.test(line) && !/===/.test(line) && !/".*==/.test(line) && !/'.*==/.test(line)) {
-        warnings.push(diag('warning', 'StyleWarning', '建议使用 === 代替 == 避免隐式类型转换', l + 1))
-      }
-      if (/\bdelete\s+(?!.*\[)/.test(line) && !/delete\s+obj\./.test(line)) {
-        warnings.push(diag('warning', 'PerformanceWarning', 'delete 操作会使 V8 隐藏类失效，影响性能', l + 1))
-      }
-      if (/\bconsole\.(log|warn|error|debug)\s*\(/.test(line)) {
-        warnings.push(diag('warning', 'StyleWarning', '生产代码中应移除 console 调试输出', l + 1))
-      }
-      // Unused variable detection (simple: declared with let/const but not used after)
-      const declMatch = line.match(/\b(?:let|const)\s+(\w+)\s*[=;]/)
-      if (declMatch) {
-        const varName = declMatch[1]
-        let usageCount = 0
-        for (let k = l + 1; k < lines.length; k++) {
-          if (new RegExp(`\\b${varName}\\b`).test(lines[k]) && !lines[k].trim().startsWith('//')) usageCount++
-        }
-        if (usageCount === 0) {
-          warnings.push(diag('warning', 'StyleWarning', `变量 '${varName}' 声明后未使用`, l + 1))
-        }
       }
     }
 
@@ -202,8 +177,6 @@ export function compileAndValidateCode(code: string, language: string): Compilat
   // ====================================
   if (language === 'python' || language === 'py') {
     const indentStack: number[] = [0]
-    const definedVars = new Set<string>()
-    const definedFuncs = new Set<string>()
 
     for (let i = 0; i < lines.length; i++) {
       const origLine = lines[i], line = origLine.trim()
@@ -245,38 +218,12 @@ export function compileAndValidateCode(code: string, language: string): Compilat
         errors.push(diag('error', 'SyntaxError', `'${matched.trim()}' 语句块末尾缺少冒号 ':'`, i + 1, undefined, origLine))
       }
 
-      // Collect definitions
-      const defMatch = line.match(/^def\s+(\w+)\s*\(/)
-      if (defMatch) definedFuncs.add(defMatch[1])
-      const assignMatch = line.match(/^(\w+)\s*=\s*/)
-      if (assignMatch) definedVars.add(assignMatch[1])
-
-      // Warnings
+      // Warnings — only genuine bug/risk patterns; pure style opinions are omitted.
       if (/\bexcept\s*:/.test(line) && !/\bexcept\s+Exception/.test(line) && !/\bexcept\s+\(/.test(line)) {
         warnings.push(diag('warning', 'StyleWarning', '避免使用裸 except，应指定具体异常类型', i + 1))
       }
       if (/def\s+\w+\s*\(.*=\s*\[\]/.test(line) || /def\s+\w+\s*\(.*=\s*\{\}/.test(line)) {
         warnings.push(diag('warning', 'BugRisk', '可变对象作为默认参数会导致意外的状态共享', i + 1))
-      }
-      if (/\bprint\s/.test(line) && language !== 'python') {
-        warnings.push(diag('warning', 'StyleWarning', '生产代码中应移除 print 调试输出', i + 1))
-      }
-      if (/\b(range\s*\(\s*len\s*\()/.test(line)) {
-        warnings.push(diag('warning', 'StyleWarning', '建议使用 enumerate() 代替 range(len(...))', i + 1))
-      }
-      if (/\bopen\s*\(/.test(line) && !/\bwith\b/.test(line)) {
-        warnings.push(diag('warning', 'ResourceWarning', '文件操作应使用 with 语句确保资源自动关闭', i + 1))
-      }
-    }
-
-    // Check for undefined references (simple heuristic)
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      const callMatch = line.match(/(\w+)\s*\(/)
-      if (callMatch && !['print', 'range', 'len', 'int', 'str', 'float', 'list', 'dict', 'set', 'tuple', 'bool', 'type', 'isinstance', 'super', 'sorted', 'reversed', 'enumerate', 'zip', 'map', 'filter', 'input', 'open', 'abs', 'min', 'max', 'sum', 'any', 'all'].includes(callMatch[1])) {
-        if (!definedFuncs.has(callMatch[1]) && !callMatch[1].startsWith('_')) {
-          warnings.push(diag('warning', 'UndefinedRef', `函数 '${callMatch[1]}' 可能未定义（非内置函数）`, i + 1))
-        }
       }
     }
   }
@@ -307,18 +254,10 @@ export function compileAndValidateCode(code: string, language: string): Compilat
         }
       }
 
-      // Warnings
-      if (/\b(NULL|0)\b/.test(codeLine) && language === 'cpp') {
-        warnings.push(diag('warning', 'StyleWarning', '建议使用 nullptr 代替 NULL 或 0（C++11 起）', i + 1))
-      }
-      if (/\busing namespace std\b/.test(codeLine)) {
-        warnings.push(diag('warning', 'StyleWarning', '头文件中避免 using namespace std，应在 .cpp 中使用', i + 1))
-      }
-      if (/\b(scanf|printf|gets)\s*\(/.test(codeLine)) {
-        warnings.push(diag('warning', 'SecurityWarning', `${codeLine.match(/(scanf|printf|gets)/)?.[1] || 'C 函数'}() 存在安全风险，建议使用 C++ 流或安全替代方案`, i + 1))
-      }
-      if (/\bnew\b(?!.*delete)/.test(codeLine)) {
-        warnings.push(diag('warning', 'ResourceWarning', 'new 分配的内存需确保对应的 delete，建议使用智能指针', i + 1))
+      // Warnings — only genuine security risks; production-style opinions
+      // (nullptr/namespace/new-delete) are omitted to avoid noise on教学片段.
+      if (/\b(scanf|gets)\s*\(/.test(codeLine)) {
+        warnings.push(diag('warning', 'SecurityWarning', `${codeLine.match(/(scanf|gets)/)?.[1] || 'C 函数'}() 存在安全风险，建议使用 C++ 流或安全替代方案`, i + 1))
       }
     }
   }

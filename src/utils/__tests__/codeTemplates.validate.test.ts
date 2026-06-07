@@ -19,5 +19,11 @@ describe('内置代码模板不应产生校验错误', () => {
       const errors = result.errors.map(e => `L${e.line} [${e.type}] ${e.message}`)
       expect(errors, errors.join('\n')).toEqual([])
     })
+
+    it(`[${algoId}/${lang}] 无校验警告`, () => {
+      const result = compileAndValidateCode(code, lang)
+      const warns = result.warnings.map(w => `L${w.line} [${w.type}] ${w.message}`)
+      expect(warns, warns.join('\n')).toEqual([])
+    })
   }
 })
