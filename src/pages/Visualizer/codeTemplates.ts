@@ -4076,3 +4076,14 @@ export function getCodeTemplate(algoId: string, lang: CodeLang): string {
   // Fallback: return Python code
   return templates?.python || `# ${lang} code template not available\n# Please write your own implementation`
 }
+
+/** All built-in code templates as flat entries — used by validation regression tests. */
+export function getAllCodeTemplates(): Array<{ algoId: string; lang: CodeLang; code: string }> {
+  const out: Array<{ algoId: string; lang: CodeLang; code: string }> = []
+  for (const [algoId, byLang] of Object.entries(CODE_TEMPLATES)) {
+    for (const [lang, code] of Object.entries(byLang)) {
+      if (code) out.push({ algoId, lang: lang as CodeLang, code })
+    }
+  }
+  return out
+}

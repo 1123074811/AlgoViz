@@ -17,6 +17,42 @@ function diag(severity: 'error' | 'warning', type: string, message: string, line
   return { severity, type, message, line, column, context }
 }
 
+/**
+ * True if the line contains a ':' at bracket depth 0 outside strings/comments.
+ * This is Python's block colon — it may sit mid-line for inline compound
+ * statements (e.g. `for x in xs: do()` or `if not a: return a`), so checking
+ * for a trailing colon alone produces false "missing colon" errors.
+ */
+/** Remove a trailing Python `# ...` comment (outside strings) and trailing space. */
+function stripTrailingPyComment(line: string): string {
+  let sq = false, dq = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (sq) { if (ch === "'" && line[i - 1] !== '\\') sq = false; continue }
+    if (dq) { if (ch === '"' && line[i - 1] !== '\\') dq = false; continue }
+    if (ch === "'") { sq = true; continue }
+    if (ch === '"') { dq = true; continue }
+    if (ch === '#') return line.slice(0, i).trimEnd()
+  }
+  return line.trimEnd()
+}
+
+function hasTopLevelColon(line: string): boolean {
+  let depth = 0, sq = false, dq = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (sq) { if (ch === "'" && line[i - 1] !== '\\') sq = false; continue }
+    if (dq) { if (ch === '"' && line[i - 1] !== '\\') dq = false; continue }
+    if (ch === "'") { sq = true; continue }
+    if (ch === '"') { dq = true; continue }
+    if (ch === '#') break
+    if (ch === '(' || ch === '[' || ch === '{') depth++
+    else if (ch === ')' || ch === ']' || ch === '}') depth--
+    else if (ch === ':' && depth === 0) return true
+  }
+  return false
+}
+
 export function compileAndValidateCode(code: string, language: string): CompilationResult {
   const errors: Diagnostic[] = []
   const warnings: Diagnostic[] = []
@@ -36,6 +72,9 @@ export function compileAndValidateCode(code: string, language: string): Compilat
   const openings = new Set(['(', '[', '{'])
   const closings = new Set([')', ']', '}'])
   let insideSingleQuote = false, insideDoubleQuote = false, insideBlockComment = false
+  // `//` and `/* */` are comments in C-like languages but operators in Python
+  // (floor division), so only treat them as comments outside Python.
+  const isPython = language === 'python' || language === 'py'
 
   for (let l = 0; l < lines.length; l++) {
     const line = lines[l]
@@ -46,9 +85,9 @@ export function compileAndValidateCode(code: string, language: string): Compilat
         if (char === '*' && nextChar === '/') { insideBlockComment = false; c++ }
         continue
       }
-      if (char === '/' && nextChar === '/' && !insideSingleQuote && !insideDoubleQuote) break
-      if (char === '#' && language === 'python' && !insideSingleQuote && !insideDoubleQuote) break
-      if (char === '/' && nextChar === '*' && !insideSingleQuote && !insideDoubleQuote) { insideBlockComment = true; c++; continue }
+      if (!isPython && char === '/' && nextChar === '/' && !insideSingleQuote && !insideDoubleQuote) break
+      if (isPython && char === '#' && !insideSingleQuote && !insideDoubleQuote) break
+      if (!isPython && char === '/' && nextChar === '*' && !insideSingleQuote && !insideDoubleQuote) { insideBlockComment = true; c++; continue }
 
       if (char === "'" && !insideDoubleQuote) { if (!(c > 0 && line[c - 1] === '\\')) insideSingleQuote = !insideSingleQuote; continue }
       if (char === '"' && !insideSingleQuote) { if (!(c > 0 && line[c - 1] === '\\')) insideDoubleQuote = !insideDoubleQuote; continue }
@@ -180,7 +219,8 @@ export function compileAndValidateCode(code: string, language: string): Compilat
       // Indentation validation
       const prevIdx = prevNonEmpty(lines, i)
       if (prevIdx !== -1) {
-        const prevLine = lines[prevIdx].trim()
+        // Strip trailing comments so `if x:  # note` is still seen as a block opener.
+        const prevLine = stripTrailingPyComment(lines[prevIdx].trim())
         if (prevLine.endsWith(':')) {
           if (spaces <= indentStack[indentStack.length - 1]) {
             errors.push(diag('error', 'IndentationError', `冒号声明后期望增加缩进 (Expected indented block after ':')`, i + 1, undefined, origLine))
@@ -199,7 +239,9 @@ export function compileAndValidateCode(code: string, language: string): Compilat
       // Colon requirement
       const blockKw = ['def ', 'class ', 'if ', 'elif ', 'while ', 'for ', 'try:', 'except ', 'else:']
       const matched = blockKw.find(kw => line.startsWith(kw))
-      if (matched && !line.endsWith(':') && !line.includes('#')) {
+      // A block colon may be mid-line (inline compound statement), so require a
+      // top-level ':' anywhere rather than only at the end.
+      if (matched && !hasTopLevelColon(line)) {
         errors.push(diag('error', 'SyntaxError', `'${matched.trim()}' 语句块末尾缺少冒号 ':'`, i + 1, undefined, origLine))
       }
 

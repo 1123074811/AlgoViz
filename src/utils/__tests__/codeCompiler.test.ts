@@ -67,4 +67,28 @@ describe('compileAndValidateCode', () => {
     expect(result.success).toBe(true)
     expect(result.errors).toEqual([])
   })
+
+  it('accepts Python inline compound statements (colon mid-line)', () => {
+    const code = [
+      'def counting_sort_for_radix(arr, exp):',
+      '    n = len(arr); output = [0] * n; count = [0] * 10',
+      '    for i in range(n): count[(arr[i] // exp) % 10] += 1',
+      '    for i in range(1, 10): count[i] += count[i - 1]',
+      '    return output',
+      '',
+      'def radix_sort(arr):',
+      '    if not arr: return arr',
+      '    max_val = max(arr); exp = 1',
+      '    while max_val // exp > 0:',
+      '        arr = counting_sort_for_radix(arr, exp); exp *= 10',
+      '    return arr',
+    ].join('\n')
+    const result = compileAndValidateCode(code, 'python')
+    expect(result.errors.filter(e => e.type === 'SyntaxError' || e.type === 'IndentationError')).toEqual([])
+  })
+
+  it('still flags a genuinely missing colon on a Python block statement', () => {
+    const result = compileAndValidateCode('for i in range(10)\n    print(i)', 'python')
+    expect(result.errors.some(e => e.type === 'SyntaxError' && e.message.includes('冒号'))).toBe(true)
+  })
 })
