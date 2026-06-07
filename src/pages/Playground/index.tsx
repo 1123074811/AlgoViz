@@ -16,6 +16,7 @@ import ConfirmDialog from '@/components/Common/ConfirmDialog'
 import { useAlgorithmStore, type AIHistoryEntry } from '@/store/algorithmStore'
 import { recognizeAlgorithm } from '@/presets/recognize'
 import { useAIGenerator } from '@/hooks/useAIGenerator'
+import { planRestoreOnMount, INTERRUPTED_MSG } from './restoreSession'
 
 let playgroundAnalysisController: AbortController | null = null
 
@@ -74,17 +75,6 @@ export default function Playground() {
     isPlaying, speed, currentStep, totalSteps,
     setSpeed, stepForward, stepBackward, reset, goToEnd, togglePlay,
   } = useAnimationEngine(activeAnimationScript)
-
-  useLayoutEffect(() => {
-    playgroundAnalysisController?.abort()
-    playgroundAnalysisController = null
-    setAnimationScript(null)
-    setAIStatus('idle')
-    setAiErrorReport(null)
-    setAiRepairHistory(null)
-    setActiveHistoryId(null)
-    resetGenerator()
-  }, [setAnimationScript, setAIStatus, resetGenerator])
 
   const handleNew = useCallback(() => {
     playgroundAnalysisController?.abort()
@@ -273,13 +263,49 @@ export default function Playground() {
       setAnimationScript(entry.script)
       setAIStatus('success')
     } else {
-      setLiveGenerator(null)
+      // Non-success entries: surface the error (don't silently blank the page).
+      setLiveGenerator(
+        entry.generatorBody && entry.generatorType
+          ? { generator: { body: entry.generatorBody, type: entry.generatorType } }
+          : null,
+      )
       setAnimationScript(null)
-      setAIStatus('idle')
+      if (entry.status === 'error') setAIStatus('error', entry.error)
+      else setAIStatus('idle')
     }
     setAiErrorReport(null)
     setAiRepairHistory(null)
   }
+
+  // 进入页面时不要清空:恢复最近一次会话(结果/错误/进行中)。
+  // 分析后切到别的页面再回来,因为本页是独立路由会被卸载重挂,旧逻辑会把共享的
+  // animationScript/aiStatus 清空导致空白;这里改为恢复最近历史项。
+  // 同时把因离开页面而残留在"分析中"的历史项标记为已中断(其请求已不再被跟踪)。
+  const didRestoreOnMountRef = useRef(false)
+  useLayoutEffect(() => {
+    if (didRestoreOnMountRef.current) return
+    didRestoreOnMountRef.current = true
+    const plan = planRestoreOnMount(aiHistory, !!playgroundAnalysisController)
+    for (const id of plan.reconcileIds) {
+      updateAIHistory(id, { status: 'error', error: INTERRUPTED_MSG })
+    }
+    if (plan.mode === 'clean') {
+      // 无历史:清成干净状态(覆盖可能来自其它页面的共享脚本)。
+      setAnimationScript(null)
+      setAIStatus('idle')
+      setActiveHistoryId(null)
+    } else if (plan.mode === 'analyzing' && plan.effective) {
+      // 仍在后台分析:保留进行中状态,完成后会通过 store 自动反映结果。
+      setCode(plan.effective.code)
+      setInputData(plan.effective.inputData)
+      setActiveHistoryId(plan.effective.id)
+      setAIStatus('analyzing')
+    } else if (plan.effective) {
+      handleRestore(plan.effective)
+    }
+    // 仅在挂载时执行一次。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleDelete = (id: string) => {
     setConfirmState({ type: 'delete', id })
