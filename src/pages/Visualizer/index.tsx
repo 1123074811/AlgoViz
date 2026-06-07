@@ -438,6 +438,11 @@ export default function Visualizer() {
       prev[codeScopeKey] === nextValue ? prev : { ...prev, [codeScopeKey]: nextValue }
     ))
   }, [codeScopeKey])
+  const codeDiagnostics = useMemo(() => {
+    if (!code.trim()) return []
+    const result = compileAndValidateCode(code, codeLanguage)
+    return [...result.errors, ...result.warnings]
+  }, [code, codeLanguage])
 
   // Parse input data from text — returns the natural type for the algorithm
   const parsedInput = useCallback((): unknown => {
@@ -692,6 +697,7 @@ export default function Visualizer() {
               language={codeLanguage}
               onChange={setCode}
               onMount={handleEditorMount}
+              diagnostics={codeDiagnostics}
               disabled={aiStatus === 'analyzing'}
               title={selectedAlgorithm.name}
               className="flex-1"

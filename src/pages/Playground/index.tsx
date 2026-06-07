@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import type { OnMount } from '@monaco-editor/react'
@@ -6,6 +6,7 @@ import { Icon } from '@/icons'
 import { useAnimationEngine } from '@/hooks/useAnimationEngine'
 import { getApiConfig, parseInputData, type AIErrorReport, type AIRepairAttempt } from '@/ai'
 import { compileAndValidateCode } from '@/utils/codeCompiler'
+import { detectCodeLanguage, getCodeLanguageLabel } from '@/utils/languageDetector'
 import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
 import Header from '@/components/Layout/Header'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
@@ -20,21 +21,12 @@ let playgroundAnalysisController: AbortController | null = null
 
 const DEFAULT_CODE = ''
 
-const LANGUAGE_OPTIONS = [
-  { value: 'python', label: 'Python' },
-  { value: 'javascript', label: 'JavaScript' },
-  { value: 'cpp', label: 'C++' },
-  { value: 'java', label: 'Java' },
-]
-
 export default function Playground() {
   const { t } = useTranslation()
   const navigate = useNavigate()
 
   const [code, setCode] = useState(DEFAULT_CODE)
-  const [codeLanguage, setCodeLanguage] = useState(() => {
-    return localStorage.getItem('algoviz-editor-code-lang') || 'python'
-  })
+  const codeLanguage = useMemo(() => detectCodeLanguage(code), [code])
   // Starts empty: the AI infers the expected format and fills a sample on analysis.
   const [inputData, setInputData] = useState('')
 
@@ -55,12 +47,19 @@ export default function Playground() {
   const [aiRepairHistory, setAiRepairHistory] = useState<AIRepairAttempt[] | null>(null)
   const [showRawResponse, setShowRawResponse] = useState(false)
   const [confirmState, setConfirmState] = useState<{ type: 'delete'; id: string } | { type: 'clearAll' } | null>(null)
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
   const decorationsRef = useRef<string[]>([])
 
   const hasApiConfig = getApiConfig() !== null
 
   const inputInfo = useMemo(() => parseInputData(inputData), [inputData])
+  const codeDiagnostics = useMemo(() => {
+    if (!code.trim()) return []
+    const result = compileAndValidateCode(code, codeLanguage)
+    return [...result.errors, ...result.warnings]
+  }, [code, codeLanguage])
+  const activeAnimationScript = code.trim() || activeHistoryId ? animationScript : null
 
   // Live mode (recognized built-in or AI generator) + input-driven live regen.
   const { liveAlgoId, generator, analyze: analyzeGenerator, reset: resetGenerator, setLive: setLiveGenerator } = useAIGenerator({
@@ -74,7 +73,18 @@ export default function Playground() {
     visualState, currentStepData,
     isPlaying, speed, currentStep, totalSteps,
     setSpeed, stepForward, stepBackward, reset, goToEnd, togglePlay,
-  } = useAnimationEngine(animationScript)
+  } = useAnimationEngine(activeAnimationScript)
+
+  useLayoutEffect(() => {
+    playgroundAnalysisController?.abort()
+    playgroundAnalysisController = null
+    setAnimationScript(null)
+    setAIStatus('idle')
+    setAiErrorReport(null)
+    setAiRepairHistory(null)
+    setActiveHistoryId(null)
+    resetGenerator()
+  }, [setAnimationScript, setAIStatus, resetGenerator])
 
   const handleNew = useCallback(() => {
     playgroundAnalysisController?.abort()
@@ -86,6 +96,7 @@ export default function Playground() {
     setAIStatus('idle')
     setAiErrorReport(null)
     setAiRepairHistory(null)
+    setActiveHistoryId(null)
   }, [setAnimationScript, setAIStatus, resetGenerator])
 
   const handleEditorMount: OnMount = useCallback((editor) => { editorRef.current = editor }, [])
@@ -94,11 +105,11 @@ export default function Playground() {
   // set by b.line() in the generator). Mirrors the Visualizer's code-line arrow.
   useEffect(() => {
     const editor = editorRef.current
-    if (!editor || !animationScript) {
+    if (!editor || !activeAnimationScript) {
       if (editor) decorationsRef.current = editor.deltaDecorations(decorationsRef.current, [])
       return
     }
-    const steps = animationScript.steps
+    const steps = activeAnimationScript.steps
     const currentCodeLine = steps[currentStep - 1]?.codeLine ?? -1
     const decos: Parameters<typeof editor.deltaDecorations>[1] = []
     const visited = new Set<number>()
@@ -117,7 +128,7 @@ export default function Playground() {
         options: { isWholeLine: true, className: 'active-line', glyphMarginClassName: 'active-glyph' } })
     }
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, decos)
-  }, [currentStep, animationScript])
+  }, [currentStep, activeAnimationScript])
 
   const handleAnalyze = async () => {
     const compResult = compileAndValidateCode(code, codeLanguage)
@@ -161,18 +172,37 @@ export default function Playground() {
     const controller = new AbortController()
     playgroundAnalysisController = controller
 
-    // Create history entry immediately with status 'analyzing'
-    const historyId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
-    addAIHistory({
-      id: historyId,
+    // Re-analyzing a restored or identical entry should update that history item,
+    // not create an indistinguishable duplicate each time the button is clicked.
+    const activeEntry = activeHistoryId ? aiHistory.find(entry => entry.id === activeHistoryId) : null
+    const reusableEntry = activeEntry && activeEntry.code === code && activeEntry.language === codeLanguage
+      ? activeEntry
+      : aiHistory.find(entry =>
+        entry.code === code &&
+        entry.language === codeLanguage &&
+        entry.inputData === inputData
+      )
+    const previousEntry = reusableEntry ? { ...reusableEntry } : null
+    const historyId = reusableEntry?.id ?? Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+    const analyzingPatch = {
       timestamp: Date.now(),
       algorithmId: 'playground',
       algorithmName: '自定义代码',
       code,
       language: codeLanguage,
       inputData,
-      status: 'analyzing',
-    })
+      status: 'analyzing' as const,
+      error: undefined,
+    }
+    if (reusableEntry) {
+      updateAIHistory(historyId, analyzingPatch)
+    } else {
+      addAIHistory({
+        id: historyId,
+        ...analyzingPatch,
+      })
+    }
+    setActiveHistoryId(historyId)
 
     setAIStatus('analyzing')
     setAiErrorReport(null)
@@ -214,7 +244,11 @@ export default function Playground() {
       })
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') {
-        removeAIHistory(historyId)
+        if (previousEntry) {
+          updateAIHistory(historyId, previousEntry)
+        } else {
+          removeAIHistory(historyId)
+        }
         return
       }
       const msg = e instanceof Error ? e.message : '未知错误'
@@ -225,8 +259,8 @@ export default function Playground() {
 
   const handleRestore = (entry: AIHistoryEntry) => {
     setCode(entry.code)
-    setCodeLanguage(entry.language)
     setInputData(entry.inputData)
+    setActiveHistoryId(entry.id)
     if (entry.status === 'success' && entry.script) {
       const recognized = recognizeAlgorithm(entry.script.algorithm)
       if (recognized) {
@@ -277,7 +311,7 @@ export default function Playground() {
     )
   }
 
-  const complexity = animationScript?.complexity
+  const complexity = activeAnimationScript?.complexity
 
   useEffect(() => { document.title = 'AI Playground — AlgoViz' }, [])
 
@@ -308,18 +342,13 @@ export default function Playground() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleNew}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border border-border bg-white text-slate-600 hover:bg-slate-50 cursor-pointer transition-colors">
-            <Icon name="code2" size={12} />
-            新建
-          </button>
-          <select value={codeLanguage} onChange={(e) => {
-            const lang = e.target.value
-            setCodeLanguage(lang)
-            localStorage.setItem('algoviz-editor-code-lang', lang)
-          }} className="text-[11px] font-medium px-2 py-1 rounded border border-border bg-white text-slate-600 outline-none cursor-pointer">
-            {LANGUAGE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-          </select>
+          <div
+            className="flex items-center gap-1.5 px-2 py-1 rounded border border-border bg-white text-[11px] font-medium text-slate-600"
+            title="根据当前代码自动识别语言，用于编辑器高亮、代码检查和 AI 分析"
+          >
+            <Icon name="brain" size={11} className="text-primary" />
+            <span>自动识别: {getCodeLanguageLabel(codeLanguage)}</span>
+          </div>
           <button onClick={handleAnalyze} disabled={aiStatus === 'analyzing'}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border-none cursor-pointer transition-all ${
               !hasApiConfig ? 'bg-slate-100 text-slate-400' :
@@ -338,7 +367,14 @@ export default function Playground() {
         {showHistory && (
           <div className="w-full lg:w-52 h-40 lg:h-auto border-b lg:border-b-0 lg:border-r border-border bg-surface flex flex-col shrink-0 overflow-hidden">
             <div className="px-3 py-2 border-b border-border flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-600">历史记录</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-600">历史记录</span>
+                <button onClick={handleNew}
+                  className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border border-border bg-white text-slate-500 hover:bg-slate-50 cursor-pointer transition-colors">
+                  <Icon name="code2" size={10} />
+                  新建
+                </button>
+              </div>
               <span className="text-[10px] text-muted">{aiHistory.length}</span>
             </div>
             <div className="flex-1 overflow-y-auto">
@@ -394,6 +430,7 @@ export default function Playground() {
             language={codeLanguage}
             onChange={setCode}
             onMount={handleEditorMount}
+            diagnostics={codeDiagnostics}
             disabled={aiStatus === 'analyzing'}
             className="flex-1"
           />
@@ -403,11 +440,12 @@ export default function Playground() {
             title={(
               <div className="flex items-center justify-between w-full">
                 <span>输入数据{inputInfo.valid ? ` · ${inputInfo.summary}` : ''}</span>
-                <span className="text-[10px] text-muted">格式由 AI 分析后自动给出</span>
+                <span className="text-[10px] text-muted">支持 JSON / LeetCode：root = [1,2,null]</span>
               </div>
             )}
-            helperText={inputInfo.valid ? `类型: ${inputInfo.kind} · 改输入动画即时更新` : inputInfo.message ?? 'JSON 解析错误'}
-            placeholder="[5, 3, 8, 1, 9, 2]"
+            helperText={inputInfo.valid ? `类型: ${inputInfo.kind} · 改输入动画即时更新` : inputInfo.message ?? '输入格式错误'}
+            placeholder={'root = [1,2,2,3,4,4,3]\n或 {"nums":[2,7,11,15],"target":9}'}
+            error={!inputInfo.valid ? inputInfo.message ?? '输入格式错误，修正后会自动同步动画' : null}
             disabled={aiStatus === 'analyzing'}
             className="h-28"
           />
@@ -416,7 +454,7 @@ export default function Playground() {
         {/* Visualization */}
         <div className="flex-[1.5] flex flex-col min-w-0 min-h-0">
           <div className="flex-1 min-h-0">
-            <VisualizationCanvas script={animationScript} visualState={visualState} currentStepData={currentStepData} />
+            <VisualizationCanvas script={activeAnimationScript} visualState={visualState} currentStepData={currentStepData} />
           </div>
           <PlaybackControls
             compact
@@ -527,12 +565,18 @@ export default function Playground() {
       )}
 
       {/* Info overlay */}
-      {animationScript && currentStepData && (
+      {activeAnimationScript && currentStepData && (
         <div className="absolute top-[7.5rem] right-4 w-56 max-h-[calc(100%-10rem)] overflow-y-auto p-3 rounded-lg border border-border bg-white/95 shadow-lg backdrop-blur z-50 space-y-2 text-xs">
           <div className="p-2 rounded bg-warning-50">
             <div className="text-[10px] text-warning font-semibold mb-0.5">步骤 {currentStepData.stepId}</div>
             <p className="text-[11px] text-slate-700">{currentStepData.description.zh}</p>
           </div>
+          {activeAnimationScript.result !== undefined && (
+            <div className="p-2 rounded bg-green-50 border border-green-100">
+              <div className="text-[10px] font-semibold text-green-700 mb-0.5">输出</div>
+              <div className="text-[11px] font-code text-green-800 break-all">{formatAnimationResult(activeAnimationScript.result)}</div>
+            </div>
+          )}
           <div className="p-2 rounded bg-surface">
             <div className="text-[10px] font-semibold text-slate-600 mb-1">统计</div>
             <div className="flex gap-3 text-[10px] text-slate-500">
@@ -563,6 +607,7 @@ export default function Playground() {
           if (!confirmState) return
           if (confirmState.type === 'delete') {
             removeAIHistory(confirmState.id)
+            if (activeHistoryId === confirmState.id) setActiveHistoryId(null)
           } else {
             // Clearing all history → also reset the current view for a clean slate
             // (the animation lives in the shared store and would otherwise linger).
@@ -570,6 +615,7 @@ export default function Playground() {
             setAnimationScript(null)
             setAIStatus('idle')
             resetGenerator()
+            setActiveHistoryId(null)
           }
           setConfirmState(null)
         }}
@@ -578,4 +624,8 @@ export default function Playground() {
 
     </div>
   )
+}
+
+function formatAnimationResult(result: Exclude<import('@/types/animation').AnimationScript['result'], undefined>) {
+  return Array.isArray(result) ? `[${result.join(', ')}]` : String(result)
 }
