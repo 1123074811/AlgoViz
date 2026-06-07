@@ -11,7 +11,7 @@ interface ContainerViewProps {
 }
 
 /** Draws structural container shapes: U-shape for stack, parallel lines for queue, panel for map. */
-export default function ContainerView({ type, cells, nodes }: ContainerViewProps) {
+export default function ContainerView({ type, cells, nodes, label }: ContainerViewProps) {
   // Map container: rounded rectangle panel around key-value entry nodes
   if (type === 'map') {
     if (!nodes || nodes.length === 0) return null
@@ -83,6 +83,7 @@ export default function ContainerView({ type, cells, nodes }: ContainerViewProps
     const bottomY = maxY + cellH / 2 + pad
     const leftX = centerX - cellW / 2 - pad
     const rightX = centerX + cellW / 2 + pad
+    const stackLabel = label ?? (cells[0]?.meta as { label?: string } | undefined)?.label ?? '栈'
 
     return (
       <g>
@@ -91,6 +92,9 @@ export default function ContainerView({ type, cells, nodes }: ContainerViewProps
           fill="none" stroke={CONTAINER_STROKE} strokeWidth={CONTAINER_STROKE_WIDTH}
           strokeLinecap="round" strokeLinejoin="round"
         />
+        <text x={leftX} y={topY - 8} textAnchor="start" fontSize="11" fill="#64748B" fontFamily="monospace">
+          {stackLabel}
+        </text>
         <text x={leftX - 8} y={topY + 8} textAnchor="end" fontSize="10" fill="#64748B" fontFamily="monospace" dominantBaseline="middle">栈顶 ➔</text>
       </g>
     )

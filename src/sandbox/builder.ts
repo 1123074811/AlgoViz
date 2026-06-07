@@ -173,6 +173,9 @@ export class AnimationBuilder {
   private treeRoot?: string
   private treeChildren: Record<string, string[]> = {}
   private treeNodes: Array<{ id: string; value: number | string }> = []
+  private resultValue?: AnimationScript['result']
+  private varValues = new Map<string, number | string>()
+  private pendingVarHighlights = new Set<string>()
   // tracks which structure families (event prefix before '.') the script used,
   // to auto-enable composite layout when 2+ distinct structures appear.
   private usedFamilies = new Set<string>()
@@ -192,8 +195,11 @@ export class AnimationBuilder {
     if (this.steps.length >= MAX_STEPS) {
       throw new Error(`步数超过上限 ${MAX_STEPS}，请减少操作或简化算法`)
     }
-    const family = events[0]?.type.split('.')[0]
-    if (family) this.usedFamilies.add(family)
+    const allEvents = [...events, ...this.consumePendingVarHighlights()]
+    for (const event of allEvents) {
+      const family = event.type.split('.')[0]
+      if (family) this.usedFamilies.add(family)
+    }
     // When the AI omits b.desc(), derive a meaningful description from the operation
     // itself instead of a meaningless "步骤 N" placeholder.
     const zh = this.pendingDesc || defaultDescFor(events[0]) || `步骤 ${this.sid}`
@@ -207,10 +213,17 @@ export class AnimationBuilder {
       description: { zh, en: zh },
       action,
       stats: { comparisons: this.comparisons, swaps: this.swaps, accesses: this.accesses },
-      events,
+      events: allEvents,
     })
     this.pendingDesc = ''
     return this
+  }
+
+  private consumePendingVarHighlights(): AlgorithmEvent[] {
+    if (this.pendingVarHighlights.size === 0) return []
+    const events = [...this.pendingVarHighlights].map(name => ({ type: 'math.highlight' as const, name }))
+    this.pendingVarHighlights.clear()
+    return events
   }
 
   private act(type: Action['type'], targets: number[] = [], color: ActionColor = 'primary'): Action {
@@ -266,15 +279,16 @@ export class AnimationBuilder {
 
   // ── tree ──
   treeCreate(variant: 'binary' | 'bst' | 'avl', rootId: string, nodes: Array<{ id: string; value: number | string }>, edges: Array<{ parentId: string; childId: string }>): this {
-    this.treeRoot = rootId
-    this.treeNodes = nodes.map(n => ({ ...n }))
+    const normalized = normalizeTreeCreateArgs(rootId, nodes, edges)
+    this.treeRoot = normalized.rootId
+    this.treeNodes = normalized.nodes.map(n => ({ ...n }))
     this.treeChildren = {}
-    for (const n of nodes) this.treeChildren[n.id] = this.treeChildren[n.id] ?? []
-    for (const e of edges) {
+    for (const n of normalized.nodes) this.treeChildren[n.id] = this.treeChildren[n.id] ?? []
+    for (const e of normalized.edges) {
       this.treeChildren[e.parentId] = this.treeChildren[e.parentId] ?? []
       this.treeChildren[e.parentId].push(e.childId)
     }
-    return this.add([{ type: 'tree.create', variant, rootId, nodes, edges }], this.act('highlight', [], 'primary'))
+    return this.add([{ type: 'tree.create', variant, rootId: normalized.rootId, nodes: normalized.nodes, edges: normalized.edges }], this.act('highlight', [], 'primary'))
   }
   treeVisit(id: string): this {
     return this.add([{ type: 'tree.visit', nodeId: id }], this.act('highlight', [], 'primary'))
@@ -287,6 +301,9 @@ export class AnimationBuilder {
   }
   treeCompare(nodeId: string, value: number | string): this {
     return this.add([{ type: 'tree.compare', nodeId, value }], this.act('compare', [], 'warning'))
+  }
+  highlightNode(nodeId: string, color: ActionColor = 'success'): this {
+    return this.add([{ type: 'scene.highlight', entityId: nodeId, role: color === 'success' ? 'safe' : 'current', color }], this.act('highlight', [], color))
   }
   treeRotate(rotation: 'left' | 'right' | 'left-right' | 'right-left', pivotId: string): this {
     return this.add([{ type: 'tree.rotate', rotation, pivotId }], this.act('highlight', [], 'primary'))
@@ -378,13 +395,18 @@ export class AnimationBuilder {
 
   // ── 纯数学 / 变量面板（结构无关算法，@type 用 array） ──
   varInit(vars: Array<{ name: string; value: number | string }>): this {
+    for (const v of vars) this.varValues.set(v.name, v.value)
     return this.add([{ type: 'math.init', vars: vars.map(v => ({ ...v })) }], this.act('highlight', [], 'primary'))
   }
-  varSet(name: string, value: number | string): this {
-    return this.add([{ type: 'math.set', name, value }], this.act('highlight', [], 'primary'))
+  varSet(name: string, value: number | string, delta?: string): this {
+    const previous = this.varValues.get(name)
+    const change = delta ?? formatVariableDelta(previous, value)
+    this.varValues.set(name, value)
+    return this.add([{ type: 'math.set', name, value, ...(change && { delta: change }) }], this.act('highlight', [], 'primary'))
   }
   varHighlight(name: string): this {
-    return this.add([{ type: 'math.highlight', name }], this.act('highlight', [], 'warning'))
+    this.pendingVarHighlights.add(name)
+    return this
   }
 
   // ── 集合（set，去重·无序·成员判定，@type 用 array） ──
@@ -633,6 +655,10 @@ export class AnimationBuilder {
   note(text: string): this {
     return this.add([{ type: 'scene.note', text }], this.act('annotate', [], 'muted'))
   }
+  result(value: AnimationScript['result']): this {
+    this.resultValue = value
+    return this.desc(`输出结果：${formatResult(value)}`).note(`result = ${formatResult(value)}`)
+  }
   emit(event: AlgorithmEvent): this {
     return this.add([event], this.act('highlight', [], 'primary'))
   }
@@ -652,6 +678,7 @@ export class AnimationBuilder {
       presentation,
       complexity: { time: { best: 'O(?)', average: 'O(?)', worst: 'O(?)' }, space: 'O(?)' },
       initialState,
+      ...(this.resultValue !== undefined && { result: this.resultValue }),
       steps: this.steps,
     }
   }
@@ -672,4 +699,69 @@ export class AnimationBuilder {
     const numericData = this.arrayData.map(v => typeof v === 'number' ? v : Number(v)).filter(v => !Number.isNaN(v))
     return { type: this.type, data: numericData }
   }
+}
+
+function formatResult(value: AnimationScript['result']): string {
+  return Array.isArray(value) ? `[${value.join(', ')}]` : String(value)
+}
+
+function formatVariableDelta(previous: number | string | undefined, next: number | string): string | undefined {
+  if (previous === undefined) return undefined
+  if (previous === next) return undefined
+
+  const prevNum = typeof previous === 'number' ? previous : Number(previous)
+  const nextNum = typeof next === 'number' ? next : Number(next)
+  if (Number.isFinite(prevNum) && Number.isFinite(nextNum)) {
+    const diff = nextNum - prevNum
+    if (diff === 0) return undefined
+    return diff > 0 ? `+${diff}` : String(diff)
+  }
+
+  return `->${String(next)}`
+}
+
+function normalizeTreeCreateArgs(
+  rootId: string,
+  nodes: Array<{ id: string; value: number | string }>,
+  edges: Array<{ parentId: string; childId: string }>,
+): {
+  rootId: string
+  nodes: Array<{ id: string; value: number | string }>
+  edges: Array<{ parentId: string; childId: string }>
+} {
+  const normalizedNodes = nodes.map(node => ({ ...node }))
+  const byId = new Map(normalizedNodes.map(node => [node.id, node]))
+  const byValue = new Map<string, Array<{ id: string; value: number | string }>>()
+  for (const node of normalizedNodes) {
+    const valueKey = String(node.value)
+    byValue.set(valueKey, [...(byValue.get(valueKey) ?? []), node])
+  }
+
+  const usedAsChild = new Set<string>()
+  const siblingUse = new Map<string, Map<string, number>>()
+
+  const resolveChild = (parentId: string, childId: string): string => {
+    if (!byId.has(childId)) return childId
+
+    const parentUse = siblingUse.get(parentId) ?? new Map<string, number>()
+    siblingUse.set(parentId, parentUse)
+
+    const candidates = byValue.get(String(byId.get(childId)?.value)) ?? [byId.get(childId)!]
+    const seen = parentUse.get(childId) ?? 0
+    parentUse.set(childId, seen + 1)
+
+    const exactCandidate = candidates[seen]
+    if (exactCandidate && !usedAsChild.has(exactCandidate.id)) return exactCandidate.id
+
+    const freeCandidate = candidates.find(candidate => !usedAsChild.has(candidate.id))
+    return freeCandidate?.id ?? childId
+  }
+
+  const normalizedEdges = edges.map(edge => {
+    const childId = resolveChild(edge.parentId, edge.childId)
+    usedAsChild.add(childId)
+    return { parentId: edge.parentId, childId }
+  })
+
+  return { rootId, nodes: normalizedNodes, edges: normalizedEdges }
 }

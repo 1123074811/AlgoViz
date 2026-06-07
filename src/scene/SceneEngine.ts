@@ -208,9 +208,9 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
   const isBfsOrTopo = script.algorithm === 'bfs_graph' || script.algorithm === 'topological_sort' || script.algorithm.includes('bfs') || script.algorithm.includes('topological')
   const isDfs = script.algorithm === 'dfs_graph' || script.algorithm.includes('dfs')
 
-  if (teachingState?.graph || isBfsOrTopo || isDfs) {
-    let queue = teachingState?.graph?.queue
-    let stack = teachingState?.graph?.stack
+  if (teachingState?.graph || teachingState?.queue || teachingState?.stack || isBfsOrTopo || isDfs) {
+    let queue = stringifyAuxItems(teachingState?.queue) ?? teachingState?.graph?.queue
+    let stack = stringifyAuxItems(teachingState?.stack) ?? teachingState?.graph?.stack
 
     // Fallback: Reconstruct queue state from event history if not explicitly provided in teachingState (e.g. custom operations)
     if (!queue && isBfsOrTopo) {
@@ -276,6 +276,8 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
       if (ent && 'label' in ent && ent.label) return ent.label
       const initNode = script.initialState.nodes?.find(n => n.id === nodeId)
       if (initNode && initNode.label) return initNode.label
+      const treeNode = script.initialState.treeNodes?.find(n => String(n.id) === nodeId)
+      if (treeNode) return treeNode.value
       return nodeId
     }
 
@@ -414,8 +416,8 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
       }
     }
 
-    // Trigger relayout to adjust graph node centers dynamically based on active queue/stack
-    scene = relayout(scene, 'graph')
+    // Trigger relayout to adjust graph/tree node centers dynamically based on active queue/stack.
+    scene = relayout(scene, script.initialState.type === 'tree' ? 'tree' : 'graph')
   }
 
   // ── Render auxiliary arrays from teachingState (generic) ──
@@ -535,6 +537,10 @@ function estimateAuxiliaryCellWidth(value: number | string): number {
     return sum + (char.charCodeAt(0) > 255 ? 15 : 8)
   }, 24)
   return Math.max(MIN_AUX_CELL_W, Math.min(MAX_AUX_CELL_W, Math.ceil(width)))
+}
+
+function stringifyAuxItems(items: Array<string | number> | undefined): string[] | undefined {
+  return items?.map(item => String(item))
 }
 
 export function applyCommands(scene: SceneState, commands: SceneCommand[]): SceneState {

@@ -154,7 +154,7 @@ const FrameCard = ({ frame }: { frame: CallStackFrame }) => {
 export const CallStackView = ({
   model,
   className,
-  emptyLabel = "No stack frames",
+  emptyLabel = "当前步骤暂无递归调用",
 }: CallStackViewProps) => {
   const frames = [...model.frames].reverse();
 
@@ -183,8 +183,8 @@ export const CallStackView = ({
             ))}
           </ol>
         ) : (
-          <div className="flex h-full min-h-28 items-center justify-center rounded border border-dashed border-slate-200 bg-slate-50 px-3 text-center text-sm text-slate-500">
-            {emptyLabel}
+          <div className="flex h-full min-h-28 items-center justify-center rounded border border-dashed border-slate-100 bg-slate-50/50 px-3 text-center text-xs text-slate-400">
+            <span>{emptyLabel}</span>
           </div>
         )}
       </div>

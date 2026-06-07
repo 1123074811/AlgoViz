@@ -69,8 +69,8 @@ export type NQueensAlgorithmEvent =
   | { type: 'n_queens.solution'; queens: Array<{ row: number; col: number }> }
 
 export type StackAlgorithmEvent =
-  | { type: 'stack.create'; values: Array<number | string> }
-  | { type: 'stack.push'; value: number | string }
+  | { type: 'stack.create'; values: Array<number | string>; label?: string }
+  | { type: 'stack.push'; value: number | string; label?: string }
   | { type: 'stack.pop' }
   | { type: 'stack.peek'; index: number }
 
@@ -131,7 +131,7 @@ export type BitsetAlgorithmEvent =
 
 export type MathAlgorithmEvent =
   | { type: 'math.init'; vars: Array<{ name: string; value: number | string }> }
-  | { type: 'math.set'; name: string; value: number | string }
+  | { type: 'math.set'; name: string; value: number | string; delta?: string }
   | { type: 'math.highlight'; name: string }
   | { type: 'math.note'; text: string }
 

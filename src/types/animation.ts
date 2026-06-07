@@ -109,6 +109,8 @@ export interface TreeInitialNode {
 
 export interface TeachingState {
   variables?: Record<string, string | number | boolean | null>
+  queue?: Array<string | number>
+  stack?: Array<string | number>
   ranges?: RangeState[]
   auxiliaryArrays?: AuxiliaryArrayState[]
   graph?: {

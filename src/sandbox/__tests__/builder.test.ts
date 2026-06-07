@@ -63,4 +63,76 @@ describe('AnimationBuilder — tree', () => {
     expect(script.initialState.root).toBe('r')
     expect(script.initialState.children?.r).toContain('l')
   })
+
+  it('treeCreate 修正重复值节点被同一 childId 引用的问题', () => {
+    const b = new AnimationBuilder('symmetric_tree', 'tree')
+    b.treeCreate(
+      'binary',
+      '1',
+      [
+        { id: '1', value: 1 },
+        { id: '2', value: 2 },
+        { id: '2_1', value: 2 },
+      ],
+      [
+        { parentId: '1', childId: '2' },
+        { parentId: '1', childId: '2' },
+      ],
+    )
+
+    const script = b.build()
+    expect(script.initialState.children?.['1']).toEqual(['2', '2_1'])
+    expect(script.steps[0].events?.[0]).toMatchObject({
+      type: 'tree.create',
+      edges: [
+        { parentId: '1', childId: '2' },
+        { parentId: '1', childId: '2_1' },
+      ],
+    })
+  })
+
+  it('highlightNode 兼容 AI 常见节点高亮调用', () => {
+    const b = new AnimationBuilder('lowest_common_ancestor', 'tree')
+    b.treeCreate('binary', 'r', [{ id: 'r', value: 3 }], [])
+    b.desc('找到 LCA').highlightNode('r')
+
+    const script = b.build()
+    expect(script.steps[1].events?.[0]).toEqual({
+      type: 'scene.highlight',
+      entityId: 'r',
+      role: 'safe',
+      color: 'success',
+    })
+  })
+})
+
+describe('AnimationBuilder — variables', () => {
+  it('varSet 自动推导数值变化标注', () => {
+    const b = new AnimationBuilder('counter', 'array')
+    b.varInit([{ name: 'ret', value: 0 }])
+    b.varSet('ret', 1)
+    b.varSet('ret', 0)
+    b.varSet('state', 'left')
+    b.varSet('state', 'right')
+
+    const script = b.build()
+    expect(script.steps[1].events?.[0]).toMatchObject({ type: 'math.set', name: 'ret', value: 1, delta: '+1' })
+    expect(script.steps[2].events?.[0]).toMatchObject({ type: 'math.set', name: 'ret', value: 0, delta: '-1' })
+    expect(script.steps[4].events?.[0]).toMatchObject({ type: 'math.set', name: 'state', value: 'right', delta: '->right' })
+  })
+
+  it('varHighlight 合并到下一次真实动作，不单独产生无意义步骤', () => {
+    const b = new AnimationBuilder('lowest_common_ancestor', 'tree')
+    b.varInit([{ name: 'q', value: 1 }])
+    b.varHighlight('q')
+    b.desc('比较当前节点是否等于 q').treeVisit('n1')
+
+    const script = b.build()
+    expect(script.steps).toHaveLength(2)
+    expect(script.steps[1].description.zh).toBe('比较当前节点是否等于 q')
+    expect(script.steps[1].events).toEqual([
+      { type: 'tree.visit', nodeId: 'n1' },
+      { type: 'math.highlight', name: 'q' },
+    ])
+  })
 })

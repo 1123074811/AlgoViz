@@ -22,6 +22,9 @@ export default function CellView({ cell }: CellViewProps) {
   if (cell.state?.role === 'empty_placeholder') {
     return null
   }
+  if (cell.id.startsWith('mathvar_')) {
+    return null
+  }
 
   const opacity = cell.state?.opacity ?? 1
   const value = cell.value?.toString() ?? ''

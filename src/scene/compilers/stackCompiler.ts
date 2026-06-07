@@ -2,10 +2,13 @@ import type { SceneCommand } from '../commandTypes'
 import type { StackAlgorithmEvent } from '../eventTypes'
 import type { CompileContext, EventCompiler } from '../SceneEngine'
 import { AuxiliaryUnit, DataUnit } from '../primitives/DataUnits'
+import { measureNodeWidth } from '../textMetrics'
 
 const CX = 500
 const BOTTOM_Y = 360
 const CELL_GAP = 44
+const MIN_WIDTH = 52
+const MAX_WIDTH = 180
 
 export const stackCompiler: EventCompiler = {
   supports: (event): event is StackAlgorithmEvent => event.type.startsWith('stack.'),
@@ -36,20 +39,20 @@ function compileStackEvent(event: StackAlgorithmEvent, context: CompileContext):
         ...cleanupCommands,
         ...event.values.map((value, index) => ({
           type: 'create_cell' as const,
-          cell: DataUnit.arrayCell({ id: stackCellId(index), value, index, x: CX, y: BOTTOM_Y - index * CELL_GAP }),
+          cell: stackCell(stackCellId(index), value, index, BOTTOM_Y - index * CELL_GAP, 'muted', event.label),
         }))
       ]
     case 'stack.push': {
-      const count = Object.keys(context.scene.entities).filter(k => k.startsWith('stack_')).length
+      const count = liveStackIds(context).length
       const arrowId = `push_arrow_${count}`
       const phantomId = `phantom_push_${count}`
       const id = stackCellId(count)
       // Create actual cell, and create a phantom cell representing the path, connected with a curved arrow
       return [
         ...cleanupCommands,
-        { type: 'create_cell', cell: DataUnit.arrayCell({ id, value: event.value, index: count, x: CX, y: BOTTOM_Y - count * CELL_GAP }) },
+        { type: 'create_cell', cell: stackCell(id, event.value, count, BOTTOM_Y - count * CELL_GAP, 'success', event.label) },
         { type: 'set_state', entityId: id, state: { role: 'inserted', color: 'success', pulse: true }, merge: true },
-        { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: event.value, index: -1, x: CX + 160, y: BOTTOM_Y - count * CELL_GAP - 60 }) },
+        { type: 'create_cell', cell: stackCell(phantomId, event.value, -1, BOTTOM_Y - count * CELL_GAP - 60, 'success', event.label, CX + 180) },
         { type: 'connect', edge: AuxiliaryUnit.arrow({
           id: arrowId, fromEntity: phantomId, toEntity: id,
           curved: true, dashed: true, thickness: 1.2, color: 'success', pulse: true,
@@ -58,7 +61,7 @@ function compileStackEvent(event: StackAlgorithmEvent, context: CompileContext):
       ]
     }
     case 'stack.pop': {
-      const ids = Object.keys(context.scene.entities).filter(k => k.startsWith('stack_'))
+      const ids = liveStackIds(context)
       const topIdx = ids.length - 1
       const topId = stackCellId(topIdx)
       const topCell = context.scene.entities[topId]
@@ -69,7 +72,7 @@ function compileStackEvent(event: StackAlgorithmEvent, context: CompileContext):
       return [
         ...cleanupCommands,
         { type: 'set_state', entityId: topId, state: { role: 'deleted', color: 'danger', opacity: 0.4, pulse: true }, merge: true },
-        { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: topVal, index: -1, x: CX + 160, y: BOTTOM_Y - topIdx * CELL_GAP - 60, color: 'danger' }) },
+        { type: 'create_cell', cell: stackCell(phantomId, topVal, -1, BOTTOM_Y - topIdx * CELL_GAP - 60, 'danger', undefined, CX + 180) },
         { type: 'connect', edge: AuxiliaryUnit.arrow({
           id: arrowId, fromEntity: topId, toEntity: phantomId,
           curved: true, dashed: true, thickness: 1.2, color: 'danger', pulse: true,
@@ -86,3 +89,24 @@ function compileStackEvent(event: StackAlgorithmEvent, context: CompileContext):
 }
 
 export function stackCellId(index: number) { return `stack_${index}` }
+
+function liveStackIds(context: CompileContext): string[] {
+  return Object.keys(context.scene.entities)
+    .filter(k => k.startsWith('stack_') && context.scene.entities[k]?.state?.role !== 'deleted')
+}
+
+function stackCell(
+  id: string,
+  value: number | string,
+  index: number,
+  y: number,
+  color: 'muted' | 'success' | 'danger',
+  label?: string,
+  x = CX,
+) {
+  const width = measureNodeWidth(String(value), { fontSize: 14, padding: 22, min: MIN_WIDTH, max: MAX_WIDTH })
+  return {
+    ...DataUnit.arrayCell({ id, value, index, x, y, width, color }),
+    meta: { ...(label && { label }) },
+  }
+}

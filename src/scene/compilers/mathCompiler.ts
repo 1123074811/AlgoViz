@@ -8,9 +8,9 @@ import { measureNodeWidth } from '../textMetrics'
 // ── Layout constants (VariablesView reads positions off the emitted cells) ──
 const START_X = 200
 const PANEL_Y = 200
-const CELL_H = 52
-const CELL_GAP = 14 // horizontal gap between variable registers
-const MIN_W = 72
+const CELL_H = 30
+const CELL_GAP = 18 // horizontal gap between variable text registers
+const MIN_W = 96
 
 export const mathCompiler: EventCompiler = {
   supports: (event): event is MathAlgorithmEvent => event.type.startsWith('math.'),
@@ -19,11 +19,9 @@ export const mathCompiler: EventCompiler = {
 
 export function mathVarId(name: string) { return `mathvar_${name}` }
 
-/** Width of a register cell sized to its value text (name shown above, value inside). */
+/** Width of a variable text register sized to "name = value". */
 function cellWidth(name: string, value: number | string): number {
-  const valueW = measureNodeWidth(String(value), { fontSize: 16, padding: 24, min: MIN_W, max: 220 })
-  const nameW = measureNodeWidth(name, { fontSize: 11, padding: 18, min: MIN_W, max: 220 })
-  return Math.max(valueW, nameW)
+  return measureNodeWidth(`${name} = ${String(value)}`, { fontSize: 13, padding: 28, min: MIN_W, max: 260 })
 }
 
 /** Live variable cells in creation order (col carries the slot index). */
@@ -43,19 +41,18 @@ function nextSlotX(cells: SceneCell[]): number {
   return last.position.x + lastW / 2 + CELL_GAP
 }
 
-function makeVarCell(name: string, value: number | string, slot: number, x: number, pulse: boolean, color: ActionColor): SceneCell {
+function makeVarCell(name: string, value: number | string, slot: number, x: number, pulse: boolean, color: ActionColor, delta?: string): SceneCell {
   const w = cellWidth(name, value)
   return {
     id: mathVarId(name),
     type: 'cell',
     position: { x: x + w / 2, y: PANEL_Y },
     size: { width: w, height: CELL_H },
-    // Cell shows only the value; the variable name is drawn above by VariablesView
-    // (avoids the redundant、易截断的 "name=value" string).
+    // CellView skips mathvar_*; VariablesView draws this as plain debugger text.
     value: String(value),
     col: slot,
     state: { role: pulse ? 'active' : 'idle', color, pulse },
-    meta: { name, value },
+    meta: { name, value, ...(delta && { delta }) },
   }
 }
 
@@ -88,13 +85,13 @@ function compileMathEvent(event: MathAlgorithmEvent, context: CompileContext): S
         // View; anchor to the cell's left edge so growth expands rightward.
         const slot = found.col ?? existing.indexOf(found)
         const leftX = found.position.x - (found.size?.width ?? MIN_W) / 2
-        const cell = makeVarCell(event.name, event.value, slot, leftX, true, 'primary')
+        const cell = makeVarCell(event.name, event.value, slot, leftX, true, 'primary', event.delta ?? inferDelta(found, event.value))
         return [...cleanup, { type: 'create_cell', cell }]
       }
       // First appearance of a variable → create it appended to the panel.
       const slot = existing.length
       const x = nextSlotX(existing)
-      const cell = makeVarCell(event.name, event.value, slot, x, true, 'success')
+      const cell = makeVarCell(event.name, event.value, slot, x, true, 'success', event.delta)
       return [...cleanup, { type: 'create_cell', cell }]
     }
 
@@ -110,4 +107,17 @@ function compileMathEvent(event: MathAlgorithmEvent, context: CompileContext): S
       return [{ type: 'add_note', text: event.text }]
     }
   }
+}
+
+function inferDelta(previous: SceneCell, next: number | string): string | undefined {
+  const rawPrev = (previous.meta as { value?: unknown } | undefined)?.value ?? previous.value
+  if (rawPrev === undefined || rawPrev === next) return undefined
+
+  if (typeof rawPrev === 'number' && typeof next === 'number') {
+    const diff = next - rawPrev
+    if (diff === 0) return undefined
+    return diff > 0 ? `+${diff}` : String(diff)
+  }
+
+  return `->${String(next)}`
 }

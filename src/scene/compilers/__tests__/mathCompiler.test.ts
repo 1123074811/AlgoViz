@@ -46,11 +46,12 @@ describe('mathCompiler', () => {
   it('set 更新已存在变量的 value 与 meta', () => {
     let scene = createEmptyScene()
     scene = step(scene, { type: 'math.init', vars: [{ name: 'a', value: 48 }, { name: 'b', value: 18 }] })
-    scene = step(scene, { type: 'math.set', name: 'a', value: 18 })
+    scene = step(scene, { type: 'math.set', name: 'a', value: 18, delta: '-30' })
 
     const a = cell(scene, 'mathvar_a')
     expect(a?.value).toBe('18')
     expect((a?.meta as { value?: number })?.value).toBe(18)
+    expect((a?.meta as { delta?: string })?.delta).toBe('-30')
     expect(a?.state?.pulse).toBe(true)
 
     // still only two variables
@@ -67,6 +68,19 @@ describe('mathCompiler', () => {
     expect(r?.value).toBe('12')
     // appended to the right of b
     expect(r!.position.x).toBeGreaterThan(cell(scene, 'mathvar_b')!.position.x)
+  })
+
+  it('未显式 delta 时按前后数值计算真实差值', () => {
+    let scene = createEmptyScene()
+    scene = step(scene, { type: 'math.init', vars: [{ name: 'remaining', value: 8 }, { name: 'count', value: 0 }] })
+    scene = step(scene, { type: 'math.set', name: 'remaining', value: -2 })
+    scene = step(scene, { type: 'math.set', name: 'count', value: 3 })
+    scene = step(scene, { type: 'math.set', name: 'currentNode', value: '5' })
+    scene = step(scene, { type: 'math.set', name: 'currentNode', value: '-3' })
+
+    expect((cell(scene, 'mathvar_remaining')?.meta as { delta?: string })?.delta).toBe('-10')
+    expect((cell(scene, 'mathvar_count')?.meta as { delta?: string })?.delta).toBe('+3')
+    expect((cell(scene, 'mathvar_currentNode')?.meta as { delta?: string })?.delta).toBe('->-3')
   })
 
   it('highlight 设 current + pulse 且不改值；note 发 scene note', () => {
