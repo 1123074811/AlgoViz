@@ -1,4 +1,5 @@
 import type { QualityRule } from './quality/types'
+import { CATEGORY_PROMPTS } from './prompt/categories'
 
 export type AlgorithmCategory =
   | 'linear' // 排序/查找/双指针/滑动窗口（array、string）
@@ -50,6 +51,6 @@ export function classifyAlgorithm(input: {
 /** 各类别 profile。promptModule/rules 由 WS2/WS5 填充；此处给空骨架。 */
 export const CATEGORY_PROFILES: Record<AlgorithmCategory, CategoryProfile> =
   ALL_CATEGORIES.reduce((acc, id) => {
-    acc[id] = { id, promptModule: '', rules: [] }
+    acc[id] = { id, promptModule: CATEGORY_PROMPTS[id] ?? '', rules: [] }
     return acc
   }, {} as Record<AlgorithmCategory, CategoryProfile>)
