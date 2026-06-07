@@ -1,9 +1,10 @@
 import type { AnimationScript } from '@/types/animation'
 import type { AlgorithmCategory } from '../categories'
 import { buildQualityContext, type QualityRule, type QualityReport } from './types'
+import { GENERAL_RULES as GENERAL_RULES_IMPL } from './rules/general'
 
-/** 通用质量规则。WS1 在 ./rules/general.ts 中填充并在此注册。 */
-export const GENERAL_RULES: QualityRule[] = []
+/** 通用质量规则（在 ./rules/general.ts 中实现并聚合）。 */
+export const GENERAL_RULES: QualityRule[] = GENERAL_RULES_IMPL
 
 /**
  * 运行确定性质量门：通用规则 + 调用方传入的类别规则。
