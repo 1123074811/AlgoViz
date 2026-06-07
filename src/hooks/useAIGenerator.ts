@@ -184,11 +184,11 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
       let activeBody = gen.body
       if (sandboxResult.ok && sandboxResult.script) {
         const category = classifyAlgorithm({ algorithm: gen.algorithm, type: gen.type, code: params.code })
-        const gate = runQualityGate(sandboxResult.script, category, CATEGORY_PROFILES[category].rules)
+        const gate = runQualityGate(sandboxResult.script, category, CATEGORY_PROFILES[category].rules, params.code)
         if (!gate.passed) {
           const errs = gate.issues.filter(i => i.severity === 'error')
           const repaired = await repairGenerator({
-            body: gen.body, language: params.language, category, issues: errs,
+            body: gen.body, sourceCode: params.code, language: params.language, category, issues: errs,
             inputData: usedInput, signal: params.signal,
           })
           if (repaired) {
@@ -196,7 +196,7 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
             if (p.valid) {
               const retry = await runGeneratorSandboxed(repaired.body, p.value, { algorithm: gen.algorithm, type: genType })
               if (retry.ok && retry.script) {
-                const errs2 = runQualityGate(retry.script, category, CATEGORY_PROFILES[category].rules)
+                const errs2 = runQualityGate(retry.script, category, CATEGORY_PROFILES[category].rules, params.code)
                   .issues.filter(i => i.severity === 'error')
                 if (errs2.length < errs.length) { sandboxResult = retry; activeBody = repaired.body }
               }

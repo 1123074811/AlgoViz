@@ -1,12 +1,22 @@
+import { useEffect, useRef } from 'react'
 import Editor, { type OnMount } from '@monaco-editor/react'
 
 export type SupportedCodeLanguage = 'python' | 'javascript' | 'cpp' | 'java' | string
+export interface EditorDiagnostic {
+  severity: 'error' | 'warning'
+  type: string
+  message: string
+  line: number
+  column?: number
+  context?: string
+}
 
 interface CodeEditorPanelProps {
   value: string
   language: SupportedCodeLanguage
   onChange: (value: string) => void
   onMount?: OnMount
+  diagnostics?: EditorDiagnostic[]
   disabled?: boolean
   title?: string
   subtitle?: string
@@ -26,13 +36,53 @@ export default function CodeEditorPanel({
   language,
   onChange,
   onMount,
+  diagnostics = [],
   disabled = false,
   title,
   subtitle,
   rightSlot,
   className = '',
 }: CodeEditorPanelProps) {
+  const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
+  const monacoRef = useRef<typeof import('monaco-editor') | null>(null)
+
+  useEffect(() => {
+    const editor = editorRef.current
+    const monaco = monacoRef.current
+    const model = editor?.getModel()
+    if (!editor || !monaco || !model) return
+
+    const markers = diagnostics.map((diagnostic) => {
+      const lineNumber = Math.min(Math.max(diagnostic.line || 1, 1), model.getLineCount())
+      const maxColumn = model.getLineMaxColumn(lineNumber)
+      const startColumn = Math.min(Math.max(diagnostic.column || 1, 1), maxColumn)
+      const endColumn = diagnostic.column
+        ? Math.min(startColumn + 1, maxColumn)
+        : maxColumn
+
+      return {
+        severity: diagnostic.severity === 'error'
+          ? monaco.MarkerSeverity.Error
+          : monaco.MarkerSeverity.Warning,
+        message: `[${diagnostic.type}] ${diagnostic.message}${diagnostic.context ? `\n${diagnostic.context}` : ''}`,
+        startLineNumber: lineNumber,
+        startColumn,
+        endLineNumber: lineNumber,
+        endColumn,
+        source: 'AlgoViz',
+      }
+    })
+
+    monaco.editor.setModelMarkers(model, 'algoviz-compiler', markers)
+    return () => {
+      monaco.editor.setModelMarkers(model, 'algoviz-compiler', [])
+    }
+  }, [diagnostics, value, language])
+
   const handleEditorMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor
+    monacoRef.current = monaco
+
     editor.addAction({
       id: 'duplicate-line-ctrl-d',
       label: 'Duplicate Line',
@@ -84,6 +134,7 @@ export default function CodeEditorPanel({
             renderLineHighlight: 'line',
             overviewRulerBorder: false,
             hideCursorInOverviewRuler: true,
+            renderValidationDecorations: 'on',
             autoClosingBrackets: 'always',
             autoClosingQuotes: 'always',
             autoIndent: 'advanced',

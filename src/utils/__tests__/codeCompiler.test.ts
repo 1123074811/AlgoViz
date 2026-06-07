@@ -42,4 +42,29 @@ describe('compileAndValidateCode', () => {
     expect(result.success).toBe(true)
     expect(result.warnings.some((warning) => warning.type === 'TypeWarning')).toBe(true)
   })
+
+  it('does not require semicolons after Java line comments', () => {
+    const result = compileAndValidateCode(`
+      class Solution {
+        int ans;
+        public int diameterOfBinaryTree(TreeNode root) {
+          ans = 1;
+          depth(root);
+          return ans - 1; // 返回直径
+        }
+        public int depth(TreeNode node) {
+          if (node == null) {
+            return 0; // 访问到空节点了，返回0
+          }
+          int L = depth(node.left); // 左子树深度
+          int R = depth(node.right); // 右子树深度
+          ans = Math.max(ans, L + R + 1); // 更新答案
+          return Math.max(L, R) + 1; // 返回深度
+        }
+      }
+    `, 'java')
+
+    expect(result.success).toBe(true)
+    expect(result.errors).toEqual([])
+  })
 })

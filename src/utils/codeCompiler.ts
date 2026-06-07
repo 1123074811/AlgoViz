@@ -243,15 +243,19 @@ export function compileAndValidateCode(code: string, language: string): Compilat
   // 5. C++ / Java
   // ====================================
   if (language === 'cpp' || language === 'java') {
+    let insideCppJavaBlockComment = false
     for (let i = 0; i < lines.length; i++) {
-      const raw = lines[i], line = raw.trim()
-      if (line === '' || line.startsWith('//') || line.startsWith('/*') || line.startsWith('*') || line.startsWith('#') || line.startsWith('import ') || line.startsWith('package ')) continue
+      const raw = lines[i]
+      const line = stripCppJavaComments(raw, insideCppJavaBlockComment)
+      insideCppJavaBlockComment = line.insideBlockComment
+      const codeLine = line.code.trim()
+      if (codeLine === '' || codeLine.startsWith('#') || codeLine.startsWith('import ') || codeLine.startsWith('package ')) continue
 
       const noSemiEnds = ['{', '}', ';', ':', ',']
-      if (!noSemiEnds.includes(line[line.length - 1])) {
+      if (!noSemiEnds.includes(codeLine[codeLine.length - 1])) {
         const kw = ['if', 'else', 'for', 'while', 'class', 'struct', 'public', 'private', 'protected', 'void', 'int', 'double', 'float', 'bool', 'char']
-        const isHeader = kw.some(k => line.startsWith(k)) && (line.includes('(') || line.includes('class') || line.startsWith('else'))
-        if (!isHeader && !line.endsWith('\\')) {
+        const isHeader = kw.some(k => codeLine.startsWith(k)) && (codeLine.includes('(') || codeLine.includes('class') || codeLine.startsWith('else'))
+        if (!isHeader && !codeLine.endsWith('\\')) {
           const nextIdx = nextNonEmpty(lines, i)
           let needSemi = true
           if (nextIdx !== -1 && (lines[nextIdx].trim().startsWith('{') || lines[nextIdx].trim().startsWith('else'))) needSemi = false
@@ -262,16 +266,16 @@ export function compileAndValidateCode(code: string, language: string): Compilat
       }
 
       // Warnings
-      if (/\b(NULL|0)\b/.test(line) && language === 'cpp') {
+      if (/\b(NULL|0)\b/.test(codeLine) && language === 'cpp') {
         warnings.push(diag('warning', 'StyleWarning', '建议使用 nullptr 代替 NULL 或 0（C++11 起）', i + 1))
       }
-      if (/\busing namespace std\b/.test(line)) {
+      if (/\busing namespace std\b/.test(codeLine)) {
         warnings.push(diag('warning', 'StyleWarning', '头文件中避免 using namespace std，应在 .cpp 中使用', i + 1))
       }
-      if (/\b(scanf|printf|gets)\s*\(/.test(line)) {
-        warnings.push(diag('warning', 'SecurityWarning', `${line.match(/(scanf|printf|gets)/)?.[1] || 'C 函数'}() 存在安全风险，建议使用 C++ 流或安全替代方案`, i + 1))
+      if (/\b(scanf|printf|gets)\s*\(/.test(codeLine)) {
+        warnings.push(diag('warning', 'SecurityWarning', `${codeLine.match(/(scanf|printf|gets)/)?.[1] || 'C 函数'}() 存在安全风险，建议使用 C++ 流或安全替代方案`, i + 1))
       }
-      if (/\bnew\b(?!.*delete)/.test(line)) {
+      if (/\bnew\b(?!.*delete)/.test(codeLine)) {
         warnings.push(diag('warning', 'ResourceWarning', 'new 分配的内存需确保对应的 delete，建议使用智能指针', i + 1))
       }
     }
@@ -293,4 +297,37 @@ function nextNonEmpty(lines: string[], idx: number): number {
     if (lines[i].trim() !== '') return i
   }
   return -1
+}
+
+function stripCppJavaComments(raw: string, startsInsideBlockComment: boolean): { code: string; insideBlockComment: boolean } {
+  let code = ''
+  let insideBlockComment = startsInsideBlockComment
+  let insideSingleQuote = false
+  let insideDoubleQuote = false
+
+  for (let i = 0; i < raw.length; i++) {
+    const char = raw[i]
+    const next = raw[i + 1]
+
+    if (insideBlockComment) {
+      if (char === '*' && next === '/') {
+        insideBlockComment = false
+        i++
+      }
+      continue
+    }
+
+    if (!insideSingleQuote && !insideDoubleQuote && char === '/' && next === '/') break
+    if (!insideSingleQuote && !insideDoubleQuote && char === '/' && next === '*') {
+      insideBlockComment = true
+      i++
+      continue
+    }
+
+    code += char
+    if (char === "'" && !insideDoubleQuote && raw[i - 1] !== '\\') insideSingleQuote = !insideSingleQuote
+    if (char === '"' && !insideSingleQuote && raw[i - 1] !== '\\') insideDoubleQuote = !insideDoubleQuote
+  }
+
+  return { code, insideBlockComment }
 }
