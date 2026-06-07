@@ -266,11 +266,15 @@ export function compileAndValidateCode(code: string, language: string): Compilat
       }
 
       // Warnings
-      if (/\b(NULL|0)\b/.test(codeLine) && language === 'cpp') {
-        warnings.push(diag('warning', 'StyleWarning', '建议使用 nullptr 代替 NULL 或 0（C++11 起）', i + 1))
+      if (/\bNULL\b/.test(codeLine) && language === 'cpp') {
+        warnings.push(diag('warning', 'StyleWarning', '建议使用 nullptr 代替 NULL（C++11 起）', i + 1))
       }
+      // Only flag using namespace std when the file looks like a header (has include guards)
       if (/\busing namespace std\b/.test(codeLine)) {
-        warnings.push(diag('warning', 'StyleWarning', '头文件中避免 using namespace std，应在 .cpp 中使用', i + 1))
+        const hasIncludeGuard = lines.some(l => /#ifndef\s+\w+|#pragma\s+once/.test(l))
+        if (hasIncludeGuard) {
+          warnings.push(diag('warning', 'StyleWarning', '头文件中避免 using namespace std，应在 .cpp 中使用', i + 1))
+        }
       }
       if (/\b(scanf|printf|gets)\s*\(/.test(codeLine)) {
         warnings.push(diag('warning', 'SecurityWarning', `${codeLine.match(/(scanf|printf|gets)/)?.[1] || 'C 函数'}() 存在安全风险，建议使用 C++ 流或安全替代方案`, i + 1))

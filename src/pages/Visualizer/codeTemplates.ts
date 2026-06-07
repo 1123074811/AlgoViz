@@ -546,7 +546,8 @@ def heap_sort(arr):
     let largest = i;
     const l = 2 * i + 1;
     const r = 2 * i + 2;
-    
+
+
     if (l < n && arr[l] > arr[largest]) {
         largest = l;
     }
@@ -574,7 +575,8 @@ function heapSort(arr) {
     int largest = i;
     int l = 2 * i + 1;
     int r = 2 * i + 2;
-    
+
+
     if (l < n && arr[l] > arr[largest]) {
         largest = l;
     }
@@ -602,7 +604,8 @@ vector<int> heapSort(vector<int> arr) {
     int largest = i;
     int l = 2 * i + 1;
     int r = 2 * i + 2;
-    
+
+
     if (l < n && arr[l] > arr[largest]) {
         largest = l;
     }
@@ -708,7 +711,8 @@ def radix_sort(arr):
     for (let exp = 1; Math.floor(max / exp) > 0; exp *= 10) {
         const out = new Array(arr.length);
         const cnt = new Array(10).fill(0);
-        
+
+
         for (let i = 0; i < arr.length; i++) {
             cnt[Math.floor(arr[i] / exp) % 10]++;
         }
@@ -728,7 +732,8 @@ def radix_sort(arr):
     for (int exp = 1; mx / exp > 0; exp *= 10) {
         vector<int> out(arr.size());
         int cnt[10] = {0};
-        
+
+
         for (int x : arr) {
             cnt[(x / exp) % 10]++;
         }
@@ -747,7 +752,8 @@ def radix_sort(arr):
     for (int exp = 1; max / exp > 0; exp *= 10) {
         int[] out = new int[arr.length];
         int[] cnt = new int[10];
-        
+
+
         for (int x : arr) {
             cnt[(x / exp) % 10]++;
         }
@@ -776,7 +782,8 @@ def radix_sort(arr):
     const n = arr.length;
     const max = Math.max(...arr);
     const buckets = Array.from({ length: n }, () => []);
-    
+
+
     for (const num of arr) {
         const idx = Math.min(Math.floor(n * num / (max + 1)), n - 1);
         buckets[idx].push(num);
@@ -791,7 +798,8 @@ def radix_sort(arr):
     int n = arr.size();
     int mx = *max_element(arr.begin(), arr.end());
     vector<vector<int>> buckets(n);
-    
+
+
     for (int x : arr) {
         buckets[min((int)(n * 1.0 * x / (mx + 1)), n - 1)].push_back(x);
     }
@@ -807,7 +815,8 @@ def radix_sort(arr):
     int n = arr.length;
     int max = Arrays.stream(arr).max().getAsInt();
     List<Integer>[] buckets = new List[n];
-    
+
+
     for (int i = 0; i < n; i++) {
         buckets[i] = new ArrayList<>();
     }
@@ -843,11 +852,13 @@ def dijkstra(graph, start):
     }
     dist[start] = 0;
     const pq = [[0, start]];
-    
+
+
     while (pq.length) {
         pq.sort((a, b) => a[0] - b[0]);
         const [d, node] = pq.shift();
-        
+
+
         if (d > dist[node]) continue;
         for (const [nbr, w] of graph[node]) {
             const nd = d + w;
@@ -870,14 +881,17 @@ unordered_map<int, int> dijkstra(unordered_map<int, vector<pair<int, int>>>& gra
         dist[pair.first] = 1e9;
     }
     dist[start] = 0;
-    
+
+
     priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> pq;
     pq.push({0, start});
-    
+
+
     while (!pq.empty()) {
         auto [d, u] = pq.top();
         pq.pop();
-        
+
+
         if (d > dist[u]) continue;
         for (auto& edge : graph[u]) {
             int v = edge.first;
@@ -899,15 +913,18 @@ public class Dijkstra {
             dist.put(node, Integer.MAX_VALUE);
         }
         dist.put(start, 0);
-        
+
+
         PriorityQueue<int[]> pq = new PriorityQueue<>((a, b) -> a[1] - b[1]);
         pq.offer(new int[]{start, 0});
-        
+
+
         while (!pq.isEmpty()) {
             int[] curr = pq.poll();
             int u = curr[0];
             int d = curr[1];
-            
+
+
             if (d > dist.get(u)) continue;
             for (int[] edge : graph.getOrDefault(u, new ArrayList<>())) {
                 int v = edge[0];
@@ -936,7 +953,8 @@ public class Dijkstra {
     javascript: `function bellmanFord(edges, n, start) {
     const dist = new Array(n).fill(Infinity);
     dist[start] = 0;
-    
+
+
     for (let i = 0; i < n - 1; i++) {
         for (const [u, v, w] of edges) {
             if (dist[u] !== Infinity && dist[u] + w < dist[v]) {
@@ -953,7 +971,8 @@ using namespace std;
 vector<int> bellmanFord(vector<tuple<int, int, int>>& edges, int n, int start) {
     vector<int> dist(n, 1e9);
     dist[start] = 0;
-    
+
+
     for (int i = 0; i < n - 1; i++) {
         for (auto& [u, v, w] : edges) {
             if (dist[u] != 1e9 && dist[u] + w < dist[v]) {
@@ -970,7 +989,8 @@ public class BellmanFord {
         int[] dist = new int[n];
         Arrays.fill(dist, Integer.MAX_VALUE);
         dist[start] = 0;
-        
+
+
         for (int i = 0; i < n - 1; i++) {
             for (int[] e : edges) {
                 int u = e[0];
@@ -1009,7 +1029,8 @@ def a_star(grid, start, goal):
     const open = [[0, start[0], start[1]]];
     const g = {};
     g[start] = 0;
-    
+
+
     while (open.length) {
         open.sort((a, b) => a[0] - b[0]);
         const [, r, c] = open.shift();
@@ -1047,19 +1068,24 @@ int aStar(vector<vector<int>>& grid, pair<int, int> start, pair<int, int> goal) 
     auto h = [](pair<int, int> a, pair<int, int> b) {
         return abs(a.first - b.first) + abs(a.second - b.second);
     };
-    
+
+
     priority_queue<Node, vector<Node>, greater<Node>> open;
     map<pair<int, int>, int> g;
-    
+
+
     open.push({start.first, start.second, h(start, goal), 0});
     g[start] = 0;
-    
+
+
     while (!open.empty()) {
         auto [r, c, f, curr_g] = open.top();
         open.pop();
-        
+
+
         if (r == goal.first && c == goal.second) return g[goal];
-        
+
+
         int dr[] = {0, 0, 1, -1};
         int dc[] = {1, -1, 0, 0};
         for (int i = 0; i < 4; i++) {
@@ -1086,19 +1112,23 @@ public class AStar {
         }
         public int compareTo(Node o) { return Integer.compare(this.f, o.f); }
     }
-    
+
+
     public static int aStar(int[][] grid, int[] start, int[] goal) {
         int R = grid.length, C = grid[0].length;
         PriorityQueue<Node> open = new PriorityQueue<>();
         Map<String, Integer> g = new HashMap<>();
-        
+
+
         open.offer(new Node(start[0], start[1], Math.abs(start[0]-goal[0]) + Math.abs(start[1]-goal[1]), 0));
         g.put(start[0] + "," + start[1], 0);
-        
+
+
         while (!open.isEmpty()) {
             Node curr = open.poll();
             if (curr.r == goal[0] && curr.c == goal[1]) return curr.g;
-            
+
+
             int[][] dirs = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
             for (int[] d : dirs) {
                 int nr = curr.r + d[0], nc = curr.c + d[1];
@@ -1187,7 +1217,8 @@ def prim(graph, n):
     const vis = new Array(n).fill(false);
     const pq = [[0, 0, -1]];
     const mst = [];
-    
+
+
     while (pq.length && mst.length < n - 1) {
         pq.sort((a, b) => a[0] - b[0]);
         const [w, u, p] = pq.shift();
@@ -1208,17 +1239,21 @@ vector<pair<int, int>> prim(vector<vector<pair<int, int>>>& graph, int n) {
     vector<bool> vis(n, false);
     priority_queue<tuple<int, int, int>, vector<tuple<int, int, int>>, greater<tuple<int, int, int>>> pq;
     vector<pair<int, int>> mst;
-    
+
+
     pq.push({0, 0, -1});
-    
+
+
     while (!pq.empty() && mst.size() < n - 1) {
         auto [w, u, p] = pq.top();
         pq.pop();
-        
+
+
         if (vis[u]) continue;
         vis[u] = true;
         if (p != -1) mst.push_back({p, u});
-        
+
+
         for (auto& edge : graph[u]) {
             int v = edge.first;
             int wt = edge.second;
@@ -1234,19 +1269,23 @@ public class Prim {
         boolean[] vis = new boolean[n];
         PriorityQueue<int[]> pq = new PriorityQueue<>((a, b) -> a[0] - b[0]);
         List<int[]> mst = new ArrayList<>();
-        
+
+
         pq.offer(new int[]{0, 0, -1});
-        
+
+
         while (!pq.isEmpty() && mst.size() < n - 1) {
             int[] curr = pq.poll();
             int w = curr[0];
             int u = curr[1];
             int p = curr[2];
-            
+
+
             if (vis[u]) continue;
             vis[u] = true;
             if (p != -1) mst.add(new int[]{p, u, w});
-            
+
+
             for (int[] edge : graph.get(u)) {
                 int v = edge[0];
                 int wt = edge[1];
@@ -1274,7 +1313,8 @@ def kruskal(edges, n):
     const p = Array.from({ length: n }, (_, i) => i);
     const find = x => p[x] === x ? x : p[x] = find(p[x]);
     const mst = [];
-    
+
+
     for (const [u, v, w] of edges) {
         const pu = find(u);
         const pv = find(v);
@@ -1303,7 +1343,8 @@ vector<Edge> kruskal(vector<Edge>& edges, int n) {
     sort(edges.begin(), edges.end());
     vector<int> parent(n);
     for (int i = 0; i < n; i++) parent[i] = i;
-    
+
+
     vector<Edge> mst;
     for (auto& edge : edges) {
         int pu = findParent(parent, edge.u);
@@ -1323,17 +1364,20 @@ public class Kruskal {
         Edge(int u, int v, int w) { this.u = u; this.v = v; this.w = w; }
         public int compareTo(Edge o) { return Integer.compare(this.w, o.w); }
     }
-    
+
+
     private static int find(int[] parent, int i) {
         if (parent[i] == i) return i;
         return parent[i] = find(parent, parent[i]);
     }
-    
+
+
     public static List<Edge> kruskal(List<Edge> edges, int n) {
         Collections.sort(edges);
         int[] parent = new int[n];
         for (int i = 0; i < n; i++) parent[i] = i;
-        
+
+
         List<Edge> mst = new ArrayList<>();
         for (Edge edge : edges) {
             int pu = find(parent, edge.u);
@@ -1530,7 +1574,8 @@ Node* insertHead(Node* head, int val) {
         Node next;
         Node(int val) { this.val = val; }
     }
-    
+
+
     public static void traverse(Node head) {
         Node cur = head;
         while (cur != null) {
@@ -1539,7 +1584,8 @@ Node* insertHead(Node* head, int val) {
         }
         System.out.println("null");
     }
-    
+
+
     public static Node insertHead(Node head, int val) {
         Node node = new Node(val);
         node.next = head;
@@ -1597,7 +1643,8 @@ void insertAfter(DLLNode* node, int val) {
         DLLNode prev, next;
         DLLNode(int val) { this.val = val; }
     }
-    
+
+
     public static void insertAfter(DLLNode node, int val) {
         if (node == null) return;
         DLLNode newNode = new DLLNode(val);
@@ -1614,45 +1661,53 @@ void insertAfter(DLLNode* node, int val) {
     python: `class Stack:
     def __init__(self):
         self.items = []
-        
+
+
     def push(self, item):
         self.items.append(item)
-        
+
+
     def pop(self):
         if not self.is_empty():
             return self.items.pop()
         return None
-        
+
+
     def peek(self):
         if not self.is_empty():
             return self.items[-1]
         return None
-        
+
+
     def is_empty(self):
         return len(self.items) == 0`,
     javascript: `class Stack {
     constructor() {
         this.items = [];
     }
-    
+
+
     push(item) {
         this.items.push(item);
     }
-    
+
+
     pop() {
         if (!this.isEmpty()) {
             return this.items.pop();
         }
         return null;
     }
-    
+
+
     peek() {
         if (!this.isEmpty()) {
             return this.items[this.items.length - 1];
         }
         return null;
     }
-    
+
+
     isEmpty() {
         return this.items.length === 0;
     }
@@ -1668,7 +1723,8 @@ public:
     void push(int item) {
         items.push_back(item);
     }
-    
+
+
     int pop() {
         if (!isEmpty()) {
             int val = items.back();
@@ -1677,14 +1733,16 @@ public:
         }
         throw runtime_error("Stack is empty");
     }
-    
+
+
     int peek() {
         if (!isEmpty()) {
             return items.back();
         }
         throw runtime_error("Stack is empty");
     }
-    
+
+
     bool isEmpty() {
         return items.empty();
     }
@@ -1693,25 +1751,29 @@ public:
 
 public class Stack {
     private ArrayList<Integer> items = new ArrayList<>();
-    
+
+
     public void push(int item) {
         items.add(item);
     }
-    
+
+
     public int pop() {
         if (!isEmpty()) {
             return items.remove(items.size() - 1);
         }
         throw new IllegalStateException("Stack is empty");
     }
-    
+
+
     public int peek() {
         if (!isEmpty()) {
             return items.get(items.size() - 1);
         }
         throw new IllegalStateException("Stack is empty");
     }
-    
+
+
     public boolean isEmpty() {
         return items.isEmpty();
     }
@@ -1723,45 +1785,53 @@ public class Stack {
 class Queue:
     def __init__(self):
         self.items = deque()
-        
+
+
     def enqueue(self, item):
         self.items.append(item)
-        
+
+
     def dequeue(self):
         if not self.is_empty():
             return self.items.popleft()
         return None
-        
+
+
     def peek_front(self):
         if not self.is_empty():
             return self.items[0]
         return None
-        
+
+
     def is_empty(self):
         return len(self.items) == 0`,
     javascript: `class Queue {
     constructor() {
         this.items = [];
     }
-    
+
+
     enqueue(item) {
         this.items.push(item);
     }
-    
+
+
     dequeue() {
         if (!this.isEmpty()) {
             return this.items.shift();
         }
         return null;
     }
-    
+
+
     peekFront() {
         if (!this.isEmpty()) {
             return this.items[0];
         }
         return null;
     }
-    
+
+
     isEmpty() {
         return this.items.length === 0;
     }
@@ -1777,7 +1847,8 @@ public:
     void enqueue(int item) {
         items.push(item);
     }
-    
+
+
     int dequeue() {
         if (!isEmpty()) {
             int val = items.front();
@@ -1786,14 +1857,16 @@ public:
         }
         throw runtime_error("Queue is empty");
     }
-    
+
+
     int peekFront() {
         if (!isEmpty()) {
             return items.front();
         }
         throw runtime_error("Queue is empty");
     }
-    
+
+
     bool isEmpty() {
         return items.empty();
     }
@@ -1802,25 +1875,29 @@ public:
 
 public class QueueDemo {
     private java.util.Queue<Integer> items = new LinkedList<>();
-    
+
+
     public void enqueue(int item) {
         items.offer(item);
     }
-    
+
+
     public int dequeue() {
         if (!isEmpty()) {
             return items.poll();
         }
         throw new IllegalStateException("Queue is empty");
     }
-    
+
+
     public int peekFront() {
         if (!isEmpty()) {
             return items.peek();
         }
         throw new IllegalStateException("Queue is empty");
     }
-    
+
+
     public boolean isEmpty() {
         return items.isEmpty();
     }
@@ -1867,7 +1944,8 @@ void inorder(TreeNode* root) {
         TreeNode left, right;
         TreeNode(int val) { this.val = val; }
     }
-    
+
+
     public static void inorder(TreeNode root) {
         if (root == null) return;
         inorder(root.left);
@@ -1911,7 +1989,8 @@ TreeNode* search(TreeNode* root, int val) {
         TreeNode left, right;
         TreeNode(int val) { this.val = val; }
     }
-    
+
+
     public static TreeNode search(TreeNode root, int val) {
         if (root == null || root.val == val) return root;
         return val < root.val ? search(root.left, val) : search(root.right, val);
@@ -1974,9 +2053,11 @@ Node* rightRotate(Node* y) {
         Node left, right;
         Node(int val) { this.val = val; this.height = 1; }
     }
-    
+
+
     private static int getHeight(Node n) { return n == null ? 0 : n.height; }
-    
+
+
     public static Node rightRotate(Node y) {
         Node x = y.left;
         Node T2 = x.right;
@@ -2031,7 +2112,8 @@ void leftRotate(Node*& root, Node* x) {
         Node left, right, parent;
         boolean color; // true for RED, false for BLACK
     }
-    
+
+
     public static Node leftRotate(Node root, Node x) {
         Node y = x.right;
         x.right = y.left;
@@ -2178,10 +2260,12 @@ public class TrieDemo {
         HashMap<Character, TrieNode> children = new HashMap<>();
         boolean isEndOfWord = false;
     }
-    
+
+
     static class Trie {
         TrieNode root = new TrieNode();
-        
+
+
         public void insert(String word) {
             TrieNode node = root;
             for (char ch : word.toCharArray()) {
@@ -2252,18 +2336,21 @@ public:
 };`,
     java: `public class UnionFind {
     private int[] parent, rank;
-    
+
+
     public UnionFind(int size) {
         parent = new int[size];
         rank = new int[size];
         for (int i = 0; i < size; i++) parent[i] = i;
     }
-    
+
+
     public int find(int x) {
         if (parent[x] != x) parent[x] = find(parent[x]);
         return parent[x];
     }
-    
+
+
     public void union(int x, int y) {
         int px = find(x), py = find(y);
         if (px != py) {
@@ -2319,7 +2406,8 @@ public class HashDemo {
     javascript: `function knapsack01(weights, values, capacity) {
     const n = weights.length;
     const dp = Array.from({ length: n + 1 }, () => new Array(capacity + 1).fill(0));
-    
+
+
     for (let i = 1; i <= n; i++) {
         for (let w = 0; w <= capacity; w++) {
             if (weights[i - 1] <= w) {
@@ -2338,7 +2426,8 @@ using namespace std;
 int knapsack01(vector<int>& weights, vector<int>& values, int capacity) {
     int n = weights.size();
     vector<vector<int>> dp(n + 1, vector<int>(capacity + 1, 0));
-    
+
+
     for (int i = 1; i <= n; i++) {
         for (int w = 0; w <= capacity; w++) {
             if (weights[i - 1] <= w) {
@@ -2354,7 +2443,8 @@ int knapsack01(vector<int>& weights, vector<int>& values, int capacity) {
     public static int knapsack01(int[] weights, int[] values, int capacity) {
         int n = weights.length;
         int[][] dp = new int[n + 1][capacity + 1];
-        
+
+
         for (int i = 1; i <= n; i++) {
             for (int w = 0; w <= capacity; w++) {
                 if (weights[i - 1] <= w) {
@@ -2372,9 +2462,9 @@ int knapsack01(vector<int>& weights, vector<int>& values, int capacity) {
     python: `def unbounded_knapsack(weights, values, capacity):
     dp = [0] * (capacity + 1)
     for w in range(capacity + 1):
-        for i in range(len(weights)):
-            if weights[i] <= w:
-                dp[w] = max(dp[w], dp[w - weights[i]] + values[i])
+        for i, weight in enumerate(weights):
+            if weight <= w:
+                dp[w] = max(dp[w], dp[w - weight] + values[i])
     return dp[capacity]`,
     javascript: `function unboundedKnapsack(weights, values, capacity) {
     const dp = new Array(capacity + 1).fill(0);
@@ -2429,7 +2519,8 @@ int unboundedKnapsack(vector<int>& weights, vector<int>& values, int capacity) {
     javascript: `function lcs(text1, text2) {
     const m = text1.length, n = text2.length;
     const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-    
+
+
     for (let i = 1; i <= m; i++) {
         for (let j = 1; j <= n; j++) {
             if (text1[i - 1] === text2[j - 1]) {
@@ -2449,7 +2540,8 @@ using namespace std;
 int lcs(string text1, string text2) {
     int m = text1.length(), n = text2.length();
     vector<vector<int>> dp(m + 1, vector<int>(n + 1, 0));
-    
+
+
     for (int i = 1; i <= m; i++) {
         for (int j = 1; j <= n; j++) {
             if (text1[i - 1] == text2[j - 1]) {
@@ -2465,7 +2557,8 @@ int lcs(string text1, string text2) {
     public static int lcs(String text1, String text2) {
         int m = text1.length(), n = text2.length();
         int[][] dp = new int[m + 1][n + 1];
-        
+
+
         for (int i = 1; i <= m; i++) {
             for (int j = 1; j <= n; j++) {
                 if (text1.charAt(i - 1) == text2.charAt(j - 1)) {
@@ -2554,7 +2647,8 @@ public class LIS {
     const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
     for (let i = 0; i <= m; i++) dp[i][0] = i;
     for (let j = 0; j <= n; j++) dp[0][j] = j;
-    
+
+
     for (let i = 1; i <= m; i++) {
         for (let j = 1; j <= n; j++) {
             if (word1[i - 1] === word2[j - 1]) {
@@ -2576,7 +2670,8 @@ int editDistance(string word1, string word2) {
     vector<vector<int>> dp(m + 1, vector<int>(n + 1, 0));
     for (int i = 0; i <= m; i++) dp[i][0] = i;
     for (int j = 0; j <= n; j++) dp[0][j] = j;
-    
+
+
     for (int i = 1; i <= m; i++) {
         for (int j = 1; j <= n; j++) {
             if (word1[i - 1] == word2[j - 1]) {
@@ -2594,7 +2689,8 @@ int editDistance(string word1, string word2) {
         int[][] dp = new int[m + 1][n + 1];
         for (int i = 0; i <= m; i++) dp[i][0] = i;
         for (int j = 0; j <= n; j++) dp[0][j] = j;
-        
+
+
         for (int i = 1; i <= m; i++) {
             for (int j = 1; j <= n; j++) {
                 if (word1.charAt(i - 1) == String2.charAt(j - 1)) {
@@ -2622,7 +2718,8 @@ int editDistance(string word1, string word2) {
     javascript: `function matrixChainOrder(dims) {
     const n = dims.length - 1;
     const dp = Array.from({ length: n }, () => new Array(n).fill(0));
-    
+
+
     for (let len = 2; len <= n; len++) {
         for (let i = 0; i <= n - len; i++) {
             const j = i + len - 1;
@@ -2642,7 +2739,8 @@ using namespace std;
 int matrixChainOrder(vector<int>& dims) {
     int n = dims.size() - 1;
     vector<vector<int>> dp(n, vector<int>(n, 0));
-    
+
+
     for (int len = 2; len <= n; len++) {
         for (int i = 0; i <= n - len; i++) {
             int j = i + len - 1;
@@ -2659,7 +2757,8 @@ int matrixChainOrder(vector<int>& dims) {
     public static int matrixChainOrder(int[] dims) {
         int n = dims.length - 1;
         int[][] dp = new int[n][n];
-        
+
+
         for (int len = 2; len <= n; len++) {
             for (int i = 0; i <= n - len; i++) {
                 int j = i + len - 1;
@@ -2694,7 +2793,8 @@ int matrixChainOrder(vector<int>& dims) {
         prefix.push(prefix[prefix.length - 1] + s);
     }
     const dp = Array.from({ length: n }, () => new Array(n).fill(0));
-    
+
+
     for (let len = 2; len <= n; len++) {
         for (let i = 0; i <= n - len; i++) {
             const j = i + len - 1;
@@ -2718,7 +2818,8 @@ int stoneMerge(vector<int>& stones) {
         prefix.push_back(prefix.back() + s);
     }
     vector<vector<int>> dp(n, vector<int>(n, 0));
-    
+
+
     for (int len = 2; len <= n; len++) {
         for (int i = 0; i <= n - len; i++) {
             int j = i + len - 1;
@@ -2741,7 +2842,8 @@ public class StoneMerge {
             prefix[i + 1] = prefix[i] + stones[i];
         }
         int[][] dp = new int[n][n];
-        
+
+
         for (int len = 2; len <= n; len++) {
             for (int i = 0; i <= n - len; i++) {
                 int j = i + len - 1;
@@ -2828,7 +2930,8 @@ public class Backtracking {
     javascript: `function solveNQueens(n) {
     const board = Array.from({ length: n }, () => new Array(n).fill('.'));
     const result = [];
-    
+
+
     const isSafe = (row, col) => {
         for (let i = 0; i < row; i++) {
             if (board[i][col] === 'Q') return false;
@@ -2838,7 +2941,8 @@ public class Backtracking {
         }
         return true;
     };
-    
+
+
     const solve = (row) => {
         if (row === n) {
             result.push(board.map(r => r.join('')));
@@ -2863,7 +2967,8 @@ class NQueens {
 private:
     vector<vector<string>> result;
     vector<string> board;
-    
+
+
     bool isSafe(int row, int col, int n) {
         for (int i = 0; i < row; i++) {
             if (board[i][col] == 'Q') return false;
@@ -2873,7 +2978,8 @@ private:
         }
         return true;
     }
-    
+
+
     void solve(int row, int n) {
         if (row == n) {
             result.push_back(board);
@@ -2899,7 +3005,8 @@ public:
 public class NQueens {
     private List<List<String>> result = new ArrayList<>();
     private char[][] board;
-    
+
+
     private boolean isSafe(int row, int col, int n) {
         for (int i = 0; i < row; i++) {
             if (board[i][col] == 'Q') return false;
@@ -2909,7 +3016,8 @@ public class NQueens {
         }
         return true;
     }
-    
+
+
     private void solve(int row, int n) {
         if (row == n) {
             List<String> list = new ArrayList<>();
@@ -2925,7 +3033,8 @@ public class NQueens {
             }
         }
     }
-    
+
+
     public List<List<String>> solveNQueens(int n) {
         board = new char[n][n];
         for (char[] r : board) Arrays.fill(r, '.');
@@ -3734,8 +3843,7 @@ def range_query(root, low, high):
     # 在起始叶子中定位，然后沿 next 扫描
     result = []
     while node is not None:
-        for i in range(len(node.keys)):
-            k = node.keys[i]
+        for i, k in enumerate(node.keys):
             if k > high:
                 return result
             if k >= low:
