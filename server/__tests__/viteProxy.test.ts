@@ -184,4 +184,30 @@ describe('vite apiProxyMiddleware', () => {
     expect(forwardedAuth).toBe('Bearer test-key')
     expect(forwardedBody).toBe('{"messages":[]}')
   })
+
+  it('returns 502 (not ERR_HTTP_HEADERS_SENT) when reading the upstream body fails', async () => {
+    // Simulate a connection drop mid-body: status is known but text() rejects.
+    const fetchImpl = vi.fn(async () => ({
+      status: 200,
+      async text() { throw new Error('socket hang up') },
+    }) as unknown as Response)
+
+    const port = await startMiddleware(createHandler({
+      allowedBaseUrls: ['https://api.deepseek.com'],
+      fetchImpl,
+      maxBodyBytes: 1024,
+    }))
+
+    const result = await request(port, {
+      method: 'POST',
+      path: '/api/chat',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Proxy-Target': 'https://api.deepseek.com',
+      },
+    }, '{"messages":[]}')
+
+    expect(result.status).toBe(502)
+    expect(result.body).toContain('代理请求失败')
+  })
 })

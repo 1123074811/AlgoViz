@@ -150,13 +150,22 @@ export function apiProxyMiddleware(options: ApiProxyMiddlewareOptions = {}) {
             body,
           })
 
+          // Read the full body BEFORE writing headers: if upstream.text() throws
+          // (connection drop mid-body) we must still be able to send an error
+          // response. Writing headers first would make the catch's writeHead crash
+          // with ERR_HTTP_HEADERS_SENT.
+          const text = await upstream.text()
           res.writeHead(upstream.status, {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
           })
-          const text = await upstream.text()
           res.end(text)
         } catch (e) {
+          // If the response already started, we can't write a new status — just end.
+          if (res.headersSent) {
+            res.end()
+            return
+          }
           if ((e as Error).message.startsWith('请求体过大')) {
             sendJson(res, 413, { error: { message: (e as Error).message } })
             return
