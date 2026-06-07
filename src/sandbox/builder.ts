@@ -126,21 +126,24 @@ function defaultDescFor(event: AlgorithmEvent | undefined): string {
     case 'scene.link': return `连接 ${e.from} → ${e.to}`
     // call stack / grid / DP overlays
     case 'callstack.create': return '初始化调用栈'
-    case 'callstack.push': return `调用 ${(e.frame as { functionName?: unknown })?.functionName ?? '函数'}`
-    case 'callstack.update': return `更新调用帧 ${e.frameId ?? ''}`
-    case 'callstack.return': return `函数返回 ${e.value ?? ''}`
+    case 'callstack.push': {
+      const fn = (e.frame as { functionName?: unknown })?.functionName
+      return `调用 ${fn ?? '函数'}`
+    }
+    case 'callstack.update': return `更新调用帧${e.frameId ? ` ${e.frameId}` : ''}`
+    case 'callstack.return': return e.value === undefined ? '函数返回' : `函数返回 ${e.value}`
     case 'callstack.pop': return '弹出调用帧'
-    case 'callstack.highlight': return `高亮调用帧 ${e.frameId ?? ''}`
+    case 'callstack.highlight': return `高亮调用帧${e.frameId ? ` ${e.frameId}` : ''}`
     case 'grid.create': return '初始化网格'
-    case 'grid.set_cell': return `更新格子 (${e.row},${e.col})`
+    case 'grid.set_cell': return e.value === undefined ? `更新格子 (${e.row},${e.col})` : `更新格子 (${e.row},${e.col}) = ${e.value}`
     case 'grid.visit': return `访问格子 (${e.row},${e.col})`
     case 'grid.frontier': return '更新网格边界集合'
     case 'grid.path': return '标记网格路径'
     case 'grid.wall': return `${e.enabled ? '设置' : '移除'}障碍 (${e.row},${e.col})`
-    case 'grid.weight': return `设置格子 (${e.row},${e.col}) 权重`
+    case 'grid.weight': return `设置格子 (${e.row},${e.col}) 权重 ${e.weight}`
     case 'grid.arrow': return '标记网格转移方向'
     case 'dp.create': return '初始化 DP 表'
-    case 'dp.set': return `更新 DP 状态 (${e.row},${e.col})`
+    case 'dp.set': return e.value === undefined ? `更新 DP 状态 (${e.row},${e.col})` : `更新 DP 状态 (${e.row},${e.col}) = ${e.value}`
     case 'dp.highlight': return '高亮 DP 状态'
     case 'dp.dependency': return '标记 DP 状态依赖'
     case 'dp.formula': return '展示 DP 转移公式'
