@@ -30,12 +30,13 @@ export const DataUnit = {
     pulse?: boolean
     x?: number
     y?: number
+    width?: number
   }): SceneCell {
     return {
       id: options.id,
       type: 'cell',
       position: { x: options.x ?? 0, y: options.y ?? 0 },
-      size: { width: 44, height: 44 },
+      size: { width: options.width ?? 44, height: 44 },
       value: options.value,
       col: options.index,
       state: {

@@ -9,7 +9,7 @@ function btreeNode(id: string, keys: number[]): SceneNode {
     role: 'key',
     value: k,
   }))
-  return { id, type: 'node', role: 'tree_node', variant: 'tree.btree', fields }
+  return { id, type: 'node', variant: 'tree.btree', position: { x: 0, y: 0 }, ports: [], fields }
 }
 
 function edge(from: string, to: string): SceneEdge {

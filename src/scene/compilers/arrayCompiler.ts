@@ -2,9 +2,17 @@ import type { SceneCommand } from '../commandTypes'
 import type { ArrayAlgorithmEvent } from '../eventTypes'
 import type { CompileContext, EventCompiler } from '../SceneEngine'
 import { AuxiliaryUnit, DataUnit } from '../primitives/DataUnits'
+import { measureNodeWidth } from '../textMetrics'
 
 const CELL_Y = 300
 const CELL_SIZE = 44
+const CELL_GAP = 6
+const CELL_X0 = 140
+
+/** Width a cell needs to show its value without truncation (square cells stay 44). */
+function cellWidth(value: string | number): number {
+  return measureNodeWidth(String(value), { fontSize: 14, padding: 18, min: CELL_SIZE, max: 220 })
+}
 
 export const arrayCompiler: EventCompiler = {
   supports: (event): event is ArrayAlgorithmEvent => event.type.startsWith('array.'),
@@ -13,11 +21,22 @@ export const arrayCompiler: EventCompiler = {
 
 function compileArrayEvent(event: ArrayAlgorithmEvent, context: CompileContext): SceneCommand[] {
   switch (event.type) {
-    case 'array.create':
-      return event.values.map((value, index) => ({
-        type: 'create_cell',
-        cell: DataUnit.arrayCell({ id: cellId(index), value, index, x: 140 + index * CELL_SIZE, y: CELL_Y }),
-      }))
+    case 'array.create': {
+      // Each cell sizes to its own content (e.g. interval pairs like "[1,3]")
+      // and is laid out left-to-right by cumulative width, so wide values are
+      // never truncated and never overlap their neighbours.
+      const widths = event.values.map(cellWidth)
+      let x = CELL_X0
+      return event.values.map((value, index) => {
+        const w = widths[index]
+        const cx = x + w / 2
+        x += w + CELL_GAP
+        return {
+          type: 'create_cell' as const,
+          cell: DataUnit.arrayCell({ id: cellId(index), value, index, x: cx, y: CELL_Y, width: w }),
+        }
+      })
+    }
     case 'array.compare': {
       const allIds = Object.keys(context.scene.entities).filter(k => k.startsWith('arr_'))
       const reset = allIds
