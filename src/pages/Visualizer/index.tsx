@@ -635,7 +635,9 @@ export default function Visualizer() {
         algorithmName: selectedAlgorithm?.name ?? '未知算法',
         code,
         language: codeLanguage,
-        inputData,
+        // Record the input the animation was actually generated from (may be the
+        // AI @sample when the box was empty/invalid), so restore stays consistent.
+        inputData: result.usedInput ?? inputData,
         status: 'success',
         script: result.script,
         ...(result.generatorBody ? { generatorBody: result.generatorBody, generatorType: result.generatorType } : {}),

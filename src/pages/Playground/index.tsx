@@ -207,6 +207,9 @@ export default function Playground() {
       updateAIHistory(historyId, {
         status: 'success',
         script: result.script,
+        // Persist the input the animation was actually generated from so a later
+        // restore shows matching box + animation (not the pre-analysis stale input).
+        ...(result.usedInput !== undefined ? { inputData: result.usedInput } : {}),
         ...(result.generatorBody ? { generatorBody: result.generatorBody, generatorType: result.generatorType } : {}),
       })
     } catch (e) {

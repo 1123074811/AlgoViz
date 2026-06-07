@@ -22,6 +22,9 @@ export interface AnalyzeResult {
   rawResponse?: string
   /** AI structured error report (compilation/schema), if any. */
   errorReport?: import('@/ai').AIErrorReport
+  /** The raw input string the returned script was actually generated from.
+   *  Callers persist this to history so the input box never diverges from the animation. */
+  usedInput?: string
 }
 
 interface AnalyzeParams {
@@ -130,6 +133,9 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
       // The AI infers the expected input format and supplies a sample. Auto-fill
       // it only when the current input box is empty/invalid (respect user input).
       const effectiveInput = currentInputValid ? params.inputData : (gen.sampleInput ?? params.inputData)
+      // Track the input the script is actually generated from, so the box and
+      // history always mirror the animation (see the @sample retry below).
+      let usedInput = effectiveInput
       if (!currentInputValid && gen.sampleInput) {
         sampleFill(gen.sampleInput)
       }
@@ -147,7 +153,7 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
         }
         if (script) applyScriptRef.current(script)
         setStatusRef.current('success')
-        return { ok: true, script: script ?? undefined }
+        return { ok: true, script: script ?? undefined, usedInput }
       }
 
       // Phase 2: AI generator — execute it in the sandbox.
@@ -166,7 +172,7 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
         const sp = parseInputRef.current(gen.sampleInput)
         if (sp.valid) {
           const retry = await runGeneratorSandboxed(gen.body, sp.value, { algorithm: gen.algorithm, type: genType })
-          if (retry.ok) { sandboxResult = retry; sampleFill(gen.sampleInput) }
+          if (retry.ok) { sandboxResult = retry; sampleFill(gen.sampleInput); usedInput = gen.sampleInput }
         }
       }
 
@@ -181,7 +187,7 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
         }
         applyScriptRef.current(sandboxResult.script)
         setStatusRef.current('success')
-        return { ok: true, script: sandboxResult.script, generatorBody: gen.body, generatorType: genType }
+        return { ok: true, script: sandboxResult.script, generatorBody: gen.body, generatorType: genType, usedInput }
       }
 
       // Surface the generator source so diagnostics can show the AI code.

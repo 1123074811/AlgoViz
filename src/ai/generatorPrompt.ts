@@ -18,6 +18,9 @@ export function buildGeneratorSystemPrompt(language: string): string {
 - 由你根据算法逻辑**推断**这段代码期望什么输入，并给出一个**合法、规模适中**的示例
 - 必须是单行合法 JSON。数组类如 \`[5, 3, 8, 1, 9, 2]\`；图类如 \`{"nodes":[{"id":"A"},{"id":"B"}],"edges":[{"source":"A","target":"B","weight":1}]}\`；树类如 \`{"root":"5","children":{"5":["3","8"],"3":[],"8":[]}}\`
 - 用户不再手动选择输入格式——你给出的 @sample 就是默认输入
+- **@sample 必须真正匹配这段代码的输入形状**，并能让 \`input\` 直接驱动出有意义的动画。严禁照抄本提示里的示例值（如不要对"合并区间"也写 \`[5,3,8,1,9,2]\`）。
+- 二维 / 区间 / 矩阵 / 多字段类算法要给**对应结构**的样例：合并区间 \`[[1,3],[2,6],[8,10],[15,18]]\`；矩阵 \`[[1,2],[3,4]]\`；带 target \`{"nums":[2,7,11,15],"target":9}\`。
+- **生成器只能用 \`input\` 的真实值**：回退仅做"形状归一化"（如 \`const a = input.nums || input\`），**严禁内置一整套默认数据集替换用户输入**（如 \`const intervals = ...; if (!ok) intervals = [[1,3],[2,6]]\`）。一旦内置默认值，换输入动画就不会变，且输入框会与动画不一致——这是必须避免的错误。
 
 ## 可用变量
 - \`input\`：解析后的输入数据（数组类为 number[]；图为 {nodes,edges}；树为 {root,children}）
@@ -39,6 +42,15 @@ export function buildGeneratorSystemPrompt(language: string): string {
 - \`b.arrayCreate(values)\` 第一步必调，传完整初始数组
 - \`b.compare(i, j)\` / \`b.swap(i, j)\` / \`b.move(from, to)\`
 - \`b.setValue(index, value)\` / \`b.markSorted(indices)\` / \`b.partition(pivot, left, right)\`
+
+### 区间类算法（合并区间 / 插入区间 / 区间调度，@type 用 array）
+区间数组每个元素是 \`[start, end]\`。单元格会自适应宽度完整显示 \`[s,e]\`，**不要把区间拆成两个数字**。要让"合并/重叠判定"这一核心逻辑清晰可见：
+- 第一步 \`b.arrayCreate(intervals.map(iv => '[' + iv[0] + ',' + iv[1] + ']'))\`：把每个区间渲染成一格（排序后再建，顺序与动画一致）
+- 用指针标出正在处理的两段：\`b.pointerCreate('cur', i, '当前合并')\` 指向当前合并区间，\`b.pointerCreate('next', j, '下一段')\` 指向待判定区间；推进时 \`b.pointerMove\`
+- **每次重叠判定都要显式对比**：\`b.line(行号).desc('比较 当前终点 ' + curEnd + ' 与 下一段起点 ' + next[0] + '：' + (curEnd >= next[0] ? '重叠→合并' : '无重叠→新开一段')).compare(i, j)\`
+- 合并时更新该格的值并说明：\`b.desc('合并：终点取 max(' + curEnd + ',' + next[1] + ') = ' + Math.max(curEnd, next[1])).setValue(i, '[' + cur[0] + ',' + newEnd + ']')\`
+- 不重叠时 \`b.markSorted([i])\` 把已确定的区间归位，再把 cur 指针移到新段
+要点：核心是"终点 vs 下一起点"的比较与终点扩展，必须用 compare + desc + setValue 逐步呈现，不能只 arrayCreate 后高亮几格了事。
 
 ### 图
 - \`b.graphCreate(nodes, edges, directed?)\` 第一步必调；nodes=[{id,label?}]，edges=[{source,target,weight?}]
