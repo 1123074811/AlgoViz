@@ -3,6 +3,9 @@ import { analyzeCodeGenerator } from '@/ai'
 import { runGeneratorSandboxed } from '@/sandbox/runGenerator'
 import { recognizeAlgorithm } from '@/presets/recognize'
 import { generatePreset } from '@/presets'
+import { classifyAlgorithm, CATEGORY_PROFILES } from '@/ai/categories'
+import { runQualityGate } from '@/ai/quality'
+import { repairGenerator } from '@/ai/repairGenerator'
 import type { AnimationScript } from '@/types/animation'
 import type { AIStatus } from '@/store/algorithmStore'
 
@@ -176,6 +179,32 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
         }
       }
 
+      // 确定性质量门:检查生成动画的语义质量(空结构/全 0 网格/递归无栈/无操作等)。
+      // 仅当存在 error 时,带具体问题清单回发 AI 修复一次,并且只有修复结果不劣化才采用。
+      let activeBody = gen.body
+      if (sandboxResult.ok && sandboxResult.script) {
+        const category = classifyAlgorithm({ algorithm: gen.algorithm, type: gen.type, code: params.code })
+        const gate = runQualityGate(sandboxResult.script, category, CATEGORY_PROFILES[category].rules)
+        if (!gate.passed) {
+          const errs = gate.issues.filter(i => i.severity === 'error')
+          const repaired = await repairGenerator({
+            body: gen.body, language: params.language, category, issues: errs,
+            inputData: usedInput, signal: params.signal,
+          })
+          if (repaired) {
+            const p = parseInputRef.current(usedInput)
+            if (p.valid) {
+              const retry = await runGeneratorSandboxed(repaired.body, p.value, { algorithm: gen.algorithm, type: genType })
+              if (retry.ok && retry.script) {
+                const errs2 = runQualityGate(retry.script, category, CATEGORY_PROFILES[category].rules)
+                  .issues.filter(i => i.severity === 'error')
+                if (errs2.length < errs.length) { sandboxResult = retry; activeBody = repaired.body }
+              }
+            }
+          }
+        }
+      }
+
       if (sandboxResult.ok && sandboxResult.script) {
         // Fill in AI-provided complexity (the builder defaults to O(?)).
         if (gen.timeComplexity || gen.spaceComplexity) {
@@ -187,7 +216,7 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
         }
         applyScriptRef.current(sandboxResult.script)
         setStatusRef.current('success')
-        return { ok: true, script: sandboxResult.script, generatorBody: gen.body, generatorType: genType, usedInput }
+        return { ok: true, script: sandboxResult.script, generatorBody: activeBody, generatorType: genType, usedInput }
       }
 
       // Surface the generator source so diagnostics can show the AI code.

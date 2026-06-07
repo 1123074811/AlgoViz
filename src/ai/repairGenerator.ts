@@ -14,6 +14,8 @@ export async function repairGenerator(args: {
   language: string
   category: AlgorithmCategory
   issues: QualityIssue[]
+  /** 一份合法 JSON 输入字符串（analyzeCodeGenerator 会解析它，不能为空/非法）。 */
+  inputData: string
   signal?: AbortSignal
 }): Promise<{ body: string } | null> {
   const config = getApiConfig()
@@ -27,7 +29,7 @@ export async function repairGenerator(args: {
         `/* 请修复以下可视化生成器：保持算法逻辑不变，仅按"问题清单"修正，使动画清晰表达算法。\n` +
         `算法类别：${args.category}\n问题清单：\n${issueList}\n*/\n${args.body}`,
       language: args.language,
-      inputData: '',
+      inputData: args.inputData,
       algorithmName: 'repair',
     },
     { signal: args.signal },

@@ -6,6 +6,7 @@ import { parseAIResponseDetailed } from './parser'
 import { parseInputData } from './input'
 import { attemptLocalRepair, buildRepairPrompt, needsAIRepair } from './repair'
 import { buildGeneratorSystemPrompt } from './generatorPrompt'
+import { classifyAlgorithm } from './categories'
 import { parseGeneratorResponse, type ParsedGenerator } from './generatorParser'
 
 export interface ApiConfig {
@@ -279,9 +280,11 @@ export async function analyzeCodeGenerator(
   }
 
   try {
+    // 由用户代码 + 算法名启发式预判类别，挑选对应的提示词模块。
+    const category = classifyAlgorithm({ code: params.code, algorithm: params.algorithmName })
     const result = await requestWithProxyFallback(
       config,
-      buildGeneratorSystemPrompt(params.language),
+      buildGeneratorSystemPrompt(params.language, category),
       buildUserMessage(params.code, params.language, params.inputData, parsedInput.promptContext, params.algorithmName),
       { temperature: 0.2, jsonMode: false, signal },
     )
