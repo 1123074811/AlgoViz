@@ -24,6 +24,8 @@ describe('recognizeAlgorithm', () => {
     expect(recognizeAlgorithm('selection_sort')).toBe('selection_sort')
     expect(recognizeAlgorithm('Bubble-Sort')).toBe('bubble_sort')
     expect(recognizeAlgorithm('quickSort')).toBe('quick_sort')
+    expect(recognizeAlgorithm('Path Sum III')).toBe('path_sum_iii')
+    expect(recognizeAlgorithm('pathSumIII')).toBe('path_sum_iii')
   })
   it('未知/自定义算法返回 null', () => {
     expect(recognizeAlgorithm('my_custom_thing')).toBeNull()

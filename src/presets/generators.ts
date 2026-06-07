@@ -891,6 +891,12 @@ function numGen(fn: (arr: number[]) => AnimationScript): (input: unknown) => Ani
 function parseArr(input: unknown): number[] {
   if (Array.isArray(input) && input.every(v => typeof v === 'number')) return input
   if (Array.isArray(input)) return input.map(Number).filter(v => !isNaN(v))
+  if (input && typeof input === 'object') {
+    const obj = input as Record<string, unknown>
+    for (const key of ['nums', 'arr', 'array', 'values', 'data', 'root', 'source']) {
+      if (Array.isArray(obj[key])) return obj[key].map(Number).filter(v => !isNaN(v))
+    }
+  }
   if (typeof input === 'number') return [input]
   return [5, 3, 8, 1, 9, 2]
 }
@@ -921,6 +927,225 @@ function parseStrs(input: unknown, d1: string, d2?: string): [string, string] {
     if (s1) return [s1, s2 ?? d2 ?? d1]
   }
   return [parseStr(input, d1), d2 ?? d1]
+}
+
+type TreeNodeInput = { id: string; value: number | string }
+type TreeEdgeInput = { parentId: string; childId: string }
+type NormalizedBinaryTreeInput = {
+  rootId: string | null
+  nodes: TreeNodeInput[]
+  edges: TreeEdgeInput[]
+  children: Record<string, string[]>
+  targetSum: number
+}
+
+function normalizePathSumTreeInput(input: unknown): NormalizedBinaryTreeInput {
+  const fallback = [10, 5, -3, 3, 2, null, 11, 3, -2, null, 1]
+  const obj = input && typeof input === 'object' && !Array.isArray(input) ? input as Record<string, unknown> : undefined
+  const targetSum = Number(obj?.targetSum ?? obj?.target ?? 8)
+
+  if (obj && Array.isArray(obj.treeNodes) && obj.children && typeof obj.children === 'object') {
+    const nodes = (obj.treeNodes as Array<{ id?: unknown; value?: unknown }>)
+      .filter(node => node.id !== undefined)
+      .map(node => ({
+        id: String(node.id),
+        value: typeof node.value === 'number' || typeof node.value === 'string' ? node.value : String(node.value ?? ''),
+      }))
+    const nodeIds = new Set(nodes.map(node => node.id))
+    const children: Record<string, string[]> = {}
+    for (const node of nodes) children[node.id] = []
+    for (const [parent, rawChildren] of Object.entries(obj.children as Record<string, unknown>)) {
+      if (!nodeIds.has(String(parent)) || !Array.isArray(rawChildren)) continue
+      children[String(parent)] = rawChildren.map(String).filter(child => nodeIds.has(child))
+    }
+    const edges = Object.entries(children).flatMap(([parentId, childIds]) => childIds.map(childId => ({ parentId, childId })))
+    return { rootId: obj.root === null || obj.root === undefined ? null : String(obj.root), nodes, edges, children, targetSum }
+  }
+
+  const source = Array.isArray(obj?.source)
+    ? obj!.source as unknown[]
+    : Array.isArray(obj?.root)
+      ? obj!.root as unknown[]
+      : Array.isArray(input)
+        ? input as unknown[]
+        : fallback
+
+  return levelOrderToBinaryTreeInput(source, targetSum)
+}
+
+function levelOrderToBinaryTreeInput(values: unknown[], targetSum: number): NormalizedBinaryTreeInput {
+  const present = values.map(value => value !== null && value !== undefined && value !== 'null')
+  const nodes: TreeNodeInput[] = []
+  const children: Record<string, string[]> = {}
+
+  values.forEach((value, index) => {
+    if (!present[index]) return
+    const id = String(index)
+    const numeric = Number(value)
+    nodes.push({ id, value: Number.isFinite(numeric) ? numeric : String(value) })
+    children[id] = []
+  })
+
+  for (let index = 0; index < values.length; index++) {
+    if (!present[index]) continue
+    const parentId = String(index)
+    const left = index * 2 + 1
+    const right = index * 2 + 2
+    if (present[left]) children[parentId].push(String(left))
+    if (present[right]) children[parentId].push(String(right))
+  }
+
+  const edges = Object.entries(children).flatMap(([parentId, childIds]) => childIds.map(childId => ({ parentId, childId })))
+  return { rootId: present[0] ? '0' : null, nodes, edges, children, targetSum }
+}
+
+export function generatePathSumIII(input: unknown): AnimationScript {
+  const tree = normalizePathSumTreeInput(input)
+  let stepId = 1
+  let accesses = 0
+  let count = 0
+  const steps: AnimationStep[] = []
+  const values = new Map(tree.nodes.map(node => [node.id, Number(node.value)]))
+  const nodeLabel = (id: string | null | undefined) => id == null ? 'null' : String(values.get(id) ?? id)
+  const variables = (extra: Record<string, string | number> = {}): TeachingState => ({
+    variables: {
+      targetSum: tree.targetSum,
+      count,
+      ...extra,
+    },
+  })
+  const push = (
+    codeLine: number,
+    zh: string,
+    events: AnimationStep['events'],
+    teachingState?: TeachingState,
+    color: AnimationStep['action']['color'] = 'primary',
+  ) => {
+    steps.push({
+      ...makeStep(stepId++, codeLine, zh, zh, 'highlight', [], color, 0, 0, accesses, teachingState),
+      events,
+    })
+  }
+
+  push(
+    1,
+    `按 LeetCode 层序输入构建二叉树，targetSum=${tree.targetSum}`,
+    [
+      { type: 'tree.create', variant: 'binary', rootId: tree.rootId ?? '', nodes: tree.nodes, edges: tree.edges },
+      { type: 'math.init', vars: [
+        { name: 'targetSum', value: tree.targetSum },
+        { name: 'startNode', value: '-' },
+        { name: 'currentNode', value: '-' },
+        { name: 'remaining', value: tree.targetSum },
+        { name: 'count', value: 0 },
+      ] },
+      { type: 'stack.create', values: [], label: '递归栈' },
+    ],
+    variables({ startNode: '-', currentNode: '-', remaining: tree.targetSum }),
+  )
+
+  if (!tree.rootId || tree.nodes.length === 0) {
+    push(2, '空树没有路径，返回 0', [
+      { type: 'math.highlight', name: 'count' },
+      { type: 'scene.note', text: 'result = 0' },
+    ], variables(), 'success')
+    return {
+      algorithm: 'path_sum_iii',
+      complexity: { time: { best: 'O(n)', average: 'O(n²)', worst: 'O(n²)' }, space: 'O(h)' },
+      presentation: { engine: 'scene', module: 'tree', layout: 'composite' },
+      initialState: { type: 'tree', data: [], root: tree.rootId ?? '', children: tree.children, treeNodes: tree.nodes },
+      result: 0,
+      steps,
+    }
+  }
+
+  const explore = (startId: string, nodeId: string, remaining: number, path: string[], depth: number): number => {
+    if (steps.length > 280) return 0
+    const value = values.get(nodeId) ?? 0
+    const nextRemaining = remaining - value
+    const frame = `rootSum(${nodeLabel(nodeId)}, ${remaining})`
+    accesses += 1
+    push(
+      4,
+      `从起点 ${nodeLabel(startId)} 向下访问 ${nodeLabel(nodeId)}：remaining ${remaining} - ${value} = ${nextRemaining}`,
+      [
+        { type: 'tree.visit', nodeId },
+        { type: 'math.set', name: 'currentNode', value: nodeLabel(nodeId), delta: `->${nodeLabel(nodeId)}` },
+        { type: 'math.set', name: 'remaining', value: nextRemaining },
+        { type: 'stack.push', value: frame, label: '递归栈' },
+      ],
+      variables({ startNode: nodeLabel(startId), currentNode: nodeLabel(nodeId), remaining: nextRemaining }),
+      'warning',
+    )
+
+    let localCount = 0
+    if (nextRemaining === 0) {
+      count += 1
+      localCount += 1
+      push(
+        5,
+        `路径 ${[...path, nodeLabel(nodeId)].join(' -> ')} 的和等于 targetSum，count 加 1`,
+        [
+          { type: 'math.set', name: 'count', value: count, delta: '+1' },
+          { type: 'stack.peek', index: path.length },
+        ],
+        variables({ startNode: nodeLabel(startId), currentNode: nodeLabel(nodeId), remaining: nextRemaining }),
+        'success',
+      )
+    }
+
+    const childIds = tree.children[nodeId] ?? []
+    for (const childId of childIds) {
+      localCount += explore(startId, childId, nextRemaining, [...path, nodeLabel(nodeId)], depth + 1)
+    }
+
+    push(
+      7,
+      `rootSum(${nodeLabel(nodeId)}, ${remaining}) 返回 ${localCount}`,
+      [
+        { type: 'stack.pop' },
+        { type: 'math.set', name: 'remaining', value: remaining, delta: `->${remaining}` },
+      ],
+      variables({ startNode: nodeLabel(startId), currentNode: nodeLabel(nodeId), remaining }),
+      depth === 0 ? 'primary' : 'muted',
+    )
+    return localCount
+  }
+
+  for (const node of tree.nodes) {
+    if (steps.length > 280) break
+    push(
+      3,
+      `枚举路径起点 ${node.value}，计算所有从该节点向下的路径`,
+      [
+        { type: 'tree.visit', nodeId: node.id },
+        { type: 'math.set', name: 'startNode', value: nodeLabel(node.id), delta: `->${nodeLabel(node.id)}` },
+        { type: 'math.set', name: 'remaining', value: tree.targetSum, delta: `->${tree.targetSum}` },
+      ],
+      variables({ startNode: nodeLabel(node.id), currentNode: '-', remaining: tree.targetSum }),
+    )
+    explore(node.id, node.id, tree.targetSum, [], 0)
+  }
+
+  push(
+    9,
+    `所有起点枚举完成，最终返回 count=${count}`,
+    [
+      { type: 'math.highlight', name: 'count' },
+      { type: 'scene.note', text: `result = ${count}` },
+    ],
+    variables(),
+    'success',
+  )
+
+  return {
+    algorithm: 'path_sum_iii',
+    complexity: { time: { best: 'O(n)', average: 'O(n²)', worst: 'O(n²)' }, space: 'O(h)' },
+    presentation: { engine: 'scene', module: 'tree', layout: 'composite' },
+    initialState: { type: 'tree', data: [], root: tree.rootId, children: tree.children, treeNodes: tree.nodes },
+    result: count,
+    steps,
+  }
 }
 
 // ─── Wrappers with natural input types ───
@@ -976,6 +1201,7 @@ const unionFindWrapper = (input: unknown) => {
   return generateUnionFind()
 }
 const binaryTreeWrapper = (input: unknown) => generateBinaryTree(parseArr(input))
+const pathSumIIIWrapper = (input: unknown) => generatePathSumIII(input)
 const avlTreeWrapper = (input: unknown) => generateAVLTree(parseArr(input))
 const trieWrapper = (input: unknown) => {
   if (Array.isArray(input) && input.every(v => typeof v === 'string')) return generateTrie(input as string[])
@@ -1270,6 +1496,7 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   linked_list_delete: linkedListDeleteWrapper,
   linked_list_search: linkedListSearchWrapper,
   binary_tree_traverse: binaryTreeWrapper,
+  path_sum_iii: pathSumIIIWrapper,
   bst_insert: bstInsertWrapper,
   bst_delete: bstDeleteWrapper,
   bst_search: bstSearchWrapper,

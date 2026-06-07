@@ -22,5 +22,16 @@ export function normalizeAlgoId(id: string): string {
 export function recognizeAlgorithm(algorithm: string | undefined | null): string | null {
   if (!algorithm) return null
   const id = normalizeAlgoId(algorithm)
+  const alias = ALIASES[id]
+  if (alias && hasGenerator(alias)) return alias
   return hasGenerator(id) ? id : null
+}
+
+const ALIASES: Record<string, string> = {
+  path_sum_3: 'path_sum_iii',
+  path_sum_iii: 'path_sum_iii',
+  pathsum_iii: 'path_sum_iii',
+  pathsum3: 'path_sum_iii',
+  pathsumiii: 'path_sum_iii',
+  path_sum: 'path_sum_iii',
 }

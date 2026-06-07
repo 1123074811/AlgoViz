@@ -41,6 +41,48 @@ describe('input-driven built-in presets', () => {
     expect(script.steps.some(step => step.description.zh.includes('result=[1,3]'))).toBe(true)
   })
 
+  it('keeps comma-separated tree root input with extra LeetCode parameters usable', () => {
+    const input = parseAlgorithmInput(
+      'root = [10,5,-3,3,2,null,11,3,-2,null,1], targetSum = 8',
+      'leetcode',
+      'binary_tree_traverse',
+    )
+
+    expect(input).toMatchObject({
+      targetSum: 8,
+      root: [10, 5, -3, 3, 2, 0, 11, 3, -2, 0, 1],
+    })
+    expect(generatePreset('binary_tree_traverse', input)?.initialState.data.slice(0, 5)).toEqual([10, 5, -3, 3, 2])
+  })
+
+  it('generates a full Path Sum III tree animation from LeetCode input', () => {
+    const input = parseAlgorithmInput(
+      'root = [10,5,-3,3,2,null,11,3,-2,null,1], targetSum = 8',
+      'leetcode',
+      'path_sum_iii',
+    )
+    const script = generatePreset('path_sum_iii', input)!
+    const firstEvents = script.steps[0].events ?? []
+    const treeCreate = firstEvents.find(event => event.type === 'tree.create') as
+      | { type: 'tree.create'; nodes: Array<{ id: string; value: number | string }>; edges: Array<{ parentId: string; childId: string }> }
+      | undefined
+    const events = script.steps.flatMap(step => step.events ?? [])
+
+    expect(input).toMatchObject({ targetSum: 8 })
+    expect(Array.isArray((input as { source?: unknown }).source)).toBe(true)
+    expect(treeCreate?.nodes).toHaveLength(9)
+    expect(treeCreate?.edges).toHaveLength(8)
+    expect(treeCreate?.nodes.find(node => node.id === '0')?.value).toBe(10)
+    expect(script.initialState.treeNodes?.find(node => node.id === '0')?.value).toBe(10)
+    expect(script.result).toBe(3)
+    expect(events.some(event => event.type === 'math.init')).toBe(true)
+    expect(events.some(event => event.type === 'math.set' && 'name' in event && event.name === 'count' && event.value === 3)).toBe(true)
+    expect(events.some(event => event.type === 'stack.create')).toBe(true)
+    expect(events.some(event => event.type === 'stack.push')).toBe(true)
+    expect(events.some(event => event.type === 'stack.pop')).toBe(true)
+    expect(events.some(event => event.type.startsWith('callstack.'))).toBe(false)
+  })
+
   it('uses input numbers for ACM template scenes', () => {
     const script = generateACM([6, 5, 10, 11])
 
