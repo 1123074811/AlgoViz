@@ -76,6 +76,34 @@ export function buildGeneratorSystemPrompt(language: string): string {
 - \`b.matrixCreate(rows, cols, values?)\` 第一步必调；values 为二维数组（可省略=全 0）
 - \`b.matrixVisit(row, col)\` 访问格子 / \`b.matrixUpdate(row, col, value)\` 更新格子值 / \`b.matrixMarkPath(cells)\` 标记路径（cells=[{row,col}]）
 - \`b.matrixTransition({row,col}, {row,col})\` 画 DP 状态转移箭头（from→to）
+- **注意**：迷宫/岛屿/棋盘/网格寻路这类"在二维格子上 DFS/BFS 走格子"的算法，**改用下面的 grid 专用 API**（语义更贴切、能显示访问/边界/路径）；matrix 主要用于纯数值矩阵与 2D DP。
+
+### 网格 / 迷宫 / 岛屿 / 棋盘寻路（@type 用 matrix）
+专为"在二维格子上遍历"的算法设计（岛屿数量、洪水填充、迷宫 BFS/DFS、棋盘最短路、A* 等）。
+- \`b.gridCreate(values, { title? })\` 第一步必调，**必须传入网格的真实初始值**（如岛屿的 '1'/'0' 字符网格、迷宫的 0/1）。**严禁建一个全 0 空网格只靠高亮**——那样看不出哪格是陆地/墙。
+- \`b.gridVisit(row, col, order?)\` 标记某格"已访问"（DFS/BFS 每访问一格就发，order 可传访问序号）
+- \`b.gridSet(row, col, value?, state?)\` 改某格的值和/或状态；state 取 'default'|'active'|'visited'|'frontier'|'path'|'wall'|'start'|'target'。**沉岛/标记时用它把陆地值由 '1' 改成 '0' 并置 visited，使"标记"动作肉眼可见**
+- \`b.gridFrontier(cells)\` BFS 当前边界/队列里的格子（cells=[[r,c],...]）/ \`b.gridPath(cells)\` 标记最终路径 / \`b.gridWall(row,col,enabled?)\` 墙 / \`b.gridArrow([r,c],[r,c],label?)\` 走向箭头
+要点：先 gridCreate 真实网格 → 遍历中每步 gridVisit/gridSet 反映"访问了哪格、把它改成了什么" → BFS 用 gridFrontier 显示队列边界、最短路用 gridPath 收尾。配合 b.desc 说明每步。
+
+### 递归调用栈（DFS / 回溯 / 分治 / 树递归，@type 用主结构类型）
+**只要代码是递归的（函数调用自己），就应该用调用栈展示递归的进入/返回**，让栈随递归深度增长、回溯时弹出。**不要用普通 stackCreate 假装调用栈却从不 push**（那样栈会一直空着）。
+- \`b.callStackCreate(title?)\` 第一步（或在主结构创建后）调用，建一个调用栈面板，title 可写 'dfs 调用栈'
+- \`b.callPush(functionName, parameters?, locals?, frameId?)\` **每次进入一层递归就压一帧**：functionName 如 'dfs'，parameters 传本次调用的实参对象如 \`{ r, c }\`，frameId 用唯一串（如 \`'f' + (depth++)\` 或 \`r + '_' + c\`）方便后续引用
+- \`b.callReturn(frameId, value?, pop?)\` 该帧计算出返回值时调用（value 可选）；pop=true 同时弹出
+- \`b.callPop(frameId?)\` **递归返回/回溯时弹出栈顶帧**（不传 frameId 弹最顶）
+- \`b.callHighlight(frameId, active?, clear?)\` 高亮"当前正在执行"的帧
+- \`b.callUpdate(frameId, { locals?, parameters?, status? })\` 更新某帧的局部变量显示
+要点：进入递归→callPush，函数体里改了关键局部量→callUpdate，返回/回溯→callReturn 或 callPop。栈的高度必须与递归深度一致。可与 grid/tree/array 等主结构同屏（系统自动分区）。
+
+### 动态规划状态表（2D DP：LCS / 编辑距离 / 背包 / 区间 DP，@type 用 matrix）
+比 matrix 更贴合 DP：能标依赖来源、转移公式与回溯路径。
+- \`b.dpCreate(tableId, rows, cols, { title?, rowLabels?, colLabels?, values?, defaultValue? })\` 第一步必调；tableId 自取（如 'dp'）
+- \`b.dpSet(tableId, row, col, value, formula?)\` 填某格的 dp 值（formula 可附该格的计算式文本）
+- \`b.dpHighlight(tableId, cells, kind?)\` 高亮，kind='current'|'dependency'|'candidate'|'answer'（cells=[{row,col}]）
+- \`b.dpDependency(tableId, sources, target, label?)\` 画"target 由哪些 source 转移而来"的依赖箭头
+- \`b.dpFormula(tableId, target, text)\` 在某格旁标转移方程 / \`b.dpTraceback(tableId, path)\` 高亮最优解回溯路径
+要点：填每个 dp[i][j] 前先 dpDependency/dpHighlight 指出它依赖哪些前驱格，再 dpSet 写值并附 formula；最后 dpTraceback 还原答案路径。
 
 ### 哈希表（hash map / hash set，@type 用 array）
 - \`b.hashCreate(capacity)\` 第一步必调，创建桶数组，capacity=桶数（如 8）
@@ -178,6 +206,8 @@ b.heapPop()
 - **位置变量要显式可视化**：双指针、快慢指针、滑动窗口左右边界应优先用 \`b.pointerCreate\`/\`b.pointerMove\`/\`b.pointerHighlight\` 表达，不要只用 \`b.note\` 描述。
 - **每一个关键步骤都要有意义的 b.desc**：说清这一步在比较/入栈/更新什么、为什么。**严禁产出空描述或"步骤 N"占位**。
 - 步骤要连贯还原算法执行过程，不要只高亮零星几格就结束。
+- **递归算法必须驱动调用栈**：凡函数调用自身（DFS、回溯、分治、树的递归遍历）都要 \`callStackCreate\` + 进入时 \`callPush\`、返回/回溯时 \`callReturn\`/\`callPop\`，栈高必须随递归深度增减。**严禁建一个调用栈却从不 push（栈一直空着是错误）**。
+- **网格必须显示真实值并可见地更新**：岛屿/迷宫/棋盘类用 \`gridCreate\` 传入真实 '1'/'0'（或墙/空）网格，遍历时用 \`gridVisit\`/\`gridSet\` 反映访问与标记（如沉岛把 '1' 改 '0' 并置 visited）。**严禁建一个全 0 空网格只靠高亮——那样看不出陆地与标记过程**。
 
 ## 硬性要求
 - 代码必须用 input 的实际值运行，**换输入要能产出不同动画**（不要硬编码步骤）
