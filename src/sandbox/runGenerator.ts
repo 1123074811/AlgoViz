@@ -32,7 +32,12 @@ export function runGeneratorSandboxed(
     worker.onerror = (ev) => {
       clearTimeout(timer)
       worker.terminate()
-      resolve({ ok: false, error: '生成器执行出错: ' + ev.message })
+      // ev.message is often empty for worker-level crashes (stack overflow or a
+      // non-serializable postMessage). Surface the best available detail.
+      const detail = ev.message
+        || (ev as unknown as { error?: { message?: string } }).error?.message
+        || '生成器在沙箱中崩溃（无错误信息，可能是栈溢出或返回了无法序列化的结果）'
+      resolve({ ok: false, error: '生成器执行出错: ' + detail })
     }
     worker.postMessage({ source, input, meta })
   })

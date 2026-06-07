@@ -179,9 +179,32 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
         }
       }
 
+      let activeBody = gen.body
+
+      // 沙箱运行期报错(异常/崩溃):把真实错误回发 AI 修复一次。
+      // 常见原因是对 input 形状的错误假设(如访问不存在的字段),让 AI 据实修正。
+      if (!sandboxResult.ok) {
+        const category = classifyAlgorithm({ algorithm: gen.algorithm, type: gen.type, code: params.code })
+        const p = parseInputRef.current(usedInput)
+        if (p.valid) {
+          const repaired = await repairGenerator({
+            body: gen.body, sourceCode: params.code, language: params.language, category,
+            issues: [{
+              code: 'runtime-error', severity: 'error',
+              message: '生成器在沙箱中执行报错: ' + (sandboxResult.error || '未知错误'),
+              hint: '按运行时报错修正:不要假设 input 上存在不存在的字段;先对 input 的真实形状做健壮解析(数组与对象都要兼容、带空值回退),再驱动 b。',
+            }],
+            inputData: usedInput, signal: params.signal,
+          })
+          if (repaired) {
+            const retry = await runGeneratorSandboxed(repaired.body, p.value, { algorithm: gen.algorithm, type: genType })
+            if (retry.ok && retry.script) { sandboxResult = retry; activeBody = repaired.body }
+          }
+        }
+      }
+
       // 确定性质量门:检查生成动画的语义质量(空结构/全 0 网格/递归无栈/无操作等)。
       // 仅当存在 error 时,带具体问题清单回发 AI 修复一次,并且只有修复结果不劣化才采用。
-      let activeBody = gen.body
       if (sandboxResult.ok && sandboxResult.script) {
         const category = classifyAlgorithm({ algorithm: gen.algorithm, type: gen.type, code: params.code })
         const gate = runQualityGate(sandboxResult.script, category, CATEGORY_PROFILES[category].rules, params.code)
