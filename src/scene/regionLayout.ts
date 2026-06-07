@@ -21,6 +21,8 @@ export function structureOf(id: string): string {
   if (id.startsWith('bit_') || id === 'bitset_label') return 'bitset'
   if (id.startsWith('aux_')) return 'aux'
   if (/^s_\d+_\d+$/.test(id)) return 'string'
+  // 矩阵：主单元格 cell_R_C，行/列表头 m_rhead_*/m_chead_*，左上角 m_corner
+  if (/^cell_\d+_\d+$/.test(id) || id.startsWith('m_rhead_') || id.startsWith('m_chead_') || id === 'm_corner') return 'matrix'
   return 'main' // 图/树节点等无前缀实体
 }
 
@@ -31,7 +33,7 @@ function groupOf(entity: SceneEntity): string {
 
 const REGION_TITLE: Record<string, string> = {
   array: '数组', heap: '堆', hashtable: '哈希表', set: '集合', variables: '变量',
-  queue: '队列', stack: '栈', deque: '双端队列', aux: '辅助', string: '字符串', bitset: '位集', main: '主结构',
+  queue: '队列', stack: '栈', deque: '双端队列', aux: '辅助', string: '字符串', bitset: '位集', matrix: '矩阵', main: '主结构',
 }
 
 /** 收集有坐标的实体（cell/node/label）。 */
