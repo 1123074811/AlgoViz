@@ -1,10 +1,11 @@
 import type { RendererType } from '@/types/animation'
+import { parseInputData } from './input'
 
 export interface ParsedGenerator {
   algorithm: string
   type: RendererType
   body: string
-  /** AI-suggested sample input (raw JSON string), used to auto-fill an empty input box. */
+  /** AI-suggested sample input, used to auto-fill an empty input box. Prefer LeetCode assignment format. */
   sampleInput?: string
   /** AI-provided time/space complexity (e.g. "O(n)"), shown on the algorithm card. */
   timeComplexity?: string
@@ -38,15 +39,12 @@ export function parseGeneratorResponse(raw: string): GeneratorParseResult {
   const typeStr = typeMatch ? typeMatch[1] : 'array'
   const type = (VALID_TYPES as string[]).includes(typeStr) ? (typeStr as RendererType) : 'array'
 
-  // @sample is only kept if it parses as valid JSON.
+  // @sample is only kept if it parses as valid user input (LeetCode assignment or JSON).
   let sampleInput: string | undefined
   if (sampleMatch) {
     const candidate = sampleMatch[1].trim()
-    try {
-      JSON.parse(candidate)
+    if (parseInputData(candidate).valid) {
       sampleInput = candidate
-    } catch {
-      sampleInput = undefined
     }
   }
 

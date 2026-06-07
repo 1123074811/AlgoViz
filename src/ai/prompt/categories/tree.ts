@@ -3,7 +3,8 @@
  */
 export const PROMPT: string = `### 树
 - \`b.treeCreate('bst'|'binary'|'avl', rootId, nodes, edges)\`；nodes=[{id,value}]，edges=[{parentId,childId}]
-- \`b.treeVisit(id)\` / \`b.treeInsert(parentId, {id,value}, side?)\` / \`b.treeCompare(nodeId, value)\` / \`b.treeRotate(rotation, pivotId)\`
+- \`b.treeVisit(id)\` / \`b.treeInsert(parentId, {id,value}, side?)\` / \`b.treeCompare(nodeId, value)\` / \`b.highlightNode(id, color?)\` / \`b.treeRotate(rotation, pivotId)\`
+- LeetCode 二叉树输入 \`root = [10,5,-3,...]\` 会被解析成 \`{root, children, treeNodes, source, targetSum?}\`：这里的 \`input.root\` 是内部根节点 id（通常是字符串 "0"），不是根节点值、也不是层序数组。必须用 \`input.treeNodes\` 读取节点值，用 \`input.children\` 读取父子边，用 \`input.source\` 仅作为原始层序输入参考。不要写旧式 \`b.treeCreate(input.root, input.children)\`。
 
 ### 堆 / 优先队列（heap / priority queue，@type 用 array）
 优先队列底层用堆。堆按**完全二叉树**展示：节点 i 的父为 \`floor((i-1)/2)\`、左右子为 \`2i+1\`/\`2i+2\`，下标从 0 起；底部附带"层序数组镜像"。适用于 Dijkstra/Prim 的优先队列、堆排序、Top-K 等。

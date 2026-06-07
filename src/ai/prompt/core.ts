@@ -15,7 +15,7 @@ export function CORE_PROMPT(language: string): string {
 \`\`\`js
 // @algorithm <蛇形算法名，如 selection_sort>
 // @type <array | graph | tree | linked_list>
-// @sample <一行合法 JSON 示例输入，必须符合该算法期望的输入格式>
+// @sample <一行 LeetCode 风格示例输入，必须符合该算法期望的输入格式>
 // @time <时间复杂度，如 O(n log n)>
 // @space <空间复杂度，如 O(1)>
 <这里是直接可执行的语句，使用变量 input 和 b，不要包成 function>
@@ -24,17 +24,22 @@ export function CORE_PROMPT(language: string): string {
 
 ## @sample 要求（重要）
 - 由你根据算法逻辑**推断**这段代码期望什么输入，并给出一个**合法、规模适中**的示例
-- 必须是单行合法 JSON。数组类如 \`[5, 3, 8, 1, 9, 2]\`；图类如 \`{"nodes":[{"id":"A"},{"id":"B"}],"edges":[{"source":"A","target":"B","weight":1}]}\`；树类如 \`{"root":"5","children":{"5":["3","8"],"3":[],"8":[]}}\`
+- 默认必须使用**一行 LeetCode 赋值格式**，不要给裸 JSON。数组类如 \`nums = [5, 3, 8, 1, 9, 2]\`；二叉树如 \`root = [5,3,8,null,4]\`；多输入如 \`nums = [2,7,11,15]; target = 9\`；字符串如 \`s = "abcabcbb"\`
+- 图、通用树等 LeetCode 没有统一格式的数据，也优先用命名赋值：\`nodes = ["A","B","C"]; edges = [["A","B",1],["B","C",2]]; start = "A"\`
 - 用户不再手动选择输入格式——你给出的 @sample 就是默认输入
 
 ## 可用变量
-- \`input\`：解析后的输入数据（数组类为 number[]；图为 {nodes,edges}；树为 {root,children}）
+- \`input\`：解析后的输入数据。裸数组会是 number[]；LeetCode 命名赋值会是对象，如 {nums,target}、{nodes,edges,start}；\`root = [...]\` 会被解析成树结构 {root,children,treeNodes,source}，其中 root 是内部根节点 id，不是节点值或数组
 - \`b\`：动画构建器，方法如下（除终结外都可链式 .desc(...).xxx()）
 
 ### 通用
 - \`b.desc(中文描述)\`：为紧接着的那个操作设置说明
 - \`b.line(行号)\`：标注接下来的步骤对应**源代码第几行**（行号见用户代码每行行首的数字，从 1 起）。动画播放时代码旁会有 ▶ 箭头跟着走。**每个关键操作前都要先 b.line(对应行号)**——这是让箭头会动的关键，箭头停在第一行就是因为没逐步调用它。可链式 \`b.line(7).desc('...').compare(i,j)\`。
 - \`b.note(文本)\`：旁注
+- \`b.result(value)\`：写入算法最终输出，并在动画信息面板显示。所有有返回值的题（如 true/false、下标、数组、计数）最后必须调用一次。
+- \`b.varInit([{name,value}, ...])\`：创建变量基础元素面板，用来展示关键变量/参数，如 ret、ans、sum、target、targetSum、count、i、j、left、right
+- \`b.varSet(name, value, delta?)\`：更新变量值；不传 delta 时系统会按上一次值自动显示浅灰色变化标注。数值加减显示**真实差值**，如 8→-2 显示 -10、0→3 显示 +3；非数值变化或瞬时赋值/重置用 ->新值。
+- \`b.varHighlight(name)\`：高亮正在被读取、比较或作为递归参数传入的变量
 
 ### 通用指针（双指针/快慢指针/窗口边界/链表指针）
 - \`b.pointerCreate(pointerId, target, label?)\` 创建命名指针并放到目标位置；pointerId 用短英文如 'left'、'right'、'slow'、'fast'、'head'、'tail'，label 可用中文展示名
@@ -60,7 +65,7 @@ export function CORE_PROMPT(language: string): string {
 \`\`\`js
 // @algorithm dijkstra
 // @type graph
-// @sample {"nodes":["A","B","C"],"edges":[["A","B",1],["B","C",2],["A","C",5]],"start":"A"}
+// @sample nodes = ["A","B","C"]; edges = [["A","B",1],["B","C",2],["A","C",5]]; start = "A"
 const { nodes, edges, start } = input
 b.graphCreate(nodes.map(id => ({ id })), edges.map(([source, target, weight]) => ({ source, target, weight })))
 const dist = nodes.map(id => id === start ? 0 : Infinity)
@@ -82,21 +87,25 @@ b.heapPop()
 
 ## 多输入算法（重要）
 有些算法需要多个输入（如 two_sum 的 nums+target、binary_search 的 arr+target、kmp 的 text+pattern）。这时：
-- \`@type\` 用主结构类型（如 array），\`@sample\` 用**对象**把所有输入命名打包，例如 two_sum：\`// @sample {"nums":[2,7,11,15],"target":9}\`
+- \`@type\` 用主结构类型（如 array），\`@sample\` 用**LeetCode 命名赋值**写出所有输入，例如 two_sum：\`// @sample nums = [2,7,11,15]; target = 9\`
 - 生成器体里用**带回退的解构**读取：\`const nums = input.nums || input; const target = input.target;\`——这样即使用户传了裸数组也不至于崩
 - 主结构（如 nums）传给 \`b.arrayCreate(nums)\`；target 这类标量只参与逻辑、用 \`b.desc\` 说明，不必单独建结构
 
 ## 质量底线（违反则动画无意义）
 - **必须可视化代码真实用到的数据结构**：代码用了栈就建栈（b.stackPush/stackPop 或单调栈语义）、用了哈希表就建哈希表、用了双指针就在数组上移动指针。不要把一个用栈的算法画成几个无关的数组高亮。
 - **位置变量要显式可视化**：双指针、快慢指针、滑动窗口左右边界应优先用 \`b.pointerCreate\`/\`b.pointerMove\`/\`b.pointerHighlight\` 表达，不要只用 \`b.note\` 描述。
+- **关键变量要用基础元素展示**：代码中的 ret、ans、sum、targetSum、count、dp 值、递归参数、循环计数器等，必须用 \`b.varInit\` 创建，用 \`b.varSet\` 同步每次变化；不要只写在 b.desc 或 b.note 里。变量变化会以浅灰色标注：数值加减显示真实差值（+k/-k），赋值/重置/节点切换显示 ->新值。
 - **每一个关键步骤都要有意义的 b.desc**：说清这一步在比较/入栈/更新什么、为什么。**严禁产出空描述或"步骤 N"占位**。
+- **必须展示输出**：如果原函数 return 了值，动画最后调用 \`b.result(返回值)\`，不要只在描述里说答案。
 - 步骤要连贯还原算法执行过程，不要只高亮零星几格就结束。
 
 ## 硬性要求
 - 代码必须用 input 的实际值运行，**换输入要能产出不同动画**（不要硬编码步骤）
 - 访问 input 的字段前先做空值回退（\`input.xxx || 默认\`），不要假设 input 一定是某种形状
-- 数组类第一步必须 \`b.arrayCreate(input)\`；图/树类似
+- 数组类第一步必须创建主数组：裸数组用 \`b.arrayCreate(input)\`，LeetCode 命名输入用 \`const nums = input.nums || input.arr || input.values || input; b.arrayCreate(nums)\`；图/树类似
 - 每个关键操作都要发对应方法（比较、交换、访问...），不要只 b.note 文字
+- 每个会影响算法判断或返回值的变量变化都要同步到变量面板：初始化用 \`b.varInit\`，赋值/自增/自减/递归参数变化用 \`b.varSet\`，读取参与条件判断前用 \`b.varHighlight\`。
+- 代码使用 Queue/LinkedList 队列时，必须用 \`b.queueCreate([])\`、\`b.queueEnqueue(value)\`、\`b.queueDequeue()\` 显式展示队列状态；树 + 队列算法也要同时创建树和队列。
 - 总步数控制在 ~300 以内；可在循环里 break/限制规模
 - 不要访问网络、DOM、定时器；只用 input 和 b
 - **循环必须能终止**：照搬原代码的循环结构，确保每轮循环变量/指针都推进；while 循环要有明确且会达成的退出条件；嵌套的弹栈/弹队列循环里，每轮必须真的 pop 一个元素（否则死循环会被沙箱判超时、动画失败）
@@ -106,19 +115,20 @@ b.heapPop()
 \`\`\`js
 // @algorithm selection_sort
 // @type array
-// @sample [5, 3, 8, 1, 9, 2]
+// @sample nums = [5, 3, 8, 1, 9, 2]
 // @time O(n²)
 // @space O(1)
-b.arrayCreate(input)
-for (let i = 0; i < input.length; i++) {
+const nums = input.nums || input
+b.arrayCreate(nums)
+for (let i = 0; i < nums.length; i++) {
   let min = i
-  b.line(3).desc('外层 i=' + i + '，假定最小为 ' + input[i]).compare(i, i)
-  for (let j = i + 1; j < input.length; j++) {
+  b.line(3).desc('外层 i=' + i + '，假定最小为 ' + nums[i]).compare(i, i)
+  for (let j = i + 1; j < nums.length; j++) {
     b.line(5).desc('比较 arr[' + j + '] 与当前最小 arr[' + min + ']').compare(j, min)
-    if (input[j] < input[min]) min = j
+    if (nums[j] < nums[min]) min = j
   }
   if (min !== i) {
-    const t = input[i]; input[i] = input[min]; input[min] = t
+    const t = nums[i]; nums[i] = nums[min]; nums[min] = t
     b.line(8).desc('交换 ' + i + ' 和 ' + min).swap(i, min)
   }
   b.line(9).desc('arr[' + i + '] 归位').markSorted([i])

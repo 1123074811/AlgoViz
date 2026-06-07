@@ -11,10 +11,11 @@ import type { QualityIssue } from './quality/types'
  */
 export async function repairGenerator(args: {
   body: string
+  sourceCode?: string
   language: string
   category: AlgorithmCategory
   issues: QualityIssue[]
-  /** 一份合法 JSON 输入字符串（analyzeCodeGenerator 会解析它，不能为空/非法）。 */
+  /** 一份合法输入字符串（支持 JSON 或 LeetCode 赋值格式，不能为空/非法）。 */
   inputData: string
   signal?: AbortSignal
 }): Promise<{ body: string } | null> {
@@ -27,7 +28,9 @@ export async function repairGenerator(args: {
     {
       code:
         `/* 请修复以下可视化生成器：保持算法逻辑不变，仅按"问题清单"修正，使动画清晰表达算法。\n` +
-        `算法类别：${args.category}\n问题清单：\n${issueList}\n*/\n${args.body}`,
+        `算法类别：${args.category}\n问题清单：\n${issueList}\n` +
+        (args.sourceCode ? `\n原始用户代码：\n${args.sourceCode}\n` : '') +
+        `*/\n${args.body}`,
       language: args.language,
       inputData: args.inputData,
       algorithmName: 'repair',

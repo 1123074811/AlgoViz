@@ -118,6 +118,33 @@ describe('validateAnimationScript', () => {
     const monotonic = issues.find(i => i.code === 'non_monotonic' && i.severity === 'warning')
     expect(monotonic).toBeDefined()
   })
+
+  it('queue 事件应通过校验并在规范化后保留', () => {
+    const script = {
+      ...minimalArrayScript,
+      steps: [
+        {
+          stepId: 1,
+          codeLine: 0,
+          description: { zh: '初始化队列', en: 'create queue' },
+          action: { type: 'highlight', targets: [], color: 'primary' },
+          stats: { comparisons: 0, swaps: 0, accesses: 0 },
+          events: [{ type: 'queue.create', values: [] }],
+        },
+        {
+          stepId: 2,
+          codeLine: 1,
+          description: { zh: '入队', en: 'enqueue' },
+          action: { type: 'insert', targets: [], color: 'success' },
+          stats: { comparisons: 0, swaps: 0, accesses: 1 },
+          events: [{ type: 'queue.enqueue', value: 1 }],
+        },
+      ],
+    }
+
+    expect(validateAnimationScript(script).filter(i => i.severity === 'error')).toHaveLength(0)
+    expect(normalizeAnimationScript(script)?.steps[1].events?.[0].type).toBe('queue.enqueue')
+  })
 })
 
 // ═══════════════════════════════════════════════════════════════════════════

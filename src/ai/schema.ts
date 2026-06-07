@@ -9,13 +9,24 @@ const VALID_COLORS = new Set<ActionColor>(['primary', 'success', 'warning', 'dan
 const VALID_RENDERER_TYPES: Set<RendererType> = new Set(['array', 'graph', 'tree', 'matrix', 'linked_list'])
 const VALID_PRESENTATION_ENGINES = new Set(['classic', 'scene'])
 const VALID_EVENT_TYPES = new Set([
-  'scene.note', 'scene.highlight', 'scene.clear_highlight', 'scene.wait',
+  'scene.note', 'scene.highlight', 'scene.clear_highlight', 'scene.link', 'scene.wait',
   'linked_list.create', 'linked_list.visit', 'linked_list.move_pointer', 'linked_list.insert_after', 'linked_list.insert_before', 'linked_list.delete', 'linked_list.reverse_link', 'linked_list.set_head', 'linked_list.set_tail',
   'tree.create', 'tree.visit', 'tree.compare', 'tree.insert', 'tree.delete', 'tree.rotate', 'tree.update_metadata',
-  'array.create', 'array.compare', 'array.swap', 'array.move', 'array.mark_sorted', 'array.window', 'array.partition',
+  'array.create', 'array.compare', 'array.swap', 'array.move', 'array.set_value', 'array.mark_sorted', 'array.window', 'array.partition',
   'graph.create', 'graph.visit_node', 'graph.visit_edge', 'graph.relax_edge', 'graph.enqueue', 'graph.dequeue',
   'matrix.create', 'matrix.visit_cell', 'matrix.update_cell', 'matrix.mark_path', 'matrix.mark_conflict',
   'n_queens.try_place', 'n_queens.place', 'n_queens.conflict', 'n_queens.backtrack', 'n_queens.solution',
+  'pointer.create', 'pointer.move', 'pointer.clear', 'pointer.highlight',
+  'stack.create', 'stack.push', 'stack.pop', 'stack.peek',
+  'queue.create', 'queue.enqueue', 'queue.dequeue', 'queue.peek_front',
+  'deque.create', 'deque.push_front', 'deque.push_back', 'deque.pop_front', 'deque.pop_back', 'deque.peek_front', 'deque.peek_back',
+  'string.create', 'string.create_double', 'string.compare', 'string.match', 'string.mismatch', 'string.mark_range', 'string.shift_pattern',
+  'set.create', 'set.add', 'set.remove', 'set.contains',
+  'map.create', 'map.put', 'map.get', 'map.remove',
+  'hashtable.create', 'hashtable.put', 'hashtable.get', 'hashtable.remove', 'hashtable.highlight_bucket',
+  'heap.create', 'heap.push', 'heap.pop', 'heap.sift', 'heap.peek',
+  'bitset.create', 'bitset.set', 'bitset.highlight',
+  'math.init', 'math.set', 'math.highlight', 'math.note',
 ])
 
 function issue(path: string, code: string, message: string, suggestion?: string, severity: AIErrorSeverity = 'error', recoverable = false): AIValidationIssue {
@@ -544,6 +555,12 @@ function validateEvent(event: unknown, path: string): AIValidationIssue[] {
   }
   if (type.startsWith('n_queens.') && (typeof e.row !== 'number' || typeof e.col !== 'number') && type !== 'n_queens.solution') {
     issues.push(issue(path, 'required', `${type} 必须包含 row 和 col`))
+  }
+  if (type === 'queue.create' && !Array.isArray(e.values)) {
+    issues.push(issue(`${path}.values`, 'required', 'queue.create 必须包含 values 数组'))
+  }
+  if (type === 'queue.enqueue' && typeof e.value !== 'number' && typeof e.value !== 'string') {
+    issues.push(issue(`${path}.value`, 'required', 'queue.enqueue 必须包含 value'))
   }
   return issues
 }

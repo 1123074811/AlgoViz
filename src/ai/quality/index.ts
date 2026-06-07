@@ -15,8 +15,9 @@ export function runQualityGate(
   script: AnimationScript,
   category: AlgorithmCategory,
   extraRules: QualityRule[] = [],
+  sourceCode?: string,
 ): QualityReport {
-  const ctx = buildQualityContext(script, category)
+  const ctx = buildQualityContext(script, category, sourceCode)
   const rules = [...GENERAL_RULES, ...extraRules].filter(
     r => !r.appliesTo || r.appliesTo.includes(category),
   )

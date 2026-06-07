@@ -11,6 +11,8 @@ export interface QualityIssue {
 export interface QualityContext {
   script: AnimationScript
   category: AlgorithmCategory
+  /** Original user code, when available. Used to detect omitted core structures/output. */
+  sourceCode?: string
   /** 出现过 <family>.create 的结构族集合（如 'array'|'stack'|'grid'|'callstack'）。 */
   structuresCreated: Set<string>
   /** 事件族 → 非 create 操作事件计数。 */
@@ -46,6 +48,7 @@ export function isCreateEvent(eventType: string): boolean {
 export function buildQualityContext(
   script: AnimationScript,
   category: AlgorithmCategory,
+  sourceCode?: string,
 ): QualityContext {
   const structuresCreated = new Set<string>()
   const opCountByFamily: Record<string, number> = {}
@@ -65,6 +68,7 @@ export function buildQualityContext(
   return {
     script,
     category,
+    sourceCode,
     structuresCreated,
     opCountByFamily,
     stepCount: steps.length,

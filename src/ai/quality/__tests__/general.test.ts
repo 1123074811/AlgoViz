@@ -298,3 +298,58 @@ describe('runQualityGate passed', () => {
     expect(report.issues.filter(i => i.severity === 'error')).toHaveLength(0)
   })
 })
+
+// ─── source-aware rules ───────────────────────────────────────────────────
+
+describe('source-aware quality rules', () => {
+  it('命中：源码有 return，但脚本没有 result', () => {
+    const script = makeScript([makeStep({ events: healthyArrayEvents() })])
+    const report = runQualityGate(script, 'linear', [], 'function f(nums) { return nums.length }')
+
+    expect(report.issues.map(i => i.code)).toContain('source-output')
+    expect(report.passed).toBe(false)
+  })
+
+  it('不命中：源码有 return 且脚本提供 result', () => {
+    const script = { ...makeScript([makeStep({ events: healthyArrayEvents() })]), result: 3 }
+    const report = runQualityGate(script, 'linear', [], 'function f(nums) { return nums.length }')
+
+    expect(report.issues.map(i => i.code)).not.toContain('source-output')
+  })
+
+  it('命中：源码使用 Queue，但动画没有队列结构', () => {
+    const script = makeScript([makeStep({ events: healthyArrayEvents() })])
+    const source = 'Queue<TreeNode> q = new LinkedList<>(); q.offer(root); q.poll(); return true;'
+    const report = runQualityGate(script, 'tree', [], source)
+
+    expect(report.issues.map(i => i.code)).toContain('source-structure.queue')
+  })
+
+  it('不命中：源码使用 Queue，动画创建并操作 queue', () => {
+    const script = {
+      ...makeScript([
+        makeStep({
+          events: [
+            { type: 'queue.create', values: [] },
+            { type: 'queue.enqueue', value: 'root' },
+            { type: 'queue.dequeue' },
+            { type: 'queue.enqueue', value: 'left' },
+          ],
+        }),
+      ]),
+      result: true,
+    }
+    const source = 'Queue<TreeNode> q = new LinkedList<>(); q.offer(root); q.poll(); return true;'
+    const report = runQualityGate(script, 'tree', [], source)
+
+    expect(report.issues.map(i => i.code)).not.toContain('source-structure.queue')
+  })
+
+  it('不误判：普通数组 map 调用不要求哈希表', () => {
+    const script = { ...makeScript([makeStep({ events: healthyArrayEvents() })]), result: [2, 4] }
+    const source = 'const doubled = nums.map(x => x * 2); return doubled;'
+    const report = runQualityGate(script, 'linear', [], source)
+
+    expect(report.issues.map(i => i.code)).not.toContain('source-structure.hashtable')
+  })
+})

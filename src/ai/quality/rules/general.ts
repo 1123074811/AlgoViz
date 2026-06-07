@@ -163,6 +163,79 @@ export const recursionNoCallStackRule: QualityRule = {
   },
 }
 
+const SOURCE_STRUCTURE_REQUIREMENTS: Array<{
+  family: string
+  label: string
+  pattern: RegExp
+  alternatives?: string[]
+  hint: string
+}> = [
+  {
+    family: 'queue',
+    label: '队列',
+    pattern: /\bqueue\b|\bQueue\b|\bLinkedList\s*<|ArrayDeque\s*<|\.offer\s*\(|\.poll\s*\(|\.shift\s*\(|popleft\s*\(/i,
+    hint: '源码使用队列，请在动画中调用 b.queueCreate([])，每次入队调用 b.queueEnqueue(value)，每次出队调用 b.queueDequeue()；树/图算法也要同时展示主结构和队列。',
+  },
+  {
+    family: 'stack',
+    label: '栈',
+    pattern: /\bStack\b|\bstack\b|\.peek\s*\(/i,
+    alternatives: ['callstack'],
+    hint: '源码使用栈，请用 b.stackCreate([])、b.stackPush(value)、b.stackPop() 展示栈内容变化；递归算法可以用 callstack 事件展示调用栈。',
+  },
+  {
+    family: 'hashtable',
+    label: '哈希表/映射',
+    pattern: /\bHashMap\b|\bHashSet\b|\bMap\s*<|\bSet\s*<|\bnew\s+Map\b|\bnew\s+Set\b|unordered_map|unordered_set|\bdict\s*\(|\.put\s*\(|containsKey\s*\(/,
+    alternatives: ['set', 'map'],
+    hint: '源码使用哈希表/集合，请用 b.hashCreate/hashPut/hashGet 或 b.setCreate/setAdd/setContains 表示成员判定、插入、查找，而不是只在文字里描述。',
+  },
+  {
+    family: 'heap',
+    label: '堆/优先队列',
+    pattern: /\bPriorityQueue\b|heapq\.|priority_queue|\.heappush\s*\(|\.heappop\s*\(/i,
+    hint: '源码使用堆或优先队列，请用 b.heapCreate、b.heapPush、b.heapPop、b.heapSift 展示优先级结构的变化。',
+  },
+]
+
+export const sourceOutputRule: QualityRule = {
+  id: 'source-output',
+  check(ctx) {
+    if (!ctx.sourceCode || !/\breturn\b|=>\s*[^{};\n]+|System\.out|console\.log|print\s*\(/.test(ctx.sourceCode)) return []
+    if (ctx.script.result !== undefined) return []
+    return [{
+      code: 'source-output',
+      severity: 'error',
+      message: '源码产生返回值或输出，但动画脚本没有 result。',
+      hint: '请在算法结束时调用 b.result(value)，value 必须等于原函数最终返回/输出的值，例如 true/false、下标、数组或计数；不要只写在 b.desc 或 b.note 里。',
+    }]
+  },
+}
+
+export const sourceStructureRule: QualityRule = {
+  id: 'source-structure',
+  check(ctx) {
+    if (!ctx.sourceCode) return []
+    const issues: QualityIssue[] = []
+    for (const requirement of SOURCE_STRUCTURE_REQUIREMENTS) {
+      if (!requirement.pattern.test(ctx.sourceCode)) continue
+      const families = [requirement.family, ...(requirement.alternatives ?? [])]
+      const represented = families.some(family =>
+        ctx.structuresCreated.has(family) && (ctx.opCountByFamily[family] ?? 0) > 0,
+      )
+      if (!represented) {
+        issues.push({
+          code: `source-structure.${requirement.family}`,
+          severity: 'error',
+          message: `源码使用了${requirement.label}，但动画没有创建并操作对应结构。`,
+          hint: requirement.hint,
+        })
+      }
+    }
+    return issues
+  },
+}
+
 /** 通用质量规则聚合（注册顺序即报告顺序）。 */
 export const GENERAL_RULES: QualityRule[] = [
   emptyStructureRule,
@@ -171,4 +244,6 @@ export const GENERAL_RULES: QualityRule[] = [
   lowCodeLineRule,
   gridUniformRule,
   recursionNoCallStackRule,
+  sourceOutputRule,
+  sourceStructureRule,
 ]

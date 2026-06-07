@@ -23,6 +23,20 @@ describe('parseGeneratorResponse', () => {
     expect(r.generator?.body).not.toContain('@sample')
   })
 
+  it('解析 @sample 示例输入（LeetCode 多输入赋值格式）', () => {
+    const raw = '```js\n// @algorithm two_sum\n// @type array\n// @sample nums = [2,7,11,15]; target = 9\nconst nums = input.nums || input\nb.arrayCreate(nums)\n```'
+    const r = parseGeneratorResponse(raw)
+    expect(r.success).toBe(true)
+    expect(r.generator?.sampleInput).toBe('nums = [2,7,11,15]; target = 9')
+  })
+
+  it('解析 @sample 示例输入（LeetCode 二叉树层序格式）', () => {
+    const raw = '```js\n// @algorithm binary_tree_diameter\n// @type tree\n// @sample root = [1,2,3,4,5]\nb.treeCreate(input.root, input.children)\n```'
+    const r = parseGeneratorResponse(raw)
+    expect(r.success).toBe(true)
+    expect(r.generator?.sampleInput).toBe('root = [1,2,3,4,5]')
+  })
+
   it('保留含 pointer builder 调用的生成器代码体', () => {
     const raw = [
       '```js',
@@ -53,7 +67,7 @@ describe('parseGeneratorResponse', () => {
     expect(r.generator?.body).not.toContain('@sample')
   })
 
-  it('@sample 不是合法 JSON 时忽略', () => {
+  it('@sample 不是合法输入时忽略', () => {
     const raw = '```js\n// @type array\n// @sample 这不是JSON\nb.compare(0,1)\n```'
     const r = parseGeneratorResponse(raw)
     expect(r.success).toBe(true)
