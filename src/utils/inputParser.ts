@@ -53,7 +53,7 @@ const MATRIX_ALGOS = new Set([
 
 const TREE_ALGOS = new Set([
   'binary_tree_traverse','bst_insert','bst_delete','bst_search',
-  'avl_insert','trie','heap_ds','btree','bplus_tree',
+  'avl_insert','trie','heap_ds','btree','bplus_tree','path_sum_iii',
 ])
 
 // ─── LeetCode defaults ────────────────────────────────────────────────────
@@ -105,6 +105,7 @@ const LEETCODE_DEFAULTS: Record<string, string> = {
   hash_table: 'pairs = {"name": "Alice", "age": "25", "city": "Beijing"}',
   // Trees
   binary_tree_traverse: 'root = [8, 3, 10, 1, 6, null, 14]',
+  path_sum_iii: 'root = [10, 5, -3, 3, 2, null, 11, 3, -2, null, 1], targetSum = 8',
   bst_insert: 'nums = [8, 3, 10, 1, 6, 14]',
   bst_delete: 'nums = [8, 3, 10, 1, 6, 14]',
   bst_search: 'nums = [8, 3, 10, 1, 6, 14]',
@@ -364,7 +365,11 @@ function parseMatrixCodeVars(vars: ParsedVars, _algoId: string, _s: string): unk
 
 function parseTreeCodeVars(vars: ParsedVars, _s: string): unknown {
   // root for binary tree
-  if (Array.isArray(vars.root)) return vars.root.map(v => v === null || v === 'null' ? 0 : Number(v))
+  if (Array.isArray(vars.root)) {
+    const source = [...vars.root]
+    const root = vars.root.map(v => v === null || v === 'null' ? 0 : Number(v))
+    return Object.keys(vars).length > 1 ? { ...vars, root, source } : root
+  }
   // keys for B-Tree / B+ Tree
   if (Array.isArray(vars.keys)) return vars.keys
   // nums

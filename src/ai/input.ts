@@ -13,6 +13,7 @@ export interface ParsedInputData {
 
 export function parseInputData(inputData: string): ParsedInputData {
   const raw = inputData.trim()
+  const input = normalizeInputText(raw)
   let value: unknown
 
   if (!raw) {
@@ -27,14 +28,26 @@ export function parseInputData(inputData: string): ParsedInputData {
   }
 
   try {
-    value = JSON.parse(raw)
+    value = JSON.parse(input.json)
   } catch {
     return {
       kind: 'unknown', raw, value: null, valid: false,
-      message: '输入不是合法 JSON',
+      message: '输入不是合法 JSON，也不是 LeetCode 形式（如 root = [1,2,null]）',
       promptContext: '',
       summary: '无法解析',
     }
+  }
+
+  if (input.assignmentName === 'root' && Array.isArray(value)) {
+    value = levelOrderArrayToTreeInput(value)
+  } else if (value !== null && typeof value === 'object' && !Array.isArray(value) && Array.isArray((value as Record<string, unknown>).root)) {
+    const obj = value as Record<string, unknown>
+    value = {
+      ...levelOrderArrayToTreeInput(obj.root as unknown[]),
+      ...Object.fromEntries(Object.entries(obj).filter(([key]) => key !== 'root')),
+    }
+  } else if (value !== null && typeof value === 'object' && !Array.isArray(value) && looksLikeTreeInput(value as Record<string, unknown>)) {
+    value = normalizeTreeInputObject(value as Record<string, unknown>)
   }
 
   const kind = identifyKind(value)
@@ -44,6 +57,211 @@ export function parseInputData(inputData: string): ParsedInputData {
   return {
     kind, raw, value, valid: true,
     promptContext, summary,
+  }
+}
+
+interface NormalizedInputText {
+  json: string
+  assignmentName?: string
+}
+
+export function normalizeInputText(raw: string): NormalizedInputText {
+  const trimmed = raw.trim()
+  if (!trimmed) return { json: trimmed }
+
+  const multiAssignments = parseMultiAssignments(trimmed)
+  if (multiAssignments) return multiAssignments
+
+  const assignment = trimmed.match(/^[A-Za-z_$][\w$]*(?:\s*,\s*[A-Za-z_$][\w$]*)*\s*=\s*([\s\S]+)$/)
+  const assignmentName = assignment ? trimmed.slice(0, trimmed.indexOf('=')).split(',')[0].trim() : undefined
+  const candidate = assignment ? assignment[1].trim() : trimmed
+
+  const json = candidate
+    .replace(/\bNone\b/g, 'null')
+    .replace(/\bnil\b/g, 'null')
+    .replace(/\bNULL\b/g, 'null')
+    .replace(/\bTrue\b/g, 'true')
+    .replace(/\bFalse\b/g, 'false')
+  return { json, assignmentName }
+}
+
+function parseMultiAssignments(raw: string): NormalizedInputText | null {
+  const parts = splitAssignmentParts(raw)
+    .map(part => part.trim())
+    .filter(Boolean)
+
+  if (parts.length < 2 || !parts.every(part => /^[A-Za-z_$][\w$]*\s*=/.test(part))) return null
+
+  const entries: string[] = []
+  for (const part of parts) {
+    const eq = part.indexOf('=')
+    const key = part.slice(0, eq).trim()
+    const value = part.slice(eq + 1).trim()
+    if (!key || !value) return null
+    entries.push(`${JSON.stringify(key)}:${toJsonLiteral(value)}`)
+  }
+
+  return { json: `{${entries.join(',')}}` }
+}
+
+function splitAssignmentParts(raw: string): string[] {
+  const parts: string[] = []
+  let start = 0
+  let depth = 0
+  let quote: '"' | "'" | null = null
+
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i]
+    const prev = raw[i - 1]
+
+    if (quote) {
+      if (ch === quote && prev !== '\\') quote = null
+      continue
+    }
+
+    if (ch === '"' || ch === "'") {
+      quote = ch
+      continue
+    }
+    if (ch === '[' || ch === '{' || ch === '(') depth++
+    else if (ch === ']' || ch === '}' || ch === ')') depth = Math.max(0, depth - 1)
+
+    const isSeparator = ch === ';' || ch === '\n' || ch === '\r' || (
+      ch === ',' && depth === 0 && /^[\s\r\n]*[A-Za-z_$][\w$]*\s*=/.test(raw.slice(i + 1))
+    )
+    if (isSeparator) {
+      parts.push(raw.slice(start, i))
+      start = i + 1
+    }
+  }
+
+  parts.push(raw.slice(start))
+  return parts
+}
+
+function toJsonLiteral(value: string): string {
+  const trimmed = value.trim()
+  if (/^[-+]?\d+(?:\.\d+)?$/.test(trimmed)) return trimmed
+  if (/^(true|false|null)$/i.test(trimmed)) return trimmed.toLowerCase()
+  if (/^(True|False|None|nil|NULL)$/.test(trimmed)) {
+    return trimmed
+      .replace(/^True$/, 'true')
+      .replace(/^False$/, 'false')
+      .replace(/^(None|nil|NULL)$/, 'null')
+  }
+  return trimmed
+    .replace(/\bNone\b/g, 'null')
+    .replace(/\bnil\b/g, 'null')
+    .replace(/\bNULL\b/g, 'null')
+    .replace(/\bTrue\b/g, 'true')
+    .replace(/\bFalse\b/g, 'false')
+}
+
+function levelOrderArrayToTreeInput(values: unknown[]): Record<string, unknown> {
+  const present = values.map((value) => value !== null && value !== undefined)
+  const nodes = values
+    .map((value, index) => ({ value, index }))
+    .filter(({ value }) => value !== null && value !== undefined)
+  const children: Record<string, string[]> = {}
+  const treeNodes: Array<{ id: string; value: string | number }> = []
+
+  for (const { value, index } of nodes) {
+    const id = String(index)
+    const displayValue = typeof value === 'number' || typeof value === 'string' ? value : String(value)
+    treeNodes.push({ id, value: displayValue })
+    const childIds: string[] = []
+    const left = index * 2 + 1
+    const right = index * 2 + 2
+    if (present[left]) childIds.push(String(left))
+    if (present[right]) childIds.push(String(right))
+    children[id] = childIds
+  }
+
+  return {
+    root: present[0] ? '0' : null,
+    children,
+    treeNodes,
+    source: values,
+    format: 'leetcode_level_order',
+  }
+}
+
+function looksLikeTreeInput(value: Record<string, unknown>): boolean {
+  return value.root !== undefined && value.children !== undefined && typeof value.children === 'object'
+}
+
+function normalizeTreeInputObject(value: Record<string, unknown>): Record<string, unknown> {
+  const children = value.children
+  if (!children || typeof children !== 'object' || Array.isArray(children)) return value
+  const childMap = children as Record<string, unknown>
+  const existingTreeNodes = Array.isArray(value.treeNodes)
+    ? value.treeNodes as Array<{ id?: unknown; value?: unknown }>
+    : []
+  const knownIds = new Set(existingTreeNodes.map(node => String(node.id)))
+  const childRefs = Object.values(childMap).flatMap(raw => Array.isArray(raw) ? raw.map(String) : [])
+  const refsHaveDuplicates = new Set(childRefs).size !== childRefs.length
+  const refsMissingNodes = existingTreeNodes.length > 0 && childRefs.some(ref => !knownIds.has(ref))
+  const hasOccurrenceKeys = Object.keys(childMap).some(key => /_\d+$/.test(key))
+
+  if (existingTreeNodes.length > 0 && !refsHaveDuplicates && !refsMissingNodes && !hasOccurrenceKeys) return value
+
+  const rootValue = String(value.root)
+  const normalizedChildren: Record<string, string[]> = {}
+  const normalizedNodes: Array<{ id: string; value: string | number }> = []
+  const nextByValue = new Map<string, number>()
+  const usedChildKey = new Map<string, number>()
+
+  const displayValueFor = (rawId: string): string | number => {
+    const fromTreeNodes = existingTreeNodes.find(node => String(node.id) === rawId)?.value
+    if (typeof fromTreeNodes === 'number' || typeof fromTreeNodes === 'string') return fromTreeNodes
+    const withoutOccurrence = rawId.replace(/_\d+$/, '')
+    const numeric = Number(withoutOccurrence)
+    return Number.isFinite(numeric) && withoutOccurrence.trim() !== '' ? numeric : withoutOccurrence
+  }
+
+  const allocate = (rawId: string): string => {
+    const base = rawId.replace(/_\d+$/, '')
+    const index = nextByValue.get(base) ?? 0
+    nextByValue.set(base, index + 1)
+    const id = `n${normalizedNodes.length}`
+    normalizedNodes.push({ id, value: displayValueFor(rawId) })
+    normalizedChildren[id] = []
+    return id
+  }
+
+  const sourceKeyFor = (rawId: string): string => {
+    const base = rawId.replace(/_\d+$/, '')
+    const hasOccurrenceVariant = Object.keys(childMap).some(key => key !== base && key.replace(/_\d+$/, '') === base)
+    if (!hasOccurrenceVariant && Object.prototype.hasOwnProperty.call(childMap, rawId)) return rawId
+    const seen = usedChildKey.get(base) ?? 0
+    const candidates = seen === 0 ? [base, `${base}_${seen}`] : [`${base}_${seen}`, base]
+    usedChildKey.set(base, seen + 1)
+    return candidates.find(candidate => Object.prototype.hasOwnProperty.call(childMap, candidate)) ?? rawId
+  }
+
+  const rootId = allocate(rootValue)
+  const queue: Array<{ rawId: string; id: string }> = [{ rawId: rootValue, id: rootId }]
+
+  for (let cursor = 0; cursor < queue.length; cursor++) {
+    const current = queue[cursor]
+    const rawChildren = childMap[sourceKeyFor(current.rawId)]
+    if (!Array.isArray(rawChildren)) continue
+    for (const childRaw of rawChildren) {
+      if (childRaw === null || childRaw === undefined) continue
+      const childRawId = String(childRaw)
+      const childId = allocate(childRawId)
+      normalizedChildren[current.id].push(childId)
+      queue.push({ rawId: childRawId, id: childId })
+    }
+  }
+
+  return {
+    ...value,
+    root: rootId,
+    children: normalizedChildren,
+    treeNodes: normalizedNodes,
+    originalRoot: value.root,
+    format: value.format ?? 'normalized_tree',
   }
 }
 
@@ -81,6 +299,11 @@ function identifyKind(value: unknown): InputDataKind {
     // Matrix object: has rows + cols + data
     if (obj.rows !== undefined && obj.cols !== undefined && Array.isArray(obj.data)) {
       return 'matrix'
+    }
+
+    // Common LeetCode multi-input objects whose primary structure is an array.
+    if (['nums', 'arr', 'array', 'values', 'heights', 'temperatures', 'prices'].some(key => Array.isArray(obj[key]))) {
+      return 'array'
     }
 
     // Linked list: has values + head
@@ -142,7 +365,9 @@ initialState 要求:
 - root 必须保留
 - children 必须表达父子关系
 - 节点值写入 treeNodes（可选）
+- 如果输入来自 LeetCode 层序数组，source 保留原数组；children/treeNodes 已按非 null 节点生成，重复值不能当作节点 id
 - 遍历路径放入 teachingState.tree.traversalPath
+- 如果代码使用 Queue/队列，请用 queueCreate/queueEnqueue/queueDequeue 显式展示队列，或在 teachingState.queue 中写入当前队列
 - 旋转、平衡因子等放入 teachingState.tree`
 
     case 'matrix':
@@ -172,7 +397,9 @@ initialState 要求:
 function buildSummary(kind: InputDataKind, value: unknown): string {
   switch (kind) {
     case 'array': {
-      const arr = value as unknown[]
+      const arr = Array.isArray(value)
+        ? value as unknown[]
+        : extractPrimaryArray(value as Record<string, unknown>)
       return `数组 [${arr.length} 个元素]`
     }
     case 'graph': {
@@ -185,7 +412,10 @@ function buildSummary(kind: InputDataKind, value: unknown): string {
       const obj = value as Record<string, unknown>
       const children = obj.children as Record<string, unknown> | undefined
       const nodeCount = children ? Object.keys(children).length : 0
-      return `树 (根=${String(obj.root)}, ${nodeCount} 节点)`
+      const rootValue = Array.isArray(obj.treeNodes)
+        ? (obj.treeNodes as Array<{ id?: unknown; value?: unknown }>).find(node => String(node.id) === String(obj.root))?.value
+        : undefined
+      return `树 (根=${String(rootValue ?? obj.root)}, ${nodeCount} 节点)`
     }
     case 'matrix': {
       const arr = value as unknown[][]
@@ -199,4 +429,11 @@ function buildSummary(kind: InputDataKind, value: unknown): string {
     default:
       return '未知结构'
   }
+}
+
+function extractPrimaryArray(obj: Record<string, unknown>): unknown[] {
+  for (const key of ['nums', 'arr', 'array', 'values', 'heights', 'temperatures', 'prices']) {
+    if (Array.isArray(obj[key])) return obj[key]
+  }
+  return []
 }

@@ -147,7 +147,7 @@ export async function analyzeCode(params: AIRequestParams, options: AnalyzeOptio
   // Parse input data for type context
   const parsedInput = parseInputData(params.inputData)
   if (!parsedInput.valid) {
-    const message = parsedInput.message || '输入数据不是合法 JSON'
+    const message = parsedInput.message || '输入数据不是合法 JSON / LeetCode 格式'
     return {
       success: false,
       error: message,
@@ -156,7 +156,7 @@ export async function analyzeCode(params: AIRequestParams, options: AnalyzeOptio
         title: '输入数据格式错误',
         message,
         issues: [{ path: 'inputData', code: 'invalid_json', message, severity: 'error', recoverable: true }],
-        suggestions: ['请检查输入数据是否为合法 JSON。', '可以使用示例数据下拉菜单插入数组、图、树或矩阵示例。'],
+        suggestions: ['请检查输入数据是否为合法 JSON 或 LeetCode 赋值格式，例如 nums = [2,7,11,15]; target = 9。'],
         canRetry: false,
         rawResponse: params.inputData,
       },
@@ -276,7 +276,7 @@ export async function analyzeCodeGenerator(
 
   const parsedInput = parseInputData(params.inputData)
   if (!parsedInput.valid) {
-    return { success: false, error: parsedInput.message || '输入数据不是合法 JSON' }
+    return { success: false, error: parsedInput.message || '输入数据不是合法 JSON / LeetCode 格式' }
   }
 
   try {
