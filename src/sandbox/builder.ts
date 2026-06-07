@@ -124,6 +124,9 @@ function defaultDescFor(event: AlgorithmEvent | undefined): string {
     // scene
     case 'scene.note': return String(e.text ?? '')
     case 'scene.link': return `连接 ${e.from} → ${e.to}`
+    case 'scene.highlight': return `高亮 ${e.entityId}`
+    case 'scene.clear_highlight': return '清除高亮'
+    case 'scene.wait': return '等待'
     // call stack / grid / DP overlays
     case 'callstack.create': return '初始化调用栈'
     case 'callstack.push': {
@@ -201,8 +204,10 @@ export class AnimationBuilder {
       if (family) this.usedFamilies.add(family)
     }
     // When the AI omits b.desc(), derive a meaningful description from the operation
-    // itself instead of a meaningless "步骤 N" placeholder.
-    const zh = this.pendingDesc || defaultDescFor(events[0]) || `步骤 ${this.sid}`
+    // itself instead of a meaningless "步骤 N" placeholder. As a last resort use a
+    // humanized event family rather than just the step number.
+    const fallback = events[0] ? `执行 ${events[0].type.split('.')[0]} 操作` : `步骤 ${this.sid}`
+    const zh = this.pendingDesc || defaultDescFor(events[0]) || fallback
     const d = statDelta(events[0]?.type ?? '')
     this.comparisons += d.c
     this.swaps += d.s

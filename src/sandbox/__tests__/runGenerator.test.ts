@@ -34,3 +34,15 @@ describe('runGeneratorSandboxed(测试环境走 inline 回退)', () => {
     expect(r.script?.steps.length).toBeGreaterThan(0)
   })
 })
+
+describe('步骤描述兜底', () => {
+  it('highlightNode 等 scene.* 事件有具体描述,不是 "步骤 N" 占位', () => {
+    const src = `b.treeCreate('binary','a',[{id:'a',value:1},{id:'b',value:2}],[{parentId:'a',childId:'b'}])
+b.highlightNode('b','warning')`
+    const r = executeGenerator(src, {}, { algorithm: 'x', type: 'tree' })
+    expect(r.ok).toBe(true)
+    const descs = r.script!.steps.map(s => s.description.zh)
+    expect(descs.some(d => /^步骤\s*\d+$/.test(d)), descs.join(' | ')).toBe(false)
+    expect(descs.some(d => d.includes('高亮'))).toBe(true)
+  })
+})
