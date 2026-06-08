@@ -18,6 +18,27 @@ export const SEMANTIC_COLORS: Record<SemanticColorName, SemanticColor> = {
   window:  { stroke: '#BFDBFE', fill: '#F8FBFF', text: '#1E293B' },
 }
 
+/**
+ * Neutral slate scale for non-semantic structural chrome: muted labels, index
+ * numbers, dashed container borders, panel shadows. Kept separate from
+ * SEMANTIC_COLORS (which encodes algorithm state) so the two are never confused.
+ * Additive to the shared contract — does not alter any existing export.
+ */
+export const NEUTRALS = {
+  /** Index numbers / secondary muted text + standalone connector strokes. */
+  mutedText: '#94A3B8',
+  /** Section / structure labels. */
+  labelText: '#64748B',
+  /** Slightly stronger body text inside panels. */
+  bodyText: '#475569',
+  /** Dashed structural frames / dividers (a touch darker than idle stroke). */
+  frameStroke: '#CBD5E1',
+  /** Drop-shadow flood color. */
+  shadow: '#0F172A',
+  /** Pure white surface (panels, node bodies). */
+  surface: '#FFFFFF',
+} as const
+
 export const SHAPE = {
   cellRadius: 8,
   ringRadius: 10,

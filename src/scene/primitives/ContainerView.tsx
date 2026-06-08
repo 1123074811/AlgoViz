@@ -1,6 +1,7 @@
 import type { SceneCell, SceneNode } from '../types'
+import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
 
-const CONTAINER_STROKE = '#94A3B8'
+const CONTAINER_STROKE = NEUTRALS.mutedText
 const CONTAINER_STROKE_WIDTH = 2
 
 interface ContainerViewProps {
@@ -27,8 +28,8 @@ export default function ContainerView({ type, cells, nodes, label }: ContainerVi
       <g>
         <rect x={minX - pad} y={minY - pad} rx={rx} ry={rx}
           width={maxX - minX + 2 * pad} height={maxY - minY + 2 * pad}
-          fill="#F8FAFC" stroke="#CBD5E1" strokeWidth={1.5} strokeDasharray="4 2" />
-        <text x={minX - pad + 8} y={minY - pad - 6} textAnchor="start" fontSize="11" fill="#64748B" fontFamily="monospace">
+          fill={SEMANTIC_COLORS.idle.fill} stroke={NEUTRALS.frameStroke} strokeWidth={1.5} strokeDasharray="4 2" />
+        <text x={minX - pad + 8} y={minY - pad - 6} textAnchor="start" fontSize="11" fill={NEUTRALS.labelText} fontFamily="monospace">
           {'映射'}
         </text>
       </g>
@@ -64,7 +65,7 @@ export default function ContainerView({ type, cells, nodes, label }: ContainerVi
             <rect key={`aux_rect_${y}`}
               x={minX - pad} y={minY} rx={rx} ry={rx}
               width={maxX - minX + 2 * pad} height={maxY - minY}
-              fill="#F8FAFC" stroke="#E2E8F0" strokeWidth={1.2}
+              fill={SEMANTIC_COLORS.idle.fill} stroke={SEMANTIC_COLORS.idle.stroke} strokeWidth={1.2}
             />
           )
         })}
@@ -92,10 +93,10 @@ export default function ContainerView({ type, cells, nodes, label }: ContainerVi
           fill="none" stroke={CONTAINER_STROKE} strokeWidth={CONTAINER_STROKE_WIDTH}
           strokeLinecap="round" strokeLinejoin="round"
         />
-        <text x={leftX} y={topY - 8} textAnchor="start" fontSize="11" fill="#64748B" fontFamily="monospace">
+        <text x={leftX} y={topY - 8} textAnchor="start" fontSize="11" fill={NEUTRALS.labelText} fontFamily="monospace">
           {stackLabel}
         </text>
-        <text x={leftX - 8} y={topY + 8} textAnchor="end" fontSize="10" fill="#64748B" fontFamily="monospace" dominantBaseline="middle">栈顶 ➔</text>
+        <text x={leftX - 8} y={topY + 8} textAnchor="end" fontSize="10" fill={NEUTRALS.labelText} fontFamily="monospace" dominantBaseline="middle">栈顶 ➔</text>
       </g>
     )
   }
@@ -116,8 +117,8 @@ export default function ContainerView({ type, cells, nodes, label }: ContainerVi
         <line x1={firstX} y1={bottomY} x2={lastX} y2={bottomY}
           stroke={CONTAINER_STROKE} strokeWidth={CONTAINER_STROKE_WIDTH}
           strokeLinecap="round" />
-        <text x={firstX} y={labelY} textAnchor="start" fontSize="10" fill="#64748B" fontFamily="monospace" dominantBaseline="hanging">队首</text>
-        <text x={lastX} y={labelY} textAnchor="end" fontSize="10" fill="#64748B" fontFamily="monospace" dominantBaseline="hanging">队尾</text>
+        <text x={firstX} y={labelY} textAnchor="start" fontSize="10" fill={NEUTRALS.labelText} fontFamily="monospace" dominantBaseline="hanging">队首</text>
+        <text x={lastX} y={labelY} textAnchor="end" fontSize="10" fill={NEUTRALS.labelText} fontFamily="monospace" dominantBaseline="hanging">队尾</text>
       </g>
     )
   }

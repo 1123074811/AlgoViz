@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { SEMANTIC_COLORS, SHAPE, TYPO, MOTION, type SemanticColorName } from '../tokens'
 
 describe('design tokens', () => {
@@ -18,5 +20,33 @@ describe('design tokens', () => {
     expect(TYPO.mono).toContain('monospace')
     expect(MOTION.easing).toMatch(/cubic-bezier/)
     expect(MOTION.duration.base).toBeTypeOf('number')
+  })
+
+  it('CellView 不再内联定义 COLOR_MAP 硬编码色板', () => {
+    const src = readFileSync(resolve(__dirname, '../primitives/CellView.tsx'), 'utf8')
+    expect(src).not.toMatch(/const COLOR_MAP/)
+    expect(src).toMatch(/from '\.\.\/tokens'/)
+  })
+
+  it('scene 目录(除 tokens.ts/overlays types)硬编码 #色值收敛到阈值内', () => {
+    const root = resolve(__dirname, '..')
+    const files = [
+      'primitives/NodeView.tsx', 'primitives/EdgeView.tsx', 'primitives/PointerView.tsx',
+      'primitives/ContainerView.tsx', 'primitives/HashTableView.tsx', 'primitives/HeapView.tsx',
+      'primitives/SetView.tsx', 'primitives/StringView.tsx', 'primitives/BitsetView.tsx',
+      'primitives/VariablesView.tsx', 'primitives/RegionView.tsx', 'SceneCanvas.tsx',
+    ]
+    let total = 0
+    for (const f of files) {
+      const src = readFileSync(resolve(root, f), 'utf8')
+      total += (src.match(/#[0-9A-Fa-f]{6}/g) ?? []).length
+    }
+    expect(total).toBeLessThanOrEqual(20)
+  })
+
+  it('共享动效常量存在且时长引用 MOTION', async () => {
+    const { CELL_KEYFRAMES, EDGE_FLOW_KEYFRAMES } = await import('../primitives/sharedMotion')
+    expect(CELL_KEYFRAMES).toContain('@keyframes')
+    expect(EDGE_FLOW_KEYFRAMES).toContain('scene-dash-flow')
   })
 })

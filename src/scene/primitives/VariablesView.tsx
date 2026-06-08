@@ -1,11 +1,13 @@
 import type { SceneCell } from '../types'
+import { NEUTRALS } from '../tokens'
 
 interface VariablesViewProps {
   vars: SceneCell[]
   hideTitle?: boolean
 }
 
-const STROKE = '#CBD5E1'
+const STROKE = NEUTRALS.frameStroke
+// Deeper blue than the primary token: signals a variable that just changed.
 const ACTIVE = '#2563EB'
 
 /**
@@ -51,12 +53,12 @@ export default function VariablesView({ vars, hideTitle }: VariablesViewProps) {
         x={minX - pad} y={frameY - pad}
         width={maxX - minX + 2 * pad} height={rowH + 2 * pad}
         rx={4} ry={4}
-        fill="#FFFFFF" fillOpacity={0.7} stroke={STROKE} strokeWidth={1} strokeDasharray="4 4" opacity={0.9}
+        fill={NEUTRALS.surface} fillOpacity={0.7} stroke={STROKE} strokeWidth={1} strokeDasharray="4 4" opacity={0.9}
       />
       {!hideTitle && (
         <text
           x={minX - pad} y={frameY - pad - 6}
-          textAnchor="start" fontSize="11" fill="#64748B" fontFamily="monospace"
+          textAnchor="start" fontSize="11" fill={NEUTRALS.labelText} fontFamily="monospace"
         >
           变量
         </text>
@@ -67,7 +69,7 @@ export default function VariablesView({ vars, hideTitle }: VariablesViewProps) {
         if (!l.name) return null
         const active = c.state?.pulse || c.state?.role === 'current' || c.state?.role === 'active'
         const textColor = active ? ACTIVE : '#334155'
-        const labelColor = active ? '#1D4ED8' : '#64748B'
+        const labelColor = active ? '#1D4ED8' : NEUTRALS.labelText
         const title = `${l.name} = ${String(c.value ?? l.meta?.value ?? '')}${l.meta?.delta ? ' ' + l.meta.delta : ''}`
         return (
           <g key={`var_meta_${c.id}`}>
@@ -80,7 +82,7 @@ export default function VariablesView({ vars, hideTitle }: VariablesViewProps) {
             </text>
             <text
               x={l.valueX - 8} y={c.position.y + 4}
-              textAnchor="start" fontSize="13" fill="#94A3B8" fontFamily="monospace"
+              textAnchor="start" fontSize="13" fill={NEUTRALS.mutedText} fontFamily="monospace"
             >
               =
             </text>
@@ -93,7 +95,7 @@ export default function VariablesView({ vars, hideTitle }: VariablesViewProps) {
             {l.delta && (
               <text
                 x={l.deltaX} y={c.position.y + 4}
-                textAnchor="start" fontSize="12" fill="#94A3B8" fontFamily="monospace"
+                textAnchor="start" fontSize="12" fill={NEUTRALS.mutedText} fontFamily="monospace"
               >
                 {l.delta}
               </text>

@@ -1,13 +1,16 @@
 import type { SceneNode } from '../types'
 import { getAdaptiveCircleLayout } from '../engineUtils'
 import { measureNodeWidth, truncateToWidth } from '../textMetrics'
+import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
 
+// Legacy scene color names map onto semantic tokens (warning→compare, muted→idle).
 const COLOR_MAP: Record<string, { stroke: string; fill: string }> = {
-  primary: { stroke: '#3B82F6', fill: '#EFF6FF' },
-  success: { stroke: '#10B981', fill: '#ECFDF5' },
-  warning: { stroke: '#F59E0B', fill: '#FFFBEB' },
-  danger:  { stroke: '#EF4444', fill: '#FEF2F2' },
-  muted:   { stroke: '#E2E8F0', fill: 'white' },
+  primary: SEMANTIC_COLORS.primary,
+  success: SEMANTIC_COLORS.success,
+  warning: SEMANTIC_COLORS.compare,
+  danger:  SEMANTIC_COLORS.danger,
+  // Rect nodes paint a pure-white body; muted only contributes the idle stroke.
+  muted:   { stroke: SEMANTIC_COLORS.idle.stroke, fill: 'white' },
 }
 
 interface NodeViewProps { node: SceneNode }
@@ -43,9 +46,9 @@ function renderCircle(
           <circle cx={0} cy={0} r={r + 4} fill={palette.stroke} opacity="0.08" className="node-active-ring" />
         )}
         <circle cx={0} cy={0} r={r} fill={palette.fill} stroke={palette.stroke} strokeWidth={1.5} />
-        <text x={0} y={Math.round(fontSize * 0.3)} textAnchor="middle" fontSize={fontSize} fontFamily="monospace" fill="#1E293B" fontWeight="bold">{value}</text>
+        <text x={0} y={Math.round(fontSize * 0.3)} textAnchor="middle" fontSize={fontSize} fontFamily="monospace" fill={SEMANTIC_COLORS.idle.text} fontWeight="bold">{value}</text>
         {node.fields.length > 1 && node.fields.slice(1).map((field, i) => (
-          <text key={field.id} x={0} y={r + 14 + i * 12} textAnchor="middle" fontSize="10" fill="#94A3B8">
+          <text key={field.id} x={0} y={r + 14 + i * 12} textAnchor="middle" fontSize="10" fill={NEUTRALS.mutedText}>
             {field.label}:{field.value ?? ''}
           </text>
         ))}
@@ -93,16 +96,16 @@ function renderRect(
             <g key={field.id}>
               {index > 0 && (
                 <line x1={x} y1={-height / 2 + 4} x2={x} y2={height / 2 - 4}
-                  stroke="#E2E8F0" strokeWidth={1} />
+                  stroke={SEMANTIC_COLORS.idle.stroke} strokeWidth={1} />
               )}
               <text x={x + fieldWidth / 2} y={isData ? -2 : 0}
                 textAnchor="middle" fontSize={fontSize} fontFamily="monospace"
-                fill={isData ? '#1E293B' : '#94A3B8'} fontWeight={isData ? 700 : 400}>
+                fill={isData ? SEMANTIC_COLORS.idle.text : NEUTRALS.mutedText} fontWeight={isData ? 700 : 400}>
                 {text !== rawText && <title>{rawText}</title>}
                 {text}
               </text>
               {field.label && isData && (
-                <text x={x + fieldWidth / 2} y={15} textAnchor="middle" fontSize="9" fill="#94A3B8">
+                <text x={x + fieldWidth / 2} y={15} textAnchor="middle" fontSize="9" fill={NEUTRALS.mutedText}>
                   {field.label}
                 </text>
               )}

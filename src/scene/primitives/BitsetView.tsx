@@ -1,4 +1,5 @@
 import type { SceneCell } from '../types'
+import { NEUTRALS } from '../tokens'
 
 interface BitsetViewProps {
   bits: SceneCell[]
@@ -6,7 +7,7 @@ interface BitsetViewProps {
   hideTitle?: boolean
 }
 
-const STROKE = '#94A3B8'
+const STROKE = NEUTRALS.mutedText
 const STROKE_WIDTH = 1.6
 
 /**
@@ -46,7 +47,7 @@ export default function BitsetView({ bits, labelCell, hideTitle }: BitsetViewPro
       {!hideTitle && (
         <text
           x={minX - pad} y={frameY - pad - 12}
-          textAnchor="start" fontSize="12" fill="#64748B" fontFamily="monospace" fontWeight={600}
+          textAnchor="start" fontSize="12" fill={NEUTRALS.labelText} fontFamily="monospace" fontWeight={600}
         >
           {title}
         </text>
@@ -57,7 +58,7 @@ export default function BitsetView({ bits, labelCell, hideTitle }: BitsetViewPro
         <text
           key={`bidx_${b.id}`}
           x={b.position.x} y={b.position.y + cellH / 2 + 16}
-          textAnchor="middle" fontSize="11" fill="#94A3B8" fontFamily="monospace"
+          textAnchor="middle" fontSize="11" fill={NEUTRALS.mutedText} fontFamily="monospace"
         >
           {b.col ?? indexOf(b)}
         </text>
