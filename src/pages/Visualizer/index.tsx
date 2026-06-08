@@ -15,10 +15,12 @@ import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
 import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
 import InputDataPanel from '@/components/Editor/InputDataPanel'
+import { REQUEST_AI_REPAIR_EVENT } from '@/components/ErrorBoundary'
 import { getSceneDiagnosticSummary, getSceneEventStats, usesSceneEngine } from '@/scene'
 import { getOperationsForAlgo } from '@/presets/operationPresets'
 import { getCodeTemplate, type CodeLang } from './codeTemplates'
 import DefinitionCard from './DefinitionCard'
+import { useResizablePanels } from './useResizablePanels'
 
 const ALGO_DESC_ZH: Record<string, string> = {
   bubble_sort: '重复遍历数列，依次比较相邻元素，如果顺序错误则交换位置。每轮将最大值"冒泡"到末尾。',
@@ -168,120 +170,21 @@ export default function Visualizer() {
   const [operationIdByAlgo, setOperationIdByAlgo] = useState<Record<string, string>>({})
   const [operationParam, setOperationParam] = useState<string>('5')
 
-  // Resizable Panels States (Left Editor: 35%, Right Info: 22%)
-  const [leftWidth, setLeftWidth] = useState(35)
-  const [rightWidth, setRightWidth] = useState(22)
-  const [isDesktop, setIsDesktop] = useState(true)
-
-  useEffect(() => {
-    const handleResize = () => setIsDesktop(window.innerWidth >= 1280)
-    handleResize()
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  const handleLeftResizeStart = (e: React.MouseEvent) => {
-    e.preventDefault()
-    const startX = e.clientX
-    const startWidth = leftWidth
-    const containerWidth = window.innerWidth
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaX = moveEvent.clientX - startX
-      const deltaPercent = (deltaX / containerWidth) * 100
-      let newWidth = startWidth + deltaPercent
-      // Enforce limits (Min 20%, Max 50% width)
-      if (newWidth < 20) newWidth = 20
-      if (newWidth > 50) newWidth = 50
-      setLeftWidth(newWidth)
-      
-      // Real-time Monaco editor layout remeasure during resizing
-      if (editorRef.current) {
-        editorRef.current.layout()
-      }
-    }
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-      if (editorRef.current) {
-        setTimeout(() => editorRef.current?.layout(), 20)
-      }
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-  }
-
-  const handleRightResizeStart = (e: React.MouseEvent) => {
-    e.preventDefault()
-    const startX = e.clientX
-    const startWidth = rightWidth
-    const containerWidth = window.innerWidth
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaX = moveEvent.clientX - startX
-      const deltaPercent = (deltaX / containerWidth) * 100
-      let newWidth = startWidth - deltaPercent
-      // Enforce limits (Min 15%, Max 35% width)
-      if (newWidth < 15) newWidth = 15
-      if (newWidth > 35) newWidth = 35
-      setRightWidth(newWidth)
-    }
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-  }
-
-  // Vertical Editor Height State (Code Editor top: 62% default)
-  const [editorHeight, setEditorHeight] = useState(62)
-
-  const handleEditorHeightResizeStart = (e: React.MouseEvent) => {
-    e.preventDefault()
-    const startY = e.clientY
-    const startHeight = editorHeight
-    const leftPanelElement = document.getElementById('left-workspace-panel')
-    if (!leftPanelElement) return
-    const containerHeight = leftPanelElement.getBoundingClientRect().height
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaY = moveEvent.clientY - startY
-      const deltaPercent = (deltaY / containerHeight) * 100
-      let newHeight = startHeight + deltaPercent
-      // Enforce limits (Min 30%, Max 82% height)
-      if (newHeight < 30) newHeight = 30
-      if (newHeight > 82) newHeight = 82
-      setEditorHeight(newHeight)
-
-      // Real-time Monaco editor layout remeasure during resizing
-      if (editorRef.current) {
-        editorRef.current.layout()
-      }
-    }
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-      if (editorRef.current) {
-        setTimeout(() => editorRef.current?.layout(), 20)
-      }
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-  }
-
   const operations = selectedAlgorithm ? getOperationsForAlgo(selectedAlgorithm.id) : undefined
   const hasOperations = operations && operations.length > 0
 
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
   const decorationsRef = useRef<string[]>([])
   const prevAlgoId = useRef<string | null>(null)
+  const {
+    leftWidth,
+    rightWidth,
+    editorHeight,
+    isDesktop,
+    handleLeftResizeStart,
+    handleRightResizeStart,
+    handleEditorHeightResizeStart,
+  } = useResizablePanels(editorRef)
 
   const {
     visualState,
@@ -596,7 +499,7 @@ export default function Visualizer() {
 
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations)
   }, [currentStep, animationScript])
-  const handleAIAnalyze = async () => {
+  const handleAIAnalyze = useCallback(async () => {
     const compResult = compileAndValidateCode(code, codeLanguage)
     if (!compResult.success) {
       setAIStatus('error', `[${compResult.errors[0].type}] ${compResult.errors[0].message} (第 ${compResult.errors[0].line} 行)${compResult.errors[0].context ? `\n\n代码上下文:\n\`\`\`\n${compResult.errors[0].context}\n\`\`\`` : ''}`)
@@ -652,7 +555,15 @@ export default function Visualizer() {
       if (e instanceof Error && e.name === 'AbortError') return
       setAIStatus('error', e instanceof Error ? e.message : t('common.error'))
     }
-  }
+  }, [addAIHistory, analyzeGenerator, code, codeLanguage, hasApiConfig, inputData, selectedAlgorithm, setAIStatus, setAnimationScript, setInputData, t])
+
+  useEffect(() => {
+    const handleRepairRequest = () => {
+      void handleAIAnalyze()
+    }
+    window.addEventListener(REQUEST_AI_REPAIR_EVENT, handleRepairRequest)
+    return () => window.removeEventListener(REQUEST_AI_REPAIR_EVENT, handleRepairRequest)
+  }, [handleAIAnalyze])
 
   if (!selectedAlgorithm) {
     return (

@@ -1,3 +1,5 @@
+import { ErrorBoundary } from 'react-error-boundary'
+import { ErrorFallback } from '@/components/ErrorBoundary'
 import type { AnimationScript, AnimationStep } from '@/types/animation'
 import type { VisualState } from '@/hooks/useAnimationEngine'
 import SceneCanvas from '@/scene/SceneCanvas'
@@ -32,7 +34,19 @@ export default function VisualizationCanvas({ script, visualState, currentStepDa
   return (
     <div className="h-full p-6 bg-slate-50">
       <div className="h-full bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-        <SceneCanvas script={script} currentStep={visualState.currentStep} currentStepData={currentStepData} speed={speed} />
+        <ErrorBoundary
+          resetKeys={[script.algorithm, script.steps.length, visualState.currentStep]}
+          FallbackComponent={(props) => (
+            <ErrorFallback
+              {...props}
+              title="场景渲染失败"
+              description="动画场景的数据或 SVG 渲染遇到异常，可以重试，或把当前错误回发给 AI 重新修复。"
+              allowAIRepair
+            />
+          )}
+        >
+          <SceneCanvas script={script} currentStep={visualState.currentStep} currentStepData={currentStepData} speed={speed} />
+        </ErrorBoundary>
       </div>
     </div>
   )

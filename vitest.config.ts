@@ -12,7 +12,7 @@ export default defineConfig({
     exclude: [...configDefaults.exclude, '.claude/**'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov'],
+      reporter: ['text', 'lcov', 'json', 'json-summary'],
       include: ['src/scene/**', 'src/ai/**'],
     },
   },

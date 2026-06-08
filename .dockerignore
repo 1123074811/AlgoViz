@@ -1,0 +1,11 @@
+node_modules
+dist
+coverage
+.git
+.claude
+.superpowers
+demo
+*.log
+.env
+.env.local
+.env.*.local

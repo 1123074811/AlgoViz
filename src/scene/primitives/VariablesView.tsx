@@ -15,43 +15,60 @@ const ACTIVE = '#2563EB'
  * text instead of cells so they cannot be mistaken for an array or DP table.
  */
 const CHAR_W = 8 // 13px 等宽字体的近似字宽
-const MAX_VALUE_CHARS = 22 // 过长的值(如序列化字符串)截断,避免撑爆面板
+const MAX_VALUE_CHARS = 18 // 过长的值(如序列化字符串)截断,避免撑爆面板
+const ITEM_GAP = 34
+const ROW_H = 24
 
 function clip(s: string): string {
   return s.length > MAX_VALUE_CHARS ? s.slice(0, MAX_VALUE_CHARS - 1) + '…' : s
 }
 
-/** 计算单个变量的渲染布局(名称/值/delta 的位置与显示文本),供边框测量与渲染共用。 */
-function layoutVar(c: SceneCell) {
+/** 计算单个变量自身所需宽度，后续按真实宽度单行顺排。 */
+function measureVar(c: SceneCell) {
   const meta = c.meta as VariableMeta | undefined
   const name = meta?.name ?? nameOfId(c.id) ?? ''
   const value = clip(String(c.value ?? meta?.value ?? ''))
   const delta = meta?.delta ? clip(meta.delta) : ''
-  const leftEdge = c.position.x - (c.size?.width ?? 72) / 2
-  const valueX = leftEdge + Math.max(34, name.length * CHAR_W + 18)
-  const deltaX = valueX + 8 + Math.max(10, value.length * CHAR_W) + 8
-  const right = (delta ? deltaX + delta.length * CHAR_W : valueX + 8 + value.length * CHAR_W) + 4
-  return { meta, name, value, delta, leftEdge, valueX, deltaX, right }
+  const nameW = Math.max(24, name.length * CHAR_W)
+  const valueW = Math.max(12, value.length * CHAR_W)
+  const deltaW = delta ? delta.length * CHAR_W + 14 : 0
+  const width = nameW + 22 + valueW + deltaW
+  return { meta, name, value, delta, nameW, valueW, width }
 }
 
 export default function VariablesView({ vars, hideTitle }: VariablesViewProps) {
   if (vars.length === 0) return null
 
   const sorted = [...vars].sort((a, b) => (a.col ?? 0) - (b.col ?? 0))
-  const rowH = 24
-  const layouts = sorted.map(layoutVar)
+  const measured = sorted.map(measureVar)
+  const sourceMinX = Math.min(...sorted.map(c => c.position.x - (c.size?.width ?? 72) / 2))
+  const startY = sorted[0].position.y
+  const layouts: Array<ReturnType<typeof measureVar> & {
+    leftEdge: number
+    valueX: number
+    deltaX: number
+    y: number
+  }> = []
+  let cursorX = sourceMinX
 
-  // 边框按实际渲染文本的左右极值自适应,长值已截断,不再溢出。
-  const minX = Math.min(...layouts.map(l => l.leftEdge))
-  const maxX = Math.max(...layouts.map(l => l.right))
-  const frameY = sorted[0].position.y - rowH / 2
+  measured.forEach((item) => {
+    const leftEdge = cursorX
+    const valueX = leftEdge + item.nameW + 14
+    const deltaX = valueX + 8 + item.valueW + 12
+    layouts.push({ ...item, leftEdge, valueX, deltaX, y: startY })
+    cursorX += item.width + ITEM_GAP
+  })
+
+  const minX = sourceMinX
+  const maxX = Math.max(sourceMinX, cursorX - ITEM_GAP)
+  const frameY = startY - ROW_H / 2
   const pad = 12
 
   return (
     <g>
       <rect
         x={minX - pad} y={frameY - pad}
-        width={maxX - minX + 2 * pad} height={rowH + 2 * pad}
+        width={maxX - minX + 2 * pad} height={ROW_H + 2 * pad}
         rx={4} ry={4}
         fill={NEUTRALS.surface} fillOpacity={0.7} stroke={STROKE} strokeWidth={1} strokeDasharray="4 4" opacity={0.9}
       />
@@ -75,26 +92,26 @@ export default function VariablesView({ vars, hideTitle }: VariablesViewProps) {
           <g key={`var_meta_${c.id}`}>
             <title>{title}</title>
             <text
-              x={l.leftEdge} y={c.position.y + 4}
+              x={l.leftEdge} y={l.y + 4}
               textAnchor="start" fontSize="13" fill={labelColor} fontFamily="monospace" fontWeight={600}
             >
               {l.name}
             </text>
             <text
-              x={l.valueX - 8} y={c.position.y + 4}
+              x={l.valueX - 8} y={l.y + 4}
               textAnchor="start" fontSize="13" fill={NEUTRALS.mutedText} fontFamily="monospace"
             >
               =
             </text>
             <text
-              x={l.valueX + 8} y={c.position.y + 4}
+              x={l.valueX + 8} y={l.y + 4}
               textAnchor="start" fontSize="13" fill={textColor} fontFamily="monospace" fontWeight={c.state?.pulse ? 700 : 500}
             >
               {l.value}
             </text>
             {l.delta && (
               <text
-                x={l.deltaX} y={c.position.y + 4}
+                x={l.deltaX} y={l.y + 4}
                 textAnchor="start" fontSize="12" fill={NEUTRALS.mutedText} fontFamily="monospace"
               >
                 {l.delta}

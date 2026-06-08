@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
+import { ErrorBoundary } from 'react-error-boundary'
 import MainLayout from '@/components/Layout/MainLayout'
+import { ErrorFallback } from '@/components/ErrorBoundary'
 
 const Home = lazy(() => import('@/pages/Home'))
 const Visualizer = lazy(() => import('@/pages/Visualizer'))
@@ -20,17 +22,27 @@ function LoadingFallback() {
 
 export default function App() {
   return (
-    <BrowserRouter
-      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    <ErrorBoundary
+      FallbackComponent={(props) => (
+        <ErrorFallback
+          {...props}
+          title="应用渲染失败"
+          description="顶层界面遇到异常，已保留错误信息以便恢复。"
+        />
+      )}
     >
-      <Routes>
-        <Route path="/" element={<Suspense fallback={<LoadingFallback />}><Home /></Suspense>} />
-        <Route element={<MainLayout />}>
-          <Route path="/visualizer" element={<Suspense fallback={<LoadingFallback />}><Visualizer /></Suspense>} />
-        </Route>
-        <Route path="/settings" element={<Suspense fallback={<LoadingFallback />}><Settings /></Suspense>} />
-        <Route path="/playground" element={<Suspense fallback={<LoadingFallback />}><Playground /></Suspense>} />
-      </Routes>
-    </BrowserRouter>
+      <BrowserRouter
+        future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+      >
+        <Routes>
+          <Route path="/" element={<Suspense fallback={<LoadingFallback />}><Home /></Suspense>} />
+          <Route element={<MainLayout />}>
+            <Route path="/visualizer" element={<Suspense fallback={<LoadingFallback />}><Visualizer /></Suspense>} />
+          </Route>
+          <Route path="/settings" element={<Suspense fallback={<LoadingFallback />}><Settings /></Suspense>} />
+          <Route path="/playground" element={<Suspense fallback={<LoadingFallback />}><Playground /></Suspense>} />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }

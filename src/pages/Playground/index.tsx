@@ -13,6 +13,7 @@ import PlaybackControls from '@/components/Controls/PlaybackControls'
 import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
 import InputDataPanel from '@/components/Editor/InputDataPanel'
 import ConfirmDialog from '@/components/Common/ConfirmDialog'
+import { REQUEST_AI_REPAIR_EVENT } from '@/components/ErrorBoundary'
 import { useAlgorithmStore, type AIHistoryEntry } from '@/store/algorithmStore'
 import { recognizeAlgorithm } from '@/presets/recognize'
 import { useAIGenerator } from '@/hooks/useAIGenerator'
@@ -133,7 +134,7 @@ export default function Playground() {
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, decos)
   }, [currentStep, activeAnimationScript])
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = useCallback(async () => {
     const compResult = compileAndValidateCode(code, codeLanguage)
 
     if (compResult.warnings.length > 0) {
@@ -258,7 +259,30 @@ export default function Playground() {
       setAIStatus('error', msg)
       updateAIHistory(historyId, { status: 'error', error: msg })
     }
-  }
+  }, [
+    activeHistoryId,
+    addAIHistory,
+    aiHistory,
+    analyzeGenerator,
+    code,
+    codeLanguage,
+    hasApiConfig,
+    inputData,
+    navigate,
+    removeAIHistory,
+    setAIStatus,
+    setAnimationScript,
+    setInputData,
+    updateAIHistory,
+  ])
+
+  useEffect(() => {
+    const handleRepairRequest = () => {
+      void handleAnalyze()
+    }
+    window.addEventListener(REQUEST_AI_REPAIR_EVENT, handleRepairRequest)
+    return () => window.removeEventListener(REQUEST_AI_REPAIR_EVENT, handleRepairRequest)
+  }, [handleAnalyze])
 
   const handleRestore = (entry: AIHistoryEntry) => {
     setCode(entry.code)
