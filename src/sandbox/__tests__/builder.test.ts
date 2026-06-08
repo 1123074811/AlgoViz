@@ -28,11 +28,12 @@ describe('AnimationBuilder — array', () => {
     expect(script.steps[2].description.zh).not.toBe('我的描述')
   })
 
-  it('超过步数上限抛错', () => {
+  it('超过步数上限时软截断而不是抛错', () => {
     const b = new AnimationBuilder('x', 'array')
-    expect(() => {
-      for (let i = 0; i < 1000; i++) b.compare(0, 0)
-    }).toThrow(/步数超过上限/)
+    for (let i = 0; i < 1000; i++) b.compare(0, 0)
+    const script = b.build()
+    expect(script.steps).toHaveLength(600)
+    expect(script.steps[599].description.zh).toContain('后续重复搜索/回溯步骤已省略')
   })
 
   it('没有任何步骤时 build 抛错', () => {

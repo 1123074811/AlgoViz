@@ -241,7 +241,7 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
           : latestNote
         
         return descriptionText ? (
-          <div className="absolute bottom-5 left-1/2 max-w-xl w-[90%] md:w-auto -translate-x-1/2 rounded-2xl border border-slate-200 bg-white/95 px-5 py-3 text-sm font-medium text-slate-700 shadow-lg backdrop-blur-sm text-center pointer-events-none transition-all duration-300 z-10">
+          <div className="absolute bottom-5 left-1/2 max-w-xl w-[90%] md:w-auto -translate-x-1/2 rounded-2xl border border-slate-200 bg-white/95 px-5 py-3 text-sm font-medium text-slate-700 shadow-lg backdrop-blur-sm text-center pointer-events-none transition-all duration-300 z-50">
             {descriptionText}
           </div>
         ) : null

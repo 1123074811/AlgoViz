@@ -53,6 +53,8 @@ export default function Playground() {
   const decorationsRef = useRef<string[]>([])
 
   const hasApiConfig = getApiConfig() !== null
+  const hasTrackedAnalysis = !!playgroundAnalysisController && !playgroundAnalysisController.signal.aborted
+  const isAnalyzing = aiStatus === 'analyzing' || (hasTrackedAnalysis && aiHistory.some(entry => entry.status === 'analyzing'))
 
   const inputInfo = useMemo(() => parseInputData(inputData), [inputData])
   const codeDiagnostics = useMemo(() => {
@@ -75,6 +77,17 @@ export default function Playground() {
     isPlaying, speed, currentStep, totalSteps,
     setSpeed, stepForward, stepBackward, reset, goToEnd, togglePlay,
   } = useAnimationEngine(activeAnimationScript)
+
+  useEffect(() => {
+    if (hasTrackedAnalysis) return
+    const orphanIds = aiHistory.filter(entry => entry.status === 'analyzing').map(entry => entry.id)
+    for (const id of orphanIds) {
+      updateAIHistory(id, { status: 'error', error: INTERRUPTED_MSG })
+    }
+    if (orphanIds.length > 0 && aiStatus === 'analyzing') {
+      setAIStatus('error', INTERRUPTED_MSG)
+    }
+  }, [aiHistory, aiStatus, hasTrackedAnalysis, setAIStatus, updateAIHistory])
 
   const handleNew = useCallback(() => {
     playgroundAnalysisController?.abort()
@@ -271,7 +284,14 @@ export default function Playground() {
       )
       setAnimationScript(null)
       if (entry.status === 'error') setAIStatus('error', entry.error)
-      else setAIStatus('idle')
+      else if (entry.status === 'analyzing') {
+        if (hasTrackedAnalysis) {
+          setAIStatus('analyzing')
+        } else {
+          updateAIHistory(entry.id, { status: 'error', error: INTERRUPTED_MSG })
+          setAIStatus('error', INTERRUPTED_MSG)
+        }
+      } else setAIStatus('idle')
     }
     setAiErrorReport(null)
     setAiRepairHistory(null)
@@ -337,8 +357,6 @@ export default function Playground() {
     )
   }
 
-  const complexity = activeAnimationScript?.complexity
-
   useEffect(() => { document.title = 'AI Playground — AlgoViz' }, [])
 
   return (
@@ -375,12 +393,12 @@ export default function Playground() {
             <Icon name="brain" size={11} className="text-primary" />
             <span>自动识别: {getCodeLanguageLabel(codeLanguage)}</span>
           </div>
-          <button onClick={handleAnalyze} disabled={aiStatus === 'analyzing'}
+          <button onClick={handleAnalyze} disabled={isAnalyzing}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border-none cursor-pointer transition-all ${
               !hasApiConfig ? 'bg-slate-100 text-slate-400' :
-              aiStatus === 'analyzing' ? 'bg-violet-100 text-violet-600' :
+              isAnalyzing ? 'bg-violet-100 text-violet-600' :
               'bg-violet-500 text-white hover:bg-violet-600 shadow-sm'}`}>
-            {aiStatus === 'analyzing' ? <><Icon name="loader2" size={12} className="animate-spin" /> 分析中...</>
+            {isAnalyzing ? <><Icon name="loader2" size={12} className="animate-spin" /> 分析中...</>
             : !hasApiConfig ? '⚙ 先配置 API Key'
             : <><Icon name="zap" size={12} /> AI 分析代码</>}
           </button>
@@ -457,7 +475,7 @@ export default function Playground() {
             onChange={setCode}
             onMount={handleEditorMount}
             diagnostics={codeDiagnostics}
-            disabled={aiStatus === 'analyzing'}
+            disabled={isAnalyzing}
             className="flex-1"
           />
           <InputDataPanel
@@ -472,7 +490,7 @@ export default function Playground() {
             helperText={inputInfo.valid ? `类型: ${inputInfo.kind} · 改输入动画即时更新` : inputInfo.message ?? '输入格式错误'}
             placeholder={'root = [1,2,2,3,4,4,3]\n或 {"nums":[2,7,11,15],"target":9}'}
             error={!inputInfo.valid ? inputInfo.message ?? '输入格式错误，修正后会自动同步动画' : null}
-            disabled={aiStatus === 'analyzing'}
+            disabled={isAnalyzing}
             className="h-28"
           />
         </div>
@@ -590,39 +608,6 @@ export default function Playground() {
         </div>
       )}
 
-      {/* Info overlay */}
-      {activeAnimationScript && currentStepData && (
-        <div className="absolute top-[7.5rem] right-4 w-56 max-h-[calc(100%-10rem)] overflow-y-auto p-3 rounded-lg border border-border bg-white/95 shadow-lg backdrop-blur z-50 space-y-2 text-xs">
-          <div className="p-2 rounded bg-warning-50">
-            <div className="text-[10px] text-warning font-semibold mb-0.5">步骤 {currentStepData.stepId}</div>
-            <p className="text-[11px] text-slate-700">{currentStepData.description.zh}</p>
-          </div>
-          {activeAnimationScript.result !== undefined && (
-            <div className="p-2 rounded bg-green-50 border border-green-100">
-              <div className="text-[10px] font-semibold text-green-700 mb-0.5">输出</div>
-              <div className="text-[11px] font-code text-green-800 break-all">{formatAnimationResult(activeAnimationScript.result)}</div>
-            </div>
-          )}
-          <div className="p-2 rounded bg-surface">
-            <div className="text-[10px] font-semibold text-slate-600 mb-1">统计</div>
-            <div className="flex gap-3 text-[10px] text-slate-500">
-              <span>比较:{currentStepData.stats.comparisons}</span>
-              <span>交换:{currentStepData.stats.swaps}</span>
-              <span>访问:{currentStepData.stats.accesses}</span>
-            </div>
-          </div>
-          {complexity && (
-            <div className="p-2 rounded bg-surface">
-              <div className="text-[10px] font-semibold text-slate-600 mb-1">复杂度</div>
-              <div className="text-[10px] text-slate-500 space-y-0.5">
-                <div>时间: {complexity.time.best}/{complexity.time.average}/{complexity.time.worst}</div>
-                <div>空间: {complexity.space}</div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       <ConfirmDialog
         open={confirmState !== null}
         title={confirmState?.type === 'delete' ? t('playground.deleteConfirmTitle') : t('playground.clearAllConfirmTitle')}
@@ -650,8 +635,4 @@ export default function Playground() {
 
     </div>
   )
-}
-
-function formatAnimationResult(result: Exclude<import('@/types/animation').AnimationScript['result'], undefined>) {
-  return Array.isArray(result) ? `[${result.join(', ')}]` : String(result)
 }

@@ -179,6 +179,7 @@ export class AnimationBuilder {
   private resultValue?: AnimationScript['result']
   private varValues = new Map<string, number | string>()
   private pendingVarHighlights = new Set<string>()
+  private truncated = false
   // tracks which structure families (event prefix before '.') the script used,
   // to auto-enable composite layout when 2+ distinct structures appear.
   private usedFamilies = new Set<string>()
@@ -195,8 +196,25 @@ export class AnimationBuilder {
   line(n: number): this { this.pendingLine = Math.max(0, Math.floor(n) - 1); return this }
 
   private add(events: AlgorithmEvent[], action: Action): this {
-    if (this.steps.length >= MAX_STEPS) {
-      throw new Error(`步数超过上限 ${MAX_STEPS}，请减少操作或简化算法`)
+    if (this.truncated) {
+      this.pendingDesc = ''
+      this.pendingVarHighlights.clear()
+      return this
+    }
+    if (this.steps.length >= MAX_STEPS - 1) {
+      const zh = `动画步骤已达到 ${MAX_STEPS} 步上限，后续重复搜索/回溯步骤已省略，最终结果仍会继续计算。`
+      this.steps.push({
+        stepId: this.sid++,
+        codeLine: this.pendingLine,
+        description: { zh, en: zh },
+        action: this.act('annotate', [], 'muted'),
+        stats: { comparisons: this.comparisons, swaps: this.swaps, accesses: this.accesses },
+        events: [{ type: 'scene.note', text: zh }],
+      })
+      this.pendingDesc = ''
+      this.pendingVarHighlights.clear()
+      this.truncated = true
+      return this
     }
     const allEvents = [...events, ...this.consumePendingVarHighlights()]
     for (const event of allEvents) {
@@ -518,7 +536,7 @@ export class AnimationBuilder {
   }
 
   // ── call stack（递归 / 回溯 / 分治）──
-  callStackCreate(title = 'Call Stack', id = 'callstack'): this {
+  callStackCreate(title = '递归调用栈', id = 'callstack'): this {
     return this.add([{ type: 'callstack.create', id, title }], this.act('highlight', [], 'primary'))
   }
   callPush(
@@ -581,6 +599,10 @@ export class AnimationBuilder {
   }
   gridVisit(row: number, col: number, order?: number): this {
     return this.add([{ type: 'grid.visit', row, col, order }], this.act('highlight', [], 'warning'))
+  }
+  highlight(row: number, col?: number): this {
+    if (typeof col === 'number') return this.gridVisit(row, col)
+    return this.add([{ type: 'scene.highlight', entityId: `arr_${row}`, role: 'current', color: 'warning' }], this.act('highlight', [row], 'warning'))
   }
   gridFrontier(cells: Array<[number, number]>): this {
     return this.add([{ type: 'grid.frontier', cells }], this.act('highlight', [], 'primary'))

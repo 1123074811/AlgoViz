@@ -40,6 +40,7 @@ export function CORE_PROMPT(language: string): string {
 - \`b.varInit([{name,value}, ...])\`：创建变量基础元素面板，用来展示关键变量/参数，如 ret、ans、sum、target、targetSum、count、i、j、left、right
 - \`b.varSet(name, value, delta?)\`：更新变量值；不传 delta 时系统会按上一次值自动显示浅灰色变化标注。数值加减显示**真实差值**，如 8→-2 显示 -10、0→3 显示 +3；非数值变化或瞬时赋值/重置用 ->新值。
 - \`b.varHighlight(name)\`：高亮正在被读取、比较或作为递归参数传入的变量
+- 棋盘/二维网格/矩阵算法（如数独、岛屿、迷宫、DP 表）不要调用 \`b.highlight(...)\`。创建棋盘用 \`b.gridCreate(board, { title: '...' })\` 或 \`b.matrixCreate(rows, cols, values)\`；访问格子用 \`b.gridVisit(row,col)\` / \`b.matrixVisit(row,col)\`；写格子用 \`b.gridSet(row,col,value,state)\` / \`b.matrixUpdate(row,col,value)\`。
 
 ### 通用指针（双指针/快慢指针/窗口边界/链表指针）
 - \`b.pointerCreate(pointerId, target, label?)\` 创建命名指针并放到目标位置；pointerId 用短英文如 'left'、'right'、'slow'、'fast'、'head'、'tail'，label 可用中文展示名
@@ -106,7 +107,7 @@ b.heapPop()
 - 每个关键操作都要发对应方法（比较、交换、访问...），不要只 b.note 文字
 - 每个会影响算法判断或返回值的变量变化都要同步到变量面板：初始化用 \`b.varInit\`，赋值/自增/自减/递归参数变化用 \`b.varSet\`，读取参与条件判断前用 \`b.varHighlight\`。
 - 代码使用 Queue/LinkedList 队列时，必须用 \`b.queueCreate([])\`、\`b.queueEnqueue(value)\`、\`b.queueDequeue()\` 显式展示队列状态；树 + 队列算法也要同时创建树和队列。
-- 总步数控制在 ~300 以内；可在循环里 break/限制规模
+- 总步数控制在 ~300 以内；可在循环里 break/限制规模。指数级搜索/回溯（数独、N 皇后、组合枚举等）必须只展示代表性分支、若干次冲突/成功/回溯和最终结果，不能逐步展开完整搜索树。
 - 不要访问网络、DOM、定时器；只用 input 和 b
 - **循环必须能终止**：照搬原代码的循环结构，确保每轮循环变量/指针都推进；while 循环要有明确且会达成的退出条件；嵌套的弹栈/弹队列循环里，每轮必须真的 pop 一个元素（否则死循环会被沙箱判超时、动画失败）
 - 对单调栈/单调队列：内层 while 每轮要么 stackPop 要么 break，外层 i 必须递增；写完默念一遍循环会不会停
