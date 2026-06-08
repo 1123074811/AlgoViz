@@ -1,4 +1,5 @@
 import type { SceneCell } from '../types'
+import { SEMANTIC_COLORS } from '../tokens'
 
 interface HeapViewProps {
   nodes: SceneCell[]
@@ -6,8 +7,8 @@ interface HeapViewProps {
 }
 
 const STROKE = '#94A3B8'
-const MIRROR_FILL = '#F8FAFC'
-const MIRROR_STROKE = '#E2E8F0'
+const MIRROR_FILL = SEMANTIC_COLORS.idle.fill
+const MIRROR_STROKE = SEMANTIC_COLORS.idle.stroke
 
 /**
  * Structural overlay for the dedicated heap / priority-queue visual. The node
