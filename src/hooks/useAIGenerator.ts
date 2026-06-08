@@ -3,10 +3,41 @@ import { analyzeCodeGenerator } from '@/ai'
 import { runGeneratorSandboxed } from '@/sandbox/runGenerator'
 import { recognizeAlgorithm } from '@/presets/recognize'
 import { generatePreset } from '@/presets'
-import type { AnimationScript } from '@/types/animation'
+import { buildFallbackScene, type FallbackKind } from '@/ai/fallbackScene'
+import type { AnimationScript, InitialState } from '@/types/animation'
 import type { AIStatus } from '@/store/algorithmStore'
 
 export type GeneratorType = 'array' | 'graph' | 'tree' | 'linked_list'
+
+/**
+ * 把一次失败映射到三类可读兜底态：
+ *  - runtime: 沙箱执行崩溃/超时（来自 GeneratorResult.kind）。
+ *  - unavailable: 模型/网络/认证/限流不可用。
+ *  - parse: 解析/schema/提取失败（默认兜底）。
+ */
+export function classifyFailure(err: { stage?: string; kind?: string }): FallbackKind {
+  if (err.kind === 'runtime') return 'runtime'
+  const s = err.stage ?? ''
+  if (s.includes('network') || s.includes('auth') || s.includes('rate') || s.includes('config') || s.includes('request')) return 'unavailable'
+  if (s.includes('json') || s.includes('schema') || s.includes('parse') || s.includes('extract')) return 'parse'
+  return 'parse'
+}
+
+/** 从已解析输入构造一个尽量有内容的兜底 initialState（数组优先）。 */
+function toFallbackInitialState(value: unknown): InitialState {
+  if (Array.isArray(value)) {
+    const data = value.map(v => (typeof v === 'number' ? v : Number(v))).filter(v => !Number.isNaN(v))
+    return { type: 'array', data }
+  }
+  if (value && typeof value === 'object') {
+    const arr = (value as Record<string, unknown>).data ?? (value as Record<string, unknown>).array
+    if (Array.isArray(arr)) {
+      const data = arr.map(v => (typeof v === 'number' ? v : Number(v))).filter(v => !Number.isNaN(v))
+      return { type: 'array', data }
+    }
+  }
+  return { type: 'array', data: [] }
+}
 
 /** Result of one AI analysis pass. The caller is responsible for translating
  *  this into history entries (Playground vs Visualizer store history differently). */
@@ -121,6 +152,10 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
 
       if (!result.success || !result.generator) {
         const error = result.error || '分析失败'
+        const kind = classifyFailure({ stage: result.errorReport?.stage })
+        const parsedInput = parseInputRef.current(params.inputData)
+        const initial = toFallbackInitialState(parsedInput.valid ? parsedInput.value : undefined)
+        applyScriptRef.current(buildFallbackScene(initial, { kind, message: error }))
         setStatusRef.current('error', error, result.rawResponse)
         return { ok: false, error, rawResponse: result.rawResponse, errorReport: result.errorReport }
       }
@@ -184,8 +219,12 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
         return { ok: true, script: sandboxResult.script, generatorBody: gen.body, generatorType: genType }
       }
 
-      // Surface the generator source so diagnostics can show the AI code.
+      // 沙箱失败：用兜底场景保证渲染永不空白，并以 kind 区分超时/崩溃。
       const error = sandboxResult.error || '生成器执行失败'
+      const kind = classifyFailure({ kind: sandboxResult.kind })
+      const initial = parsed.valid ? toFallbackInitialState(parsed.value) : { type: 'array' as const, data: [] }
+      applyScriptRef.current(buildFallbackScene(initial, { kind, message: error }))
+      // Surface the generator source so diagnostics can show the AI code.
       setStatusRef.current('error', error, gen.body)
       return { ok: false, error, generatorBody: gen.body, generatorType: genType, rawResponse: gen.body }
     },
@@ -212,7 +251,15 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
         if (!parsed.valid) return
         const result = await runGeneratorSandboxed(generator.body, parsed.value, { algorithm: 'custom', type: generator.type })
         if (cancelled) return
-        if (result.ok && result.script) { applyScriptRef.current(result.script); setStatusRef.current('success') }
+        if (result.ok && result.script) {
+          applyScriptRef.current(result.script); setStatusRef.current('success')
+        } else {
+          // 输入变化后重生成失败：兜底场景，避免空白或残留旧动画。
+          const error = result.error || '生成器执行失败'
+          const kind = classifyFailure({ kind: result.kind })
+          applyScriptRef.current(buildFallbackScene(toFallbackInitialState(parsed.value), { kind, message: error }))
+          setStatusRef.current('error', error)
+        }
       }, 400)
       return () => { cancelled = true; clearTimeout(handle) }
     }
