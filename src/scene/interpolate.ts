@@ -2,9 +2,6 @@ import type { SceneState, SceneEntity, SceneCell } from './types'
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 
-/** 交叉弧线最大抬升高度（像素，场景坐标）。让互换的两个元素一上一下错开、不重叠。 */
-const SWAP_ARC = 30
-
 /**
  * 检测 prev→next 之间的「值互换」对：同 id 仍在原位、但 i 与 j 的值互相交换
  * （prev[i]==next[j] 且 prev[j]==next[i]）。数组排序的 swap 是「位置固定、交换数值」，
@@ -65,8 +62,8 @@ export function interpolateScene(prev: SceneState, next: SceneState, t: number):
 
   const entities: Record<string, SceneEntity> = {}
 
-  // 1. 值互换对：交叉弧线动画
-  const arc = -Math.sin(Math.PI * t) * SWAP_ARC
+  // 1. 值互换对：沿直线交叉（A 携带原值直线移到 B 的位置，B 反向）。
+  // 直线路径与位置无关,因此同样适用于树/堆等任意位置的结点交换。
   for (const [idA, idB] of swaps) {
     const pa = prev.entities[idA] as SceneCell
     const pb = prev.entities[idB] as SceneCell
@@ -74,16 +71,15 @@ export function interpolateScene(prev: SceneState, next: SceneState, t: number):
     const nb = next.entities[idB] as SceneCell
     const posA = na.position
     const posB = nb.position
-    // A 携带原值划向 B 的位置，向上拱起；B 携带原值划向 A 的位置，向下沉。
     entities[idA] = {
       ...na,
       value: pa.value,
-      position: { x: lerp(posA.x, posB.x, t), y: lerp(posA.y, posB.y, t) + arc },
+      position: { x: lerp(posA.x, posB.x, t), y: lerp(posA.y, posB.y, t) },
     }
     entities[idB] = {
       ...nb,
       value: pb.value,
-      position: { x: lerp(posB.x, posA.x, t), y: lerp(posB.y, posA.y, t) - arc },
+      position: { x: lerp(posB.x, posA.x, t), y: lerp(posB.y, posA.y, t) },
     }
   }
 

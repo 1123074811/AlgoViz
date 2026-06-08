@@ -154,41 +154,46 @@ function renderSelfLoop(edge: SceneEdge, scene: SceneState, color: string): Reac
   )
 }
 
-function trimAnchor(scene: SceneState, entityId: string, from: Point, to: Point): Point {
+export function trimAnchor(scene: SceneState, entityId: string, from: Point, to: Point): Point {
   const entity = scene.entities[entityId]
   if (!entity || !('size' in entity) || !entity.size) return from
-  const dx = to.x - from.x
-  const dy = to.y - from.y
-  const dist = Math.sqrt(dx * dx + dy * dy)
-  if (dist === 0) return from
+  const gap = 5
 
   const isCircle = entity.type === 'node' && (
     entity.variant.startsWith('tree.') ||
     entity.variant.startsWith('graph.') ||
     entity.variant.startsWith('union_find.')
   )
-  let scale = 0
-  if (isCircle) {
+
+  // 圆形结点：端口锚点已落在结点边界上。必须从「中心」沿朝向对方的方向算到圆周，
+  // 否则把端口点当中心再裁掉一个半径，会重复裁剪、把父子连线砍成悬在中间的短线。
+  if (isCircle && 'position' in entity && entity.position) {
+    const center = entity.position
     let r = entity.size.width / 2
     if ('fields' in entity && entity.fields?.[0]?.value != null) {
-      const val = entity.fields[0].value.toString()
-      r = getAdaptiveCircleLayout(val, entity.size.width).r
+      r = getAdaptiveCircleLayout(entity.fields[0].value.toString(), entity.size.width).r
     }
-    scale = r / dist
-  } else {
-    const halfW = entity.size.width / 2
-    const halfH = entity.size.height / 2
-    scale = Math.min(halfW / Math.max(Math.abs(dx), 0.001), halfH / Math.max(Math.abs(dy), 0.001))
+    const dx = to.x - center.x
+    const dy = to.y - center.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    if (dist === 0) return from
+    const k = (r + gap) / dist
+    return { x: center.x + dx * k, y: center.y + dy * k }
   }
 
+  // 矩形结点/单元格：沿用从锚点按半宽/半高裁剪到边界的逻辑。
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  const dist = Math.sqrt(dx * dx + dy * dy)
+  if (dist === 0) return from
+  const halfW = entity.size.width / 2
+  const halfH = entity.size.height / 2
+  const scale = Math.min(halfW / Math.max(Math.abs(dx), 0.001), halfH / Math.max(Math.abs(dy), 0.001))
   const boundaryX = from.x + dx * scale
   const boundaryY = from.y + dy * scale
-
-  // Stand-off gap (5px) from the boundary towards the other entity to prevent arrow tip overlap
-  const gap = 5
   return {
     x: boundaryX + (dx / dist) * gap,
-    y: boundaryY + (dy / dist) * gap
+    y: boundaryY + (dy / dist) * gap,
   }
 }
 

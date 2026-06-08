@@ -57,5 +57,6 @@ export const TYPO = {
 
 export const MOTION = {
   easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-  duration: { fast: 180, base: 320, slow: 480 },
+  // 放慢整体补间节奏：交换/移动等位移动画在常速下约 0.6s,更易看清过程。
+  duration: { fast: 320, base: 600, slow: 950 },
 } as const

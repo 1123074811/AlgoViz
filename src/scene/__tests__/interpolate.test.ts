@@ -66,19 +66,20 @@ describe('interpolateScene', () => {
       return { prev, next }
     }
 
-    it('t=0.5 时两端携带原值并交叉到对方位置附近', () => {
+    it('t=0.5 时两端携带原值并沿直线交叉到对方位置', () => {
       const { prev, next } = swapScenes()
       const mid = interpolateScene(prev, next, 0.5)
       const a = mid.entities['arr_0'] as SceneCell
       const b = mid.entities['arr_1'] as SceneCell
-      // arr_0 携带原值 5，划向 arr_1 的位置（x 从 0→100 的中点 50）
+      // arr_0 携带原值 5，直线划向 arr_1 的位置（x 从 0→100 的中点 50）
       expect(a.value).toBe('5')
       expect(a.position.x).toBeCloseTo(50)
-      // arr_1 携带原值 3，划向 arr_0 的位置
+      // arr_1 携带原值 3，反向直线划到 arr_0 的位置
       expect(b.value).toBe('3')
       expect(b.position.x).toBeCloseTo(50)
-      // 一上一下错开，y 不相等
-      expect(a.position.y).not.toBeCloseTo(b.position.y)
+      // 直线路径：同行交换时 y 保持不变（无弧线抬升）
+      expect(a.position.y).toBeCloseTo(0)
+      expect(b.position.y).toBeCloseTo(0)
     })
 
     it('t=1 精确等于 next（终态等价，索引模型不变）', () => {
