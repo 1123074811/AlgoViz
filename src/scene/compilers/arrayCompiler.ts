@@ -53,12 +53,12 @@ function compileArrayEvent(event: ArrayAlgorithmEvent, context: CompileContext):
       const [a, b] = event.indices
       const cellA = context.scene.entities[cellId(a)]
       const cellB = context.scene.entities[cellId(b)]
+      // 值互换(位置固定)。补间层会检测到这是一次「值互换」并渲染成带弧线的位置
+      // 交叉动画(见 interpolate.ts),因此这里不再画曲线箭头,也不软等待。
+      // 颜色用 warning(琥珀)而非 danger(红),交换是正常操作而非冲突/错误。
       return [
-        { type: 'set_cell', cellId: cellId(a), value: cellB?.type === 'cell' ? cellB.value : undefined, state: { role: 'swapping', color: 'danger', pulse: true } },
-        { type: 'set_cell', cellId: cellId(b), value: cellA?.type === 'cell' ? cellA.value : undefined, state: { role: 'swapping', color: 'danger', pulse: true } },
-        { type: 'connect', edge: AuxiliaryUnit.arrow({ id: swapEdgeId(a, b), fromEntity: cellId(a), toEntity: cellId(b), curved: true, dashed: true, thickness: 1.2, color: 'danger', pulse: true }) },
-        { type: 'connect', edge: AuxiliaryUnit.arrow({ id: swapEdgeId(b, a), fromEntity: cellId(b), toEntity: cellId(a), curved: true, dashed: true, thickness: 1.2, color: 'danger', pulse: true }) },
-        { type: 'wait', duration: 200 },
+        { type: 'set_cell', cellId: cellId(a), value: cellB?.type === 'cell' ? cellB.value : undefined, state: { role: 'swapping', color: 'warning', pulse: true } },
+        { type: 'set_cell', cellId: cellId(b), value: cellA?.type === 'cell' ? cellA.value : undefined, state: { role: 'swapping', color: 'warning', pulse: true } },
       ]
     }
     case 'array.move': {
@@ -130,5 +130,4 @@ function compileArrayEvent(event: ArrayAlgorithmEvent, context: CompileContext):
 }
 
 function cellId(index: number) { return `arr_${index}` }
-function swapEdgeId(a: number, b: number) { return `swap_${a}_${b}` }
 function range(left: number, right: number) { return Array.from({ length: Math.max(0, right - left + 1) }, (_v, index) => left + index) }

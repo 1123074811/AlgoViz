@@ -51,7 +51,9 @@ export default function CellView({ cell }: CellViewProps) {
   const palette = SEMANTIC_COLORS[resolveColor(cell.state?.color, cell.state?.role)]
   const isCurrent = cell.state?.role === 'current' || cell.state?.role === 'active'
   const isWindow = cell.state?.role === 'window'
-  const isDanger = cell.state?.role === 'swapping' || cell.state?.role === 'conflict'
+  // 仅 conflict(真正的冲突/错误)用红字；swapping 是正常操作,文字保持深色,
+  // 由 warning(琥珀)描边 + 交叉动画表达,避免大红刺眼。
+  const isDanger = cell.state?.role === 'conflict'
   const textColor = isDanger ? SEMANTIC_COLORS.danger.text : SEMANTIC_COLORS.idle.text
   const windowPalette = isWindow ? SEMANTIC_COLORS.window : null
   const cellFill = windowPalette?.fill ?? palette.fill

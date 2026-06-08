@@ -53,4 +53,37 @@ describe('interpolateScene', () => {
     const prev = sceneWithCell('arr_0', 0, 0)
     expect(interpolateScene(prev, next, 1)).toEqual(next)
   })
+
+  describe('值互换交叉动画', () => {
+    // 构造一次 swap：位置固定，arr_0/arr_1 的值互换（5↔3）。
+    function swapScenes() {
+      const cell = (id: string, x: number, value: string): SceneCell => ({
+        id, type: 'cell', position: { x, y: 0 }, size: { width: 44, height: 44 },
+        value, col: 0, state: { role: 'idle', color: 'muted' },
+      })
+      const prev: SceneState = { ...createEmptyScene(), entities: { arr_0: cell('arr_0', 0, '5'), arr_1: cell('arr_1', 100, '3') } }
+      const next: SceneState = { ...createEmptyScene(), entities: { arr_0: cell('arr_0', 0, '3'), arr_1: cell('arr_1', 100, '5') } }
+      return { prev, next }
+    }
+
+    it('t=0.5 时两端携带原值并交叉到对方位置附近', () => {
+      const { prev, next } = swapScenes()
+      const mid = interpolateScene(prev, next, 0.5)
+      const a = mid.entities['arr_0'] as SceneCell
+      const b = mid.entities['arr_1'] as SceneCell
+      // arr_0 携带原值 5，划向 arr_1 的位置（x 从 0→100 的中点 50）
+      expect(a.value).toBe('5')
+      expect(a.position.x).toBeCloseTo(50)
+      // arr_1 携带原值 3，划向 arr_0 的位置
+      expect(b.value).toBe('3')
+      expect(b.position.x).toBeCloseTo(50)
+      // 一上一下错开，y 不相等
+      expect(a.position.y).not.toBeCloseTo(b.position.y)
+    })
+
+    it('t=1 精确等于 next（终态等价，索引模型不变）', () => {
+      const { prev, next } = swapScenes()
+      expect(interpolateScene(prev, next, 1)).toEqual(next)
+    })
+  })
 })
