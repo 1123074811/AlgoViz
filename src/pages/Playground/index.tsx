@@ -305,6 +305,10 @@ export default function Playground() {
   useLayoutEffect(() => {
     if (didRestoreOnMountRef.current) return
     didRestoreOnMountRef.current = true
+    // 挂载时一次性恢复会话,须在绘制前同步落状态以避免空白闪烁(故用 useLayoutEffect)。
+    // mount-once + React18 对 effect 内 setState 自动批处理,不会触发级联渲染,
+    // 因此豁免 set-state-in-effect 性能启发式规则。
+    /* eslint-disable react-hooks/set-state-in-effect */
     const plan = planRestoreOnMount(aiHistory, !!playgroundAnalysisController)
     for (const id of plan.reconcileIds) {
       updateAIHistory(id, { status: 'error', error: INTERRUPTED_MSG })
@@ -323,6 +327,7 @@ export default function Playground() {
     } else if (plan.effective) {
       handleRestore(plan.effective)
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
     // 仅在挂载时执行一次。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
