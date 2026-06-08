@@ -41,7 +41,10 @@ export default function SceneCanvas({ script, currentStep, currentStepData, spee
   const lang = i18n.language as 'zh' | 'en'
 
   const targetScene = deriveSceneState(script, currentStep)
-  const scene = useSceneTransition(targetScene, durationForSpeed(speed))
+  // 逻辑步骤 key：补间只在「脚本或步骤」变化时重启，避免 deriveSceneState 每帧新引用
+  // 导致动画反复重启而抖动。
+  const transitionKey = `${script.algorithm}|${script.steps.length}|${currentStep}`
+  const scene = useSceneTransition(targetScene, durationForSpeed(speed), transitionKey)
   const entities = Object.values(scene.entities)
   const edges = Object.values(scene.edges)
   const pointers = Object.values(scene.pointers)

@@ -33,4 +33,22 @@ describe('useSceneTransition', () => {
     await act(async () => { for (let i = 0; i < 40; i++) { await new Promise(r => setTimeout(r, 0)) } })
     expect((result.current.entities['arr_0'] as SceneCell).position.x).toBeCloseTo(100, 0)
   })
+
+  it('稳定 key 下 target 引用变化不重启动画（防抖动回归）', async () => {
+    const { result, rerender } = renderHook(
+      ({ s, k }: { s: SceneState; k: string }) => useSceneTransition(s, 320, k),
+      { initialProps: { s: sceneAt(0), k: 'step-0' } },
+    )
+    // 切到新步骤,启动动画
+    rerender({ s: sceneAt(100), k: 'step-1' })
+    await act(async () => { for (let i = 0; i < 5; i++) { await new Promise(r => setTimeout(r, 0)) } })
+    const xMid = (result.current.entities['arr_0'] as SceneCell).position.x
+    expect(xMid).toBeGreaterThan(0) // 已经在移动
+    expect(xMid).toBeLessThan(100)
+    // 同 key、但传入新的 target 引用(相同内容): 不应重启 → x 继续前进,不被打回起点
+    rerender({ s: sceneAt(100), k: 'step-1' })
+    await act(async () => { for (let i = 0; i < 3; i++) { await new Promise(r => setTimeout(r, 0)) } })
+    const xAfter = (result.current.entities['arr_0'] as SceneCell).position.x
+    expect(xAfter).toBeGreaterThanOrEqual(xMid - 0.001)
+  })
 })
