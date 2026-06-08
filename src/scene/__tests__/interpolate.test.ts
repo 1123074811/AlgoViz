@@ -32,4 +32,15 @@ describe('interpolateScene', () => {
     const mid = interpolateScene(prev, next, 1)
     expect(mid.entities['arr_0']).toEqual(next.entities['arr_0'])
   })
+
+  it('prev 有、next 无的实体在中间帧保留并淡出，t=1 时消失', () => {
+    const prev = sceneWithCell('arr_0', 0, 0)
+    const next = createEmptyScene()
+    const mid = interpolateScene(prev, next, 0.5)
+    const ghost = mid.entities['arr_0'] as SceneCell
+    expect(ghost).toBeDefined()
+    expect(ghost.state?.opacity).toBeCloseTo(0.5)
+    const end = interpolateScene(prev, next, 1)
+    expect(end.entities['arr_0']).toBeUndefined()
+  })
 })

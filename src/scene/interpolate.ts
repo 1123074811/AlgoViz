@@ -33,6 +33,12 @@ export function interpolateScene(prev: SceneState, next: SceneState, t: number):
       entities[id] = nextEnt
     }
   }
+  // prev 有、next 无：淡出（仅 t<1 时存在）
+  for (const [id, prevEnt] of Object.entries(prev.entities)) {
+    if (!next.entities[id] && 'position' in prevEnt) {
+      entities[id] = { ...prevEnt, state: { ...prevEnt.state, opacity: (1 - t) * (prevEnt.state?.opacity ?? 1) } } as SceneEntity
+    }
+  }
   // 其余子图（edges/pointers/labels/groups/overlays/notes）整体取 next
   return { ...next, entities }
 }
