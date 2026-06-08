@@ -1,12 +1,14 @@
 import React from 'react'
 import type { Point, SceneEdge, SceneState } from '../types'
 import { getAdaptiveCircleLayout } from '../engineUtils'
+import { SEMANTIC_COLORS } from '../tokens'
 
 const COLOR_MAP = {
-  primary: '#3B82F6',
-  success: '#10B981',
-  warning: '#F59E0B',
-  danger: '#EF4444',
+  primary: SEMANTIC_COLORS.primary.stroke,
+  success: SEMANTIC_COLORS.success.stroke,
+  warning: SEMANTIC_COLORS.compare.stroke,
+  danger: SEMANTIC_COLORS.danger.stroke,
+  // Edge "muted" uses a darker slate than the idle cell stroke for line legibility.
   muted: '#94A3B8',
 }
 
