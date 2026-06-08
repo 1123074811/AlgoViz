@@ -1,17 +1,20 @@
 import type { SceneCell } from '../types'
 import { truncateToWidth } from '../textMetrics'
+import { SEMANTIC_COLORS, SHAPE, type SemanticColorName } from '../tokens'
 
-const COLOR_MAP: Record<string, { stroke: string; fill: string }> = {
-  primary: { stroke: '#3B82F6', fill: '#EFF6FF' },
-  success: { stroke: '#10B981', fill: '#ECFDF5' },
-  warning: { stroke: '#F59E0B', fill: '#FFFBEB' },
-  danger:  { stroke: '#EF4444', fill: '#FEF2F2' },
-  muted:   { stroke: '#E2E8F0', fill: '#F8FAFC' },
+// Legacy color names carried on the scene model map onto semantic tokens.
+const COLOR_ALIAS: Record<string, SemanticColorName> = {
+  primary: 'primary',
+  success: 'success',
+  warning: 'compare',
+  danger: 'danger',
+  muted: 'idle',
 }
 
-const WINDOW_CELL_MAP: Record<string, { stroke: string; fill: string }> = {
-  primary: { stroke: '#BFDBFE', fill: '#F8FBFF' },
-  success: { stroke: '#A7F3D0', fill: '#F6FEFA' },
+const resolveColor = (color: string | undefined, role: string | undefined): SemanticColorName => {
+  if (role === 'idle') return 'idle'
+  if (color && color in COLOR_ALIAS) return COLOR_ALIAS[color]
+  return 'idle'
 }
 
 interface CellViewProps {
@@ -44,17 +47,15 @@ export default function CellView({ cell }: CellViewProps) {
 
   const width = cell.size?.width ?? 44
   const height = cell.size?.height ?? 44
-  const palette = cell.state?.role === 'idle' ? COLOR_MAP.muted
-    : cell.state?.color ? (COLOR_MAP[cell.state.color] ?? COLOR_MAP.muted)
-    : COLOR_MAP.muted
+  const palette = SEMANTIC_COLORS[resolveColor(cell.state?.color, cell.state?.role)]
   const isCurrent = cell.state?.role === 'current' || cell.state?.role === 'active'
   const isWindow = cell.state?.role === 'window'
   const isDanger = cell.state?.role === 'swapping' || cell.state?.role === 'conflict'
-  const textColor = isDanger ? '#EF4444' : '#1E293B'
-  const windowPalette = isWindow ? (WINDOW_CELL_MAP[cell.state?.color ?? ''] ?? WINDOW_CELL_MAP.primary) : null
+  const textColor = isDanger ? SEMANTIC_COLORS.danger.text : SEMANTIC_COLORS.idle.text
+  const windowPalette = isWindow ? SEMANTIC_COLORS.window : null
   const cellFill = windowPalette?.fill ?? palette.fill
   const cellStroke = windowPalette?.stroke ?? palette.stroke
-  const cellStrokeWidth = isWindow ? 1.15 : 1.5
+  const cellStrokeWidth = isWindow ? SHAPE.strokeWidth.thin : SHAPE.strokeWidth.base
   // Truncate long values so they never spill past the cell border.
   const displayValue = truncateToWidth(value, width - 6, 14)
 
@@ -64,10 +65,10 @@ export default function CellView({ cell }: CellViewProps) {
       <g className={cell.state?.pulse ? 'cell-pulse' : undefined}>
         {isCurrent && (
           <rect x={-width / 2 - 4} y={-height / 2 - 4}
-            width={width + 8} height={height + 8} rx={10}
+            width={width + 8} height={height + 8} rx={SHAPE.ringRadius}
             fill={palette.stroke} opacity="0.08" className="cell-current-ring" />
         )}
-        <rect x={-width / 2} y={-height / 2} width={width} height={height} rx={8}
+        <rect x={-width / 2} y={-height / 2} width={width} height={height} rx={SHAPE.cellRadius}
           fill={cellFill} stroke={cellStroke} strokeWidth={cellStrokeWidth} />
         <text x={0} y={4} textAnchor="middle" fontSize="14" fontFamily="monospace"
           fill={textColor} fontWeight={isCurrent ? 600 : 400}>
