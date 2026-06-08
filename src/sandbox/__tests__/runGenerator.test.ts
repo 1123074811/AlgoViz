@@ -46,3 +46,32 @@ b.highlightNode('b','warning')`
     expect(descs.some(d => d.includes('高亮'))).toBe(true)
   })
 })
+
+// 测试环境无 Worker，runGeneratorSandboxed 走 executeGenerator 内联兜底（无 Worker
+// 超时保护）。因此这里用「有界的运行期抛错」而非死循环来验证失败归类——死循环在
+// 内联路径会真的卡死主线程（builder 的 MAX_STEPS 现为封顶不抛错）。
+describe('runGeneratorSandboxed 失败归类 kind=runtime', () => {
+  it('运行期访问 undefined 抛错时返回 ok=false 且 kind=runtime', async () => {
+    const src = 'b.arrayCreate(input); input.nope.forEach(() => {})'
+    const result = await runGeneratorSandboxed(
+      src,
+      [1, 2, 3],
+      { algorithm: 'custom', type: 'array' },
+      200,
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.kind).toBe('runtime')
+  }, 2000)
+
+  it('生成器抛出普通异常时也归类 kind=runtime', async () => {
+    const src = 'throw new Error("boom")'
+    const result = await runGeneratorSandboxed(
+      src,
+      [1, 2, 3],
+      { algorithm: 'custom', type: 'array' },
+      200,
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.kind).toBe('runtime')
+  }, 2000)
+})

@@ -123,4 +123,22 @@ describe('parseAIResponseDetailed', () => {
     expect(result.success).toBe(true)
     expect(result.script).not.toBeNull()
   })
+
+  // 6. 尾随逗号是模型常见笔误，应在 JSON.parse 失败后清洗重试救回。
+  it('容忍 JSON 对象/数组的尾随逗号', () => {
+    const raw = `{
+      "algorithm": "bubble_sort",
+      "complexity": { "time": { "best": "O(n)", "average": "O(n^2)", "worst": "O(n^2)" }, "space": "O(1)" },
+      "initialState": { "type": "array", "data": [5,3,1,] },
+      "steps": [
+        { "stepId": 1, "codeLine": 0, "description": { "zh": "初始化", "en": "init" },
+          "action": { "type": "highlight", "targets": [], "color": "primary" },
+          "events": [{ "type": "array.create", "values": [5,3,1] }],
+          "stats": { "comparisons": 0, "swaps": 0, "accesses": 0 } },
+      ]
+    }`
+    const result = parseAIResponseDetailed(raw)
+    expect(result.success).toBe(true)
+    expect(result.script?.algorithm).toBe('bubble_sort')
+  })
 })

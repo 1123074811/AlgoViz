@@ -13,7 +13,7 @@ export function interpolateScene(prev: SceneState, next: SceneState, t: number):
   const entities: Record<string, SceneEntity> = {}
   for (const [id, nextEnt] of Object.entries(next.entities)) {
     const prevEnt = prev.entities[id]
-    if (prevEnt && 'position' in prevEnt && 'position' in nextEnt) {
+    if (prevEnt && 'position' in prevEnt && 'position' in nextEnt && prevEnt.position && nextEnt.position) {
       const pos = {
         x: lerp(prevEnt.position.x, nextEnt.position.x, t),
         y: lerp(prevEnt.position.y, nextEnt.position.y, t),
