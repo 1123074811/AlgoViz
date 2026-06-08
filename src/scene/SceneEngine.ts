@@ -138,7 +138,14 @@ function seedInitialStructures(scene: SceneState, script: AnimationScript): Scen
     || firstStepEvents.some(event => event.type === 'math.init')
   if (hasVariableInit) return scene
 
-  if (script.initialState.type === 'array' && (script.initialState.data?.length ?? 0) > 0) {
+  // 仅在「数组模块」时把 initialState 当数组种入。容器/结构类模块
+  // (queue/stack/deque/heap/set/map/hashtable 等)会用自己的 *.create 事件构建结构,
+  // 若再按 initialState.data 种一排 arr_ 单元,会与结构单元重叠(如队列里多出一排带
+  // 下标的方块)。module 缺省或为 'array' 时才种。
+  const module = script.presentation?.module
+  const arrayModule = module === undefined || module === 'array'
+
+  if (arrayModule && script.initialState.type === 'array' && (script.initialState.data?.length ?? 0) > 0) {
     const commands = compileEvent(
       { type: 'array.create', values: script.initialState.data } as AlgorithmEvent,
       { scene, stepIndex: 0, script },

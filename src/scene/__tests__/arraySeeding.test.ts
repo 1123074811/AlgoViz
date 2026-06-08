@@ -45,6 +45,32 @@ describe('deriveSceneState — array seeding fallback', () => {
     expect(cellIds).toHaveLength(0)
   })
 
+  it('容器模块（queue 等）即使 initialState 是数组也不播种 arr_ 单元', () => {
+    // 队列用 queue.create 自建结构；若按 initialState.data 再种 arr_,会与 queue_ 重叠
+    // (画面里多出一排带下标的方块)。module 非 array 时不应播种。
+    const queueScript: AnimationScript = {
+      algorithm: 'queue',
+      complexity: { time: { best: 'O(1)', average: 'O(1)', worst: 'O(1)' }, space: 'O(n)' },
+      presentation: { engine: 'scene', module: 'queue' },
+      initialState: { type: 'array', data: [1, 2, 3] },
+      steps: [
+        {
+          stepId: 1,
+          codeLine: 0,
+          description: { zh: '队列', en: 'queue' },
+          action: { type: 'highlight', targets: [], color: 'primary' },
+          stats: { comparisons: 0, swaps: 0, accesses: 0 },
+          events: [{ type: 'queue.create', values: [1, 2, 3] }],
+        },
+      ],
+    }
+    const scene = deriveSceneState(queueScript, 0)
+    const arrIds = Object.keys(scene.entities).filter((k) => k.startsWith('arr_'))
+    const queueIds = Object.keys(scene.entities).filter((k) => /^queue_\d+$/.test(k))
+    expect(arrIds).toHaveLength(0) // 不再种出多余的数组单元
+    expect(queueIds).toHaveLength(3) // 只有队列自身的单元
+  })
+
   it('非数组类型（如 graph）不受播种影响', () => {
     const graphScript: AnimationScript = {
       algorithm: 'bfs_graph',
