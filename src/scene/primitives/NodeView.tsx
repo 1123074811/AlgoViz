@@ -16,7 +16,11 @@ const COLOR_MAP: Record<string, { stroke: string; fill: string }> = {
 interface NodeViewProps { node: SceneNode }
 
 export default function NodeView({ node }: NodeViewProps) {
-  const isCircle = (node.variant.startsWith('graph.') || node.variant.startsWith('tree.')) && node.variant !== 'tree.btree'
+  const isCircle = (
+    node.variant.startsWith('graph.') ||
+    node.variant.startsWith('union_find.') ||
+    node.variant.startsWith('tree.')
+  ) && node.variant !== 'tree.btree'
   const width = node.size?.width ?? (isCircle ? 48 : 96)
   const height = node.size?.height ?? (isCircle ? 48 : 44)
   const palette = node.state?.color ? (COLOR_MAP[node.state.color] ?? COLOR_MAP.muted) : COLOR_MAP.muted

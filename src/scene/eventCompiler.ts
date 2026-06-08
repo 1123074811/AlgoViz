@@ -17,10 +17,11 @@ import { setCompiler } from './compilers/setCompiler'
 import { stackCompiler } from './compilers/stackCompiler'
 import { stringCompiler } from './compilers/stringCompiler'
 import { treeCompiler } from './compilers/treeCompiler'
+import { unionFindCompiler } from './compilers/unionFindCompiler'
 import { compileAlgorithmOverlayEvent, createAlgorithmOverlayState, isAlgorithmOverlayEvent } from './overlays/overlayCompiler'
 import { AuxiliaryUnit } from './primitives/DataUnits'
 
-const compilers = [pointerCompiler, linkedListCompiler, treeCompiler, arrayCompiler, matrixCompiler, graphCompiler, stackCompiler, queueCompiler, stringCompiler, setCompiler, mapCompiler, dequeCompiler, hashTableCompiler, heapCompiler, bitsetCompiler, mathCompiler]
+const compilers = [pointerCompiler, linkedListCompiler, treeCompiler, unionFindCompiler, arrayCompiler, matrixCompiler, graphCompiler, stackCompiler, queueCompiler, stringCompiler, setCompiler, mapCompiler, dequeCompiler, hashTableCompiler, heapCompiler, bitsetCompiler, mathCompiler]
 
 export function compileEvent(event: AlgorithmEvent, context: CompileContext): SceneCommand[] {
   if (isAlgorithmOverlayEvent(event)) {

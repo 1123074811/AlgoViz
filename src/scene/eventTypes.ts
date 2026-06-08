@@ -129,10 +129,18 @@ export type BitsetAlgorithmEvent =
   | { type: 'bitset.set'; index: number; value: 0 | 1 }
   | { type: 'bitset.highlight'; index: number }
 
+export type UnionFindAlgorithmEvent =
+  | { type: 'union_find.create'; size: number; parent: number[]; rank?: number[] }
+  | { type: 'union_find.find'; node: number; root: number; path: number[]; parent: number[]; rank?: number[] }
+  | { type: 'union_find.link'; childRoot: number; parentRoot: number; parent: number[]; rank?: number[]; reason?: string }
+  | { type: 'union_find.compress'; node: number; from: number; to: number; parent: number[]; rank?: number[] }
+  | { type: 'union_find.same'; x: number; y: number; root: number; parent: number[]; rank?: number[] }
+  | { type: 'union_find.done'; parent: number[]; rank?: number[] }
+
 export type MathAlgorithmEvent =
   | { type: 'math.init'; vars: Array<{ name: string; value: number | string }> }
   | { type: 'math.set'; name: string; value: number | string; delta?: string }
   | { type: 'math.highlight'; name: string }
   | { type: 'math.note'; text: string }
 
-export type AlgorithmEvent = CommonAlgorithmEvent | PointerAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | MathAlgorithmEvent | CallStackEvent | DPEvent | GridEvent
+export type AlgorithmEvent = CommonAlgorithmEvent | PointerAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | UnionFindAlgorithmEvent | MathAlgorithmEvent | CallStackEvent | DPEvent | GridEvent

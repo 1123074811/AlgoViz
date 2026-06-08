@@ -2,7 +2,7 @@
 
 import type { AlgorithmEvent, PresentationConfig } from '@/scene'
 
-export type RendererType = 'array' | 'graph' | 'tree' | 'matrix' | 'linked_list'
+export type RendererType = 'array' | 'graph' | 'tree' | 'matrix' | 'linked_list' | 'union_find'
 
 export type ActionType = 'highlight' | 'swap' | 'compare' | 'move' | 'insert' | 'delete' | 'mark' | 'annotate' | 'edge'
 

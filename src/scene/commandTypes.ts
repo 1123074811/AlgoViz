@@ -1,9 +1,10 @@
-import type { AnchorRef, NodeField, NodePort, Point, SceneCell, SceneEdge, SceneEntityState, SceneNode } from './types'
+import type { AnchorRef, NodeField, NodePort, Point, SceneCell, SceneEdge, SceneEntityState, SceneLabel, SceneNode } from './types'
 import type { AlgorithmOverlaySceneCommand } from './overlays'
 
 export type SceneCommand =
   | CreateNodeCommand
   | CreateCellCommand
+  | CreateLabelCommand
   | RemoveEntityCommand
   | MoveEntityCommand
   | ConnectCommand
@@ -30,6 +31,12 @@ export interface CreateCellCommand {
   type: 'create_cell'
   cell: SceneCell
   animation?: 'fade' | 'scale' | 'drop' | 'none'
+}
+
+export interface CreateLabelCommand {
+  type: 'create_label'
+  label: SceneLabel
+  animation?: 'fade' | 'none'
 }
 
 export interface RemoveEntityCommand {

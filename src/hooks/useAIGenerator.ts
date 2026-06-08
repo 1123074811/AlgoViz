@@ -10,7 +10,7 @@ import { buildFallbackScene, type FallbackKind } from '@/ai/fallbackScene'
 import type { AnimationScript, InitialState } from '@/types/animation'
 import type { AIStatus } from '@/store/algorithmStore'
 
-export type GeneratorType = 'array' | 'graph' | 'tree' | 'linked_list'
+export type GeneratorType = 'array' | 'graph' | 'tree' | 'linked_list' | 'union_find'
 
 /**
  * 把一次失败映射到三类可读兜底态：

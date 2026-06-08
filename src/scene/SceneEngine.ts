@@ -614,6 +614,8 @@ function applyCommand(scene: SceneState, command: SceneCommand): SceneState {
       return { ...scene, entities: { ...scene.entities, [command.node.id]: command.node } }
     case 'create_cell':
       return { ...scene, entities: { ...scene.entities, [command.cell.id]: command.cell } }
+    case 'create_label':
+      return { ...scene, labels: { ...scene.labels, [command.label.id]: command.label } }
     case 'remove_entity':
       return removeEntity(scene, command.entityId)
     case 'move': {

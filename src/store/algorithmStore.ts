@@ -17,7 +17,7 @@ export interface AIHistoryEntry {
   script?: AnimationScript
   error?: string
   generatorBody?: string
-  generatorType?: 'array' | 'graph' | 'tree' | 'linked_list'
+  generatorType?: 'array' | 'graph' | 'tree' | 'linked_list' | 'union_find'
 }
 
 const AI_HISTORY_KEY = 'algoviz-ai-history'

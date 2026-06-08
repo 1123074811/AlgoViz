@@ -162,7 +162,11 @@ function trimAnchor(scene: SceneState, entityId: string, from: Point, to: Point)
   const dist = Math.sqrt(dx * dx + dy * dy)
   if (dist === 0) return from
 
-  const isCircle = entity.type === 'node' && (entity.variant.startsWith('tree.') || entity.variant.startsWith('graph.'))
+  const isCircle = entity.type === 'node' && (
+    entity.variant.startsWith('tree.') ||
+    entity.variant.startsWith('graph.') ||
+    entity.variant.startsWith('union_find.')
+  )
   let scale = 0
   if (isCircle) {
     let r = entity.size.width / 2

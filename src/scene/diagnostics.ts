@@ -8,7 +8,7 @@ export interface SceneDiagnostic {
   message: string
 }
 
-const IMPLEMENTED_EVENT_PREFIXES = ['scene.', 'linked_list.', 'tree.', 'array.', 'matrix.', 'n_queens.', 'graph.', 'queue.', 'stack.', 'string.', 'set.', 'map.', 'deque.', 'hashtable.', 'math.', 'heap.', 'bitset.']
+const IMPLEMENTED_EVENT_PREFIXES = ['scene.', 'linked_list.', 'tree.', 'array.', 'matrix.', 'n_queens.', 'graph.', 'queue.', 'stack.', 'string.', 'set.', 'map.', 'deque.', 'hashtable.', 'math.', 'heap.', 'bitset.', 'union_find.']
 
 const REQUIRED_FIELDS: Record<string, string[]> = {
   'linked_list.create': ['variant', 'nodes'],
@@ -29,6 +29,12 @@ const REQUIRED_FIELDS: Record<string, string[]> = {
   'array.compare': ['indices'],
   'array.swap': ['indices'],
   'array.window': ['indices'],
+  'union_find.create': ['size', 'parent'],
+  'union_find.find': ['node', 'root', 'path', 'parent'],
+  'union_find.link': ['childRoot', 'parentRoot', 'parent'],
+  'union_find.compress': ['node', 'from', 'to', 'parent'],
+  'union_find.same': ['x', 'y', 'root', 'parent'],
+  'union_find.done': ['parent'],
   'matrix.create': ['rows', 'cols'],
   'matrix.visit_cell': ['row', 'col'],
   'matrix.update_cell': ['row', 'col', 'value'],
