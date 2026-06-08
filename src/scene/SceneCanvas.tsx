@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AnimationScript, AnimationStep } from '@/types/animation'
 import { deriveSceneState } from './SceneEngine'
+import { useSceneTransition } from './useSceneTransition'
 import CellView from './primitives/CellView'
 import ContainerView from './primitives/ContainerView'
 import EdgeView from './primitives/EdgeView'
@@ -28,7 +29,8 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
   const { i18n } = useTranslation()
   const lang = i18n.language as 'zh' | 'en'
 
-  const scene = deriveSceneState(script, currentStep)
+  const targetScene = deriveSceneState(script, currentStep)
+  const scene = useSceneTransition(targetScene)
   const entities = Object.values(scene.entities)
   const edges = Object.values(scene.edges)
   const pointers = Object.values(scene.pointers)
