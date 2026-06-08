@@ -3,11 +3,13 @@ import { describe, expect, it } from 'vitest'
 import VariablesView from '../VariablesView'
 import type { SceneCell } from '../../types'
 
-function variable(name: string, value: string | number, col: number, x: number): SceneCell {
+// 纵向布局：每个变量占一行,左边缘对齐(同 x),y 逐行递增(取自 cell.position.y)。
+function variable(name: string, value: string | number, col: number): SceneCell {
+  const ROW_STEP = 34
   return {
     id: `mathvar_${name}`,
     type: 'cell',
-    position: { x, y: 200 },
+    position: { x: 200 + 96 / 2, y: 160 + col * ROW_STEP },
     size: { width: 96, height: 30 },
     value,
     col,
@@ -16,11 +18,11 @@ function variable(name: string, value: string | number, col: number, x: number):
 }
 
 describe('VariablesView', () => {
-  it('keeps variables on one row while spacing long values apart', () => {
+  it('变量纵向排列：各行左边缘对齐,逐行向下', () => {
     const vars = [
-      variable('index', 1, 0, 200),
-      variable('combination', 'bd', 1, 314),
-      variable('result', '["ad", "ae", "af"]', 2, 472),
+      variable('index', 1, 0),
+      variable('combination', 'bd', 1),
+      variable('result', '["ad", "ae", "af"]', 2),
     ]
 
     const { container } = render(
@@ -33,15 +35,18 @@ describe('VariablesView', () => {
       .map((node) => ({
         text: node.textContent,
         x: Number(node.getAttribute('x')),
-        y: node.getAttribute('y'),
+        y: Number(node.getAttribute('y')),
       }))
 
+    const index = labels.find((node) => node.text === 'index')
     const combination = labels.find((node) => node.text === 'combination')
     const result = labels.find((node) => node.text === 'result')
 
-    expect(combination?.y).toBeDefined()
-    expect(result?.y).toBeDefined()
-    expect(result?.y).toBe(combination?.y)
-    expect(result!.x).toBeGreaterThan(combination!.x + 'combination'.length * 8)
+    // 三个变量名标签左边缘对齐(同 x)
+    expect(index!.x).toBe(combination!.x)
+    expect(combination!.x).toBe(result!.x)
+    // 逐行向下：result 在 combination 下方,combination 在 index 下方
+    expect(combination!.y).toBeGreaterThan(index!.y)
+    expect(result!.y).toBeGreaterThan(combination!.y)
   })
 })

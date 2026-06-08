@@ -39,8 +39,8 @@ describe('mathCompiler', () => {
 
     expect(cell(scene, 'mathvar_b')?.value).toBe('18')
 
-    // horizontally packed: b sits to the right of a
-    expect(cell(scene, 'mathvar_b')!.position.x).toBeGreaterThan(cell(scene, 'mathvar_a')!.position.x)
+    // vertically stacked: b sits below a (纵向排列,逐行向下)
+    expect(cell(scene, 'mathvar_b')!.position.y).toBeGreaterThan(cell(scene, 'mathvar_a')!.position.y)
   })
 
   it('set 更新已存在变量的 value 与 meta', () => {
@@ -66,8 +66,8 @@ describe('mathCompiler', () => {
     expect(Object.keys(scene.entities).filter(k => k.startsWith('mathvar_'))).toHaveLength(3)
     const r = cell(scene, 'mathvar_r')
     expect(r?.value).toBe('12')
-    // appended to the right of b
-    expect(r!.position.x).toBeGreaterThan(cell(scene, 'mathvar_b')!.position.x)
+    // appended as a new row below b (纵向追加)
+    expect(r!.position.y).toBeGreaterThan(cell(scene, 'mathvar_b')!.position.y)
   })
 
   it('未显式 delta 时按前后数值计算真实差值', () => {

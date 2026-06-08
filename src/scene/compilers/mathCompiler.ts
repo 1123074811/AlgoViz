@@ -6,10 +6,12 @@ import type { SceneCell } from '../types'
 import { measureNodeWidth } from '../textMetrics'
 
 // ── Layout constants (VariablesView reads positions off the emitted cells) ──
+// 变量纵向排列：每个变量占一行,左边缘统一对齐到 START_X,行间按 ROW_STEP 递增。
+// 这样改变量值只撑宽自己那一行,虚线框宽度取最宽行、不会随变量增多/变化而横向变长。
 const START_X = 200
-const PANEL_Y = 200
+const PANEL_Y = 160
 const CELL_H = 30
-const CELL_GAP = 18 // horizontal gap between variable text registers
+const ROW_STEP = 34 // 行高 + 行间距,VariablesView 直接读取 cell.position.y
 const MIN_W = 96
 
 export const mathCompiler: EventCompiler = {
@@ -33,20 +35,13 @@ function varCells(context: CompileContext): SceneCell[] {
     .sort((a, b) => (a.col ?? 0) - (b.col ?? 0))
 }
 
-/** X position of the next slot, packed after existing cells. */
-function nextSlotX(cells: SceneCell[]): number {
-  if (cells.length === 0) return START_X
-  const last = cells[cells.length - 1]
-  const lastW = last.size?.width ?? MIN_W
-  return last.position.x + lastW / 2 + CELL_GAP
-}
-
-function makeVarCell(name: string, value: number | string, slot: number, x: number, pulse: boolean, color: ActionColor, delta?: string): SceneCell {
+function makeVarCell(name: string, value: number | string, slot: number, pulse: boolean, color: ActionColor, delta?: string): SceneCell {
   const w = cellWidth(name, value)
   return {
     id: mathVarId(name),
     type: 'cell',
-    position: { x: x + w / 2, y: PANEL_Y },
+    // 左边缘固定在 START_X(故 position.x = START_X + w/2),y 按行递增。
+    position: { x: START_X + w / 2, y: PANEL_Y + slot * ROW_STEP },
     size: { width: w, height: CELL_H },
     // CellView skips mathvar_*; VariablesView draws this as plain debugger text.
     value: String(value),
@@ -66,14 +61,10 @@ function clearPulses(context: CompileContext): SceneCommand[] {
 function compileMathEvent(event: MathAlgorithmEvent, context: CompileContext): SceneCommand[] {
   switch (event.type) {
     case 'math.init': {
-      const cells: SceneCommand[] = []
-      let cursor = START_X
-      event.vars.forEach((v, i) => {
-        const cell = makeVarCell(v.name, v.value, i, cursor, false, 'muted')
-        cells.push({ type: 'create_cell', cell })
-        cursor += (cell.size?.width ?? MIN_W) + CELL_GAP
-      })
-      return cells
+      return event.vars.map((v, i) => ({
+        type: 'create_cell' as const,
+        cell: makeVarCell(v.name, v.value, i, false, 'muted'),
+      }))
     }
 
     case 'math.set': {
@@ -81,17 +72,14 @@ function compileMathEvent(event: MathAlgorithmEvent, context: CompileContext): S
       const existing = varCells(context)
       const found = existing.find(c => c.id === mathVarId(event.name))
       if (found) {
-        // Refresh value + meta in place. Recreate keeps meta consistent for the
-        // View; anchor to the cell's left edge so growth expands rightward.
+        // Refresh value + meta in place, keeping its row slot (vertical layout).
         const slot = found.col ?? existing.indexOf(found)
-        const leftX = found.position.x - (found.size?.width ?? MIN_W) / 2
-        const cell = makeVarCell(event.name, event.value, slot, leftX, true, 'primary', event.delta ?? inferDelta(found, event.value))
+        const cell = makeVarCell(event.name, event.value, slot, true, 'primary', event.delta ?? inferDelta(found, event.value))
         return [...cleanup, { type: 'create_cell', cell }]
       }
-      // First appearance of a variable → create it appended to the panel.
+      // First appearance of a variable → append as a new row.
       const slot = existing.length
-      const x = nextSlotX(existing)
-      const cell = makeVarCell(event.name, event.value, slot, x, true, 'success', event.delta)
+      const cell = makeVarCell(event.name, event.value, slot, true, 'success', event.delta)
       return [...cleanup, { type: 'create_cell', cell }]
     }
 

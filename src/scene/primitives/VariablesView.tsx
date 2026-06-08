@@ -16,7 +16,6 @@ const ACTIVE = '#2563EB'
  */
 const CHAR_W = 8 // 13px 等宽字体的近似字宽
 const MAX_VALUE_CHARS = 18 // 过长的值(如序列化字符串)截断,避免撑爆面板
-const ITEM_GAP = 34
 const ROW_H = 24
 
 function clip(s: string): string {
@@ -41,40 +40,34 @@ export default function VariablesView({ vars, hideTitle }: VariablesViewProps) {
 
   const sorted = [...vars].sort((a, b) => (a.col ?? 0) - (b.col ?? 0))
   const measured = sorted.map(measureVar)
+  // 纵向布局：所有变量左边缘统一对齐到最小左边缘,各自占一行(y 取自 cell.position.y)。
   const sourceMinX = Math.min(...sorted.map(c => c.position.x - (c.size?.width ?? 72) / 2))
-  const startY = sorted[0].position.y
-  const layouts: Array<ReturnType<typeof measureVar> & {
-    leftEdge: number
-    valueX: number
-    deltaX: number
-    y: number
-  }> = []
-  let cursorX = sourceMinX
-
-  measured.forEach((item) => {
-    const leftEdge = cursorX
+  const layouts = measured.map((item, i) => {
+    const leftEdge = sourceMinX
     const valueX = leftEdge + item.nameW + 14
     const deltaX = valueX + 8 + item.valueW + 12
-    layouts.push({ ...item, leftEdge, valueX, deltaX, y: startY })
-    cursorX += item.width + ITEM_GAP
+    return { ...item, leftEdge, valueX, deltaX, y: sorted[i].position.y }
   })
 
   const minX = sourceMinX
-  const maxX = Math.max(sourceMinX, cursorX - ITEM_GAP)
-  const frameY = startY - ROW_H / 2
+  // 框宽取最宽的一行(而非所有行之和),所以新增/改变量只会纵向变化、不会横向变长。
+  const maxX = sourceMinX + Math.max(...measured.map(m => m.width))
+  const minY = Math.min(...layouts.map(l => l.y))
+  const maxY = Math.max(...layouts.map(l => l.y))
   const pad = 12
+  const frameTop = minY - ROW_H / 2
 
   return (
     <g>
       <rect
-        x={minX - pad} y={frameY - pad}
-        width={maxX - minX + 2 * pad} height={ROW_H + 2 * pad}
+        x={minX - pad} y={frameTop - pad}
+        width={maxX - minX + 2 * pad} height={(maxY - minY) + ROW_H + 2 * pad}
         rx={4} ry={4}
         fill={NEUTRALS.surface} fillOpacity={0.7} stroke={STROKE} strokeWidth={1} strokeDasharray="4 4" opacity={0.9}
       />
       {!hideTitle && (
         <text
-          x={minX - pad} y={frameY - pad - 6}
+          x={minX - pad} y={frameTop - pad - 6}
           textAnchor="start" fontSize="11" fill={NEUTRALS.labelText} fontFamily="monospace"
         >
           变量
