@@ -1,6 +1,7 @@
 import type { SceneCell } from '../types'
 import { truncateToWidth } from '../textMetrics'
 import { SEMANTIC_COLORS, SHAPE, type SemanticColorName } from '../tokens'
+import { CELL_KEYFRAMES } from './sharedMotion'
 
 // Legacy color names carried on the scene model map onto semantic tokens.
 const COLOR_ALIAS: Record<string, SemanticColorName> = {
@@ -82,12 +83,7 @@ export default function CellView({ cell }: CellViewProps) {
           </text>
         )}
       </g>
-      <style>{`
-        .cell-pulse { animation: cell-pop 0.5s ease-in-out; transform-box: fill-box; transform-origin: center; }
-        .cell-current-ring { animation: cell-ring 0.9s ease-out infinite; transform-box: fill-box; transform-origin: center; }
-        @keyframes cell-pop { 0% { transform: scale(0.94); } 55% { transform: scale(1.04); } 100% { transform: scale(1); } }
-        @keyframes cell-ring { from { opacity: 0.15; transform: scale(0.94); } to { opacity: 0.02; transform: scale(1.12); } }
-      `}</style>
+      <style>{CELL_KEYFRAMES}</style>
     </g>
   )
 }

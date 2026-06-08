@@ -17,6 +17,7 @@ import StringView from './primitives/StringView'
 import VariablesView from './primitives/VariablesView'
 import AlgorithmOverlays from './overlays/AlgorithmOverlays'
 import { SEMANTIC_COLORS, NEUTRALS } from './tokens'
+import { EDGE_FLOW_KEYFRAMES } from './primitives/sharedMotion'
 import type { SceneCell, SceneEntity, SceneNode } from './types'
 
 interface SceneCanvasProps {
@@ -183,14 +184,7 @@ export default function SceneCanvas({ script, currentStep, currentStepData }: Sc
           {labels.map((label) => <LabelView key={label.id} label={label} />)}
           {pointers.map((pointer, index) => <PointerView key={pointer.id} pointer={pointer} scene={scene} index={index} />)}
         </g>
-        <style>{`
-          .scene-edge-flow {
-            animation: scene-dash-flow 0.7s linear infinite;
-          }
-          @keyframes scene-dash-flow {
-            to { stroke-dashoffset: -22; }
-          }
-        `}</style>
+        <style>{EDGE_FLOW_KEYFRAMES}</style>
       </svg>
       <AlgorithmOverlays overlays={scene.overlays} />
 

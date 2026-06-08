@@ -43,4 +43,10 @@ describe('design tokens', () => {
     }
     expect(total).toBeLessThanOrEqual(20)
   })
+
+  it('共享动效常量存在且时长引用 MOTION', async () => {
+    const { CELL_KEYFRAMES, EDGE_FLOW_KEYFRAMES } = await import('../primitives/sharedMotion')
+    expect(CELL_KEYFRAMES).toContain('@keyframes')
+    expect(EDGE_FLOW_KEYFRAMES).toContain('scene-dash-flow')
+  })
 })
