@@ -1,4 +1,5 @@
 import type { SceneGroup } from '../types'
+import { NEUTRALS } from '../tokens'
 
 interface RegionViewProps { region: SceneGroup }
 
@@ -11,12 +12,12 @@ export default function RegionView({ region }: RegionViewProps) {
       <rect
         x={position.x} y={position.y} width={size.width} height={size.height}
         rx={12} ry={12}
-        fill="#FFFFFF" fillOpacity={0.35}
-        stroke="#CBD5E1" strokeWidth={1.4} strokeDasharray="6 4"
+        fill={NEUTRALS.surface} fillOpacity={0.35}
+        stroke={NEUTRALS.frameStroke} strokeWidth={1.4} strokeDasharray="6 4"
       />
       {region.label && (
         <text x={position.x + 10} y={position.y - 8} fontSize="12" fontWeight={600}
-          fill="#64748B" fontFamily="monospace">
+          fill={NEUTRALS.labelText} fontFamily="monospace">
           {region.label}
         </text>
       )}

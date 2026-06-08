@@ -1,7 +1,7 @@
 import type { SceneNode } from '../types'
 import { getAdaptiveCircleLayout } from '../engineUtils'
 import { measureNodeWidth, truncateToWidth } from '../textMetrics'
-import { SEMANTIC_COLORS } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
 
 // Legacy scene color names map onto semantic tokens (warning→compare, muted→idle).
 const COLOR_MAP: Record<string, { stroke: string; fill: string }> = {
@@ -48,7 +48,7 @@ function renderCircle(
         <circle cx={0} cy={0} r={r} fill={palette.fill} stroke={palette.stroke} strokeWidth={1.5} />
         <text x={0} y={Math.round(fontSize * 0.3)} textAnchor="middle" fontSize={fontSize} fontFamily="monospace" fill={SEMANTIC_COLORS.idle.text} fontWeight="bold">{value}</text>
         {node.fields.length > 1 && node.fields.slice(1).map((field, i) => (
-          <text key={field.id} x={0} y={r + 14 + i * 12} textAnchor="middle" fontSize="10" fill="#94A3B8">
+          <text key={field.id} x={0} y={r + 14 + i * 12} textAnchor="middle" fontSize="10" fill={NEUTRALS.mutedText}>
             {field.label}:{field.value ?? ''}
           </text>
         ))}
@@ -100,12 +100,12 @@ function renderRect(
               )}
               <text x={x + fieldWidth / 2} y={isData ? -2 : 0}
                 textAnchor="middle" fontSize={fontSize} fontFamily="monospace"
-                fill={isData ? SEMANTIC_COLORS.idle.text : '#94A3B8'} fontWeight={isData ? 700 : 400}>
+                fill={isData ? SEMANTIC_COLORS.idle.text : NEUTRALS.mutedText} fontWeight={isData ? 700 : 400}>
                 {text !== rawText && <title>{rawText}</title>}
                 {text}
               </text>
               {field.label && isData && (
-                <text x={x + fieldWidth / 2} y={15} textAnchor="middle" fontSize="9" fill="#94A3B8">
+                <text x={x + fieldWidth / 2} y={15} textAnchor="middle" fontSize="9" fill={NEUTRALS.mutedText}>
                   {field.label}
                 </text>
               )}

@@ -1,12 +1,12 @@
 import type { SceneCell } from '../types'
-import { SEMANTIC_COLORS } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
 
 interface HeapViewProps {
   nodes: SceneCell[]
   hideTitle?: boolean
 }
 
-const STROKE = '#94A3B8'
+const STROKE = NEUTRALS.mutedText
 const MIRROR_FILL = SEMANTIC_COLORS.idle.fill
 const MIRROR_STROKE = SEMANTIC_COLORS.idle.stroke
 
@@ -51,7 +51,7 @@ export default function HeapView({ nodes, hideTitle }: HeapViewProps) {
       {!hideTitle && (
         <text
           x={minX} y={minY - 16}
-          textAnchor="start" fontSize="12" fill="#64748B" fontFamily="monospace" fontWeight={600}
+          textAnchor="start" fontSize="12" fill={NEUTRALS.labelText} fontFamily="monospace" fontWeight={600}
         >
           {title}
         </text>
@@ -60,7 +60,7 @@ export default function HeapView({ nodes, hideTitle }: HeapViewProps) {
       {/* Array mirror label */}
       <text
         x={mirrorStartX} y={mirrorY - cellH / 2 - 8}
-        textAnchor="start" fontSize="10" fill="#94A3B8" fontFamily="monospace"
+        textAnchor="start" fontSize="10" fill={NEUTRALS.mutedText} fontFamily="monospace"
       >
         底层数组（层序）
       </text>
@@ -78,14 +78,14 @@ export default function HeapView({ nodes, hideTitle }: HeapViewProps) {
             />
             <text
               x={x + cellW / 2} y={mirrorY + 4}
-              textAnchor="middle" fontSize="13" fill="#475569" fontFamily="monospace" fontWeight={600}
+              textAnchor="middle" fontSize="13" fill={NEUTRALS.bodyText} fontFamily="monospace" fontWeight={600}
             >
               {String(c.value ?? '')}
             </text>
             {/* index label below */}
             <text
               x={x + cellW / 2} y={mirrorY + cellH / 2 + 12}
-              textAnchor="middle" fontSize="9" fill="#94A3B8" fontFamily="monospace"
+              textAnchor="middle" fontSize="9" fill={NEUTRALS.mutedText} fontFamily="monospace"
             >
               {idx}
             </text>

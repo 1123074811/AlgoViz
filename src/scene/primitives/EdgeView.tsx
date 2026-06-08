@@ -1,7 +1,7 @@
 import React from 'react'
 import type { Point, SceneEdge, SceneState } from '../types'
 import { getAdaptiveCircleLayout } from '../engineUtils'
-import { SEMANTIC_COLORS } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
 
 const COLOR_MAP = {
   primary: SEMANTIC_COLORS.primary.stroke,
@@ -9,7 +9,7 @@ const COLOR_MAP = {
   warning: SEMANTIC_COLORS.compare.stroke,
   danger: SEMANTIC_COLORS.danger.stroke,
   // Edge "muted" uses a darker slate than the idle cell stroke for line legibility.
-  muted: '#94A3B8',
+  muted: NEUTRALS.mutedText,
 }
 
 interface EdgeViewProps {
@@ -18,7 +18,7 @@ interface EdgeViewProps {
 }
 
 export default function EdgeView({ edge, scene }: EdgeViewProps) {
-  const color = edge.state?.color ? COLOR_MAP[edge.state.color] : edge.style?.color ? COLOR_MAP[edge.style.color] : '#94A3B8'
+  const color = edge.state?.color ? COLOR_MAP[edge.state.color] : edge.style?.color ? COLOR_MAP[edge.style.color] : NEUTRALS.mutedText
 
   // Self-loop: rotation arrows (clockwise / counterclockwise)
   if (edge.from.entityId === edge.to.entityId && (edge.variant === 'clockwise' || edge.variant === 'counterclockwise')) {

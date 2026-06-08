@@ -1,6 +1,6 @@
 import type { ScenePointer, SceneState } from '../types'
 import { resolveAnchor } from './EdgeView'
-import { SEMANTIC_COLORS } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
 
 interface PointerViewProps {
   pointer: ScenePointer
@@ -24,7 +24,7 @@ export default function PointerView({ pointer, scene, index }: PointerViewProps)
         <line x1={x} y1={y + 8} x2={target.x} y2={target.y - 24}
           stroke="#93C5FD" strokeWidth={1.5} markerEnd="url(#scenePointerArrow)" />
       ) : (
-        <text x={x} y={y + 28} textAnchor="middle" fontSize="10" fill="#94A3B8">null</text>
+        <text x={x} y={y + 28} textAnchor="middle" fontSize="10" fill={NEUTRALS.mutedText}>null</text>
       )}
     </g>
   )
