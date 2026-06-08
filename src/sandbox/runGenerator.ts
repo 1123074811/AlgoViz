@@ -22,7 +22,7 @@ export function runGeneratorSandboxed(
     }
     const timer = setTimeout(() => {
       worker.terminate()
-      resolve({ ok: false, error: `生成器执行超时（>${timeoutMs}ms），可能存在死循环` })
+      resolve({ ok: false, error: `生成器执行超时（>${timeoutMs}ms），可能存在死循环`, kind: 'runtime' })
     }, timeoutMs)
     worker.onmessage = (ev: MessageEvent<GeneratorResult>) => {
       clearTimeout(timer)
@@ -32,7 +32,7 @@ export function runGeneratorSandboxed(
     worker.onerror = (ev) => {
       clearTimeout(timer)
       worker.terminate()
-      resolve({ ok: false, error: '生成器执行出错: ' + ev.message })
+      resolve({ ok: false, error: '生成器执行出错: ' + ev.message, kind: 'runtime' })
     }
     worker.postMessage({ source, input, meta })
   })

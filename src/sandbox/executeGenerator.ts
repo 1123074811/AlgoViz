@@ -6,10 +6,15 @@ export interface GeneratorMeta {
   type: RendererType
 }
 
+/** Structured failure classification, used by callers to pick a fallback state. */
+export type GeneratorFailureKind = 'runtime'
+
 export interface GeneratorResult {
   ok: boolean
   script?: AnimationScript
   error?: string
+  /** Present only on failure: why the generator failed (e.g. runtime crash/timeout). */
+  kind?: GeneratorFailureKind
 }
 
 /** Execute an AI-generated generator body against the given input. Pure — runs
@@ -22,6 +27,6 @@ export function executeGenerator(source: string, input: unknown, meta: Generator
     fn(input, b)
     return { ok: true, script: b.build() }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { ok: false, error: e instanceof Error ? e.message : String(e), kind: 'runtime' }
   }
 }
