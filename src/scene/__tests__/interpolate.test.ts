@@ -43,4 +43,14 @@ describe('interpolateScene', () => {
     const end = interpolateScene(prev, next, 1)
     expect(end.entities['arr_0']).toBeUndefined()
   })
+
+  it('随机多实体场景 t=1 整体等于 next（不变量守卫）', () => {
+    const next = sceneWithCell('arr_0', 12, 34)
+    ;(next.entities as Record<string, unknown>)['arr_1'] = {
+      id: 'arr_1', type: 'cell', position: { x: 99, y: 7 }, size: { width: 44, height: 44 },
+      value: '2', col: 1, state: { role: 'active', color: 'primary', opacity: 0.8 },
+    }
+    const prev = sceneWithCell('arr_0', 0, 0)
+    expect(interpolateScene(prev, next, 1)).toEqual(next)
+  })
 })

@@ -12,17 +12,23 @@ function prefersReducedMotion(): boolean {
 /**
  * 在 target 变化时，从「当前显示态」补间到 target。
  * 可中断：新 target 到来时以当前显示态为新 prev 重新起算。
- * reduced-motion 或 duration<=0 时直接返回 target。
+ * reduced-motion 或 duration<=0 时直接返回 target（瞬移，等价现状）。
  */
 export function useSceneTransition(target: SceneState, durationMs: number = MOTION.duration.base): SceneState {
   const [displayed, setDisplayed] = useState(target)
   const fromRef = useRef(target)
   const rafRef = useRef<number | null>(null)
 
+  const instant = prefersReducedMotion() || durationMs <= 0
+
   useEffect(() => {
-    if (prefersReducedMotion() || durationMs <= 0) {
+    // 瞬移路径：不驱动 rAF，仅同步 ref（显示态在渲染时已直接返回 target）。
+    if (instant) {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+      }
       fromRef.current = target
-      setDisplayed(target)
       return
     }
     const from = fromRef.current
@@ -45,7 +51,9 @@ export function useSceneTransition(target: SceneState, durationMs: number = MOTI
     }
     rafRef.current = requestAnimationFrame(tick)
     return () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current) }
-  }, [target, durationMs])
+  }, [target, durationMs, instant])
 
-  return displayed
+  // 瞬移时直接返回 target，避免在 effect 内同步 setState 触发级联渲染；
+  // fromRef 由上面的 effect 同步为 target。
+  return instant ? target : displayed
 }
