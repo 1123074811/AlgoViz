@@ -1,4 +1,5 @@
 import type { SceneCell, SceneNode } from '../types'
+import { SEMANTIC_COLORS } from '../tokens'
 
 const CONTAINER_STROKE = '#94A3B8'
 const CONTAINER_STROKE_WIDTH = 2
@@ -27,7 +28,7 @@ export default function ContainerView({ type, cells, nodes, label }: ContainerVi
       <g>
         <rect x={minX - pad} y={minY - pad} rx={rx} ry={rx}
           width={maxX - minX + 2 * pad} height={maxY - minY + 2 * pad}
-          fill="#F8FAFC" stroke="#CBD5E1" strokeWidth={1.5} strokeDasharray="4 2" />
+          fill={SEMANTIC_COLORS.idle.fill} stroke="#CBD5E1" strokeWidth={1.5} strokeDasharray="4 2" />
         <text x={minX - pad + 8} y={minY - pad - 6} textAnchor="start" fontSize="11" fill="#64748B" fontFamily="monospace">
           {'映射'}
         </text>
@@ -64,7 +65,7 @@ export default function ContainerView({ type, cells, nodes, label }: ContainerVi
             <rect key={`aux_rect_${y}`}
               x={minX - pad} y={minY} rx={rx} ry={rx}
               width={maxX - minX + 2 * pad} height={maxY - minY}
-              fill="#F8FAFC" stroke="#E2E8F0" strokeWidth={1.2}
+              fill={SEMANTIC_COLORS.idle.fill} stroke={SEMANTIC_COLORS.idle.stroke} strokeWidth={1.2}
             />
           )
         })}
