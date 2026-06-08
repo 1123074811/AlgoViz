@@ -1,4 +1,5 @@
 import type { SceneCell } from '../types'
+import { SEMANTIC_COLORS } from '../tokens'
 
 interface HashTableViewProps {
   buckets: SceneCell[]
@@ -107,7 +108,7 @@ export default function HashTableView({ buckets, entries, loadFactorCell, hideTi
       {/* Load factor panel (centered on the load-factor cell position) */}
       <g transform={`translate(${lfX}, ${lfY})`}>
         <rect x={-60} y={-bucketH / 2} width={120} height={bucketH} rx={8}
-          fill="#F8FAFC" stroke="#E2E8F0" strokeWidth={1.2} />
+          fill={SEMANTIC_COLORS.idle.fill} stroke={SEMANTIC_COLORS.idle.stroke} strokeWidth={1.2} />
         <text x={0} y={-3} textAnchor="middle" fontSize="10" fill="#94A3B8" fontFamily="monospace">
           负载因子
         </text>
