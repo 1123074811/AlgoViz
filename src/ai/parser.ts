@@ -11,6 +11,11 @@ export interface ParseResult {
   extractedText?: string
 }
 
+/** 去除对象/数组中的尾随逗号：  ,] -> ]   ,} -> } （字符串外的常见模型笔误） */
+function stripTrailingCommas(text: string): string {
+  return text.replace(/,(\s*[}\]])/g, '$1')
+}
+
 /** Legacy API: returns null on failure (kept for backward compat) */
 export function parseAIResponse(raw: string): AnimationScript | null {
   const result = parseAIResponseDetailed(raw)
@@ -36,18 +41,28 @@ export function parseAIResponseDetailed(raw: string): ParseResult {
         json = JSON.parse(extractedText)
         extractMethod = 'code_block'
       } catch {
-        // Strategy 3: Find first { and last }
-        const extracted = extractBetweenBraces(raw)
-        if (extracted) {
-          extractedText = extracted
-          try {
-            json = JSON.parse(extractedText)
-            extractMethod = 'brace_extract'
-          } catch {
-            return buildError('json_parse', 'jsonParseFailed', raw)
+        try {
+          json = JSON.parse(stripTrailingCommas(extractedText))
+          extractMethod = 'code_block_cleaned'
+        } catch {
+          // Strategy 3: Find first { and last }
+          const extracted = extractBetweenBraces(raw)
+          if (extracted) {
+            extractedText = extracted
+            try {
+              json = JSON.parse(extractedText)
+              extractMethod = 'brace_extract'
+            } catch {
+              try {
+                json = JSON.parse(stripTrailingCommas(extractedText))
+                extractMethod = 'brace_extract_cleaned'
+              } catch {
+                return buildError('json_parse', 'jsonParseFailed', raw)
+              }
+            }
+          } else {
+            return buildError('json_extract', 'jsonExtractFailed', raw)
           }
-        } else {
-          return buildError('json_extract', 'jsonExtractFailed', raw)
         }
       }
     } else {
@@ -58,7 +73,12 @@ export function parseAIResponseDetailed(raw: string): ParseResult {
           json = JSON.parse(extractedText)
           extractMethod = 'brace_extract'
         } catch {
-          return buildError('json_parse', 'jsonParseFailed', raw)
+          try {
+            json = JSON.parse(stripTrailingCommas(extractedText))
+            extractMethod = 'brace_extract_cleaned'
+          } catch {
+            return buildError('json_parse', 'jsonParseFailed', raw)
+          }
         }
       } else {
         return buildError('json_extract', 'jsonExtractFailed', raw)
