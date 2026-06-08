@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { AnimationScript, AnimationStep } from '@/types/animation'
 import { deriveSceneState } from './SceneEngine'
 import { useSceneTransition } from './useSceneTransition'
+import { MOTION } from './tokens'
 import CellView from './primitives/CellView'
 import ContainerView from './primitives/ContainerView'
 import EdgeView from './primitives/EdgeView'
@@ -23,14 +24,22 @@ interface SceneCanvasProps {
   script: AnimationScript
   currentStep: number
   currentStepData?: AnimationStep | null
+  speed?: number
 }
 
-export default function SceneCanvas({ script, currentStep, currentStepData }: SceneCanvasProps) {
+/** 播放速度→补间时长：慢放更舒缓、快放更利落。 */
+function durationForSpeed(speedMultiplier: number): number {
+  if (speedMultiplier <= 0.5) return MOTION.duration.slow
+  if (speedMultiplier >= 2) return MOTION.duration.fast
+  return MOTION.duration.base
+}
+
+export default function SceneCanvas({ script, currentStep, currentStepData, speed = 1 }: SceneCanvasProps) {
   const { i18n } = useTranslation()
   const lang = i18n.language as 'zh' | 'en'
 
   const targetScene = deriveSceneState(script, currentStep)
-  const scene = useSceneTransition(targetScene)
+  const scene = useSceneTransition(targetScene, durationForSpeed(speed))
   const entities = Object.values(scene.entities)
   const edges = Object.values(scene.edges)
   const pointers = Object.values(scene.pointers)

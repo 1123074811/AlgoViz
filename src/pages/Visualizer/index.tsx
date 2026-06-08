@@ -881,6 +881,7 @@ export default function Visualizer() {
               script={animationScript}
               visualState={visualState}
               currentStepData={currentStepData}
+              speed={speed}
             />
           </div>
         </div>

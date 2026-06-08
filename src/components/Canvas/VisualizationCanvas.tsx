@@ -6,9 +6,10 @@ interface VisualizationCanvasProps {
   script: AnimationScript | null
   visualState: VisualState
   currentStepData: AnimationStep | null
+  speed?: number
 }
 
-export default function VisualizationCanvas({ script, visualState, currentStepData }: VisualizationCanvasProps) {
+export default function VisualizationCanvas({ script, visualState, currentStepData, speed = 1 }: VisualizationCanvasProps) {
   if (!script) {
     return (
       <div className="h-full flex items-center justify-center bg-slate-50">
@@ -31,7 +32,7 @@ export default function VisualizationCanvas({ script, visualState, currentStepDa
   return (
     <div className="h-full p-6 bg-slate-50">
       <div className="h-full bg-white rounded-xl border border-border shadow-sm overflow-hidden">
-        <SceneCanvas script={script} currentStep={visualState.currentStep} currentStepData={currentStepData} />
+        <SceneCanvas script={script} currentStep={visualState.currentStep} currentStepData={currentStepData} speed={speed} />
       </div>
     </div>
   )
