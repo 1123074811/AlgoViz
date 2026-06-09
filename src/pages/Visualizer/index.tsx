@@ -19,7 +19,7 @@ import RunDataPanel from '@/components/Editor/RunDataPanel'
 import { REQUEST_AI_REPAIR_EVENT } from '@/components/ErrorBoundary'
 import { getSceneDiagnosticSummary, getSceneEventStats, usesSceneEngine } from '@/scene'
 import { getOperationsForAlgo } from '@/presets/operationPresets'
-import { getCodeTemplate, type CodeLang } from './codeTemplates'
+import { getCodeTemplate, type CodeLang } from '@/data/codeTemplates'
 import DefinitionCard from './DefinitionCard'
 import { useResizablePanels } from './useResizablePanels'
 

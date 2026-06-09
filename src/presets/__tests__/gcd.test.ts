@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { generateGCD } from '../gcd'
 import { generatePreset } from '../generators'
-import { getCodeTemplate } from '@/pages/Visualizer/codeTemplates'
+import { getCodeTemplate } from '@/data/codeTemplates'
 import { deriveSceneState } from '@/scene'
 import { getLeetCodeDefault, getLeetCodePlaceholder, parseAlgorithmInput } from '@/utils/inputParser'
 

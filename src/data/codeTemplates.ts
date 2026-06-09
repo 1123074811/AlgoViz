@@ -1,6 +1,6 @@
 export type CodeLang = 'python' | 'javascript' | 'cpp' | 'java'
 
-const CODE_TEMPLATES: Record<string, Partial<Record<CodeLang, string>>> = {
+export const CODE_TEMPLATES: Record<string, Partial<Record<CodeLang, string>>> = {
   bubble_sort: {
     python: `def bubble_sort(arr):
     n = len(arr)
