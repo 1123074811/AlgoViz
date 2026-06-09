@@ -13,6 +13,7 @@ import HeapView from './primitives/HeapView'
 import LabelView from './primitives/LabelView'
 import NodeView, { NodeStyles } from './primitives/NodeView'
 import PointerView from './primitives/PointerView'
+import DistributionView from './primitives/DistributionView'
 import RegionView from './primitives/RegionView'
 import SetView from './primitives/SetView'
 import StringView from './primitives/StringView'
@@ -195,6 +196,10 @@ export default function SceneCanvas({ script, currentStep, currentStepData, spee
           {entities.map((entity) => entity.type === 'cell' ? <CellView key={entity.id} cell={entity} /> : null)}
           {renderArrayWindowOverlay(entities, 'boundary')}
           {entities.map((entity) => entity.type === 'node' ? <NodeView key={entity.id} node={entity} /> : null)}
+          {(() => {
+            const probCells = entities.filter((e): e is SceneCell => e.type === 'cell' && e.id.startsWith('prob_'))
+            return probCells.length > 0 ? <DistributionView cells={probCells} /> : null
+          })()}
           {labels.map((label) => <LabelView key={label.id} label={label} />)}
           {pointers.map((pointer, index) => <PointerView key={pointer.id} pointer={pointer} scene={scene} index={index} />)}
         </g>
