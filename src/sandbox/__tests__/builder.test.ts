@@ -42,6 +42,18 @@ describe('AnimationBuilder — array', () => {
   })
 })
 
+describe('AnimationBuilder — geometry', () => {
+  it('builder geometry 方法产出 geometry.* 事件', () => {
+    const b = new AnimationBuilder('geo', 'array')
+    b.geoPlane([0, 10], [0, 10])
+    b.geoPoint('A', 3, 4)
+    const script = b.build()
+    const evs = script.steps.flatMap(s => s.events ?? [])
+    expect(evs.some(e => e.type === 'geometry.plane')).toBe(true)
+    expect(evs.some(e => e.type === 'geometry.point')).toBe(true)
+  })
+})
+
 describe('AnimationBuilder — graph', () => {
   it('graphCreate 写入 initialState.nodes/edges', () => {
     const b = new AnimationBuilder('bfs', 'graph')
