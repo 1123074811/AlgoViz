@@ -1,5 +1,4 @@
 import { CallStackView } from '../primitives/CallStackView'
-import { DPTableView } from '../primitives/DPTableView'
 import { GridView } from '../primitives/GridView'
 import type { AlgorithmOverlayState } from './overlayCompiler'
 
@@ -10,10 +9,9 @@ interface AlgorithmOverlaysProps {
 
 export function AlgorithmOverlays({ overlays, className = '' }: AlgorithmOverlaysProps) {
   const callStack = overlays?.callStack
-  const dpTables = Object.values(overlays?.dpTables ?? {})
   const grids = Object.values(overlays?.grids ?? {})
 
-  if (!callStack && dpTables.length === 0 && grids.length === 0) return null
+  if (!callStack && grids.length === 0) return null
 
   return (
     <div className={`pointer-events-none absolute inset-3 z-20 flex flex-col gap-3 ${className}`}>
@@ -21,9 +19,6 @@ export function AlgorithmOverlays({ overlays, className = '' }: AlgorithmOverlay
         <div className="pointer-events-auto min-w-0 flex-1 space-y-3 overflow-auto">
           {grids.map((grid) => (
             <GridView key={grid.gridId} model={grid} />
-          ))}
-          {dpTables.map((table) => (
-            <DPTableView key={table.id} model={table} />
           ))}
         </div>
         {callStack ? (

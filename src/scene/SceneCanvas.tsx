@@ -7,6 +7,7 @@ import { MOTION } from './tokens'
 import AutomatonView from './primitives/AutomatonView'
 import CellView from './primitives/CellView'
 import ContainerView from './primitives/ContainerView'
+import { DPTableView } from './primitives/DPTableView'
 import EdgeView from './primitives/EdgeView'
 import BitsetView from './primitives/BitsetView'
 import HashTableView from './primitives/HashTableView'
@@ -25,6 +26,7 @@ import AlgorithmOverlays from './overlays/AlgorithmOverlays'
 import { SEMANTIC_COLORS, NEUTRALS } from './tokens'
 import { EDGE_FLOW_KEYFRAMES } from './primitives/sharedMotion'
 import type { SceneCell, SceneEntity, SceneNode } from './types'
+import type { DPTableModel } from './overlays'
 
 interface SceneCanvasProps {
   script: AnimationScript
@@ -53,13 +55,14 @@ export default function SceneCanvas({ script, currentStep, currentStepData, spee
   const edges = Object.values(scene.edges)
   const pointers = Object.values(scene.pointers)
   const labels = Object.values(scene.labels)
+  const dpTables = Object.values(scene.overlays?.dpTables ?? {})
+  const dpPanels = createDPPanelEntities(entities, dpTables)
   const latestNote = scene.notes?.[scene.notes.length - 1]
   const hasOverlays = Boolean(
     scene.overlays?.callStack ||
-    Object.keys(scene.overlays?.dpTables ?? {}).length > 0 ||
     Object.keys(scene.overlays?.grids ?? {}).length > 0,
   )
-  const isEmpty = entities.length === 0 && edges.length === 0 && pointers.length === 0 && labels.length === 0 && !hasOverlays
+  const isEmpty = entities.length === 0 && edges.length === 0 && pointers.length === 0 && labels.length === 0 && dpPanels.length === 0 && !hasOverlays
 
   // 1. Zoom and Pan state
   const [viewport, setViewport] = useState(() => ({
@@ -89,7 +92,7 @@ export default function SceneCanvas({ script, currentStep, currentStepData, spee
   }
 
   // 2. Compute viewBox dimensions (centered on content with 1.6 aspect ratio)
-  const { xStart, yStart, width, height } = computeViewBoxDimensions(entities, labels)
+  const { xStart, yStart, width, height } = computeViewBoxDimensions([...entities, ...dpPanels], labels)
 
   // Apply zoom to width/height
   const viewBoxWidth = width / zoom
@@ -213,6 +216,20 @@ export default function SceneCanvas({ script, currentStep, currentStepData, spee
           })()}
           {labels.map((label) => <LabelView key={label.id} label={label} />)}
           {pointers.map((pointer, index) => <PointerView key={pointer.id} pointer={pointer} scene={scene} index={index} />)}
+          {dpPanels.map((panel) => (
+            <foreignObject
+              key={panel.id}
+              x={panel.position.x - panel.size.width / 2}
+              y={panel.position.y - panel.size.height / 2}
+              width={panel.size.width}
+              height={panel.size.height}
+              className="pointer-events-auto"
+            >
+              <div className="h-full w-full">
+                <DPTableView model={panel.model} />
+              </div>
+            </foreignObject>
+          ))}
           {scene.entities['gan_marker']?.type === 'cell' && (
             <GraphAnalysisView marker={scene.entities['gan_marker'] as SceneCell} scene={scene} />
           )}
@@ -434,8 +451,59 @@ function renderContainers(entities: SceneEntity[], composite: boolean) {
   )
 }
 
+type DPPanelEntity = {
+  id: string
+  position: { x: number; y: number }
+  size: { width: number; height: number }
+  model: DPTableModel
+}
+
+function createDPPanelEntities(entities: SceneEntity[], tables: DPTableModel[]): DPPanelEntity[] {
+  if (tables.length === 0) return []
+
+  const positioned = entities.filter(
+    (e): e is SceneEntity & { position: { x: number; y: number } } =>
+      'position' in e && !!e.position,
+  )
+  const bounds = positioned.length > 0 ? boundsFor(positioned) : { minX: 120, minY: 120, maxX: 360, maxY: 320 }
+  const startX = bounds.maxX + 430
+  const startY = Math.min(bounds.minY + 160, 260)
+
+  let cursorY = startY
+  return tables.map((model) => {
+    const formulaRows = Math.max(1, Math.ceil(Math.max(model.formulas.length, 1) / 4))
+    const focusHeight = model.formulas.length > 0 ? 118 : 0
+    const footerHeight = model.formulas.length > 0 ? 38 + formulaRows * 34 : 0
+    const width = Math.max(560, model.colCount * 108 + 170)
+    const height = 64 + focusHeight + 24 + model.rowCount * 58 + footerHeight
+    const panel: DPPanelEntity = {
+      id: `dp_panel_${model.id}`,
+      position: { x: startX, y: cursorY + height / 2 },
+      size: { width, height },
+      model,
+    }
+    cursorY += height + 28
+    return panel
+  })
+}
+
+function boundsFor(entities: Array<SceneEntity & { position: { x: number; y: number } }>) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  for (const e of entities) {
+    const w = ('size' in e ? e.size?.width : 80) ?? 80
+    const h = ('size' in e ? e.size?.height : 60) ?? 60
+    const hw = w / 2
+    const hh = h / 2
+    minX = Math.min(minX, e.position.x - hw)
+    minY = Math.min(minY, e.position.y - hh)
+    maxX = Math.max(maxX, e.position.x + hw)
+    maxY = Math.max(maxY, e.position.y + hh)
+  }
+  return { minX, minY, maxX, maxY }
+}
+
 function computeViewBoxDimensions(
-  entities: SceneEntity[],
+  entities: Array<SceneEntity | DPPanelEntity>,
   labels: SceneEntity[]
 ): { xStart: number; yStart: number; width: number; height: number } {
   const positioned = [...entities, ...labels].filter(
