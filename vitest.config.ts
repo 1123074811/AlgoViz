@@ -13,7 +13,18 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'json', 'json-summary'],
-      include: ['src/scene/**', 'src/ai/**'],
+      // 覆盖率统计全部源码，排除测试、类型声明、纯入口/数据与 i18n 文案，
+      // 避免覆盖率报告因 include 过窄而失真。
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        ...configDefaults.coverage.exclude ?? [],
+        'src/**/__tests__/**',
+        'src/**/*.test.{ts,tsx}',
+        'src/**/*.d.ts',
+        'src/main.tsx',
+        'src/vite-env.d.ts',
+        'src/i18n/locales/**',
+      ],
     },
   },
   resolve: {
