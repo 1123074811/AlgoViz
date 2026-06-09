@@ -39,11 +39,11 @@ export function getLeetCodeDefault(algoId: string): string {
 
 const GRAPH_ALGOS = new Set([
   'bfs_graph','dfs_graph','dijkstra','prim','kruskal',
-  'topological_sort','bellman_ford','a_star','union_find',
+  'topological_sort','bellman_ford','a_star','union_find','tarjan_scc',
 ])
 
 const STRING_ALGOS = new Set([
-  'kmp','manacher','lcs','edit_distance',
+  'kmp','manacher','lcs','edit_distance','kmp_automaton',
 ])
 
 const MATRIX_ALGOS = new Set([
@@ -54,6 +54,12 @@ const MATRIX_ALGOS = new Set([
 const TREE_ALGOS = new Set([
   'binary_tree_traverse','bst_insert','bst_delete','bst_search',
   'avl_insert','trie','heap_ds','btree','bplus_tree','path_sum_iii',
+  'btree_search','btree_insert','bplus_tree_search','bplus_tree_range_query',
+])
+
+/** 点集类（几何）：输入为 points = [[x,y],...]。 */
+const POINTS_ALGOS = new Set([
+  'convex_hull',
 ])
 
 // ─── LeetCode defaults ────────────────────────────────────────────────────
@@ -125,6 +131,15 @@ const LEETCODE_DEFAULTS: Record<string, string> = {
   gcd_euclidean: 'a = 48, b = 18',
   leetcode_hot100: 'nums = [2, 7, 11, 15], target = 9',
   acm_templates: 'nums = [2, 3, 5, 7, 11, 13]',
+  // 进阶/新模块（图/字符串/几何/概率）—— 类型匹配的默认输入
+  tarjan_scc: 'n = 5, edges = [[0,1],[1,2],[2,0],[2,3],[3,4],[4,3]]',
+  kmp_automaton: 'text = "ababaab", pattern = "aba"',
+  convex_hull: 'points = [[0,0],[4,0],[5,3],[2,5],[1,1],[3,2]]',
+  reservoir_sampling: 'nums = [10, 20, 30, 40, 50, 60]',
+  btree_search: 'keys = [10, 20, 30, 3, 7, 13, 17, 23, 27, 33, 37]',
+  btree_insert: 'keys = [10, 20, 30, 3, 7, 13, 17, 23, 27, 33, 37]',
+  bplus_tree_search: 'keys = [10, 20, 30, 35, 40, 45, 50, 60]',
+  bplus_tree_range_query: 'keys = [10, 20, 30, 35, 40, 45, 50, 60]',
   _default: 'nums = [5, 3, 8, 1, 9, 2]',
 }
 
@@ -153,6 +168,9 @@ function parseCodeInput(raw: string, algoId: string): unknown {
   }
   if (TREE_ALGOS.has(algoId)) {
     return parseTreeCodeVars(vars, s)
+  }
+  if (POINTS_ALGOS.has(algoId)) {
+    return parsePointsCodeVars(vars)
   }
   if (algoId === 'binary_search') {
     return parseArrayTargetCodeVars(vars)
@@ -314,9 +332,18 @@ function parseGraphCodeVars(vars: ParsedVars, _s: string): unknown {
   return vars
 }
 
+function parsePointsCodeVars(vars: ParsedVars): unknown {
+  // points = [[x,y],...]；兼容 pts / 裸二维数组。
+  const pts = Array.isArray(vars.points) ? vars.points
+    : Array.isArray(vars.pts) ? vars.pts
+    : Array.isArray(vars._array) ? vars._array
+    : undefined
+  return pts ? { points: pts } : vars
+}
+
 function parseStringCodeVars(vars: ParsedVars, algoId: string): unknown {
-  // For KMP: text + pattern
-  if (algoId === 'kmp') {
+  // For KMP / KMP 自动机: text + pattern
+  if (algoId === 'kmp' || algoId === 'kmp_automaton') {
     if (typeof vars.text === 'string' && typeof vars.pattern === 'string') {
       return { text: vars.text, pattern: vars.pattern }
     }

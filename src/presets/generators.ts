@@ -1168,7 +1168,23 @@ const binarySearchWrapper = (input: unknown) => {
 }
 const slidingWindowWrapper = (input: unknown) => generateSlidingWindow(parseArr(input), Math.min(3, parseArr(input).length))
 const monotonicStackWrapper = (input: unknown) => generateMonotonicStack(parseArr(input))
+const asKnapsackObj = (input: unknown) => {
+  const o = (input && typeof input === 'object' && !Array.isArray(input)) ? input as Record<string, unknown> : null
+  if (o && Array.isArray(o.weights) && Array.isArray(o.values)) {
+    return {
+      weights: (o.weights as unknown[]).map(Number).filter(v => !Number.isNaN(v)),
+      values: (o.values as unknown[]).map(Number).filter(v => !Number.isNaN(v)),
+      capacity: typeof o.capacity === 'number' ? o.capacity : undefined,
+    }
+  }
+  return null
+}
 const knapsackWrapper = (input: unknown) => {
+  const o = asKnapsackObj(input)
+  if (o && o.weights.length > 0) {
+    const w = o.weights.slice(0, 5), v = o.values.slice(0, 5)
+    return generateKnapsack(w, v, o.capacity ?? Math.max(...w) + 3)
+  }
   const arr = parseArr(input)
   return generateKnapsack(arr.slice(0, 4), arr.slice(0, 4).map((_, i) => (arr[i] || 1) * 2), Math.max(...arr.slice(0, 4)) + 3)
 }
@@ -1192,6 +1208,11 @@ const kmpAutomatonWrapper = (input: unknown) => {
 }
 const fenwickWrapper = (input: unknown) => generateFenwick(parseArr(input).slice(0, 8))
 const unboundedKnapsackWrapper = (input: unknown) => {
+  const o = asKnapsackObj(input)
+  if (o && o.weights.length > 0) {
+    const w = o.weights.slice(0, 4), v = o.values.slice(0, 4)
+    return generateUnboundedKnapsack(w, v, o.capacity ?? Math.max(...w) + 2)
+  }
   const arr = parseArr(input)
   return generateUnboundedKnapsack(arr.slice(0, 3), arr.slice(0, 3).map(v => v * 2), Math.max(...arr.slice(0, 3)) + 2)
 }
@@ -1207,7 +1228,19 @@ const queueWrapper = (input: unknown) => generateQueue(parseArr(input))
 const heapWrapper = (input: unknown) => generateHeapOperations(parseArr(input).slice(0, 6))
 const reservoirWrapper = (input: unknown) => generateReservoir(parseArr(input))
 const unionFindWrapper = (input: unknown) => {
+  // 边列表数组形式
   if (Array.isArray(input) && input.length > 0 && Array.isArray(input[0])) return generateUnionFind(input as number[][])
+  // 图对象形式 {nodes, edges}(来自 parseGraphInput/parseGraphCodeVars)
+  if (input && typeof input === 'object' && !Array.isArray(input)) {
+    const o = input as { nodes?: unknown[]; edges?: Array<{ source: string | number; target: string | number }> }
+    if (Array.isArray(o.edges)) {
+      const edges = o.edges
+        .map(e => [Number(e.source), Number(e.target)])
+        .filter(p => p.every(x => !Number.isNaN(x)))
+      const nodeCount = Array.isArray(o.nodes) ? o.nodes.length : undefined
+      if (edges.length > 0) return generateUnionFind(edges, nodeCount)
+    }
+  }
   return generateUnionFind()
 }
 const binaryTreeWrapper = (input: unknown) => generateBinaryTree(parseArr(input))
@@ -1221,7 +1254,12 @@ const btreeWrapper = (input: unknown) => generateBTree(input)
 const bplusTreeWrapper = (input: unknown) => generateBPlusTree(input)
 
 const hashTableWrapper = (input: unknown) => {
-  if (typeof input === 'object' && input !== null && !Array.isArray(input)) return generateHashTable(input as Record<string, string>)
+  if (input && typeof input === 'object' && !Array.isArray(input)) {
+    const o = input as Record<string, unknown>
+    // 输入解析为 { pairs: {...} } 时取出 pairs；否则把对象本身当键值表。
+    const pairs = (o.pairs && typeof o.pairs === 'object' && !Array.isArray(o.pairs)) ? o.pairs as Record<string, string> : o as Record<string, string>
+    return generateHashTable(pairs)
+  }
   return generateHashTable()
 }
 const backtrackingWrapper = (input: unknown) => generateBacktracking(parseArr(input))

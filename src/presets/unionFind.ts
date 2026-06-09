@@ -1,12 +1,13 @@
 import type { AnimationScript, AnimationStep } from '@/types/animation'
 import type { AlgorithmEvent } from '@/scene'
 
-export function generateUnionFind(edges?: number[][]): AnimationScript {
+export function generateUnionFind(edges?: number[][], nodeCount?: number): AnimationScript {
   const steps: AnimationStep[] = []
   let sid = 1
 
   const unions = edges && edges.length > 0 ? edges : [[0, 1], [1, 2], [3, 4], [4, 5], [2, 4]]
-  let n = 6
+  // 结点数：显式 nodeCount 优先(随输入 n 同步),否则按边的最大端点推断,下限 6。
+  let n = nodeCount && nodeCount > 0 ? nodeCount : 6
   for (const [a, b] of unions) n = Math.max(n, a + 1, b + 1)
 
   const parent = Array.from({ length: n }, (_v, i) => i)
