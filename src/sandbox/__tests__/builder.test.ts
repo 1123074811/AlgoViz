@@ -159,3 +159,18 @@ describe('AnimationBuilder — variables', () => {
     expect(b._getVar('ans')).toBe(1)
   })
 })
+
+describe('AnimationBuilder — automaton', () => {
+  it('builder automaton 方法产出 automaton.* 事件', () => {
+    const b = new AnimationBuilder('kmp_automaton', 'array')
+    b.autoCreate([{ id: 's0', start: true }, { id: 's1', accepting: true }])
+    b.autoTransition('t0', 's0', 's1', 'a')
+    b.autoActivate('s1')
+    b.autoConsume('a', 0)
+    const evs = b.build().steps.flatMap(s => s.events ?? [])
+    expect(evs.some(e => e.type === 'automaton.create')).toBe(true)
+    expect(evs.some(e => e.type === 'automaton.transition')).toBe(true)
+    expect(evs.some(e => e.type === 'automaton.activate')).toBe(true)
+    expect(evs.some(e => e.type === 'automaton.consume')).toBe(true)
+  })
+})

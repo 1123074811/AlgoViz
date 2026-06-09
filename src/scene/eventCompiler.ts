@@ -2,6 +2,7 @@ import type { SceneCommand } from './commandTypes'
 import type { AlgorithmEvent } from './eventTypes'
 import type { CompileContext } from './SceneEngine'
 import { arrayCompiler } from './compilers/arrayCompiler'
+import { automatonCompiler } from './compilers/automatonCompiler'
 import { bitsetCompiler } from './compilers/bitsetCompiler'
 import { dequeCompiler } from './compilers/dequeCompiler'
 import { geometryCompiler } from './compilers/geometryCompiler'
@@ -22,7 +23,7 @@ import { unionFindCompiler } from './compilers/unionFindCompiler'
 import { compileAlgorithmOverlayEvent, createAlgorithmOverlayState, isAlgorithmOverlayEvent } from './overlays/overlayCompiler'
 import { AuxiliaryUnit } from './primitives/DataUnits'
 
-const compilers = [pointerCompiler, linkedListCompiler, treeCompiler, unionFindCompiler, arrayCompiler, matrixCompiler, graphCompiler, stackCompiler, queueCompiler, stringCompiler, setCompiler, mapCompiler, dequeCompiler, hashTableCompiler, heapCompiler, bitsetCompiler, mathCompiler, geometryCompiler]
+const compilers = [pointerCompiler, linkedListCompiler, treeCompiler, unionFindCompiler, arrayCompiler, matrixCompiler, graphCompiler, stackCompiler, queueCompiler, stringCompiler, setCompiler, mapCompiler, dequeCompiler, hashTableCompiler, heapCompiler, bitsetCompiler, mathCompiler, geometryCompiler, automatonCompiler]
 
 export function compileEvent(event: AlgorithmEvent, context: CompileContext): SceneCommand[] {
   if (isAlgorithmOverlayEvent(event)) {

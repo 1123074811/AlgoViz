@@ -938,6 +938,34 @@ def interval_dp(nums):
     return -1`,
   },
   {
+    id: 'kmp_automaton', name: 'KMP 匹配自动机', nameEn: 'KMP Automaton', category: 'advanced', difficulty: 'medium',
+    hasPreset: true, defaultLanguage: 'python',
+    defaultCode: `def build_automaton(pattern):
+    m = len(pattern)
+    fail = [0] * m
+    k = 0
+    for i in range(1, m):
+        while k > 0 and pattern[i] != pattern[k]:
+            k = fail[k - 1]
+        if pattern[i] == pattern[k]:
+            k += 1
+        fail[i] = k
+    return fail
+
+def match(text, pattern):
+    fail = build_automaton(pattern)
+    state = 0
+    for i, ch in enumerate(text):
+        while state > 0 and ch != pattern[state]:
+            state = fail[state - 1]
+        if ch == pattern[state]:
+            state += 1
+        if state == len(pattern):
+            return i - state + 1
+            state = fail[state - 1]
+    return -1`,
+  },
+  {
     id: 'manacher', name: 'Manacher 回文', nameEn: "Manacher's Algorithm", category: 'advanced', difficulty: 'hard',
     hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def longest_palindrome(s):

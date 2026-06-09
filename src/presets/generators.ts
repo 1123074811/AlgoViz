@@ -840,6 +840,7 @@ import { generateNQueens } from './nQueens'
 import { generateLIS } from './lis'
 import { generateEditDistance } from './editDistance'
 import { generateKMP } from './kmp'
+import { generateKmpAutomaton } from './kmpAutomaton'
 import { generateFenwick } from './fenwick'
 import { generateUnboundedKnapsack } from './unboundedKnapsack'
 import { generateMatrixChain } from './matrixChain'
@@ -1182,6 +1183,10 @@ const kmpWrapper = (input: unknown) => {
   const [text, pattern] = parseStrs(input, 'ABABABCABABABCABAB', 'ABABC')
   return generateKMP(text, pattern)
 }
+const kmpAutomatonWrapper = (input: unknown) => {
+  const [text, pattern] = parseStrs(input, 'ababaab', 'aba')
+  return generateKmpAutomaton(pattern, text)
+}
 const fenwickWrapper = (input: unknown) => generateFenwick(parseArr(input).slice(0, 8))
 const unboundedKnapsackWrapper = (input: unknown) => {
   const arr = parseArr(input)
@@ -1503,6 +1508,7 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   monotonic_stack: monotonicStackWrapper, knapsack_01: knapsackWrapper,
   lcs: lcsWrapper, n_queens: nQueensWrapper, lis: lisWrapper,
   edit_distance: editDistanceWrapper, kmp: kmpWrapper,
+  kmp_automaton: kmpAutomatonWrapper,
   fenwick_tree: fenwickWrapper, unbounded_knapsack: unboundedKnapsackWrapper,
   matrix_chain: matrixChainWrapper, sudoku: sudokuWrapper,
   manacher: manacherWrapper, segment_tree: segmentTreeWrapper,

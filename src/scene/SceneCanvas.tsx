@@ -4,6 +4,7 @@ import type { AnimationScript, AnimationStep } from '@/types/animation'
 import { deriveSceneState } from './SceneEngine'
 import { useSceneTransition } from './useSceneTransition'
 import { MOTION } from './tokens'
+import AutomatonView from './primitives/AutomatonView'
 import CellView from './primitives/CellView'
 import ContainerView from './primitives/ContainerView'
 import EdgeView from './primitives/EdgeView'
@@ -197,7 +198,11 @@ export default function SceneCanvas({ script, currentStep, currentStepData, spee
         })()}
         <g className="pointer-events-auto">
           {edges.map((edge) => <EdgeView key={edge.id} edge={edge} scene={scene} />)}
-          {entities.map((entity) => entity.type === 'cell' && !entity.id.startsWith('geo_') ? <CellView key={entity.id} cell={entity} /> : null)}
+          {entities.map((entity) => entity.type === 'cell' ? <CellView key={entity.id} cell={entity} /> : null)}
+          {(() => {
+            const autoCells = entities.filter((e): e is SceneCell => e.type === 'cell' && e.id.startsWith('auto_'))
+            return autoCells.length > 0 ? <AutomatonView cells={autoCells} /> : null
+          })()}
           {renderArrayWindowOverlay(entities, 'boundary')}
           {entities.map((entity) => entity.type === 'node' ? <NodeView key={entity.id} node={entity} /> : null)}
           {labels.map((label) => <LabelView key={label.id} label={label} />)}
