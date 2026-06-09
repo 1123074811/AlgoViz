@@ -143,4 +143,8 @@ export type MathAlgorithmEvent =
   | { type: 'math.highlight'; name: string }
   | { type: 'math.note'; text: string }
 
-export type AlgorithmEvent = CommonAlgorithmEvent | PointerAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | UnionFindAlgorithmEvent | MathAlgorithmEvent | CallStackEvent | DPEvent | GridEvent
+export type GraphAnalysisAlgorithmEvent =
+  | { type: 'graph_analysis.update'; discLow?: Record<string, [number, number]>; stack?: string[]; components?: Record<string, number> }
+  | { type: 'graph_analysis.clear' }
+
+export type AlgorithmEvent = CommonAlgorithmEvent | PointerAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | UnionFindAlgorithmEvent | MathAlgorithmEvent | GraphAnalysisAlgorithmEvent | CallStackEvent | DPEvent | GridEvent
