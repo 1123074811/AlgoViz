@@ -1,7 +1,7 @@
 import type { AIErrorReport, AIValidationIssue } from './errors'
 
 /** Attempt local repair on AI response. Returns repaired text + issues fixed, or null if too broken. */
-export function attemptLocalRepair(raw: string, report: AIErrorReport): { repairedText: string; fixedIssues: number } | null {
+export function attemptLocalRepair(raw: string, _report: AIErrorReport): { repairedText: string; fixedIssues: number } | null {
   let text = raw
   let fixed = 0
 

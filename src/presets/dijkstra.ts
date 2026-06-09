@@ -42,7 +42,6 @@ export function generateDijkstra(input: GraphInput): AnimationScript {
   // 朴素优先队列（数组里放距离数值，与堆可视化一致）。返回最小距离对应的节点。
   // pq 与可视化堆同步：pq 里每个 entry 既有 node 也有 dist；堆里只放 dist 数值。
   const pq: Array<{ id: string; d: number }> = [{ id: startId, d: 0 }]
-  const heapValues = () => [...pq].sort((a, b) => a.d - b.d).map(e => e.d)
 
   // ── Step 1: 同时创建三结构 ──
   steps.push({

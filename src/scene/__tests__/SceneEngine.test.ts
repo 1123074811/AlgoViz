@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { applyCommands } from '../SceneEngine'
 import { createEmptyScene } from '../types'
 import type { SceneState, SceneNode, SceneCell, SceneEdge, ScenePointer } from '../types'

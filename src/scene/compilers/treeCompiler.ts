@@ -144,9 +144,7 @@ function compileDelete(event: Extract<TreeAlgorithmEvent, { type: 'tree.delete' 
   ]
 }
 
-function compileRotate(event: Extract<TreeAlgorithmEvent, { type: 'tree.rotate' }>, context: CompileContext): SceneCommand[] {
-  const pivot = context.scene.entities[event.pivotId]
-  const pivotPos = pivot && 'position' in pivot && pivot.position ? pivot.position : { x: 500, y: 200 }
+function compileRotate(event: Extract<TreeAlgorithmEvent, { type: 'tree.rotate' }>, _context: CompileContext): SceneCommand[] {
   const rotateArrowId = `rotate_${event.pivotId}`
   // Determine rotation direction for arrow visualization
   const isLeft = event.rotation === 'left' || event.rotation === 'right-left'

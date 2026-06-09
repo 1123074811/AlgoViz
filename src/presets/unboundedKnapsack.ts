@@ -7,7 +7,6 @@ export function generateUnboundedKnapsack(weights?: number[], values?: number[],
   const n = w.length
   const dp: number[] = new Array(C + 1).fill(0)
   const table: number[][] = [new Array(C + 1).fill(0)]
-  const initialTable = table.map(row => [...row])
   const steps: AnimationStep[] = []
   let sid = 1
 

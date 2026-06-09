@@ -158,7 +158,7 @@ function validateInitialState(is: Record<string, unknown>): AIValidationIssue[] 
   return issues
 }
 
-function validateSteps(steps: unknown[], rendererType?: string): AIValidationIssue[] {
+function validateSteps(steps: unknown[], _rendererType?: string): AIValidationIssue[] {
   const issues: AIValidationIssue[] = []
   steps.forEach((s, i) => {
     if (!s || typeof s !== 'object') {
@@ -344,7 +344,7 @@ function extractDeletedId(event: Record<string, unknown>, type: string): string 
   return null
 }
 
-function extractReferencedIds(event: Record<string, unknown>, type: string): string[] {
+function extractReferencedIds(event: Record<string, unknown>, _type: string): string[] {
   const ids: string[] = []
   const nodeId = event.nodeId as string | undefined
   const targetNodeId = event.targetNodeId as string | undefined
@@ -465,7 +465,7 @@ function normalizeInitialState(is?: Record<string, unknown>): AnimationScript['i
   return { type, data, ...(matrix && { matrix }), ...(nodes && { nodes }), ...(edges && { edges }), ...(root !== undefined && { root }), ...(children && { children }), ...(labels && { labels }), ...(treeNodes && { treeNodes }) }
 }
 
-function normalizeSteps(rawSteps: unknown[] | undefined, rendererType: RendererType): AnimationStep[] {
+function normalizeSteps(rawSteps: unknown[] | undefined, _rendererType: RendererType): AnimationStep[] {
   if (!rawSteps || !Array.isArray(rawSteps)) return []
   return rawSteps
     .map((s, i) => normalizeStep(s, i + 1))

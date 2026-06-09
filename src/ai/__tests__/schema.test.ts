@@ -56,8 +56,8 @@ describe('validateAnimationScript', () => {
 
   // 2. 缺 steps
   it('缺少 steps 字段时应返回相关 issue', () => {
-    const raw = { ...minimalArrayScript }
-    const { steps: _steps, ...noSteps } = raw
+    const noSteps = { ...minimalArrayScript }
+    delete (noSteps as { steps?: unknown }).steps
     const issues = validateAnimationScript(noSteps)
     const stepIssue = issues.find(i => i.path === 'steps')
     expect(stepIssue).toBeDefined()

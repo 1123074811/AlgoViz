@@ -1,4 +1,4 @@
-import type { AnimationScript, AnimationStep, TeachingState, RangeState, AuxiliaryArrayState } from '@/types/animation'
+import type { AnimationScript, AnimationStep, TeachingState } from '@/types/animation'
 import { makeStep, rng, auxArr, sortTeaching, sortTeachingWithAux } from './utils'
 import { deriveSceneState } from '@/scene/SceneEngine'
 
@@ -853,17 +853,12 @@ import { generateStack } from './stack'
 import { generateQueue } from './queue'
 import { generateHeapOperations } from './heap'
 import { generateUnionFind } from './unionFind'
-import { generateLinkedList } from './linkedList'
-import { generateDoublyLinkedList } from './doublyLinkedList'
 import { generateBinaryTree } from './binaryTree'
-import { generateBST } from './bst'
 import { generateAVLTree } from './avlTree'
-import { generateRedBlackTree } from './redBlackTree'
 import { generateTrie } from './trie'
 import { generateBellmanFord } from './bellmanFord'
 import { generateHashTable } from './hashTable'
 import { generateBacktracking } from './backtracking'
-import { generateArray } from './arrayDS'
 import { generateLeetCode } from './leetcode'
 import { generateACM } from './acm'
 import { generateGCD } from './gcd'
@@ -1222,7 +1217,6 @@ const manacherWrapper = (input: unknown) => generateManacher(parseStr(input, 'ba
 const segmentTreeWrapper = (input: unknown) => generateSegmentTree(parseArr(input).slice(0, 6))
 const intervalDPWrapper = (input: unknown) => generateIntervalDP(parseArr(input).slice(0, 5))
 const stackWrapper = (input: unknown) => generateStack(parseArr(input))
-import { DATA_STRUCTURE_OPERATIONS } from './operationPresets'
 
 const queueWrapper = (input: unknown) => generateQueue(parseArr(input))
 const heapWrapper = (input: unknown) => generateHeapOperations(parseArr(input).slice(0, 6))
@@ -1353,9 +1347,6 @@ function parseCodeGraphString(s: string): GraphInput {
 
   let n: number | undefined
   let edges: unknown[][] | undefined
-  let weights: number[] | undefined
-  let start: string | undefined
-  let goal: string | undefined
 
   // ── Extract n = <number> ────────────────────────────────────────────
   const nMatch = s.match(/\bn\s*[:=]\s*(\d+)/)
@@ -1381,18 +1372,6 @@ function parseCodeGraphString(s: string): GraphInput {
       } catch { continue }
     }
   }
-
-  // ── Extract weights = [...] ──────────────────────────────────────────
-  const weightsBlock = extractArrayBlock(s, 'weights')
-  if (weightsBlock) {
-    try { weights = JSON.parse(weightsBlock) } catch { /* ignore */ }
-  }
-
-  // ── Extract start / goal ────────────────────────────────────────────
-  const startMatch = s.match(/\bstart\s*[:=]\s*["']?(\w+)["']?/)
-  if (startMatch) start = startMatch[1]
-  const goalMatch = s.match(/\bgoal\s*[:=]\s*["']?(\w+)["']?/)
-  if (goalMatch) goal = goalMatch[1]
 
   // ── Build GraphInput ────────────────────────────────────────────────
   if (edges && edges.length > 0) {
