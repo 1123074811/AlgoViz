@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { compileAndValidateCode } from '../codeCompiler'
-import { getAllCodeTemplates } from '@/pages/Visualizer/codeTemplates'
+import { getAllCodeTemplates } from '@/data/codeTemplates'
 
 /**
  * 回归保证：所有内置算法代码模板都不应触发校验器的「错误」（warning 允许）。
