@@ -271,6 +271,9 @@ export class AnimationBuilder {
   setValue(index: number, value: number | string): this {
     return this.add([{ type: 'array.set_value', index, value }], this.act('highlight', [index], 'primary'))
   }
+  arrayUpdate(index: number, value: number | string): this {
+    return this.setValue(index, value)
+  }
   markSorted(indices: number[]): this {
     return this.add([{ type: 'array.mark_sorted', indices: [...indices] }], this.act('mark', [...indices], 'success'))
   }

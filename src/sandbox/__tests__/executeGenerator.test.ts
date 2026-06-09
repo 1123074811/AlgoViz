@@ -54,6 +54,16 @@ b.result(b._getVar('ans'))
     expect(result.script?.result).toBe(1)
   })
 
+  it('兼容 AI 常见别名 b.arrayUpdate', () => {
+    const result = executeGenerator(
+      'b.arrayCreate(input); b.arrayUpdate(1, 9)',
+      [1, 2, 3],
+      { algorithm: 'x', type: 'array' },
+    )
+    expect(result.ok).toBe(true)
+    expect(result.script?.steps[1].events?.[0]).toEqual({ type: 'array.set_value', index: 1, value: 9 })
+  })
+
   it('对常见漏声明变量做一次本地恢复', () => {
     const body = `
 const courses = input.courses || input

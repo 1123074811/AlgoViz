@@ -14,13 +14,13 @@ self.onmessage = (e: MessageEvent<{ source: string; input: unknown; meta: Genera
   try {
     result = executeGenerator(source, input, meta)
   } catch (err) {
-    result = { ok: false, error: err instanceof Error ? err.message : String(err) }
+    result = { ok: false, error: err instanceof Error ? err.message : String(err), kind: 'runtime' }
   }
   try {
     ;(self as unknown as Worker).postMessage(result)
   } catch {
     // A non-serializable script/result would otherwise crash the worker (onerror
     // with an empty message). Report a clear, actionable error instead.
-    ;(self as unknown as Worker).postMessage({ ok: false, error: '生成器返回了无法序列化的结果' } as GeneratorResult)
+    ;(self as unknown as Worker).postMessage({ ok: false, error: '生成器返回了无法序列化的结果', kind: 'runtime' } as GeneratorResult)
   }
 }
