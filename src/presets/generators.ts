@@ -1,5 +1,6 @@
 import type { AnimationScript, AnimationStep, TeachingState, RangeState, AuxiliaryArrayState } from '@/types/animation'
 import { makeStep, rng, auxArr, sortTeaching, sortTeachingWithAux } from './utils'
+import { deriveSceneState } from '@/scene/SceneEngine'
 
 /** Helper: create an events payload for a step */
 function evt(events: any[]) {
@@ -1543,6 +1544,9 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   reservoir_sampling: reservoirWrapper,
 }
 
+/** 所有内置预设算法 id（供输出完整性回归测试枚举）。 */
+export const PRESET_IDS = Object.keys(GENERATORS)
+
 export function generatePreset(algoId: string, inputData: unknown): AnimationScript | undefined {
   const gen = GENERATORS[algoId]
   if (gen) return withInferredResult(algoId, inputData, gen(inputData))
@@ -1611,9 +1615,69 @@ function inferPresetResult(algoId: string, inputData: unknown, script: Animation
     case 'dfs_graph':
     case 'topological_sort':
       return scriptTraversalResult(script)
+    case 'convex_hull': {
+      // 凸包：从最终场景的多边形/线段还原顶点；退化时返回点数说明。
+      const pts = parsePointsForResult(inputData)
+      const hull = andrewHull(pts)
+      return hull.length > 0 ? hull.map(([x, y]) => `(${x},${y})`) : undefined
+    }
+    case 'kmp_automaton': {
+      const [pattern, text] = parseStrs(inputData, 'aba', 'ababaab')
+      return kmpMatchIndices(pattern, text)
+    }
     default:
-      return undefined
+      // 通用兜底链：访问顺序(图/树/链表 visit) → 最终矩阵 → 最终场景结构值。
+      return scriptVisitOrder(script) ?? finalMatrixFromScript(script) ?? genericResultFromScene(script)
   }
+}
+
+/** Andrew 单调链凸包(下+上链)，用于输出顶点。 */
+function andrewHull(input: Array<[number, number]>): Array<[number, number]> {
+  const pts = [...new Set(input.map(p => `${p[0]},${p[1]}`))].map(s => s.split(',').map(Number) as [number, number])
+    .sort((a, b) => a[0] - b[0] || a[1] - b[1])
+  if (pts.length <= 2) return pts
+  const cross = (o: [number, number], a: [number, number], b: [number, number]) =>
+    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+  const lower: Array<[number, number]> = []
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop()
+    lower.push(p)
+  }
+  const upper: Array<[number, number]> = []
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i]
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop()
+    upper.push(p)
+  }
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)]
+}
+
+function parsePointsForResult(input: unknown): Array<[number, number]> {
+  if (Array.isArray(input)) {
+    const pts = input.filter((p): p is [number, number] => Array.isArray(p) && p.length >= 2 && typeof p[0] === 'number' && typeof p[1] === 'number')
+      .map(p => [p[0], p[1]] as [number, number])
+    if (pts.length >= 3) return pts
+  }
+  return [[0, 0], [5, 0], [5, 5], [0, 5], [2, 2], [3, 1]]
+}
+
+/** KMP 返回所有匹配起始下标。 */
+function kmpMatchIndices(pattern: string, text: string): number[] {
+  const m = pattern.length
+  if (m === 0) return []
+  const fail = new Array(m).fill(0)
+  for (let i = 1, k = 0; i < m; i++) {
+    while (k > 0 && pattern[i] !== pattern[k]) k = fail[k - 1]
+    if (pattern[i] === pattern[k]) k++
+    fail[i] = k
+  }
+  const res: number[] = []
+  for (let i = 0, state = 0; i < text.length; i++) {
+    while (state > 0 && text[i] !== pattern[state]) state = fail[state - 1]
+    if (text[i] === pattern[state]) state++
+    if (state === m) { res.push(i - m + 1); state = fail[state - 1] }
+  }
+  return res
 }
 
 function gcd(a: number, b: number): number {
@@ -1736,11 +1800,88 @@ function nQueensCount(n: number): number {
 }
 
 function scriptTraversalResult(script: AnimationScript): Array<number | string | boolean> | undefined {
+  // 仅图遍历(visit_node)——供 bfs/dfs/topo 精确使用。
   const output = script.steps
     .flatMap(step => step.events ?? [])
     .filter(event => event.type === 'graph.visit_node')
     .map(event => (event as { nodeId: string }).nodeId)
   return output.length > 0 ? output : undefined
+}
+
+/** 访问顺序兜底：图/树/链表的 visit 事件序列(去重保序)。 */
+function scriptVisitOrder(script: AnimationScript): Array<number | string> | undefined {
+  const ids: Array<string> = []
+  for (const step of script.steps) {
+    for (const ev of step.events ?? []) {
+      if (ev.type === 'graph.visit_node' || ev.type === 'tree.visit' || ev.type === 'linked_list.visit') {
+        ids.push((ev as { nodeId: string }).nodeId)
+      }
+    }
+  }
+  return ids.length > 0 ? ids : undefined
+}
+
+/** 矩阵类(floyd/interval_dp/sudoku 等)：用 initialState.matrix 应用所有 update_cell 得最终矩阵。 */
+function finalMatrixFromScript(script: AnimationScript): AnimationScript['result'] | undefined {
+  const base = script.initialState.matrix
+  if (!base || base.length === 0) return undefined
+  const m: Array<Array<number | string>> = base.map(row => [...row])
+  for (const step of script.steps) {
+    for (const ev of step.events ?? []) {
+      if (ev.type === 'matrix.update_cell') {
+        const e = ev as { row: number; col: number; value: number | string }
+        if (m[e.row] && e.col < m[e.row].length) m[e.row][e.col] = e.value
+      }
+    }
+  }
+  // result 不支持二维数组 → 转成可读的逐行字符串。
+  return m.map(row => `[${row.join(', ')}]`).join('  ')
+}
+
+/**
+ * 通用输出兜底：把脚本回放到最终场景，按结构前缀(数组/堆/栈/队列/集合/水塘等)
+ * 取出最终结构的值序列作为「输出结果」。覆盖大多数数据结构类算法,无需逐个写死。
+ */
+function genericResultFromScene(script: AnimationScript): AnimationScript['result'] | undefined {
+  const norm = (v: unknown) =>
+    typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean' ? v : String(v ?? '')
+  try {
+    const scene = deriveSceneState(script, script.steps.length)
+    const ents = Object.values(scene.entities)
+
+    // 1. 有序结构单元(数组/堆/栈/队列/集合/水塘/位集),按下标排序取值。
+    const prefixes = ['arr_', 'heap_', 'stack_', 'queue_', 'deque_', 'set_', 'prob_res_', 'bit_']
+    for (const prefix of prefixes) {
+      const re = new RegExp(`^${prefix}(\\d+)$`)
+      const cells = ents
+        .filter(e => e.type === 'cell' && re.test(e.id))
+        .sort((a, b) => Number(a.id.match(re)![1]) - Number(b.id.match(re)![1]))
+      if (cells.length > 0) return cells.map(c => norm((c as { value?: unknown }).value))
+    }
+
+    // 2. 结点型结构(树/链表/并查集/图)：取结点 value 字段。
+    const nodeVals = ents
+      .filter((e): e is typeof e & { fields?: Array<{ id: string; role?: string; value?: unknown }> } => e.type === 'node')
+      .map(n => {
+        const f = (n.fields ?? []).find(ff => ff.id === 'value' || ff.role === 'value') ?? (n.fields ?? [])[0]
+        return f?.value
+      })
+      .filter(v => v !== undefined && v !== null && v !== '')
+    if (nodeVals.length > 0) return nodeVals.map(norm)
+
+    // 3. 兜底：任何带值的结构性单元(排除变量面板/几何/自动机/概率柱/表头/占位)。
+    const skip = ['mathvar_', 'geo_', 'auto_', 'prob_bin_', 'gan_']
+    const cells = ents.filter(e =>
+      e.type === 'cell' &&
+      (e as { value?: unknown }).value != null && (e as { value?: unknown }).value !== '' &&
+      !skip.some(s => e.id.startsWith(s)) &&
+      e.state?.role !== 'header' && e.state?.role !== 'empty_placeholder',
+    )
+    if (cells.length > 0) return cells.map(c => norm((c as { value?: unknown }).value))
+  } catch {
+    /* 回放失败则放弃通用兜底 */
+  }
+  return undefined
 }
 
 export function hasGenerator(algoId: string): boolean {
