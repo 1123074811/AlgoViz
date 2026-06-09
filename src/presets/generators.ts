@@ -1415,7 +1415,7 @@ const floydWrapper = (input: unknown) => {
   if (typeof input === 'object' && input !== null && Array.isArray((input as Record<string, unknown>).matrix)) return generateFloyd((input as Record<string, unknown>).matrix as number[][])
   return generateFloyd()
 }
-const tarjanSccWrapper = () => generateTarjanScc()
+const tarjanSccWrapper = (input: unknown) => generateTarjanScc(parseGraphInput(input))
 const aStarWrapper = (input: unknown) => {
   const graph = parseGraphInput(input)
   if (typeof input === 'object' && input !== null) {

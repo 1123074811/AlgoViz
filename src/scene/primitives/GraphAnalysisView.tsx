@@ -9,8 +9,9 @@ interface Model { discLow: Record<string, [number, number]>; stack: string[]; co
 export default function GraphAnalysisView({ marker, scene }: Props) {
   const model = (marker.meta ?? {}) as Partial<Model>
   const discLow = model.discLow ?? {}
-  const stack = model.stack ?? []
   const components = model.components ?? {}
+  // DFS 栈不在此自建样式——预设通过 teachingState.stack 交给基础 ContainerView 栈渲染。
+  // 本叠加层只负责图结点上的 disc/low 标注与 SCC 分组环。
 
   const graphNodes = Object.values(scene.entities).filter(
     (e): e is SceneNode => e.type === 'node' && e.variant.startsWith('graph.'),
@@ -36,18 +37,6 @@ export default function GraphAnalysisView({ marker, scene }: Props) {
           </g>
         )
       })}
-      {/* DFS 栈面板 */}
-      {stack.length > 0 && (
-        <g>
-          <text x={40} y={40} fontSize={11} fontFamily="monospace" fill={NEUTRALS.labelText}>DFS 栈</text>
-          {stack.map((id, i) => (
-            <g key={`ganstk_${i}`}>
-              <rect x={32} y={48 + (stack.length - 1 - i) * 30} width={56} height={26} rx={4} fill={NEUTRALS.surface} stroke={NEUTRALS.frameStroke} strokeWidth={1} />
-              <text x={60} y={48 + (stack.length - 1 - i) * 30 + 17} textAnchor="middle" fontSize={12} fontFamily="monospace" fill={NEUTRALS.bodyText}>{id}</text>
-            </g>
-          ))}
-        </g>
-      )}
     </g>
   )
 }
