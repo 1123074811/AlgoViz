@@ -432,6 +432,14 @@ export class AnimationBuilder {
     return this
   }
 
+  // ── 图高级分析（Tarjan SCC：disc/low 标注 + DFS 栈 + 分组着色） ──
+  ganUpdate(patch: { discLow?: Record<string, [number, number]>; stack?: string[]; components?: Record<string, number> }): this {
+    return this.add([{ type: 'graph_analysis.update', ...patch }], this.act('highlight', [], 'primary'))
+  }
+  ganClear(): this {
+    return this.add([{ type: 'graph_analysis.clear' }], this.act('highlight', [], 'muted'))
+  }
+
   // ── 集合（set，去重·无序·成员判定，@type 用 array） ──
   setCreate(values: Array<number | string>): this {
     return this.add([{ type: 'set.create', values: [...values] }], this.act('highlight', [], 'primary'))
