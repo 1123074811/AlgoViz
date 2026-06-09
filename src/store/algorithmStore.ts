@@ -428,6 +428,22 @@ q.append(2)
 q.popleft()    # dequeue -> 1`,
   },
   {
+    id: 'reservoir_sampling', name: '水塘抽样', nameEn: 'Reservoir Sampling', category: 'data-structure', difficulty: 'medium',
+    hasPreset: true, defaultLanguage: 'python',
+    defaultCode: `import random
+
+def reservoir_sample(stream, k=1):
+    reservoir = []
+    for i, x in enumerate(stream):
+        if i < k:
+            reservoir.append(x)
+        else:
+            j = random.randint(0, i)
+            if j < k:
+                reservoir[j] = x
+    return reservoir`,
+  },
+  {
     id: 'binary_tree_traverse', name: '二叉树遍历', nameEn: 'Binary Tree Traversal', category: 'data-structure', difficulty: 'medium',
     hasPreset: true, defaultLanguage: 'python',
     defaultCode: `def inorder(root):
