@@ -143,4 +143,12 @@ export type MathAlgorithmEvent =
   | { type: 'math.highlight'; name: string }
   | { type: 'math.note'; text: string }
 
-export type AlgorithmEvent = CommonAlgorithmEvent | PointerAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | UnionFindAlgorithmEvent | MathAlgorithmEvent | CallStackEvent | DPEvent | GridEvent
+export type GeometryAlgorithmEvent =
+  | { type: 'geometry.plane'; xRange: [number, number]; yRange: [number, number] }
+  | { type: 'geometry.point'; id: string; x: number; y: number; label?: string; color?: 'primary' | 'success' | 'danger' | 'muted' }
+  | { type: 'geometry.segment'; id: string; from: [number, number]; to: [number, number]; color?: 'primary' | 'success' | 'danger' | 'muted' }
+  | { type: 'geometry.polygon'; id: string; points: Array<[number, number]>; color?: 'primary' | 'success' | 'danger' | 'muted' }
+  | { type: 'geometry.sweepline'; axis: 'x' | 'y'; value: number }
+  | { type: 'geometry.clear' }
+
+export type AlgorithmEvent = CommonAlgorithmEvent | PointerAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | UnionFindAlgorithmEvent | MathAlgorithmEvent | GeometryAlgorithmEvent | CallStackEvent | DPEvent | GridEvent
