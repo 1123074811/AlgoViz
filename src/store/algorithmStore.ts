@@ -508,6 +508,24 @@ heapq.heappush(heap, 2)
 print(heapq.heappop(heap))  # 1`,
   },
   {
+    id: 'convex_hull', name: '凸包 (Andrew)', nameEn: 'Convex Hull (Andrew)', category: 'data-structure', difficulty: 'medium',
+    hasPreset: true, defaultLanguage: 'python',
+    defaultCode: `def convex_hull(points):
+    points = sorted(set(points))
+    def half(pts):
+        hull = []
+        for p in pts:
+            while len(hull) >= 2 and cross(hull[-2], hull[-1], p) <= 0:
+                hull.pop()
+            hull.append(p)
+        return hull[:-1]
+    def cross(o, a, b):
+        return (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0])
+    lower = half(points)
+    upper = half(points[::-1])
+    return lower + upper`,
+  },
+  {
     id: 'trie', name: 'Trie 字典树', nameEn: 'Trie', category: 'data-structure', difficulty: 'medium',
     hasPreset: true, defaultLanguage: 'python',
     defaultCode: `class TrieNode:

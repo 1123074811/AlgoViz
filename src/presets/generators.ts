@@ -875,6 +875,7 @@ import { generateFloyd } from './floyd'
 import { generateAStar } from './aStar'
 import { generateBTree } from './bTree'
 import { generateBPlusTree } from './bPlusTree'
+import { generateConvexHull } from './convexHull'
 export { generateBFS, generateDFS, generateDijkstra, generatePrim, generateKruskal, generateTopologicalSort, generateFloyd, generateAStar }
 import { generateRadixSort } from './radixSort'
 import { generateBucketSort } from './bucketSort'
@@ -1474,6 +1475,25 @@ const bplusRangeWrapper = (input: any): AnimationScript => {
   return generateDynamicBPlusTreeOp('range_query', arr, param)!
 }
 
+/** Parse an array of [x, y] point pairs from natural input; ignore malformed input. */
+function parsePoints(input: unknown): Array<[number, number]> | undefined {
+  const raw = Array.isArray(input)
+    ? input
+    : (input && typeof input === 'object'
+        ? (Array.isArray((input as Record<string, unknown>).points)
+            ? (input as Record<string, unknown>).points as unknown[]
+            : Array.isArray((input as Record<string, unknown>).data)
+              ? (input as Record<string, unknown>).data as unknown[]
+              : undefined)
+        : undefined)
+  if (!raw) return undefined
+  const pts = raw
+    .filter((p): p is [number, number] => Array.isArray(p) && p.length >= 2 && typeof p[0] === 'number' && typeof p[1] === 'number')
+    .map(p => [p[0], p[1]] as [number, number])
+  return pts.length >= 3 ? pts : undefined
+}
+const convexHullWrapper = (input: unknown) => generateConvexHull(parsePoints(input))
+
 const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   bubble_sort: numGen(generateBubbleSort), selection_sort: numGen(generateSelectionSort),
   insertion_sort: numGen(generateInsertionSort), merge_sort: numGen(generateMergeSort),
@@ -1508,6 +1528,7 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   backtracking: backtrackingWrapper,
   radix_sort: numGen(generateRadixSort), bucket_sort: numGen(generateBucketSort),
   leetcode_hot100: leetcodeWrapper, gcd_euclidean: gcdWrapper, acm_templates: acmWrapper,
+  convex_hull: convexHullWrapper,
 }
 
 export function generatePreset(algoId: string, inputData: unknown): AnimationScript | undefined {

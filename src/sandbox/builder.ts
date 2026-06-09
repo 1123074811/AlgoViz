@@ -683,6 +683,26 @@ export class AnimationBuilder {
     )
   }
 
+  // ── geometry（坐标平面：点 / 线段 / 多边形 / 扫描线，@type 用 array） ──
+  geoPlane(xRange: [number, number], yRange: [number, number]): this {
+    return this.add([{ type: 'geometry.plane', xRange, yRange }], this.act('highlight', [], 'primary'))
+  }
+  geoPoint(id: string, x: number, y: number, label?: string, color?: 'primary' | 'success' | 'danger' | 'muted'): this {
+    return this.add([{ type: 'geometry.point', id, x, y, label, color }], this.act('highlight', [], color ?? 'primary'))
+  }
+  geoSegment(id: string, from: [number, number], to: [number, number], color?: 'primary' | 'success' | 'danger' | 'muted'): this {
+    return this.add([{ type: 'geometry.segment', id, from, to, color }], this.act('edge', [], color ?? 'primary'))
+  }
+  geoPolygon(id: string, points: Array<[number, number]>, color?: 'primary' | 'success' | 'danger' | 'muted'): this {
+    return this.add([{ type: 'geometry.polygon', id, points, color }], this.act('highlight', [], color ?? 'primary'))
+  }
+  geoSweep(axis: 'x' | 'y', value: number): this {
+    return this.add([{ type: 'geometry.sweepline', axis, value }], this.act('highlight', [], 'warning'))
+  }
+  geoClear(): this {
+    return this.add([{ type: 'geometry.clear' }], this.act('highlight', [], 'muted'))
+  }
+
   // ── note / escape ──
   note(text: string): this {
     return this.add([{ type: 'scene.note', text }], this.act('annotate', [], 'muted'))
