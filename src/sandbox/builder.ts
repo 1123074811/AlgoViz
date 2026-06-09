@@ -416,6 +416,20 @@ export class AnimationBuilder {
     return this.add([{ type: 'bitset.highlight', index }], this.act('highlight', [index], 'warning'))
   }
 
+  // ── 概率 / 随机化（直方图分布 + 采样高亮 + 水塘抽样槽位，@type 用 array） ──
+  probDist(bins: Array<{ label: string; weight: number }>): this {
+    return this.add([{ type: 'prob.dist', bins: bins.map(b => ({ ...b })) }], this.act('highlight', [], 'primary'))
+  }
+  probSample(index: number): this {
+    return this.add([{ type: 'prob.sample', index }], this.act('highlight', [], 'success'))
+  }
+  probReservoir(capacity: number, items: Array<number | string>): this {
+    return this.add([{ type: 'prob.reservoir', capacity, items: [...items] }], this.act('highlight', [], 'primary'))
+  }
+  probNote(text: string): this {
+    return this.add([{ type: 'prob.note', text }], this.act('annotate', [], 'muted'))
+  }
+
   // ── 纯数学 / 变量面板（结构无关算法，@type 用 array） ──
   varInit(vars: Array<{ name: string; value: number | string }>): this {
     for (const v of vars) this.varValues.set(v.name, v.value)

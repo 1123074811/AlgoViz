@@ -880,6 +880,7 @@ import { generateConvexHull } from './convexHull'
 export { generateBFS, generateDFS, generateDijkstra, generatePrim, generateKruskal, generateTopologicalSort, generateFloyd, generateAStar }
 import { generateRadixSort } from './radixSort'
 import { generateBucketSort } from './bucketSort'
+import { generateReservoir } from './reservoir'
 import type { GraphInput } from './bfsGraph'
 import { generateDynamicLinkedListOp, generateDynamicBSTOp, generateDynamicBTreeOp, generateDynamicBPlusTreeOp } from './dynamicOperations'
 
@@ -1202,6 +1203,7 @@ import { DATA_STRUCTURE_OPERATIONS } from './operationPresets'
 
 const queueWrapper = (input: unknown) => generateQueue(parseArr(input))
 const heapWrapper = (input: unknown) => generateHeapOperations(parseArr(input).slice(0, 6))
+const reservoirWrapper = (input: unknown) => generateReservoir(parseArr(input))
 const unionFindWrapper = (input: unknown) => {
   if (Array.isArray(input) && input.length > 0 && Array.isArray(input[0])) return generateUnionFind(input as number[][])
   return generateUnionFind()
@@ -1535,6 +1537,7 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   radix_sort: numGen(generateRadixSort), bucket_sort: numGen(generateBucketSort),
   leetcode_hot100: leetcodeWrapper, gcd_euclidean: gcdWrapper, acm_templates: acmWrapper,
   convex_hull: convexHullWrapper,
+  reservoir_sampling: reservoirWrapper,
 }
 
 export function generatePreset(algoId: string, inputData: unknown): AnimationScript | undefined {

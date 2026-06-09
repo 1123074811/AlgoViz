@@ -40,6 +40,15 @@ describe('AnimationBuilder — array', () => {
     const b = new AnimationBuilder('x', 'array')
     expect(() => b.build()).toThrow(/没有产生任何步骤/)
   })
+
+  it('builder prob 方法产出 prob.* 事件', () => {
+    const b = new AnimationBuilder('prob', 'array')
+    b.probDist([{ label: 'a', weight: 1 }, { label: 'b', weight: 2 }])
+    b.probSample(1)
+    const evs = b.build().steps.flatMap(s => s.events ?? [])
+    expect(evs.some(e => e.type === 'prob.dist')).toBe(true)
+    expect(evs.some(e => e.type === 'prob.sample')).toBe(true)
+  })
 })
 
 describe('AnimationBuilder — geometry', () => {

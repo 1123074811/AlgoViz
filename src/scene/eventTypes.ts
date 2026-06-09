@@ -158,4 +158,11 @@ export type AutomatonAlgorithmEvent =
   | { type: 'automaton.consume'; symbol: string; index: number }
   | { type: 'automaton.clear' }
 
-export type AlgorithmEvent = CommonAlgorithmEvent | PointerAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | UnionFindAlgorithmEvent | MathAlgorithmEvent | GeometryAlgorithmEvent | AutomatonAlgorithmEvent | CallStackEvent | DPEvent | GridEvent
+export type ProbAlgorithmEvent =
+  | { type: 'prob.dist'; bins: Array<{ label: string; weight: number }> }
+  | { type: 'prob.sample'; index: number }
+  | { type: 'prob.reservoir'; capacity: number; items: Array<number | string> }
+  | { type: 'prob.note'; text: string }
+  | { type: 'prob.clear' }
+
+export type AlgorithmEvent = CommonAlgorithmEvent | PointerAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | UnionFindAlgorithmEvent | MathAlgorithmEvent | GeometryAlgorithmEvent | AutomatonAlgorithmEvent | ProbAlgorithmEvent | CallStackEvent | DPEvent | GridEvent
