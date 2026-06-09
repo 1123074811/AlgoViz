@@ -29,6 +29,11 @@ export default function CellView({ cell }: CellViewProps) {
   if (cell.id.startsWith('mathvar_')) {
     return null
   }
+  // 这些前缀由各自的专用图元渲染(GeometryView/AutomatonView/DistributionView)，
+  // CellView 跳过,避免把它们当普通方块单元重复绘制(如几何平面会变成巨型方块)。
+  if (cell.id.startsWith('geo_') || cell.id.startsWith('auto_') || cell.id.startsWith('prob_')) {
+    return null
+  }
 
   const opacity = cell.state?.opacity ?? 1
   const value = cell.value?.toString() ?? ''
