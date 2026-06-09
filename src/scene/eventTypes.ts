@@ -143,4 +143,11 @@ export type MathAlgorithmEvent =
   | { type: 'math.highlight'; name: string }
   | { type: 'math.note'; text: string }
 
-export type AlgorithmEvent = CommonAlgorithmEvent | PointerAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | UnionFindAlgorithmEvent | MathAlgorithmEvent | CallStackEvent | DPEvent | GridEvent
+export type AutomatonAlgorithmEvent =
+  | { type: 'automaton.create'; states: Array<{ id: string; label?: string; accepting?: boolean; start?: boolean }> }
+  | { type: 'automaton.transition'; id: string; from: string; to: string; label: string }
+  | { type: 'automaton.activate'; stateId: string }
+  | { type: 'automaton.consume'; symbol: string; index: number }
+  | { type: 'automaton.clear' }
+
+export type AlgorithmEvent = CommonAlgorithmEvent | PointerAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | UnionFindAlgorithmEvent | MathAlgorithmEvent | AutomatonAlgorithmEvent | CallStackEvent | DPEvent | GridEvent
