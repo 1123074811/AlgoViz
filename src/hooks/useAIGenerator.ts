@@ -26,6 +26,43 @@ export function classifyFailure(err: { stage?: string; kind?: string }): Fallbac
   return 'parse'
 }
 
+const PARAM_SAMPLE_BY_NAME: Array<[RegExp, string]> = [
+  [/(intervals?|ranges?|segments?)/i, 'intervals = [[1,3],[2,5],[3,6]]'],
+  [/(target|targetSum|sum|k)\b/i, 'nums = [2, 7, 11, 15]; target = 9'],
+  [/(nums?|arr|array|values|heights|temperatures|prices|stones|piles)/i, 'nums = [5, 3, 8, 1, 9, 2]'],
+  [/(grid|board|matrix)/i, 'grid = [[1,0,1],[0,1,0],[1,0,1]]'],
+  [/(text|word1|word2|pattern|s)\b/i, 's = "babad"'],
+  [/(root|tree)/i, 'root = [8,3,10,1,6,null,14]'],
+  [/(edges?|graph|nodes?)/i, 'n = 5; edges = [[0,1],[1,2],[2,3],[3,4]]'],
+]
+
+/** Infer a small LeetCode-style sample when the model forgets @sample.
+ *  This keeps empty-input analysis from executing generators against null. */
+export function inferSampleInputFromCode(code: string, algorithmName?: string): string | undefined {
+  const candidates = [algorithmName ?? '', code]
+  const paramList = extractFirstParameterList(code)
+  if (paramList) candidates.unshift(paramList)
+
+  const joined = candidates.join('\n')
+  for (const [pattern, sample] of PARAM_SAMPLE_BY_NAME) {
+    if (pattern.test(joined)) return sample
+  }
+  return undefined
+}
+
+function extractFirstParameterList(code: string): string | undefined {
+  const patterns = [
+    /\bdef\s+\w+\s*\(([^)]*)\)/,
+    /\b(?:public|private|protected)?\s*(?:static\s+)?[\w<>\[\], ?]+\s+\w+\s*\(([^)]*)\)\s*[{;]/,
+    /\bfunction\s+\w+\s*\(([^)]*)\)/,
+  ]
+  for (const pattern of patterns) {
+    const match = pattern.exec(code)
+    if (match?.[1]) return match[1]
+  }
+  return undefined
+}
+
 /** 从已解析输入构造一个尽量有内容的兜底 initialState（数组优先）。 */
 function toFallbackInitialState(value: unknown): InitialState {
   if (Array.isArray(value)) {
@@ -170,12 +207,16 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
 
       // The AI infers the expected input format and supplies a sample. Auto-fill
       // it only when the current input box is empty/invalid (respect user input).
-      const effectiveInput = currentInputValid ? params.inputData : (gen.sampleInput ?? params.inputData)
+      const inferredSample = !currentInputValid && !gen.sampleInput
+        ? inferSampleInputFromCode(params.code, params.algorithmName)
+        : undefined
+      const sampleInput = gen.sampleInput ?? inferredSample
+      const effectiveInput = currentInputValid ? params.inputData : (sampleInput ?? params.inputData)
       // Track the input the script is actually generated from, so the box and
       // history always mirror the animation (see the @sample retry below).
       let usedInput = effectiveInput
-      if (!currentInputValid && gen.sampleInput) {
-        sampleFill(gen.sampleInput)
+      if (!currentInputValid && sampleInput) {
+        sampleFill(sampleInput)
       }
 
       const recognized = recognizeAlgorithm(gen.algorithm)
@@ -206,11 +247,11 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
 
       // If the generator crashed (often a stale/wrong-shaped leftover input),
       // retry with the AI's own sample input, which matches the expected format.
-      if (!sandboxResult.ok && gen.sampleInput && gen.sampleInput !== effectiveInput) {
-        const sp = parseInputRef.current(gen.sampleInput)
+      if (!sandboxResult.ok && sampleInput && sampleInput !== effectiveInput) {
+        const sp = parseInputRef.current(sampleInput)
         if (sp.valid) {
           const retry = await runGeneratorSandboxed(gen.body, sp.value, { algorithm: gen.algorithm, type: genType })
-          if (retry.ok) { sandboxResult = retry; sampleFill(gen.sampleInput); usedInput = gen.sampleInput }
+          if (retry.ok) { sandboxResult = retry; sampleFill(sampleInput); usedInput = sampleInput }
         }
       }
 
@@ -233,7 +274,11 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
           })
           if (repaired) {
             const retry = await runGeneratorSandboxed(repaired.body, p.value, { algorithm: gen.algorithm, type: genType })
-            if (retry.ok && retry.script) { sandboxResult = retry; activeBody = repaired.body }
+            if (retry.ok && retry.script) {
+              sandboxResult = retry
+              activeBody = repaired.body
+              setGenerator({ body: repaired.body, type: genType })
+            }
           }
         }
       }
@@ -256,7 +301,11 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
               if (retry.ok && retry.script) {
                 const errs2 = runQualityGate(retry.script, category, CATEGORY_PROFILES[category].rules, params.code)
                   .issues.filter(i => i.severity === 'error')
-                if (errs2.length < errs.length) { sandboxResult = retry; activeBody = repaired.body }
+                if (errs2.length < errs.length) {
+                  sandboxResult = retry
+                  activeBody = repaired.body
+                  setGenerator({ body: repaired.body, type: genType })
+                }
               }
             }
           }
