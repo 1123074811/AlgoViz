@@ -329,6 +329,10 @@ Scene 的每一步是一个完整的 `SceneState` 快照。`src/scene/useSceneTr
 | `heapCompiler` | `heap.*` |
 | `bitsetCompiler` | `bitset.*` |
 | `mathCompiler` | `math.*` |
+| `geometryCompiler` | `geometry.*`（坐标平面/点/线段/多边形/扫描线） |
+| `automatonCompiler` | `automaton.*`（状态机：状态/转移/接受态/当前态） |
+| `probCompiler` | `prob.*`（概率分布直方图/采样/水塘槽） |
+| `graphAnalysisCompiler` | `graph_analysis.*`（图叠加：disc/low、SCC 分组、DFS 栈） |
 
 此外，`scene.note`、`scene.wait`、`scene.highlight`、`scene.link`、`scene.clear_highlight` 等通用事件在 `compileEvent` 中直接处理。
 
@@ -344,6 +348,7 @@ Scene 的每一步是一个完整的 `SceneState` 快照。`src/scene/useSceneTr
 - `LabelView`：标签、说明文本
 - `RegionView`：复合场景分区
 - `StringView`、`SetView`、`HashTableView`、`HeapView`、`BitsetView`、`VariablesView`：专用结构视图
+- `GeometryView`、`AutomatonView`、`DistributionView`、`GraphAnalysisView`：几何坐标平面、状态机、概率直方图、图高级分析叠加层
 
 ### 复合场景布局
 
@@ -378,6 +383,10 @@ presentation.layout = 'composite'
 | 动态规划 | 0/1 背包、完全背包、LCS、LIS、编辑距离、矩阵链乘、区间 DP |
 | 搜索回溯 | 二分查找、回溯、N 皇后、数独 |
 | 进阶专题 | KMP、Manacher、线段树、树状数组、单调栈、滑动窗口、位集、数学变量面板 |
+| 几何 | 凸包（Andrew 单调链，坐标平面/点/线段/多边形/扫描线） |
+| 自动机/字符串 | KMP 匹配自动机（状态机可视化） |
+| 概率/随机化 | 水塘抽样（分布直方图 + 槽位） |
+| 图高级分析 | Tarjan 强连通分量（disc/low + SCC 分组 + DFS 栈叠加） |
 | 题单/模板 | LeetCode Hot 100、ACM 模板 |
 
 算法目录状态主要定义在 `src/store/algorithmStore.ts`，补充说明数据位于 `src/data/algorithmDefs.ts`。
