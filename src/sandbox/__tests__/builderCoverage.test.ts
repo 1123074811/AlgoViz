@@ -45,19 +45,19 @@ describe('coerceArray（经 stackCreate / arrayCreate 等驱动）', () => {
 
   it('标量（number / string）被包裹为单元素数组', () => {
     const bn = new AnimationBuilder('x', 'array')
-    // @ts-expect-error 标量
+    // @ts-expect-error 故意传标量以测试 coerceArray 包裹行为
     bn.stackCreate(7)
     expect(lastEvent(bn)).toEqual({ type: 'stack.create', values: [7] })
 
     const bs = new AnimationBuilder('x', 'array')
-    // @ts-expect-error 标量
+    // @ts-expect-error 故意传标量以测试 coerceArray 包裹行为
     bs.stackCreate('hi')
     expect(lastEvent(bs)).toEqual({ type: 'stack.create', values: ['hi'] })
   })
 
   it('垃圾输入（null / 无匹配键的对象）降级为空数组', () => {
     const bnull = new AnimationBuilder('x', 'array')
-    // @ts-expect-error 垃圾
+    // @ts-expect-error 故意传垃圾值以测试降级为空数组
     bnull.queueCreate(null)
     expect(lastEvent(bnull)).toEqual({ type: 'queue.create', values: [] })
 
