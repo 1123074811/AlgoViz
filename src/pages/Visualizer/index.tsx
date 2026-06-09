@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import type { OnMount } from '@monaco-editor/react'
 import { Icon } from '@/icons'
 import { useAlgorithmStore, type AIHistoryEntry } from '@/store/algorithmStore'
-import { getPreset, generatePreset, hasGenerator } from '@/presets'
 import { useAnimationEngine } from '@/hooks/useAnimationEngine'
+import { resolveScript } from '@/hooks/resolveScript'
 import { getApiConfig, parseInputData } from '@/ai'
 import { useAIGenerator } from '@/hooks/useAIGenerator'
 import type { AnimationScript } from '@/types/animation'
@@ -126,22 +126,6 @@ function getAlgorithmDescEn(id: string): string {
   return ALGO_DESC_EN[id] || ''
 }
 
-
-function getConcreteAlgoId(algoId: string, opId: string): string {
-  if (algoId.startsWith('linked_list_') || algoId === 'doubly_linked_list' || algoId === 'linked_list') {
-    return `linked_list_${opId}`
-  }
-  if (algoId.startsWith('bst_') || algoId === 'avl_tree' || algoId === 'red_black_tree' || algoId === 'bst' || algoId === 'avl_insert') {
-    return `bst_${opId}`
-  }
-  if (algoId === 'btree') {
-    return `btree_${opId}`
-  }
-  if (algoId === 'bplus_tree') {
-    return `bplus_tree_${opId}`
-  }
-  return algoId
-}
 
 let currentAnalysisController: AbortController | null = null
 
@@ -411,45 +395,14 @@ export default function Visualizer() {
       prevAlgoId.current = selectedAlgorithm.id
     }
 
-    // If a custom operation is selected, load its code and script dynamically if dynamic generator is available
-    if (currentOperationId && selectedAlgorithm) {
-      const concreteAlgoId = getConcreteAlgoId(selectedAlgorithm.id, currentOperationId)
-      if (hasGenerator(concreteAlgoId)) {
-        const baseData = parsedInput()
-        const paramVal = Number(operationParam) || 5
-        const script = generatePreset(concreteAlgoId, { data: baseData, param: paramVal })
-        if (script) {
-          setAnimationScript(script)
-          return
-        }
-      }
-
-      // Fallback to static op script if no dynamic generator
-      const op = operations?.find(o => o.id === currentOperationId)
-      if (op) {
-        setAnimationScript(op.script)
-        return
-      }
-    }
-
-    if (selectedAlgorithm.hasPreset) {
-      // Try generator first (dynamic, responds to input changes)
-      if (hasGenerator(selectedAlgorithm.id)) {
-        const data = parsedInput()
-        const script = generatePreset(selectedAlgorithm.id, data)
-        if (script) {
-          setAnimationScript(script)
-          return
-        }
-      }
-      // Fallback to static preset
-      const preset = getPreset(selectedAlgorithm.id)
-      if (preset) {
-        setAnimationScript(preset)
-        return
-      }
-    }
-    setAnimationScript(null)
+    const script = resolveScript({
+      selectedAlgorithm,
+      currentOperationId,
+      operations,
+      parsedInput,
+      operationParam,
+    })
+    setAnimationScript(script)
   }, [selectedAlgorithm, inputData, operationParam, setAnimationScript, parsedInput, currentOperationId, operations, resetGenerator, setAIStatus])
 
   const handleEditorMount: OnMount = useCallback((editor) => {
