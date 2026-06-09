@@ -432,6 +432,20 @@ export class AnimationBuilder {
     return this
   }
 
+  // ── 状态机 / 自动机（automaton，状态圆 + 带标签有向转移，@type 用 array） ──
+  autoCreate(states: Array<{ id: string; label?: string; accepting?: boolean; start?: boolean }>): this {
+    return this.add([{ type: 'automaton.create', states: states.map(s => ({ ...s })) }], this.act('highlight', [], 'primary'))
+  }
+  autoTransition(id: string, from: string, to: string, label: string): this {
+    return this.add([{ type: 'automaton.transition', id, from, to, label }], this.act('edge', [], 'primary'))
+  }
+  autoActivate(stateId: string): this {
+    return this.add([{ type: 'automaton.activate', stateId }], this.act('highlight', [], 'success'))
+  }
+  autoConsume(symbol: string, index: number): this {
+    return this.add([{ type: 'automaton.consume', symbol, index }], this.act('highlight', [], 'warning'))
+  }
+
   // ── 集合（set，去重·无序·成员判定，@type 用 array） ──
   setCreate(values: Array<number | string>): this {
     return this.add([{ type: 'set.create', values: [...values] }], this.act('highlight', [], 'primary'))
