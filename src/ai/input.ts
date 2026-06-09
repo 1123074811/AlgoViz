@@ -72,9 +72,13 @@ export function normalizeInputText(raw: string): NormalizedInputText {
   const multiAssignments = parseMultiAssignments(trimmed)
   if (multiAssignments) return multiAssignments
 
-  const assignment = trimmed.match(/^[A-Za-z_$][\w$]*(?:\s*,\s*[A-Za-z_$][\w$]*)*\s*=\s*([\s\S]+)$/)
-  const assignmentName = assignment ? trimmed.slice(0, trimmed.indexOf('=')).split(',')[0].trim() : undefined
-  const candidate = assignment ? assignment[1].trim() : trimmed
+  const assignment = trimmed.match(/^([A-Za-z_$][\w$]*)\s*=\s*([\s\S]+)$/)
+  const assignmentName = assignment ? assignment[1].trim() : undefined
+  if (assignment && assignmentName !== 'root') {
+    return { json: `{${JSON.stringify(assignmentName)}:${toJsonLiteral(assignment[2])}}`, assignmentName }
+  }
+
+  const candidate = assignment ? assignment[2].trim() : trimmed
 
   const json = candidate
     .replace(/\bNone\b/g, 'null')
@@ -302,7 +306,7 @@ function identifyKind(value: unknown): InputDataKind {
     }
 
     // Common LeetCode multi-input objects whose primary structure is an array.
-    if (['nums', 'arr', 'array', 'values', 'heights', 'temperatures', 'prices'].some(key => Array.isArray(obj[key]))) {
+    if (['nums', 'arr', 'array', 'values', 'heights', 'temperatures', 'prices', 'intervals', 'ranges', 'segments', 'stones', 'piles'].some(key => Array.isArray(obj[key]))) {
       return 'array'
     }
 
@@ -432,7 +436,7 @@ function buildSummary(kind: InputDataKind, value: unknown): string {
 }
 
 function extractPrimaryArray(obj: Record<string, unknown>): unknown[] {
-  for (const key of ['nums', 'arr', 'array', 'values', 'heights', 'temperatures', 'prices']) {
+  for (const key of ['nums', 'arr', 'array', 'values', 'heights', 'temperatures', 'prices', 'intervals', 'ranges', 'segments', 'stones', 'piles']) {
     if (Array.isArray(obj[key])) return obj[key]
   }
   return []

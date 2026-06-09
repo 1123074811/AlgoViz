@@ -344,6 +344,9 @@ function parseStringCodeVars(vars: ParsedVars, algoId: string): unknown {
 }
 
 function parseMatrixCodeVars(vars: ParsedVars, _algoId: string, _s: string): unknown {
+  if (Array.isArray(vars.intervals)) return vars
+  if (Array.isArray(vars.ranges)) return vars
+  if (Array.isArray(vars.segments)) return vars
   // Knapsack: weights + values + capacity
   if (Array.isArray(vars.weights) && Array.isArray(vars.values) && typeof vars.capacity === 'number') {
     return vars
