@@ -15,6 +15,7 @@ import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
 import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
 import InputDataPanel from '@/components/Editor/InputDataPanel'
+import RunDataPanel from '@/components/Editor/RunDataPanel'
 import { REQUEST_AI_REPAIR_EVENT } from '@/components/ErrorBoundary'
 import { getSceneDiagnosticSummary, getSceneEventStats, usesSceneEngine } from '@/scene'
 import { getOperationsForAlgo } from '@/presets/operationPresets'
@@ -709,43 +710,44 @@ export default function Visualizer() {
                     disabled={aiStatus === 'analyzing'}
                     className="h-20 xl:h-24 xl:shrink-0"
                   />
+                  <RunDataPanel
+                    script={animationScript}
+                    visualState={visualState}
+                    currentStep={currentStep}
+                    totalSteps={totalSteps}
+                    lang={lang}
+                    title={lang === 'zh' ? '操作输出' : 'Operation Output'}
+                    className="h-20 xl:h-24 xl:shrink-0"
+                  />
                 </div>
               ) : (
-                <InputDataPanel
-                  value={inputData}
-                  onChange={setInputData}
-                  title={t('visualizer.inputData')}
-                  helperText={(() => {
-                    const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
-                    if (def) return def.hint
-                    const info = parseInputData(inputData)
-                    return info.valid ? `类型: ${info.kind} · ${info.summary}` : '支持数组、字符串、JSON 对象'
-                  })()}
-                  placeholder={(() => {
-                    if (inputFormat === 'leetcode' && selectedAlgorithm?.id) return getLeetCodePlaceholder(selectedAlgorithm.id)
-                    const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
-                    return def?.value ?? '[5, 3, 8, 1, 9, 2]'
-                  })()}
-                  disabled={aiStatus === 'analyzing'}
-                  className="h-28 xl:flex-1 xl:h-auto xl:min-h-0 p-1"
-                />
-              )}
-              {/* Output result */}
-              {currentStep >= totalSteps && totalSteps > 0 && (
-                animationScript?.result !== undefined ||
-                (visualState.arrayData.length > 0 && ((animationScript?.algorithm ?? '').includes('sort') || (animationScript?.algorithm ?? '') === 'array'))
-              ) && (
-                <div className="h-20 border-t border-border bg-green-50 p-2.5 shrink-0 mt-auto">
-                  <div className="text-xs font-semibold text-green-700 mb-1">
-                    {lang === 'zh' ? '输出结果' : 'Output'}
-                  </div>
-                  <div className="text-xs font-code text-green-600 leading-relaxed break-all overflow-auto max-h-12">
-                    {animationScript?.result !== undefined
-                      ? Array.isArray(animationScript.result)
-                        ? `[${animationScript.result.join(', ')}]`
-                        : String(animationScript.result)
-                      : `[${visualState.arrayData.join(', ')}]`}
-                  </div>
+                <div className="flex flex-col gap-2 flex-1 min-h-0 p-1">
+                  <InputDataPanel
+                    value={inputData}
+                    onChange={setInputData}
+                    title={t('visualizer.inputData')}
+                    helperText={(() => {
+                      const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
+                      if (def) return def.hint
+                      const info = parseInputData(inputData)
+                      return info.valid ? `类型: ${info.kind} · ${info.summary}` : '支持数组、字符串、JSON 对象'
+                    })()}
+                    placeholder={(() => {
+                      if (inputFormat === 'leetcode' && selectedAlgorithm?.id) return getLeetCodePlaceholder(selectedAlgorithm.id)
+                      const def = selectedAlgorithm?.id ? DEFAULT_INPUTS[selectedAlgorithm.id] : null
+                      return def?.value ?? '[5, 3, 8, 1, 9, 2]'
+                    })()}
+                    disabled={aiStatus === 'analyzing'}
+                    className="h-28 xl:flex-1 xl:h-auto xl:min-h-0"
+                  />
+                  <RunDataPanel
+                    script={animationScript}
+                    visualState={visualState}
+                    currentStep={currentStep}
+                    totalSteps={totalSteps}
+                    lang={lang}
+                    className="h-20 xl:h-24 xl:shrink-0"
+                  />
                 </div>
               )}
             </div>

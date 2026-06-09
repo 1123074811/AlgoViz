@@ -4068,6 +4068,96 @@ public class BPlusTree {
     }
 }`,
   },
+  reservoir_sampling: {
+    python: `import random
+
+def reservoir_sampling(stream, k=1):
+    # 水塘抽样：从未知长度的数据流中等概率抽取 k 个样本
+    reservoir = []
+    for i, x in enumerate(stream):
+        if i < k:
+            reservoir.append(x)
+        else:
+            j = random.randint(0, i)  # 第 i 个元素以 k/(i+1) 概率入选
+            if j < k:
+                reservoir[j] = x
+    return reservoir`,
+  },
+  convex_hull: {
+    python: `def convex_hull(points):
+    # Andrew 单调链：O(n log n) 求凸包
+    points = sorted(set(map(tuple, points)))
+    if len(points) <= 2:
+        return points
+
+    def cross(o, a, b):
+        return (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0])
+
+    lower = []
+    for p in points:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+            lower.pop()
+        lower.append(p)
+    upper = []
+    for p in reversed(points):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+            upper.pop()
+        upper.append(p)
+    return lower[:-1] + upper[:-1]`,
+  },
+  kmp_automaton: {
+    python: `def kmp_search(pattern, text):
+    # 构建失败函数(前缀函数)
+    m = len(pattern)
+    fail = [0] * m
+    k = 0
+    for i in range(1, m):
+        while k > 0 and pattern[i] != pattern[k]:
+            k = fail[k-1]
+        if pattern[i] == pattern[k]:
+            k += 1
+        fail[i] = k
+    # 在 text 上跑自动机
+    res, state = [], 0
+    for i, ch in enumerate(text):
+        while state > 0 and ch != pattern[state]:
+            state = fail[state-1]
+        if ch == pattern[state]:
+            state += 1
+        if state == m:
+            res.append(i - m + 1)
+            state = fail[state-1]
+    return res`,
+  },
+  tarjan_scc: {
+    python: `def tarjan_scc(graph):
+    # Tarjan 求强连通分量：O(V+E)
+    index = 0
+    disc, low, on_stack = {}, {}, set()
+    stack, sccs = [], []
+
+    def dfs(u):
+        nonlocal index
+        index += 1
+        disc[u] = low[u] = index
+        stack.append(u); on_stack.add(u)
+        for v in graph.get(u, []):
+            if v not in disc:
+                dfs(v); low[u] = min(low[u], low[v])
+            elif v in on_stack:
+                low[u] = min(low[u], disc[v])
+        if low[u] == disc[u]:
+            comp = []
+            while True:
+                w = stack.pop(); on_stack.discard(w); comp.append(w)
+                if w == u: break
+            sccs.append(comp)
+
+    for node in graph:
+        if node not in disc:
+            dfs(node)
+    return sccs`,
+  },
 };
 
 export function getCodeTemplate(algoId: string, lang: CodeLang): string {

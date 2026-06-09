@@ -199,7 +199,13 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
       event.type.endsWith('_double') ||
       event.type === 'linked_list.create' ||
       event.type === 'tree.create' ||
-      event.type === 'graph.create'
+      event.type === 'graph.create' ||
+      // 新模块的首步即「初始化整组结构」(平面+点、分布/水塘、自动机、图分析叠加),
+      // 整步在第 0 帧就完整呈现,避免初始空白。
+      event.type.startsWith('geometry.') ||
+      event.type.startsWith('prob.') ||
+      event.type.startsWith('automaton.') ||
+      event.type.startsWith('graph_analysis.')
     )
     for (const event of createEvents) {
       const commands = compileEvent(event, { scene, stepIndex: 0, script })

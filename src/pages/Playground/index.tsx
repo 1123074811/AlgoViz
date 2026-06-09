@@ -12,6 +12,7 @@ import Header from '@/components/Layout/Header'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
 import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
 import InputDataPanel from '@/components/Editor/InputDataPanel'
+import RunDataPanel from '@/components/Editor/RunDataPanel'
 import ConfirmDialog from '@/components/Common/ConfirmDialog'
 import { REQUEST_AI_REPAIR_EVENT } from '@/components/ErrorBoundary'
 import { useAlgorithmStore, type AIHistoryEntry } from '@/store/algorithmStore'
@@ -24,7 +25,8 @@ let playgroundAnalysisController: AbortController | null = null
 const DEFAULT_CODE = ''
 
 export default function Playground() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language as 'zh' | 'en'
   const navigate = useNavigate()
 
   const [code, setCode] = useState(DEFAULT_CODE)
@@ -521,6 +523,14 @@ export default function Playground() {
             error={!inputInfo.valid ? inputInfo.message ?? '输入格式错误，修正后会自动同步动画' : null}
             disabled={isAnalyzing}
             className="h-28"
+          />
+          <RunDataPanel
+            script={activeAnimationScript}
+            visualState={visualState}
+            currentStep={currentStep}
+            totalSteps={totalSteps}
+            lang={lang}
+            className="h-24"
           />
         </div>
 
