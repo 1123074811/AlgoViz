@@ -27,11 +27,9 @@ export function parseAIResponseDetailed(raw: string): ParseResult {
   // Strategy 1: Direct JSON parse
   let json: unknown
   let extractedText = raw
-  let extractMethod = ''
 
   try {
     json = JSON.parse(raw.trim())
-    extractMethod = 'direct'
   } catch {
     // Strategy 2: Extract from markdown code block
     const blockMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
@@ -39,11 +37,9 @@ export function parseAIResponseDetailed(raw: string): ParseResult {
       extractedText = blockMatch[1].trim()
       try {
         json = JSON.parse(extractedText)
-        extractMethod = 'code_block'
       } catch {
         try {
           json = JSON.parse(stripTrailingCommas(extractedText))
-          extractMethod = 'code_block_cleaned'
         } catch {
           // Strategy 3: Find first { and last }
           const extracted = extractBetweenBraces(raw)
@@ -51,11 +47,9 @@ export function parseAIResponseDetailed(raw: string): ParseResult {
             extractedText = extracted
             try {
               json = JSON.parse(extractedText)
-              extractMethod = 'brace_extract'
             } catch {
               try {
                 json = JSON.parse(stripTrailingCommas(extractedText))
-                extractMethod = 'brace_extract_cleaned'
               } catch {
                 return buildError('json_parse', 'jsonParseFailed', raw)
               }
@@ -71,11 +65,9 @@ export function parseAIResponseDetailed(raw: string): ParseResult {
         extractedText = extracted
         try {
           json = JSON.parse(extractedText)
-          extractMethod = 'brace_extract'
         } catch {
           try {
             json = JSON.parse(stripTrailingCommas(extractedText))
-            extractMethod = 'brace_extract_cleaned'
           } catch {
             return buildError('json_parse', 'jsonParseFailed', raw)
           }

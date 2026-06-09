@@ -499,14 +499,14 @@ function renderAuxiliaryArrays(scene: SceneState, teachingState: TeachingState |
   let labels = { ...scene.labels }
   for (const key of Object.keys(entities)) {
     if (key.startsWith('aux_')) {
-      const { [key]: _, ...rest } = entities
-      entities = rest
+      entities = { ...entities }
+      delete entities[key]
     }
   }
   for (const key of Object.keys(labels)) {
     if (key.startsWith('aux_label_')) {
-      const { [key]: _, ...rest } = labels
-      labels = rest
+      labels = { ...labels }
+      delete labels[key]
     }
   }
 
@@ -639,7 +639,8 @@ function applyCommand(scene: SceneState, command: SceneCommand): SceneState {
     case 'connect':
       return { ...scene, edges: { ...scene.edges, [command.edge.id]: command.edge } }
     case 'disconnect': {
-      const { [command.edgeId]: _, ...restEdges } = scene.edges
+      const restEdges = { ...scene.edges }
+      delete restEdges[command.edgeId]
       return { ...scene, edges: restEdges }
     }
     case 'set_state': {
@@ -730,10 +731,14 @@ function applyCommand(scene: SceneState, command: SceneCommand): SceneState {
 }
 
 function removeEntity(scene: SceneState, entityId: string): SceneState {
-  const { [entityId]: _e, ...restEntities } = scene.entities
-  const { [entityId]: _l, ...restLabels } = scene.labels
-  const { [entityId]: _g, ...restGroups } = scene.groups
-  const { [entityId]: _p, ...restPointers } = scene.pointers
+  const restEntities = { ...scene.entities }
+  delete restEntities[entityId]
+  const restLabels = { ...scene.labels }
+  delete restLabels[entityId]
+  const restGroups = { ...scene.groups }
+  delete restGroups[entityId]
+  const restPointers = { ...scene.pointers }
+  delete restPointers[entityId]
 
   // Remove edges connected to this entity
   const filteredEdges: Record<string, SceneEdge> = {}

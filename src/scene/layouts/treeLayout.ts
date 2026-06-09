@@ -65,25 +65,6 @@ function computeDepth(scene: SceneState, rootId: string, nodes: SceneNode[]): nu
 }
 
 /**
- * Count the number of leaf nodes in the tree.
- */
-function countLeaves(scene: SceneState, rootId: string, nodes: SceneNode[]): number {
-  const nodeIdSet = new Set(nodes.map(n => n.id))
-  let count = 0
-  function dfs(id: string) {
-    if (!nodeIdSet.has(id)) return
-    const children = getChildren(scene, id).filter(c => nodeIdSet.has(c))
-    if (children.length === 0) {
-      count++
-      return
-    }
-    children.forEach(c => dfs(c))
-  }
-  dfs(rootId)
-  return count
-}
-
-/**
  * Layout tree nodes with adaptive spacing.
  *
  * Horizontal and vertical gaps are computed from tree depth and leaf count,

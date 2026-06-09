@@ -22,7 +22,7 @@ export function getSceneEventStats(script: AnimationScript | null | undefined) {
  * Compute adaptive radius and font size for circular scene nodes (trees and graphs)
  * to maintain a perfect aesthetic proportion between text and node size.
  */
-export function getAdaptiveCircleLayout(value: string, defaultDiameter: number = 48): { r: number; fontSize: number } {
+export function getAdaptiveCircleLayout(value: string, _defaultDiameter: number = 48): { r: number; fontSize: number } {
   const valLen = value.length
   
   if (valLen === 0) {

@@ -27,7 +27,6 @@ export function generateNQueens(n?: number): AnimationScript {
 
   function solve(row: number): boolean {
     if (row === N) {
-      const flat = board.flat().map((c) => (c === 'Q' ? 1 : 0))
       steps.push({
         stepId: sid++, codeLine: 3,
         description: { zh: `找到解！皇后位置: ${board.map((r, i) => `(${i},${r.indexOf('Q')})`).join(' ')}`, en: `Solution found! Queens at: ${board.map((r, i) => `(${i},${r.indexOf('Q')})`).join(' ')}` },

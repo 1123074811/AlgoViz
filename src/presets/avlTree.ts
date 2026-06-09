@@ -1,20 +1,5 @@
-import type { AnimationScript, TeachingState, ActionColor } from '@/types/animation'
+import type { AnimationScript } from '@/types/animation'
 import { makeStep } from './utils'
-
-function avlTeaching(nodeId: string, role: 'current' | 'rotating' | 'balanced' | 'path', height?: number, bf?: number): TeachingState {
-  return {
-    tree: {
-      nodeStates: [{
-        id: nodeId,
-        role,
-        color: (role === 'rotating' ? 'danger' : role === 'balanced' ? 'success' : 'warning') as ActionColor,
-        height,
-        balanceFactor: bf,
-      }],
-    },
-    variables: height !== undefined ? { height, bf: bf ?? 0 } : undefined,
-  }
-}
 
 export function generateAVLTree(arr?: number[]): AnimationScript {
   const tree = arr && arr.length > 0 ? [...arr] : [8, 3, 10, 1, 6, 0, 14, 0, 0, 4]

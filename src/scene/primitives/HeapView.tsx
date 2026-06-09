@@ -35,7 +35,6 @@ export default function HeapView({ nodes, hideTitle }: HeapViewProps) {
   const minX = Math.min(...sorted.map(c => c.position.x - nodeW / 2))
   const maxX = Math.max(...sorted.map(c => c.position.x + nodeW / 2))
   const minY = Math.min(...sorted.map(c => c.position.y - nodeH / 2))
-  const maxY = Math.max(...sorted.map(c => c.position.y + nodeH / 2))
 
   // Array-mirror geometry: a horizontal strip above the tree. Keeping it above
   // the nodes uses the otherwise empty top space and avoids dashed region frames.

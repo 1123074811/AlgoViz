@@ -9,7 +9,7 @@ export const graphCompiler: EventCompiler = {
   compile: (event, context) => compileGraphEvent(event as GraphAlgorithmEvent, context),
 }
 
-function compileGraphEvent(event: GraphAlgorithmEvent, context: CompileContext): SceneCommand[] {
+function compileGraphEvent(event: GraphAlgorithmEvent, _context: CompileContext): SceneCommand[] {
   switch (event.type) {
     case 'graph.create':
       return [

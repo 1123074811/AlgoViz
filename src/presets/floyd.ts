@@ -1,4 +1,4 @@
-import type { AnimationScript, ActionColor } from '@/types/animation'
+import type { AnimationScript } from '@/types/animation'
 
 export function generateFloyd(input?: number[][]): AnimationScript {
   let matrix: number[][]
@@ -81,7 +81,6 @@ export function generateFloyd(input?: number[][]): AnimationScript {
   }
 
   // Final step
-  const finalFlat = matrix.flat()
   steps.push({
     stepId: sid++, codeLine: 12,
     description: {

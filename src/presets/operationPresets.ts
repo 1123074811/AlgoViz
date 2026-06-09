@@ -1,8 +1,4 @@
-import type { AnimationScript, AnimationStep, ActionColor } from '@/types/animation'
-import { makeStep } from './utils'
-import { createLinkedListNode, createTreeNode } from '@/scene/variants/nodeVariants'
-import { createGraphNode } from '@/scene/variants/graphNodeVariants'
-import { createEdge } from '@/scene/variants/edgeVariants'
+import type { AnimationScript } from '@/types/animation'
 
 export interface OperationDef {
   id: 'insert' | 'delete' | 'update' | 'search' | 'range_query'
@@ -10,14 +6,6 @@ export interface OperationDef {
   labelEn: string
   code: Record<string, string>
   script: AnimationScript
-}
-
-function edgeId(from: string, port: string, to: string) {
-  return `e_${from}_${port}_${to}`
-}
-
-function graphEdgeId(source: string, target: string) {
-  return `e_${source}_center_${target}`
 }
 
 export const DATA_STRUCTURE_OPERATIONS: Record<string, OperationDef[]> = {

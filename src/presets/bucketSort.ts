@@ -1,5 +1,5 @@
 import type { AnimationScript, ActionColor, AuxiliaryArrayState } from '@/types/animation'
-import { makeStep, sortTeaching, sortTeachingWithAux } from './utils'
+import { makeStep, sortTeachingWithAux } from './utils'
 
 export function generateBucketSort(arr: number[]): AnimationScript {
   const data = arr.map(v => Math.max(0, Math.floor(v)))

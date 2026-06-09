@@ -5,9 +5,7 @@ import type {
   SceneEdge, 
   ScenePointer, 
   SceneLabel, 
-  SceneEntityState, 
-  Point, 
-  Size,
+  SceneEntityState,
   NodeField,
   NodePort
 } from '../types'
