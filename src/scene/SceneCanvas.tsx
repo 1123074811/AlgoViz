@@ -9,6 +9,7 @@ import ContainerView from './primitives/ContainerView'
 import EdgeView from './primitives/EdgeView'
 import BitsetView from './primitives/BitsetView'
 import HashTableView from './primitives/HashTableView'
+import GeometryView from './primitives/GeometryView'
 import HeapView from './primitives/HeapView'
 import LabelView from './primitives/LabelView'
 import NodeView, { NodeStyles } from './primitives/NodeView'
@@ -190,9 +191,13 @@ export default function SceneCanvas({ script, currentStep, currentStepData, spee
         ))}
         {renderContainers(entities, Object.values(scene.groups).some(g => g.id.startsWith('region_')))}
         {renderArrayWindowOverlay(entities, 'backdrop')}
+        {(() => {
+          const geoCells = entities.filter((e): e is SceneCell => e.type === 'cell' && e.id.startsWith('geo_'))
+          return geoCells.length > 0 ? <GeometryView cells={geoCells} /> : null
+        })()}
         <g className="pointer-events-auto">
           {edges.map((edge) => <EdgeView key={edge.id} edge={edge} scene={scene} />)}
-          {entities.map((entity) => entity.type === 'cell' ? <CellView key={entity.id} cell={entity} /> : null)}
+          {entities.map((entity) => entity.type === 'cell' && !entity.id.startsWith('geo_') ? <CellView key={entity.id} cell={entity} /> : null)}
           {renderArrayWindowOverlay(entities, 'boundary')}
           {entities.map((entity) => entity.type === 'node' ? <NodeView key={entity.id} node={entity} /> : null)}
           {labels.map((label) => <LabelView key={label.id} label={label} />)}
