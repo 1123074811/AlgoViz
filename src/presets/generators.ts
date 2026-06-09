@@ -875,6 +875,7 @@ import { generateFloyd } from './floyd'
 import { generateAStar } from './aStar'
 import { generateBTree } from './bTree'
 import { generateBPlusTree } from './bPlusTree'
+import { generateTarjanScc } from './tarjanScc'
 export { generateBFS, generateDFS, generateDijkstra, generatePrim, generateKruskal, generateTopologicalSort, generateFloyd, generateAStar }
 import { generateRadixSort } from './radixSort'
 import { generateBucketSort } from './bucketSort'
@@ -1406,6 +1407,7 @@ const floydWrapper = (input: unknown) => {
   if (typeof input === 'object' && input !== null && Array.isArray((input as Record<string, unknown>).matrix)) return generateFloyd((input as Record<string, unknown>).matrix as number[][])
   return generateFloyd()
 }
+const tarjanSccWrapper = () => generateTarjanScc()
 const aStarWrapper = (input: unknown) => {
   const graph = parseGraphInput(input)
   if (typeof input === 'object' && input !== null) {
@@ -1490,6 +1492,7 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   bfs_graph: bfsWrapper, dfs_graph: dfsWrapper,
   dijkstra: dijkstraWrapper, prim: primWrapper, kruskal: kruskalWrapper,
   topological_sort: topoWrapper, floyd: floydWrapper, a_star: aStarWrapper,
+  tarjan_scc: tarjanSccWrapper,
   queue: queueWrapper, heap_ds: heapWrapper, union_find: unionFindWrapper,
   bellman_ford: bellmanFordWrapper,
   linked_list_insert: linkedListInsertWrapper,
