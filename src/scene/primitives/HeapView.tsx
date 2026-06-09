@@ -14,13 +14,13 @@ const MIRROR_STROKE = SEMANTIC_COLORS.idle.stroke
  * Structural overlay for the dedicated heap / priority-queue visual. The node
  * bodies (cells) and parent→child edges are drawn by CellView / EdgeView in the
  * main scene loop; this component draws only the shell — a title naming the heap
- * variant (最小堆 / 最大堆) and a bottom "array mirror" showing the level-order
+ * variant (最小堆 / 最大堆) and a top "array mirror" showing the level-order
  * backing array with its indices. Mirrors HashTableView / SetView's
  * "draw shell, not cells" convention.
  *
  * The compiler lays out heap_<i> cells as a complete binary tree (node i at
  * level floor(log2(i+1)); children 2i+1, 2i+2), so the mirror just re-sorts the
- * cells by index and renders them in a horizontal row beneath the tree.
+ * cells by index and renders them in a horizontal row above the tree.
  */
 export default function HeapView({ nodes, hideTitle }: HeapViewProps) {
   if (nodes.length === 0) return null
@@ -37,20 +37,22 @@ export default function HeapView({ nodes, hideTitle }: HeapViewProps) {
   const minY = Math.min(...sorted.map(c => c.position.y - nodeH / 2))
   const maxY = Math.max(...sorted.map(c => c.position.y + nodeH / 2))
 
-  // Array-mirror geometry: a horizontal strip below the tree.
+  // Array-mirror geometry: a horizontal strip above the tree. Keeping it above
+  // the nodes uses the otherwise empty top space and avoids dashed region frames.
   const cellW = 40
   const cellH = 34
   const gap = 4
-  const mirrorY = maxY + 56
+  const mirrorGap = 44
+  const mirrorY = minY - mirrorGap
   const totalW = sorted.length * cellW + (sorted.length - 1) * gap
   const mirrorStartX = (minX + maxX) / 2 - totalW / 2
 
   return (
     <g>
-      {/* Title above the tree */}
+      {/* Title above the mirror strip */}
       {!hideTitle && (
         <text
-          x={minX} y={minY - 16}
+          x={Math.min(minX, mirrorStartX)} y={mirrorY - cellH / 2 - 28}
           textAnchor="start" fontSize="12" fill={NEUTRALS.labelText} fontFamily="monospace" fontWeight={600}
         >
           {title}

@@ -54,6 +54,25 @@ b.result(b._getVar('ans'))
     expect(result.script?.result).toBe(1)
   })
 
+  it('对常见漏声明变量做一次本地恢复', () => {
+    const body = `
+const courses = input.courses || input
+b.arrayCreate(courses.map(course => course[0]))
+for (const [ti] of courses) {
+  total += ti
+  b.varSet('total', total)
+}
+b.result(total)
+`
+    const result = executeGenerator(
+      body,
+      { courses: [[100, 200], [200, 1300]] },
+      { algorithm: 'course_schedule', type: 'array' },
+    )
+    expect(result.ok).toBe(true)
+    expect(result.script?.result).toBe(300)
+  })
+
   it('语法错误的生成器体返回 ok:false', () => {
     const result = executeGenerator('this is not valid js {{{', [1], { algorithm: 'x', type: 'array' })
     expect(result.ok).toBe(false)
