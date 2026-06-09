@@ -35,6 +35,25 @@ describe('executeGenerator', () => {
     expect(result.error).toContain('boom')
   })
 
+  it('兼容旧生成器源码调用 b._getVar 读取变量', () => {
+    const body = `
+const nums = input.height || input.nums || input
+b.arrayCreate(nums)
+b.varInit([{ name: 'ans', value: 0 }])
+for (let l = 0, r = nums.length - 1; l < r;) {
+  const area = Math.min(nums[l], nums[r]) * (r - l)
+  if (area > b._getVar('ans')) b.varSet('ans', area)
+  b.compare(l, r)
+  if (nums[l] <= nums[r]) l++
+  else r--
+}
+b.result(b._getVar('ans'))
+`
+    const result = executeGenerator(body, { height: [1, 1] }, { algorithm: 'container_with_most_water', type: 'array' })
+    expect(result.ok).toBe(true)
+    expect(result.script?.result).toBe(1)
+  })
+
   it('语法错误的生成器体返回 ok:false', () => {
     const result = executeGenerator('this is not valid js {{{', [1], { algorithm: 'x', type: 'array' })
     expect(result.ok).toBe(false)

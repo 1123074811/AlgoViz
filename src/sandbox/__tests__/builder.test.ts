@@ -136,4 +136,14 @@ describe('AnimationBuilder — variables', () => {
       { type: 'math.highlight', name: 'q' },
     ])
   })
+
+  it('_getVar 兼容旧生成器读取变量值', () => {
+    const b = new AnimationBuilder('container_with_most_water', 'array')
+    b.varInit([{ name: 'ans', value: 0 }])
+    expect(b._getVar('ans')).toBe(0)
+    expect(b._getVar('missing')).toBeUndefined()
+
+    b.varSet('ans', 1)
+    expect(b._getVar('ans')).toBe(1)
+  })
 })

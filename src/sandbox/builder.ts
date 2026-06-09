@@ -431,6 +431,11 @@ export class AnimationBuilder {
     this.pendingVarHighlights.add(name)
     return this
   }
+  /** Backward-compatible helper for older/AI-generated generators that read
+   *  tracked variables through an internal-looking API before updating them. */
+  _getVar(name: string): number | string | undefined {
+    return this.varValues.get(name)
+  }
 
   // ── 集合（set，去重·无序·成员判定，@type 用 array） ──
   setCreate(values: Array<number | string>): this {
