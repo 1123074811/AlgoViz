@@ -7,7 +7,7 @@ import { useAnimationEngine } from '@/hooks/useAnimationEngine'
 import { getApiConfig, parseInputData, type AIErrorReport, type AIRepairAttempt } from '@/ai'
 import { compileAndValidateCode } from '@/utils/codeCompiler'
 import { detectCodeLanguage, getCodeLanguageLabel } from '@/utils/languageDetector'
-import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
+import SceneCanvas from '@/scene/SceneCanvas'
 import Header from '@/components/Layout/Header'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
 import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
@@ -537,7 +537,7 @@ export default function Playground() {
         {/* Visualization */}
         <div className="flex-[1.5] flex flex-col min-w-0 min-h-0">
           <div className="flex-1 min-h-0">
-            <VisualizationCanvas script={activeAnimationScript} visualState={visualState} currentStepData={currentStepData} speed={speed} />
+            <SceneCanvas script={activeAnimationScript} currentStep={visualState.currentStep} currentStepData={currentStepData} speed={speed} />
           </div>
           <PlaybackControls
             compact

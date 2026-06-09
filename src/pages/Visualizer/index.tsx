@@ -11,7 +11,7 @@ import type { AnimationScript } from '@/types/animation'
 import { compileAndValidateCode } from '@/utils/codeCompiler'
 import { parseAlgorithmInput, getLeetCodeDefault, getLeetCodePlaceholder } from '@/utils/inputParser'
 import { ALGORITHM_DEFS } from '@/data/algorithmDefs'
-import VisualizationCanvas from '@/components/Canvas/VisualizationCanvas'
+import SceneCanvas from '@/scene/SceneCanvas'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
 import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
 import InputDataPanel from '@/components/Editor/InputDataPanel'
@@ -798,9 +798,9 @@ export default function Visualizer() {
             </div>
           )}
           <div className="flex-1 min-h-0">
-            <VisualizationCanvas
+            <SceneCanvas
               script={animationScript}
-              visualState={visualState}
+              currentStep={visualState.currentStep}
               currentStepData={currentStepData}
               speed={speed}
             />
