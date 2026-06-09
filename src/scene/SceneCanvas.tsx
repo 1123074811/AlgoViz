@@ -20,6 +20,7 @@ import RegionView from './primitives/RegionView'
 import SetView from './primitives/SetView'
 import StringView from './primitives/StringView'
 import VariablesView from './primitives/VariablesView'
+import GraphAnalysisView from './primitives/GraphAnalysisView'
 import AlgorithmOverlays from './overlays/AlgorithmOverlays'
 import { SEMANTIC_COLORS, NEUTRALS } from './tokens'
 import { EDGE_FLOW_KEYFRAMES } from './primitives/sharedMotion'
@@ -212,6 +213,9 @@ export default function SceneCanvas({ script, currentStep, currentStepData, spee
           })()}
           {labels.map((label) => <LabelView key={label.id} label={label} />)}
           {pointers.map((pointer, index) => <PointerView key={pointer.id} pointer={pointer} scene={scene} index={index} />)}
+          {scene.entities['gan_marker']?.type === 'cell' && (
+            <GraphAnalysisView marker={scene.entities['gan_marker'] as SceneCell} scene={scene} />
+          )}
         </g>
         <style>{EDGE_FLOW_KEYFRAMES}</style>
       </svg>

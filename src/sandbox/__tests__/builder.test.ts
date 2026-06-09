@@ -183,3 +183,14 @@ describe('AnimationBuilder — automaton', () => {
     expect(evs.some(e => e.type === 'automaton.consume')).toBe(true)
   })
 })
+
+describe('AnimationBuilder — graph_analysis', () => {
+  it('ganUpdate / ganClear 方法产出对应 events', () => {
+    const b = new AnimationBuilder('tarjan_scc', 'graph')
+    b.ganUpdate({ discLow: { A: [1, 1] }, stack: ['A'] })
+    b.ganClear()
+    const evs = b.build().steps.flatMap(s => s.events ?? [])
+    expect(evs.some(e => e.type === 'graph_analysis.update')).toBe(true)
+    expect(evs.some(e => e.type === 'graph_analysis.clear')).toBe(true)
+  })
+})

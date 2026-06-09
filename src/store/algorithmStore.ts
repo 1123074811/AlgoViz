@@ -324,6 +324,39 @@ def a_star(grid, start, goal):
     return dist`,
   },
   {
+    id: 'tarjan_scc', name: 'Tarjan 强连通分量', nameEn: 'Tarjan SCC', category: 'graph', difficulty: 'hard',
+    hasPreset: true, defaultLanguage: 'python',
+    defaultCode: `def tarjan_scc(graph, n):
+    index = [0]
+    disc = [-1] * n
+    low = [0] * n
+    on_stack = [False] * n
+    stack = []
+    comps = []
+
+    def dfs(u):
+        index[0] += 1
+        disc[u] = low[u] = index[0]
+        stack.append(u); on_stack[u] = True
+        for v in graph[u]:
+            if disc[v] == -1:
+                dfs(v); low[u] = min(low[u], low[v])
+            elif on_stack[v]:
+                low[u] = min(low[u], disc[v])
+        if low[u] == disc[u]:
+            comp = []
+            while True:
+                w = stack.pop(); on_stack[w] = False
+                comp.append(w)
+                if w == u: break
+            comps.append(comp)
+
+    for u in range(n):
+        if disc[u] == -1:
+            dfs(u)
+    return comps`,
+  },
+  {
     id: 'prim', name: 'Prim 最小生成树', nameEn: "Prim's Algorithm", category: 'graph', difficulty: 'hard',
     hasPreset: true, defaultLanguage: 'python',
     defaultCode: `import heapq
