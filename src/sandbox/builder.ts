@@ -306,6 +306,7 @@ export class AnimationBuilder {
   private varValues = new Map<string, number | string>()
   private pendingVarHighlights = new Set<string>()
   private truncated = false
+  private searchSeq = 0
   // tracks which structure families (event prefix before '.') the script used,
   // to auto-enable composite layout when 2+ distinct structures appear.
   private usedFamilies = new Set<string>()
@@ -870,6 +871,40 @@ export class AnimationBuilder {
   }
   geoClear(): this {
     return this.add([{ type: 'geometry.clear' }], this.act('highlight', [], 'muted'))
+  }
+
+  // ── 回溯搜索树（复用 tree.* 事件；与调用栈视图互补：树看搜索空间形状，栈看当前路径） ──
+  /** 创建搜索树根。回溯算法第一步调用，label 描述初始状态（如 '空棋盘'）。根 id 固定 'st_0'。 */
+  searchRoot(label: string | number): this {
+    this.searchSeq = 0
+    return this.treeCreate('binary', 'st_0', [{ id: 'st_0', value: label }], [])
+  }
+  /** 做选择：在 parentId 下挂一个新分支节点，返回其 id（后续 searchFail/searchOk/searchBack 引用）。 */
+  searchTry(parentId: string, label: string | number): string {
+    const id = `st_${++this.searchSeq}`
+    this.treeInsert(parentId, { id, value: label })
+    return id
+  }
+  /** 标记冲突/剪枝：该分支不可行。 */
+  searchFail(id: string): this {
+    return this.add(
+      [{ type: 'scene.highlight', entityId: id, role: 'current', color: 'danger' }],
+      this.act('highlight', [], 'danger'),
+    )
+  }
+  /** 标记成功：该分支到达解。 */
+  searchOk(id: string): this {
+    return this.add(
+      [{ type: 'scene.highlight', entityId: id, role: 'safe', color: 'success' }],
+      this.act('highlight', [], 'success'),
+    )
+  }
+  /** 撤销选择（回溯离开该分支）。 */
+  searchBack(id: string): this {
+    return this.add(
+      [{ type: 'scene.highlight', entityId: id, role: 'current', color: 'muted' }],
+      this.act('highlight', [], 'muted'),
+    )
   }
 
   // ── note / escape ──
