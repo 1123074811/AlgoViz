@@ -85,7 +85,8 @@ export function sanitizeLineMapping(script: AnimationScript, sourceCode: string)
 export function formatVerifyValue(value: unknown): string {
   let text: string
   try {
-    text = JSON.stringify(value)
+    // JSON.stringify 对 undefined/function/symbol 返回 undefined(不抛错),需回退 String()
+    text = JSON.stringify(value) ?? String(value)
   } catch {
     text = String(value)
   }

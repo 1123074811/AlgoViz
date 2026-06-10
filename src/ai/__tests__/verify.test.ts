@@ -118,3 +118,9 @@ describe('formatVerifyValue', () => {
     expect(result.endsWith('...')).toBe(true)
   })
 })
+
+describe('formatVerifyValue edge cases', () => {
+  it('does not throw on undefined and falls back to String()', () => {
+    expect(formatVerifyValue(undefined)).toBe('undefined')
+  })
+})
