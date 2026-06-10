@@ -5,7 +5,7 @@ import {
   type AlgorithmType,
   type AlgorithmCategory,
   type Difficulty,
-} from '@/data/algorithmCatalog'
+} from '@/data/algorithms'
 
 export type { AlgorithmType, AlgorithmCategory, Difficulty }
 
@@ -71,59 +71,66 @@ export interface AlgorithmActions {
   removeAIHistory: (id: string) => void
 }
 
-export const createAlgorithmStore = () => createStore<AlgorithmState & AlgorithmActions>((set) => ({
-  selectedAlgorithm: null,
-  algorithms: DEFAULT_ALGORITHMS,
-  animationScript: null,
-  searchQuery: '',
-  activeCategory: 'all',
-  language: (() => { try { return (localStorage.getItem('algoviz-lang') as 'zh' | 'en') || 'zh' } catch { return 'zh' } })(),
-  aiStatus: 'idle' as AIStatus,
-  aiError: '',
-  aiRawResponse: '',
-  aiHistory: loadAIHistory(),
+export const createAlgorithmStore = () =>
+  createStore<AlgorithmState & AlgorithmActions>((set) => ({
+    selectedAlgorithm: null,
+    algorithms: DEFAULT_ALGORITHMS,
+    animationScript: null,
+    searchQuery: '',
+    activeCategory: 'all',
+    language: (() => {
+      try {
+        return (localStorage.getItem('algoviz-lang') as 'zh' | 'en') || 'zh'
+      } catch {
+        return 'zh'
+      }
+    })(),
+    aiStatus: 'idle' as AIStatus,
+    aiError: '',
+    aiRawResponse: '',
+    aiHistory: loadAIHistory(),
 
-  setSelectedAlgorithm: (algo) => set({ selectedAlgorithm: algo }),
-  setAnimationScript: (script) => set({ animationScript: script }),
-  setSearchQuery: (query) => set({ searchQuery: query }),
-  setActiveCategory: (cat) => set({ activeCategory: cat }),
-  setLanguage: (lang) => {
-    localStorage.setItem('algoviz-lang', lang)
-    set({ language: lang })
-  },
+    setSelectedAlgorithm: (algo) => set({ selectedAlgorithm: algo }),
+    setAnimationScript: (script) => set({ animationScript: script }),
+    setSearchQuery: (query) => set({ searchQuery: query }),
+    setActiveCategory: (cat) => set({ activeCategory: cat }),
+    setLanguage: (lang) => {
+      localStorage.setItem('algoviz-lang', lang)
+      set({ language: lang })
+    },
 
-  setAIStatus: (status, error = '', rawResponse = '') =>
-    set({ aiStatus: status, aiError: error, aiRawResponse: rawResponse }),
+    setAIStatus: (status, error = '', rawResponse = '') =>
+      set({ aiStatus: status, aiError: error, aiRawResponse: rawResponse }),
 
-  addAIHistory: (entry) =>
-    set((state) => {
-      const next = [entry, ...state.aiHistory].slice(0, AI_HISTORY_MAX)
-      saveAIHistory(next)
-      return { aiHistory: next }
-    }),
+    addAIHistory: (entry) =>
+      set((state) => {
+        const next = [entry, ...state.aiHistory].slice(0, AI_HISTORY_MAX)
+        saveAIHistory(next)
+        return { aiHistory: next }
+      }),
 
-  clearAIHistory: () => {
-    saveAIHistory([])
-    set({ aiHistory: [] })
-  },
+    clearAIHistory: () => {
+      saveAIHistory([])
+      set({ aiHistory: [] })
+    },
 
-  updateAIHistory: (id, patch) =>
-    set((state) => {
-      const idx = state.aiHistory.findIndex((e) => e.id === id)
-      if (idx === -1) return state
-      const next = [...state.aiHistory]
-      next[idx] = { ...next[idx], ...patch }
-      saveAIHistory(next)
-      return { aiHistory: next }
-    }),
+    updateAIHistory: (id, patch) =>
+      set((state) => {
+        const idx = state.aiHistory.findIndex((e) => e.id === id)
+        if (idx === -1) return state
+        const next = [...state.aiHistory]
+        next[idx] = { ...next[idx], ...patch }
+        saveAIHistory(next)
+        return { aiHistory: next }
+      }),
 
-  removeAIHistory: (id) =>
-    set((state) => {
-      const next = state.aiHistory.filter((e) => e.id !== id)
-      saveAIHistory(next)
-      return { aiHistory: next }
-    }),
-}))
+    removeAIHistory: (id) =>
+      set((state) => {
+        const next = state.aiHistory.filter((e) => e.id !== id)
+        saveAIHistory(next)
+        return { aiHistory: next }
+      }),
+  }))
 
 const algorithmStore = createAlgorithmStore()
 

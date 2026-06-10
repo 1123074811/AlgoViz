@@ -1,7 +1,17 @@
 import { Icon } from '@/icons'
-import type { AlgorithmDefinition } from '@/data/algorithmDefs'
+import type { AlgorithmDefinition } from '@/data/algorithms'
 
-export default function DefinitionCard({ def, lang, expanded, onToggle }: { def: AlgorithmDefinition; lang: 'zh' | 'en'; expanded: boolean; onToggle: () => void }) {
+export default function DefinitionCard({
+  def,
+  lang,
+  expanded,
+  onToggle,
+}: {
+  def: AlgorithmDefinition
+  lang: 'zh' | 'en'
+  expanded: boolean
+  onToggle: () => void
+}) {
   return (
     <div className="p-3 rounded-lg border border-border bg-surface">
       <button
@@ -22,18 +32,32 @@ export default function DefinitionCard({ def, lang, expanded, onToggle }: { def:
             <span className="font-semibold">{lang === 'zh' ? '过程：' : 'Procedure:'}</span>
             <ol className="list-decimal list-inside mt-1 space-y-0.5">
               {(lang === 'zh' ? def.procedure : def.procedureEn).map((step, i) => (
-                <li key={i} className="text-[10px]">{step}</li>
+                <li key={i} className="text-[10px]">
+                  {step}
+                </li>
               ))}
             </ol>
           </div>
           <div className="border-t border-border pt-2">
-            <span className="font-semibold">{lang === 'zh' ? '复杂度详解' : 'Complexity Details'}</span>
-            <p className="mt-0.5"><strong>{lang === 'zh' ? '时间：' : 'Time: '}</strong>{lang === 'zh' ? def.timeComplexity.explanation : def.timeComplexity.explanationEn}</p>
-            <p className="mt-0.5"><strong>{lang === 'zh' ? '空间：' : 'Space: '}</strong>{lang === 'zh' ? def.spaceComplexity.explanation : def.spaceComplexity.explanationEn}</p>
+            <span className="font-semibold">
+              {lang === 'zh' ? '复杂度详解' : 'Complexity Details'}
+            </span>
+            <p className="mt-0.5">
+              <strong>{lang === 'zh' ? '时间：' : 'Time: '}</strong>
+              {lang === 'zh' ? def.timeComplexity.explanation : def.timeComplexity.explanationEn}
+            </p>
+            <p className="mt-0.5">
+              <strong>{lang === 'zh' ? '空间：' : 'Space: '}</strong>
+              {lang === 'zh' ? def.spaceComplexity.explanation : def.spaceComplexity.explanationEn}
+            </p>
           </div>
           <div className="border-t border-border pt-2">
             <span className="font-semibold">{lang === 'zh' ? '特性：' : 'Properties: '}</span>
-            <span>{lang === 'zh' ? `稳定=${def.properties.stable ? '是' : '否'} 原地=${def.properties.inPlace ? '是' : '否'} 自适应=${def.properties.adaptive ? '是' : '否'}` : `Stable=${def.properties.stable} In-place=${def.properties.inPlace} Adaptive=${def.properties.adaptive}`}</span>
+            <span>
+              {lang === 'zh'
+                ? `稳定=${def.properties.stable ? '是' : '否'} 原地=${def.properties.inPlace ? '是' : '否'} 自适应=${def.properties.adaptive ? '是' : '否'}`
+                : `Stable=${def.properties.stable} In-place=${def.properties.inPlace} Adaptive=${def.properties.adaptive}`}
+            </span>
           </div>
           <div className="border-t border-border pt-2">
             <span className="font-semibold">{lang === 'zh' ? '适用场景：' : 'Use Cases: '}</span>

@@ -11,8 +11,6 @@ function makeAlgo(overrides: Partial<AlgorithmType> & { id: string }): Algorithm
     category: 'sorting',
     difficulty: 'easy',
     hasPreset: false,
-    defaultCode: '',
-    defaultLanguage: 'python',
     ...overrides,
   } as AlgorithmType
 }
