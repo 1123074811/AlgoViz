@@ -23,10 +23,14 @@ export function parseExpectValue(raw: string | undefined): { ok: boolean; value?
   }
 }
 
-/** 结果比对:数字带 1e-9 容差;数组逐元素;字符串/数字/布尔跨类型按字符串化比较。 */
+const FLOAT_TOLERANCE = 1e-9
+
+/** 结果比对:数字带 1e-9 容差;数组逐元素;字符串/数字/布尔跨类型按字符串化比较。
+ *  NaN 与 NaN 视为相等(浮点运算可能产生 NaN);不支持 plain object。 */
 export function resultsMatch(actual: unknown, expected: unknown): boolean {
   if (typeof actual === 'number' && typeof expected === 'number') {
-    return Math.abs(actual - expected) < 1e-9
+    if (Number.isNaN(actual) && Number.isNaN(expected)) return true
+    return Math.abs(actual - expected) < FLOAT_TOLERANCE
   }
   if (Array.isArray(actual) && Array.isArray(expected)) {
     return actual.length === expected.length && actual.every((v, i) => resultsMatch(v, expected[i]))
@@ -64,7 +68,7 @@ export function verifyAgainstGroundTruth(script: AnimationScript, truth: unknown
   return { status: matched ? 'pass' : 'fail', source: 'js-exec', expected: truth, actual: script.result }
 }
 
-/** 行号消毒:b.line() 指向超出源代码行数的步骤,清除其行高亮(置 -1)。返回修正条数。 */
+/** 行号消毒:原地修改 script.steps[].codeLine,将越界行号置 -1。返回修正条数。 */
 export function sanitizeLineMapping(script: AnimationScript, sourceCode: string): number {
   const lineCount = sourceCode.split('\n').length
   let fixed = 0
@@ -81,7 +85,7 @@ export function sanitizeLineMapping(script: AnimationScript, sourceCode: string)
 export function formatVerifyValue(value: unknown): string {
   let text: string
   try {
-    text = JSON.stringify(value) ?? String(value)
+    text = JSON.stringify(value)
   } catch {
     text = String(value)
   }

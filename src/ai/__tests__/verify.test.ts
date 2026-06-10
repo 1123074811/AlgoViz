@@ -1,4 +1,4 @@
-import { parseExpectValue, resultsMatch, verifyAgainstExpect, sanitizeLineMapping } from '../verify'
+import { parseExpectValue, resultsMatch, verifyAgainstExpect, verifyAgainstGroundTruth, sanitizeLineMapping, formatVerifyValue } from '../verify'
 import type { AnimationScript } from '@/types/animation'
 
 function makeScript(result?: AnimationScript['result'], codeLines: number[] = [0]): AnimationScript {
@@ -47,6 +47,16 @@ describe('resultsMatch', () => {
     expect(resultsMatch('42', 42)).toBe(true)
     expect(resultsMatch(true, 'true')).toBe(true)
   })
+  it('treats NaN as equal to NaN', () => {
+    expect(resultsMatch(NaN, NaN)).toBe(true)
+  })
+  it('matches nested arrays recursively', () => {
+    expect(resultsMatch([[1, 2]], [[1, 2]])).toBe(true)
+    expect(resultsMatch([[1, 2]], [[1, 3]])).toBe(false)
+  })
+  it('matches empty arrays', () => {
+    expect(resultsMatch([], [])).toBe(true)
+  })
 })
 
 describe('verifyAgainstExpect', () => {
@@ -79,5 +89,31 @@ describe('sanitizeLineMapping', () => {
   it('returns 0 when all lines are valid', () => {
     const script = makeScript([0], [0, 1])
     expect(sanitizeLineMapping(script, 'a\nb\nc')).toBe(0)
+  })
+})
+
+describe('verifyAgainstGroundTruth', () => {
+  it('passes when script.result equals the ground truth', () => {
+    const outcome = verifyAgainstGroundTruth(makeScript(42), 42)
+    expect(outcome.status).toBe('pass')
+    expect(outcome.source).toBe('js-exec')
+  })
+  it('fails on mismatch', () => {
+    expect(verifyAgainstGroundTruth(makeScript(42), 99).status).toBe('fail')
+  })
+  it('skips when generator never called b.result', () => {
+    expect(verifyAgainstGroundTruth(makeScript(undefined), 99).status).toBe('skipped')
+  })
+})
+
+describe('formatVerifyValue', () => {
+  it('returns JSON for plain values', () => {
+    expect(formatVerifyValue([1, 2])).toBe('[1,2]')
+  })
+  it('truncates long strings beyond 120 chars', () => {
+    const long = Array(200).fill('a').join('')
+    const result = formatVerifyValue(long)
+    expect(result.length).toBe(120)
+    expect(result.endsWith('...')).toBe(true)
   })
 })
