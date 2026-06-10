@@ -37,4 +37,9 @@ describe('buildGeneratorSystemPrompt（core + 类别装配）', () => {
     expect(prompt).toContain('@expect')
     expect(prompt).toMatch(/@expect[\s\S]*原代码/)
   })
+
+  it('CORE_PROMPT requires bilingual desc', () => {
+    const prompt = CORE_PROMPT('Python')
+    expect(prompt).toContain("b.desc(中文描述, 'English description')")
+  })
 })

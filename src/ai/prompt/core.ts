@@ -39,7 +39,7 @@ export function CORE_PROMPT(language: string): string {
 - \`b\`：动画构建器，方法如下（除终结外都可链式 .desc(...).xxx()）
 
 ### 通用
-- \`b.desc(中文描述)\`：为紧接着的那个操作设置说明
+- \`b.desc(中文描述, 'English description')\`：为紧接着的那个操作设置**中英双语**说明。第二个英文参数必填——界面支持中英切换，缺英文会导致英文用户看到中文。两种语言都要说清这一步在做什么、为什么
 - \`b.line(行号)\`：标注接下来的步骤对应**源代码第几行**（行号见用户代码每行行首的数字，从 1 起）。动画播放时代码旁会有 ▶ 箭头跟着走。**每个关键操作前都要先 b.line(对应行号)**——这是让箭头会动的关键，箭头停在第一行就是因为没逐步调用它。可链式 \`b.line(7).desc('...').compare(i,j)\`。
 - \`b.note(文本)\`：旁注
 - \`b.result(value)\`：写入算法最终输出，并在动画信息面板显示。所有有返回值的题（如 true/false、下标、数组、计数）最后必须调用一次。
@@ -102,7 +102,7 @@ b.heapPop()
 - **必须可视化代码真实用到的数据结构**：代码用了栈就建栈（b.stackPush/stackPop 或单调栈语义）、用了哈希表就建哈希表、用了双指针就在数组上移动指针。不要把一个用栈的算法画成几个无关的数组高亮。
 - **位置变量要显式可视化**：双指针、快慢指针、滑动窗口左右边界应优先用 \`b.pointerCreate\`/\`b.pointerMove\`/\`b.pointerHighlight\` 表达，不要只用 \`b.note\` 描述。
 - **关键变量要用基础元素展示**：代码中的 ret、ans、sum、targetSum、count、dp 值、递归参数、循环计数器等，必须用 \`b.varInit\` 创建，用 \`b.varSet\` 同步每次变化；不要只写在 b.desc 或 b.note 里。变量变化会以浅灰色标注：数值加减显示真实差值（+k/-k），赋值/重置/节点切换显示 ->新值。
-- **每一个关键步骤都要有意义的 b.desc**：说清这一步在比较/入栈/更新什么、为什么。**严禁产出空描述或"步骤 N"占位**。
+- **每一个关键步骤都要有意义的中英双语 b.desc**：第一参数中文、第二参数英文，说清这一步在比较/入栈/更新什么、为什么。**严禁产出空描述、"步骤 N"占位或缺英文参数**。
 - **必须展示输出**：如果原函数 return 了值，动画最后调用 \`b.result(返回值)\`，不要只在描述里说答案。
 - 步骤要连贯还原算法执行过程，不要只高亮零星几格就结束。
 
@@ -123,22 +123,24 @@ b.heapPop()
 // @algorithm selection_sort
 // @type array
 // @sample nums = [5, 3, 8, 1, 9, 2]
+// @expect [1, 2, 3, 5, 8, 9]
 // @time O(n²)
 // @space O(1)
 const nums = input.nums || input
 b.arrayCreate(nums)
 for (let i = 0; i < nums.length; i++) {
   let min = i
-  b.line(3).desc('外层 i=' + i + '，假定最小为 ' + nums[i]).compare(i, i)
+  b.line(3).desc('外层 i=' + i + '，假定最小为 ' + nums[i], 'Outer i=' + i + ', assume min is ' + nums[i]).compare(i, i)
   for (let j = i + 1; j < nums.length; j++) {
-    b.line(5).desc('比较 arr[' + j + '] 与当前最小 arr[' + min + ']').compare(j, min)
+    b.line(5).desc('比较 arr[' + j + '] 与当前最小 arr[' + min + ']', 'Compare arr[' + j + '] with current min arr[' + min + ']').compare(j, min)
     if (nums[j] < nums[min]) min = j
   }
   if (min !== i) {
     const t = nums[i]; nums[i] = nums[min]; nums[min] = t
-    b.line(8).desc('交换 ' + i + ' 和 ' + min).swap(i, min)
+    b.line(8).desc('交换 ' + i + ' 和 ' + min, 'Swap ' + i + ' and ' + min).swap(i, min)
   }
-  b.line(9).desc('arr[' + i + '] 归位').markSorted([i])
+  b.line(9).desc('arr[' + i + '] 归位', 'arr[' + i + '] settled').markSorted([i])
 }
+b.result([...nums])
 \`\`\``
 }
