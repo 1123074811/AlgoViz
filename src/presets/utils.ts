@@ -1,5 +1,17 @@
 import type { AnimationStep, TeachingState, RangeState, VisualRole, ActionColor, AuxiliaryArrayState } from '@/types/animation'
 
+export interface DemoClampResult<T> {
+  data: T[]
+  truncated: boolean
+  original: number
+}
+
+/** 演示用输入截断:超过 max 时截断并报告原始长度,调用方负责把截断信息显式画进动画。 */
+export function clampForDemo<T>(values: T[], max: number): DemoClampResult<T> {
+  if (values.length <= max) return { data: values, truncated: false, original: values.length }
+  return { data: values.slice(0, max), truncated: true, original: values.length }
+}
+
 export function makeStep(
   id: number, codeLine: number, zh: string, en: string,
   type: AnimationStep['action']['type'], targets: number[],

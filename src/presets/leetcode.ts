@@ -1,37 +1,57 @@
 import type { AnimationScript, AnimationStep } from '@/types/animation'
+import { clampForDemo } from './utils'
 
 const DEFAULT_NUMS = [2, 7, 11, 15]
 const DEFAULT_TARGET = 9
+const DEMO_CAP = 12
 
-function parseInput(input?: unknown): { nums: number[]; target: number } {
+function parseInput(input?: unknown): { nums: number[]; target: number; truncated: boolean; original: number } {
   if (Array.isArray(input)) {
-    const nums = input.map(Number).filter(Number.isFinite).slice(0, 12)
-    return { nums: nums.length > 0 ? nums : DEFAULT_NUMS, target: DEFAULT_TARGET }
+    const all = input.map(Number).filter(Number.isFinite)
+    const { data, truncated, original } = clampForDemo(all, DEMO_CAP)
+    return data.length > 0
+      ? { nums: data, target: DEFAULT_TARGET, truncated, original }
+      : { nums: DEFAULT_NUMS, target: DEFAULT_TARGET, truncated: false, original: DEFAULT_NUMS.length }
   }
 
   if (typeof input === 'object' && input !== null) {
     const obj = input as Record<string, unknown>
     const rawNums = obj.nums ?? obj.data ?? obj.arr ?? obj.array
-    const nums = Array.isArray(rawNums)
-      ? rawNums.map(Number).filter(Number.isFinite).slice(0, 12)
-      : DEFAULT_NUMS
+    const all = Array.isArray(rawNums) ? rawNums.map(Number).filter(Number.isFinite) : []
+    const { data, truncated, original } = clampForDemo(all, DEMO_CAP)
     const target = typeof obj.target === 'number'
       ? obj.target
       : typeof obj.param === 'number'
         ? obj.param
         : DEFAULT_TARGET
-    return { nums: nums.length > 0 ? nums : DEFAULT_NUMS, target }
+    return data.length > 0
+      ? { nums: data, target, truncated, original }
+      : { nums: DEFAULT_NUMS, target: DEFAULT_TARGET, truncated: false, original: DEFAULT_NUMS.length }
   }
 
-  return { nums: DEFAULT_NUMS, target: DEFAULT_TARGET }
+  return { nums: DEFAULT_NUMS, target: DEFAULT_TARGET, truncated: false, original: DEFAULT_NUMS.length }
 }
 
 export function generateLeetCode(input?: unknown): AnimationScript {
   const steps: AnimationStep[] = []
   let sid = 1
-  const { nums, target } = parseInput(input)
+  const { nums, target, truncated, original } = parseInput(input)
   const seen = new Map<number, number>()
   let found: [number, number] | null = null
+
+  if (truncated) {
+    steps.push({
+      stepId: sid++,
+      codeLine: 0,
+      description: {
+        zh: `输入共 ${original} 个元素，超出演示上限，已截断为前 12 个`,
+        en: `Input has ${original} elements, beyond the demo cap; truncated to the first 12`,
+      },
+      action: { type: 'highlight', targets: [], color: 'warning' },
+      stats: { comparisons: 0, swaps: 0, accesses: 0 },
+      events: [{ type: 'scene.note', text: `输入共 ${original} 个元素，演示仅取前 12 个` }],
+    })
+  }
 
   steps.push({
     stepId: sid++,
