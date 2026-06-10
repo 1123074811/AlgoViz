@@ -66,6 +66,11 @@
     "space": "Space",
     "canvasPlaceholder": "Select an algorithm to visualize",
     "noDataToRender": "No data to render",
+    "codeDesync": {
+      "message": "Code modified — the animation and line highlights still come from the built-in demo, not your edited code",
+      "analyze": "Analyze my code with AI",
+      "restore": "Restore template"
+    },
     "verification": {
       "failTitle": "Animation failed the consistency check:",
       "failDetail": "the original code is expected to return {{expected}}, but the animation produced {{actual}}. The animation may not match the real execution."

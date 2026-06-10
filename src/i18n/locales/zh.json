@@ -66,6 +66,11 @@
     "space": "空间",
     "canvasPlaceholder": "选择算法以开始可视化",
     "noDataToRender": "无数据可渲染",
+    "codeDesync": {
+      "message": "代码已修改——当前动画与行高亮仍来自内置演示，与编辑后的代码无关",
+      "analyze": "AI 分析我的代码",
+      "restore": "还原模板"
+    },
     "verification": {
       "failTitle": "动画未通过一致性校验:",
       "failDetail": "原代码预期结果 {{expected}}，动画输出 {{actual}}。动画过程可能与代码真实执行不符，仅供参考。"
