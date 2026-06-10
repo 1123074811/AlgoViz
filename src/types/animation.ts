@@ -187,6 +187,14 @@ export interface AnimationScript {
   complexity: Complexity
   initialState: InitialState
   result?: number | string | boolean | Array<number | string | boolean>
+  /** AI 生成动画的语义一致性校验结果(见 src/ai/verify.ts)。内置生成器无此字段。 */
+  verification?: {
+    status: 'pass' | 'fail' | 'skipped'
+    source?: 'expect' | 'js-exec'
+    expected?: string
+    actual?: string
+    message?: string
+  }
   presentation?: PresentationConfig
   steps: AnimationStep[]
 }

@@ -7,6 +7,8 @@ import { classifyAlgorithm, CATEGORY_PROFILES } from '@/ai/categories'
 import { runQualityGate } from '@/ai/quality'
 import { repairGenerator } from '@/ai/repairGenerator'
 import { buildFallbackScene, type FallbackKind } from '@/ai/fallbackScene'
+import { verifyAgainstExpect, verifyAgainstGroundTruth, sanitizeLineMapping, formatVerifyValue, type VerifyOutcome } from '@/ai/verify'
+import { runUserJsSandboxed } from '@/sandbox/runUserCode'
 import type { AnimationScript, InitialState } from '@/types/animation'
 import type { AIStatus } from '@/store/algorithmStore'
 
@@ -24,6 +26,39 @@ export function classifyFailure(err: { stage?: string; kind?: string }): Fallbac
   if (s.includes('network') || s.includes('auth') || s.includes('rate') || s.includes('config') || s.includes('request')) return 'unavailable'
   if (s.includes('json') || s.includes('schema') || s.includes('parse') || s.includes('extract')) return 'parse'
   return 'parse'
+}
+
+export interface VerifyAndTagArgs {
+  expectRaw?: string
+  language: string
+  userCode: string
+  input: unknown
+  sourceCode: string
+}
+
+export async function verifyAndTag(script: AnimationScript, args: VerifyAndTagArgs): Promise<VerifyOutcome> {
+  let outcome: VerifyOutcome | null = null
+
+  if (args.language.toLowerCase() === 'javascript') {
+    const truth = await runUserJsSandboxed(args.userCode, args.input)
+    if (truth.ok) {
+      outcome = verifyAgainstGroundTruth(script, truth.value)
+    }
+  }
+  if (!outcome || outcome.status === 'skipped') {
+    const byExpect = verifyAgainstExpect(script, args.expectRaw)
+    if (!outcome || byExpect.status !== 'skipped') outcome = byExpect
+  }
+
+  script.verification = {
+    status: outcome.status,
+    ...(outcome.source && { source: outcome.source }),
+    ...(outcome.expected !== undefined && { expected: formatVerifyValue(outcome.expected) }),
+    ...(outcome.actual !== undefined && { actual: formatVerifyValue(outcome.actual) }),
+    ...(outcome.message && { message: outcome.message }),
+  }
+  sanitizeLineMapping(script, args.sourceCode)
+  return outcome
 }
 
 const PARAM_SAMPLE_BY_NAME: Array<[RegExp, string]> = [
@@ -306,6 +341,43 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
                   activeBody = repaired.body
                   setGenerator({ body: repaired.body, type: genType })
                 }
+              }
+            }
+          }
+        }
+      }
+
+      // 语义一致性校验:动画输出 vs 原代码预期(JS 真值执行优先,@expect 兜底)。
+      // 失败 → 带具体差异回发 AI 修复一次;仍失败不回退,打 fail 标记交给 UI 警示。
+      if (sandboxResult.ok && sandboxResult.script) {
+        const p = parseInputRef.current(usedInput)
+        const verifyArgs = {
+          expectRaw: gen.expectedResult,
+          language: params.language,
+          userCode: params.code,
+          input: p.valid ? p.value : undefined,
+          sourceCode: params.code,
+        }
+        const outcome = await verifyAndTag(sandboxResult.script, verifyArgs)
+        if (outcome.status === 'fail' && p.valid) {
+          const category = classifyAlgorithm({ algorithm: gen.algorithm, type: gen.type, code: params.code })
+          const repaired = await repairGenerator({
+            body: activeBody, sourceCode: params.code, language: params.language, category,
+            issues: [{
+              code: 'result-mismatch', severity: 'error',
+              message: `动画最终结果 ${formatVerifyValue(outcome.actual)} 与原代码在该输入上的预期结果 ${formatVerifyValue(outcome.expected)} 不一致`,
+              hint: '逐行重读原代码,严格按原代码语义重写生成器逻辑(注意循环边界、条件分支与返回值),确保 b.result(...) 与原代码返回值一致;不要为了凑结果硬编码。',
+            }],
+            inputData: usedInput, signal: params.signal,
+          })
+          if (repaired) {
+            const retry = await runGeneratorSandboxed(repaired.body, p.value, { algorithm: gen.algorithm, type: genType })
+            if (retry.ok && retry.script) {
+              const retryOutcome = await verifyAndTag(retry.script, verifyArgs)
+              if (retryOutcome.status !== 'fail') {
+                sandboxResult = retry
+                activeBody = repaired.body
+                setGenerator({ body: repaired.body, type: genType })
               }
             }
           }
