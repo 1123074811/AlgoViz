@@ -1,9 +1,10 @@
 import type { AnimationScript, AnimationStep, TeachingState, RangeState, AuxiliaryArrayState } from '@/types/animation'
 import { makeStep, rng, auxArr, sortTeaching, sortTeachingWithAux } from './utils'
 import { deriveSceneState } from '@/scene/SceneEngine'
+import type { AlgorithmEvent } from '@/scene'
 
 /** Helper: create an events payload for a step */
-function evt(events: any[]) {
+function evt(events: AlgorithmEvent[]) {
   return { events }
 }
 
@@ -1470,56 +1471,66 @@ const aStarWrapper = (input: unknown) => {
 }
 const bellmanFordWrapper = (input: unknown) => generateBellmanFord(input)
 
-const linkedListInsertWrapper = (input: any) => {
-  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
-  const param = typeof input?.param === 'number' ? input.param : 5
+const linkedListInsertWrapper = (input: unknown) => {
+  const obj = input as Record<string, unknown> | null | undefined
+  const arr = Array.isArray(obj?.data) ? obj.data : parseArr(input)
+  const param = typeof obj?.param === 'number' ? obj.param : 5
   return generateDynamicLinkedListOp('insert', arr, param)
 }
-const linkedListDeleteWrapper = (input: any) => {
-  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
-  const param = typeof input?.param === 'number' ? input.param : 3
+const linkedListDeleteWrapper = (input: unknown) => {
+  const obj = input as Record<string, unknown> | null | undefined
+  const arr = Array.isArray(obj?.data) ? obj.data : parseArr(input)
+  const param = typeof obj?.param === 'number' ? obj.param : 3
   return generateDynamicLinkedListOp('delete', arr, param)
 }
-const linkedListSearchWrapper = (input: any) => {
-  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
-  const param = typeof input?.param === 'number' ? input.param : 3
+const linkedListSearchWrapper = (input: unknown) => {
+  const obj = input as Record<string, unknown> | null | undefined
+  const arr = Array.isArray(obj?.data) ? obj.data : parseArr(input)
+  const param = typeof obj?.param === 'number' ? obj.param : 3
   return generateDynamicLinkedListOp('search', arr, param)
 }
 
-const bstInsertWrapper = (input: any) => {
-  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
-  const param = typeof input?.param === 'number' ? input.param : 5
+const bstInsertWrapper = (input: unknown) => {
+  const obj = input as Record<string, unknown> | null | undefined
+  const arr = Array.isArray(obj?.data) ? obj.data : parseArr(input)
+  const param = typeof obj?.param === 'number' ? obj.param : 5
   return generateDynamicBSTOp('insert', arr, param)
 }
-const bstDeleteWrapper = (input: any) => {
-  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
-  const param = typeof input?.param === 'number' ? input.param : 14
+const bstDeleteWrapper = (input: unknown) => {
+  const obj = input as Record<string, unknown> | null | undefined
+  const arr = Array.isArray(obj?.data) ? obj.data : parseArr(input)
+  const param = typeof obj?.param === 'number' ? obj.param : 14
   return generateDynamicBSTOp('delete', arr, param)
 }
-const bstSearchWrapper = (input: any) => {
-  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
-  const param = typeof input?.param === 'number' ? input.param : 10
+const bstSearchWrapper = (input: unknown) => {
+  const obj = input as Record<string, unknown> | null | undefined
+  const arr = Array.isArray(obj?.data) ? obj.data : parseArr(input)
+  const param = typeof obj?.param === 'number' ? obj.param : 10
   return generateDynamicBSTOp('search', arr, param)
 }
 
-const btreeSearchWrapper = (input: any): AnimationScript => {
-  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
-  const param = typeof input?.param === 'number' ? input.param : 17
+const btreeSearchWrapper = (input: unknown): AnimationScript => {
+  const obj = input as Record<string, unknown> | null | undefined
+  const arr = Array.isArray(obj?.data) ? obj.data : parseArr(input)
+  const param = typeof obj?.param === 'number' ? obj.param : 17
   return generateDynamicBTreeOp('search', arr, param)!
 }
-const btreeInsertWrapper = (input: any): AnimationScript => {
-  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
-  const param = typeof input?.param === 'number' ? input.param : 15
+const btreeInsertWrapper = (input: unknown): AnimationScript => {
+  const obj = input as Record<string, unknown> | null | undefined
+  const arr = Array.isArray(obj?.data) ? obj.data : parseArr(input)
+  const param = typeof obj?.param === 'number' ? obj.param : 15
   return generateDynamicBTreeOp('insert', arr, param)!
 }
-const bplusSearchWrapper = (input: any): AnimationScript => {
-  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
-  const param = typeof input?.param === 'number' ? input.param : 45
+const bplusSearchWrapper = (input: unknown): AnimationScript => {
+  const obj = input as Record<string, unknown> | null | undefined
+  const arr = Array.isArray(obj?.data) ? obj.data : parseArr(input)
+  const param = typeof obj?.param === 'number' ? obj.param : 45
   return generateDynamicBPlusTreeOp('search', arr, param)!
 }
-const bplusRangeWrapper = (input: any): AnimationScript => {
-  const arr = Array.isArray(input?.data) ? input.data : parseArr(input)
-  const param = typeof input?.param === 'string' ? input.param : '30, 60'
+const bplusRangeWrapper = (input: unknown): AnimationScript => {
+  const obj = input as Record<string, unknown> | null | undefined
+  const arr = Array.isArray(obj?.data) ? obj.data : parseArr(input)
+  const param = typeof obj?.param === 'string' ? obj.param : '30, 60'
   return generateDynamicBPlusTreeOp('range_query', arr, param)!
 }
 

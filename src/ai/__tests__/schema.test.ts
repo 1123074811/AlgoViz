@@ -5,6 +5,7 @@ import {
   normalizeAnimationScript,
 } from '../schema'
 import type { AnimationStep } from '@/types/animation'
+import type { AlgorithmEvent } from '@/scene'
 
 // ─── Minimal valid array script fixture ────────────────────────────────────
 
@@ -162,7 +163,7 @@ describe('validateCrossStepConsistency', () => {
             type: 'linked_list.create',
             variant: 'singly',
             nodes: [{ id: 'n1', value: 1, next: null }],
-          } as any,
+          } as unknown as AlgorithmEvent,
         ],
       }),
       makeStep({
@@ -172,7 +173,7 @@ describe('validateCrossStepConsistency', () => {
             type: 'linked_list.create',
             variant: 'singly',
             nodes: [{ id: 'n1', value: 2, next: null }], // 同 id n1 再创建
-          } as any,
+          } as unknown as AlgorithmEvent,
         ],
       }),
     ]
@@ -194,19 +195,19 @@ describe('validateCrossStepConsistency', () => {
             type: 'linked_list.create',
             variant: 'singly',
             nodes: [{ id: 'n2', value: 1, next: null }],
-          } as any,
+          } as unknown as AlgorithmEvent,
         ],
       }),
       makeStep({
         stepId: 2,
         events: [
-          { type: 'linked_list.delete', nodeId: 'n2' } as any,
+          { type: 'linked_list.delete', nodeId: 'n2' } as unknown as AlgorithmEvent,
         ],
       }),
       makeStep({
         stepId: 3,
         events: [
-          { type: 'linked_list.visit', nodeId: 'n2' } as any, // 已删除，再访问
+          { type: 'linked_list.visit', nodeId: 'n2' } as unknown as AlgorithmEvent, // 已删除，再访问
         ],
       }),
     ]
@@ -227,7 +228,7 @@ describe('validateCrossStepConsistency', () => {
             type: 'tree.rotate',
             rotation: 'left',
             pivotId: 'ghost_node', // 从未创建过
-          } as any,
+          } as unknown as AlgorithmEvent,
         ],
       }),
     ]
@@ -245,19 +246,19 @@ describe('validateCrossStepConsistency', () => {
             type: 'linked_list.create',
             variant: 'singly',
             nodes: [{ id: 'n3', value: 1, next: null }],
-          } as any,
+          } as unknown as AlgorithmEvent,
         ],
       }),
       makeStep({
         stepId: 2,
         events: [
-          { type: 'linked_list.visit', nodeId: 'n3' } as any,
+          { type: 'linked_list.visit', nodeId: 'n3' } as unknown as AlgorithmEvent,
         ],
       }),
       makeStep({
         stepId: 3,
         events: [
-          { type: 'linked_list.delete', nodeId: 'n3' } as any,
+          { type: 'linked_list.delete', nodeId: 'n3' } as unknown as AlgorithmEvent,
         ],
       }),
     ]

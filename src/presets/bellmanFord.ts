@@ -1,6 +1,7 @@
 import type { AnimationScript, ActionColor, ActionType } from '@/types/animation'
+import type { AlgorithmEvent } from '@/scene'
 
-export function generateBellmanFord(input: any): AnimationScript {
+export function generateBellmanFord(input: unknown): AnimationScript {
   // 1. Parse or default the custom graph data
   let nodes = [
     { id: '0', label: 'S' },
@@ -20,14 +21,15 @@ export function generateBellmanFord(input: any): AnimationScript {
   ]
 
   if (input && typeof input === 'object') {
-    if (Array.isArray(input.nodes) && input.nodes.length > 0) {
-      nodes = input.nodes.map((n: any, idx: number) => ({
+    const obj = input as Record<string, unknown>
+    if (Array.isArray(obj.nodes) && obj.nodes.length > 0) {
+      nodes = obj.nodes.map((n: Record<string, unknown>, idx: number) => ({
         id: String(n.id !== undefined ? n.id : idx),
         label: String(n.label !== undefined ? n.label : (n.id !== undefined ? n.id : idx))
       }))
     }
-    if (Array.isArray(input.edges)) {
-      edges = input.edges.map((e: any) => ({
+    if (Array.isArray(obj.edges)) {
+      edges = obj.edges.map((e: Record<string, unknown>) => ({
         source: String(e.source),
         target: String(e.target),
         weight: Number(e.weight !== undefined ? e.weight : 1)
@@ -64,7 +66,7 @@ export function generateBellmanFord(input: any): AnimationScript {
     rnd: number,
     comps: number,
     accs: number,
-    events: any[] = []
+    events: AlgorithmEvent[] = []
   ) {
     steps.push({
       stepId: sid++,
@@ -118,7 +120,7 @@ export function generateBellmanFord(input: any): AnimationScript {
       comparisons++
       accesses += 2
 
-      const events = [
+      const events: AlgorithmEvent[] = [
         { type: 'graph.visit_edge', source: u, target: v },
         { type: 'graph.relax_edge', source: u, target: v, success: false }
       ]
@@ -130,7 +132,8 @@ export function generateBellmanFord(input: any): AnimationScript {
         if (valU + w < valV) {
           dist[v] = valU + w
           updatedThisRound = true
-          events[1].success = true
+          const relaxEvent = events[1]
+          if (relaxEvent.type === 'graph.relax_edge') relaxEvent.success = true
 
           addBfStep(
             14,
