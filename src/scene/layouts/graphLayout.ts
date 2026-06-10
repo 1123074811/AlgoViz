@@ -1,5 +1,6 @@
 import type { Point, SceneState } from '../types'
 import { measureNodeRenderWidth } from '../textMetrics'
+import { forceLayout } from './forceLayout'
 
 /**
  * Generate a stable integer hash for any arbitrary string ID.
@@ -138,6 +139,20 @@ export function layoutGraph(scene: SceneState): Record<string, Point> {
       }
       return positions
     }
+  }
+
+  // ==========================================
+  // UNDIRECTED / CYCLIC: force-directed layout for larger or denser graphs.
+  // Small sparse graphs (n <= 8 and edges <= nodes) keep the stable circular ring.
+  // ==========================================
+  const structuralEdges = Object.values(scene.edges)
+    .map(e => [e.from.entityId, e.to.entityId] as [string, string])
+    .filter(([a, b]) => a !== b)
+    .filter(([a, b]) => vertices.some(v => v.id === a) && vertices.some(v => v.id === b))
+
+  const isDense = structuralEdges.length > vertices.length
+  if (vertices.length > 8 || isDense) {
+    return forceLayout(vertices.map(v => v.id), structuralEdges, { cx, cy, minClearance })
   }
 
   // ==========================================
