@@ -114,9 +114,24 @@ export function layoutGraph(scene: SceneState): Record<string, Point> {
         columns[ranks[v.id]].push(v.id)
       })
 
-      // Sort nodes inside columns to keep positioning perfectly stable
-      for (let r = 0; r <= maxRank; r++) {
-        columns[r].sort((a, b) => a.localeCompare(b))
+      // 层内排序:首列字典序保证稳定;后续列按"前驱在前一列中的平均位置"
+      // (重心法 barycenter)排序以消减边交叉,重心相同回退字典序。
+      columns[0].sort((a, b) => a.localeCompare(b))
+      const preds = new Map<string, string[]>()
+      vertices.forEach(v => preds.set(v.id, []))
+      Object.values(scene.edges).forEach(e => {
+        if (e.directed && preds.has(e.to.entityId)) {
+          preds.get(e.to.entityId)!.push(e.from.entityId)
+        }
+      })
+      for (let r = 1; r <= maxRank; r++) {
+        const prevIndex = new Map(columns[r - 1].map((id, i) => [id, i]))
+        const bary = (id: string): number => {
+          const ps = (preds.get(id) ?? []).filter(p => prevIndex.has(p))
+          if (ps.length === 0) return Number.MAX_SAFE_INTEGER
+          return ps.reduce((s, p) => s + prevIndex.get(p)!, 0) / ps.length
+        }
+        columns[r].sort((a, b) => bary(a) - bary(b) || a.localeCompare(b))
       }
 
       const colGap = Math.max(160, Math.min(220, 500 / maxRank), minClearance)

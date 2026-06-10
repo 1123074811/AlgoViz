@@ -76,4 +76,16 @@ describe('layoutGraph', () => {
     )
     expect(new Set(rs).size).toBe(1)
   })
+
+  it('orders nodes within a layer by predecessor barycenter to reduce crossings', () => {
+    // layer0: A(top), B(bottom); edges A→Y, B→X.
+    // localeCompare would put X above Y → crossed edges;
+    // barycenter should put Y(predecessor A, index 0) above X(predecessor B, index 1) → no crossing.
+    const positions = layoutGraph(makeGraphScene(
+      ['A', 'B', 'X', 'Y'],
+      [['A', 'Y'], ['B', 'X']],
+      true,
+    ))
+    expect(positions['Y'].y).toBeLessThan(positions['X'].y)
+  })
 })
