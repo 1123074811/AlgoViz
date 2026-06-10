@@ -18,6 +18,7 @@ export function CORE_PROMPT(language: string): string {
 // @sample <一行 LeetCode 风格示例输入，必须符合该算法期望的输入格式>
 // @time <时间复杂度，如 O(n log n)>
 // @space <空间复杂度，如 O(1)>
+// @expect <原代码在 @sample 输入上的返回值,JSON 格式;无返回值写 null>
 <这里是直接可执行的语句，使用变量 input 和 b，不要包成 function>
 \`\`\`
 不要输出任何代码块以外的文字。
@@ -27,6 +28,11 @@ export function CORE_PROMPT(language: string): string {
 - 默认必须使用**一行 LeetCode 赋值格式**，不要给裸 JSON。数组类如 \`nums = [5, 3, 8, 1, 9, 2]\`；二叉树如 \`root = [5,3,8,null,4]\`；多输入如 \`nums = [2,7,11,15]; target = 9\`；字符串如 \`s = "abcabcbb"\`
 - 图、通用树等 LeetCode 没有统一格式的数据，也优先用命名赋值：\`nodes = ["A","B","C"]; edges = [["A","B",1],["B","C",2]]; start = "A"\`
 - 用户不再手动选择输入格式——你给出的 @sample 就是默认输入
+
+## @expect 要求(重要)
+- 在心里把**原代码**(不是你写的生成器)在 @sample 输入上完整执行一遍,把**真实返回值**以 JSON 写进 \`@expect\`(数组如 [0,1]、布尔 true/false、字符串带引号、无返回值写 null)
+- 系统会把动画的 b.result(...) 与 @expect 比对,不一致会要求你修复——所以 @expect 必须是认真推演的结果,不是猜测
+- 生成器最后的 b.result(...) 必须输出与原代码一致的返回值
 
 ## 可用变量
 - \`input\`：解析后的输入数据。裸数组会是 number[]；LeetCode 命名赋值会是对象，如 {nums,target}、{nodes,edges,start}；\`root = [...]\` 会被解析成树结构 {root,children,treeNodes,source}，其中 root 是内部根节点 id，不是节点值或数组

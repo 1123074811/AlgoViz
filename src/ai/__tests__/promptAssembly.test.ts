@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildGeneratorSystemPrompt } from '../prompt'
+import { CORE_PROMPT } from '../prompt/core'
 
 describe('buildGeneratorSystemPrompt（core + 类别装配）', () => {
   it('grid 类别包含网格 builder 方法', () => {
@@ -29,5 +30,11 @@ describe('buildGeneratorSystemPrompt（core + 类别装配）', () => {
     const prompt = buildGeneratorSystemPrompt('java', 'graph')
     expect(prompt).toContain('硬性要求')
     expect(prompt).toContain('graphCreate')
+  })
+
+  it('CORE_PROMPT requires the @expect directive', () => {
+    const prompt = CORE_PROMPT('Python')
+    expect(prompt).toContain('@expect')
+    expect(prompt).toMatch(/@expect[\s\S]*原代码/)
   })
 })
