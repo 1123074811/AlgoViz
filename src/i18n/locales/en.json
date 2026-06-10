@@ -65,7 +65,11 @@
     "worst": "Worst",
     "space": "Space",
     "canvasPlaceholder": "Select an algorithm to visualize",
-    "noDataToRender": "No data to render"
+    "noDataToRender": "No data to render",
+    "verification": {
+      "failTitle": "Animation failed the consistency check:",
+      "failDetail": "the original code is expected to return {{expected}}, but the animation produced {{actual}}. The animation may not match the real execution."
+    }
   },
   "settings": {
     "title": "AI API Configuration",

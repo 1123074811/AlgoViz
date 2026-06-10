@@ -65,7 +65,11 @@
     "worst": "最坏",
     "space": "空间",
     "canvasPlaceholder": "选择算法以开始可视化",
-    "noDataToRender": "无数据可渲染"
+    "noDataToRender": "无数据可渲染",
+    "verification": {
+      "failTitle": "动画未通过一致性校验:",
+      "failDetail": "原代码预期结果 {{expected}}，动画输出 {{actual}}。动画过程可能与代码真实执行不符，仅供参考。"
+    }
   },
   "settings": {
     "title": "AI API 配置",

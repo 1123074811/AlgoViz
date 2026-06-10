@@ -30,6 +30,7 @@ import { REQUEST_AI_REPAIR_EVENT } from '@/components/ErrorBoundary'
 import { getSceneDiagnosticSummary, getSceneEventStats, usesSceneEngine } from '@/scene'
 import { getOperationsForAlgo } from '@/presets/operationPresets'
 import DefinitionCard from './DefinitionCard'
+import { VerificationNotice } from './VerificationNotice'
 import { useResizablePanels } from './useResizablePanels'
 
 let currentAnalysisController: AbortController | null = null
@@ -710,6 +711,8 @@ export default function Visualizer() {
             </span>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-3">
+            <VerificationNotice verification={animationScript?.verification} />
+
             {/* AI Status Banner */}
             {aiStatus !== 'idle' && (
               <div
