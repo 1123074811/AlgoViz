@@ -26,12 +26,12 @@ export default defineConfig({
         'src/i18n/locales/**',
       ],
       // 防回退阈值：略低于当前实际覆盖率，留小幅缓冲，既挡住真实退化又不因
-      // 微小波动误伤 CI。当前实际约 stmts 82.9 / branch 67.7 / funcs 82.9 / lines 84。
+      // 微小波动误伤 CI。当前实际约 stmts 87 / branch 73 / funcs 86.5 / lines 88。
       thresholds: {
-        statements: 80,
-        branches: 64,
-        functions: 80,
-        lines: 80,
+        statements: 84,
+        branches: 70,
+        functions: 84,
+        lines: 85,
       },
     },
   },
