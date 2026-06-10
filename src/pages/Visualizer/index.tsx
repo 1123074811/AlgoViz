@@ -31,6 +31,7 @@ import { getSceneDiagnosticSummary, getSceneEventStats, usesSceneEngine } from '
 import { getOperationsForAlgo } from '@/presets/operationPresets'
 import DefinitionCard from './DefinitionCard'
 import { VerificationNotice } from './VerificationNotice'
+import { CodeDesyncNotice } from './CodeDesyncNotice'
 import { useResizablePanels } from './useResizablePanels'
 
 let currentAnalysisController: AbortController | null = null
@@ -145,6 +146,8 @@ export default function Visualizer() {
       ? getCodeTemplate(selectedAlgorithm.id, codeLanguage)
       : ''
   const code = codeByScope[codeScopeKey] ?? defaultCode
+  // 代码脱钩检测:用户编辑过且动画不来自 AI live 模式时,动画/行高亮与代码无关。
+  const isCodeDirty = codeByScope[codeScopeKey] !== undefined && codeByScope[codeScopeKey] !== defaultCode
   const setCode = useCallback(
     (nextValue: string) => {
       setCodeByScope((prev) =>
@@ -218,6 +221,9 @@ export default function Visualizer() {
     setStatus: setAIStatus,
   })
 
+  const aiLiveActive = Boolean(liveAlgoId || generator)
+  const showCodeDesync = isCodeDirty && !aiLiveActive
+
   // Mirror live mode in a ref so the preset effect can detect it without taking
   // liveAlgoId/generator as deps (which would re-run the preset path on analysis).
   const liveModeRef = useRef(false)
@@ -273,6 +279,12 @@ export default function Visualizer() {
     const editor = editorRef.current
     if (!editor || !animationScript) return
 
+    // 脱钩状态下模板行号对编辑后的代码无意义:清空所有行高亮,避免箭头指错行。
+    if (showCodeDesync) {
+      decorationsRef.current = editor.deltaDecorations(decorationsRef.current, [])
+      return
+    }
+
     const steps = animationScript.steps
     const currentCodeLine = steps[currentStep - 1]?.codeLine ?? -1
 
@@ -321,7 +333,7 @@ export default function Visualizer() {
     }
 
     decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations)
-  }, [currentStep, animationScript])
+  }, [currentStep, animationScript, showCodeDesync])
   const handleAIAnalyze = useCallback(async () => {
     const compResult = compileAndValidateCode(code, codeLanguage)
     if (!compResult.success) {
@@ -447,6 +459,13 @@ export default function Visualizer() {
             className="flex-1 xl:flex-none flex flex-col min-h-0"
             style={isDesktop ? { height: `${editorHeight}%` } : undefined}
           >
+            {showCodeDesync && (
+              <CodeDesyncNotice
+                analyzing={aiStatus === 'analyzing'}
+                onAnalyze={handleAIAnalyze}
+                onRestore={() => setCode(defaultCode)}
+              />
+            )}
             <CodeEditorPanel
               value={code}
               language={codeLanguage}
