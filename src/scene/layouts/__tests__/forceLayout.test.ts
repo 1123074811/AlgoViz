@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest'
 import { forceLayout } from '../forceLayout'
 
 /** 3x3 grid graph: 9 nodes 12 edges. */

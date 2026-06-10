@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest'
 import { buildJsCallSource, runUserJsSandboxed } from '../runUserCode'
 
 describe('buildJsCallSource', () => {

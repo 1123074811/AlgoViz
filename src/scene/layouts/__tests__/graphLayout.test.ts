@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest'
 import { layoutGraph } from '../graphLayout'
 import { createEmptyScene } from '../../types'
 import type { SceneState, SceneNode, SceneEdge } from '../../types'

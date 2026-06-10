@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest'
 import { parseExpectValue, resultsMatch, verifyAgainstExpect, verifyAgainstGroundTruth, sanitizeLineMapping, formatVerifyValue } from '../verify'
 import type { AnimationScript } from '@/types/animation'
 
