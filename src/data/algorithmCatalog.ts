@@ -483,8 +483,8 @@ export const DEFAULT_ALGORITHMS: AlgorithmType[] = [
   // ============ 面试高频 ============
   {
     id: 'leetcode_hot100',
-    name: 'LeetCode Hot 100',
-    nameEn: 'LeetCode Top 100',
+    name: '两数之和（Hot 100 示例）',
+    nameEn: 'Two Sum (Hot 100 Sample)',
     category: 'interview',
     difficulty: 'medium',
     hasPreset: true,
@@ -501,8 +501,8 @@ export const DEFAULT_ALGORITHMS: AlgorithmType[] = [
   },
   {
     id: 'acm_templates',
-    name: 'ACM 算法模板',
-    nameEn: 'ACM Templates',
+    name: 'ACM 模板速览（示例）',
+    nameEn: 'ACM Template Sampler',
     category: 'contest',
     difficulty: 'hard',
     hasPreset: true,
