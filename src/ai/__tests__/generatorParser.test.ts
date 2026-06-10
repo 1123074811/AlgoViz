@@ -107,3 +107,28 @@ describe('parseGeneratorResponse', () => {
     expect(parseGeneratorResponse('').success).toBe(false)
   })
 })
+
+describe('@expect directive', () => {
+  it('extracts the raw @expect payload and strips it from the body', () => {
+    const raw = [
+      '```js',
+      '// @algorithm two_sum',
+      '// @type array',
+      '// @sample nums = [2,7,11,15]; target = 9',
+      '// @expect [0,1]',
+      'b.arrayCreate(input.nums || input)',
+      '```',
+    ].join('\n')
+    const result = parseGeneratorResponse(raw)
+    expect(result.success).toBe(true)
+    expect(result.generator?.expectedResult).toBe('[0,1]')
+    expect(result.generator?.body).not.toContain('@expect')
+  })
+
+  it('leaves expectedResult undefined when @expect is absent', () => {
+    const raw = '```js\n// @algorithm x\n// @type array\nb.arrayCreate(input)\n```'
+    const result = parseGeneratorResponse(raw)
+    expect(result.success).toBe(true)
+    expect(result.generator?.expectedResult).toBeUndefined()
+  })
+})

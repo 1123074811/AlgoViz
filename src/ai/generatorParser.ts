@@ -10,6 +10,8 @@ export interface ParsedGenerator {
   /** AI-provided time/space complexity (e.g. "O(n)"), shown on the algorithm card. */
   timeComplexity?: string
   spaceComplexity?: string
+  /** AI-declared expected return value of the ORIGINAL code on @sample input (raw text, parsed lazily by verify.ts). */
+  expectedResult?: string
 }
 
 export interface GeneratorParseResult {
@@ -32,8 +34,10 @@ export function parseGeneratorResponse(raw: string): GeneratorParseResult {
   const sampleMatch = code.match(/\/\/\s*@sample\s+(.+)/)
   const timeMatch = code.match(/\/\/\s*@time\s+(.+)/)
   const spaceMatch = code.match(/\/\/\s*@space\s+(.+)/)
+  const expectMatch = code.match(/\/\/\s*@expect\s+(.+)/)
   const timeComplexity = timeMatch ? timeMatch[1].trim() : undefined
   const spaceComplexity = spaceMatch ? spaceMatch[1].trim() : undefined
+  const expectedResult = expectMatch ? expectMatch[1].trim() : undefined
 
   const algorithm = algoMatch ? algoMatch[1] : 'custom'
   const typeStr = typeMatch ? typeMatch[1] : 'array'
@@ -51,7 +55,7 @@ export function parseGeneratorResponse(raw: string): GeneratorParseResult {
   // Body = code minus the directive comment lines.
   const body = code
     .split('\n')
-    .filter(line => !/^\s*\/\/\s*@(algorithm|type|sample|time|space)\b/.test(line))
+    .filter(line => !/^\s*\/\/\s*@(algorithm|type|sample|time|space|expect)\b/.test(line))
     .join('\n')
     .trim()
 
@@ -62,5 +66,5 @@ export function parseGeneratorResponse(raw: string): GeneratorParseResult {
     return { success: false, error: '生成器未调用构建器 b（输出格式不符）' }
   }
 
-  return { success: true, generator: { algorithm, type, body, sampleInput, timeComplexity, spaceComplexity } }
+  return { success: true, generator: { algorithm, type, body, sampleInput, timeComplexity, spaceComplexity, expectedResult } }
 }
