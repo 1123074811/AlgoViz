@@ -156,12 +156,138 @@ function defaultDescFor(event: AlgorithmEvent | undefined): string {
   }
 }
 
+/** Derive a readable English description from an event when the AI omits the en
+ *  argument of b.desc(). Covers every event family that defaultDescFor covers. */
+function defaultDescEnFor(event: AlgorithmEvent | undefined): string {
+  if (!event) return ''
+  const e = event as Record<string, unknown>
+  const idx = (k = 'indices') => (e[k] as number[] | undefined)?.join(', ')
+  switch (event.type) {
+    // array
+    case 'array.create': return 'Initialize array'
+    case 'array.compare': return `Compare indices ${idx()}`
+    case 'array.swap': return `Swap indices ${idx()}`
+    case 'array.move': return `Move ${e.from} → ${e.to}`
+    case 'array.set_value': return `Set index ${e.index} to ${e.value}`
+    case 'array.mark_sorted': return `Mark indices ${idx()} as settled`
+    case 'array.partition': return `Partition around pivot index ${e.pivotIndex}`
+    // graph
+    case 'graph.create': return 'Build graph'
+    case 'graph.visit_node': return `Visit node ${e.nodeId}`
+    case 'graph.visit_edge': return `Inspect edge ${e.source}→${e.target}`
+    case 'graph.relax_edge': return `Relax edge ${e.source}→${e.target}`
+    case 'graph.enqueue': return `Enqueue node ${e.nodeId}`
+    case 'graph.dequeue': return `Dequeue node ${e.nodeId}`
+    // tree
+    case 'tree.create': return 'Build tree'
+    case 'tree.visit': return `Visit node ${e.nodeId}`
+    case 'tree.insert': return `Insert node ${(e.node as { value?: unknown })?.value ?? ''}`
+    case 'tree.compare': return `Compare with node ${e.nodeId}`
+    case 'tree.rotate': return `Rotate (${e.rotation})`
+    // linked_list
+    case 'linked_list.create': return 'Build linked list'
+    case 'linked_list.visit': return `Visit node ${e.nodeId}`
+    case 'linked_list.insert_after': return `Insert after ${e.targetNodeId}`
+    case 'linked_list.delete': return `Delete node ${e.nodeId}`
+    case 'linked_list.move_pointer': return `Move pointer ${e.pointerId}`
+    // pointer
+    case 'pointer.create': return `Create pointer ${e.pointerId}`
+    case 'pointer.move': return `Move pointer ${e.pointerId}`
+    case 'pointer.clear': return `Clear pointer ${e.pointerId}`
+    case 'pointer.highlight': return `Highlight pointer ${e.pointerId}`
+    // stack
+    case 'stack.create': return 'Initialize stack'
+    case 'stack.push': return `Push ${e.value}`
+    case 'stack.pop': return 'Pop the top'
+    case 'stack.peek': return 'Peek the top'
+    // queue
+    case 'queue.create': return 'Initialize queue'
+    case 'queue.enqueue': return `Enqueue ${e.value}`
+    case 'queue.dequeue': return 'Dequeue the front'
+    case 'queue.peek_front': return 'Peek the front'
+    // deque
+    case 'deque.create': return 'Initialize deque'
+    case 'deque.push_front': return `Push ${e.value} to the front`
+    case 'deque.push_back': return `Push ${e.value} to the back`
+    case 'deque.pop_front': return 'Pop the front'
+    case 'deque.pop_back': return 'Pop the back'
+    // heap
+    case 'heap.create': return 'Build heap'
+    case 'heap.push': return `Push ${e.value} into the heap`
+    case 'heap.pop': return 'Pop the heap top'
+    case 'heap.sift': return `Sift: index ${e.from} ↔ ${e.to}`
+    case 'heap.peek': return 'Peek the heap top'
+    // hashtable
+    case 'hashtable.create': return 'Initialize hash table'
+    case 'hashtable.put': return `Put ${e.key} → bucket ${e.bucket}`
+    case 'hashtable.get': return `Look up ${e.key}`
+    case 'hashtable.remove': return `Remove ${e.key}`
+    // set
+    case 'set.create': return 'Initialize set'
+    case 'set.add': return `Add ${e.value}`
+    case 'set.remove': return `Remove ${e.value}`
+    case 'set.contains': return `Check membership of ${e.value}`
+    // string
+    case 'string.create': case 'string.create_double': return 'Initialize string'
+    case 'string.compare': return `Compare characters ${idx()}`
+    case 'string.match': return `Character match at ${e.index}`
+    case 'string.mismatch': return `Character mismatch at ${e.index}`
+    case 'string.mark_range': return `Mark range ${idx()}`
+    // matrix
+    case 'matrix.create': return 'Initialize matrix'
+    case 'matrix.visit_cell': return `Visit cell (${e.row},${e.col})`
+    case 'matrix.update_cell': return `Update cell (${e.row},${e.col}) = ${e.value}`
+    case 'matrix.mark_path': return 'Mark path'
+    case 'matrix.transition': return 'State transition'
+    // math / bitset
+    case 'math.init': return 'Initialize variables'
+    case 'math.set': return `${e.name} = ${e.value}`
+    case 'math.highlight': return `Focus on variable ${e.name}`
+    case 'bitset.create': return 'Initialize bitset'
+    case 'bitset.set': return `Set bit ${e.index} to ${e.value}`
+    case 'bitset.highlight': return `Focus on bit ${e.index}`
+    // scene
+    case 'scene.note': return String(e.text ?? '')
+    case 'scene.link': return `Link ${e.from} → ${e.to}`
+    case 'scene.highlight': return `Highlight ${e.entityId}`
+    case 'scene.clear_highlight': return 'Clear highlights'
+    case 'scene.wait': return 'Wait'
+    // call stack / grid / DP overlays
+    case 'callstack.create': return 'Initialize call stack'
+    case 'callstack.push': {
+      const fn = (e.frame as { functionName?: unknown })?.functionName
+      return `Call ${fn ?? 'function'}`
+    }
+    case 'callstack.update': return `Update frame${e.frameId ? ` ${e.frameId}` : ''}`
+    case 'callstack.return': return e.value === undefined ? 'Function returns' : `Function returns ${e.value}`
+    case 'callstack.pop': return 'Pop the top frame'
+    case 'callstack.highlight': return `Highlight frame${e.frameId ? ` ${e.frameId}` : ''}`
+    case 'grid.create': return 'Initialize grid'
+    case 'grid.set_cell': return e.value === undefined ? `Update cell (${e.row},${e.col})` : `Update cell (${e.row},${e.col}) = ${e.value}`
+    case 'grid.visit': return `Visit cell (${e.row},${e.col})`
+    case 'grid.frontier': return 'Update the frontier set'
+    case 'grid.path': return 'Mark the grid path'
+    case 'grid.wall': return `${e.enabled ? 'Place' : 'Remove'} wall (${e.row},${e.col})`
+    case 'grid.weight': return `Set cell (${e.row},${e.col}) weight ${e.weight}`
+    case 'grid.arrow': return 'Mark grid transition direction'
+    case 'dp.create': return 'Initialize DP table'
+    case 'dp.set': return e.value === undefined ? `Update DP state (${e.row},${e.col})` : `Update DP state (${e.row},${e.col}) = ${e.value}`
+    case 'dp.highlight': return 'Highlight DP states'
+    case 'dp.dependency': return 'Mark DP dependencies'
+    case 'dp.formula': return 'Show DP transition formula'
+    case 'dp.traceback': return 'Trace back the DP answer path'
+    case 'dp.roll': return 'Roll the DP window'
+    default: return ''
+  }
+}
+
 /** Accumulates builder calls into a standard AnimationScript. Used by AI-generated
  *  generators to describe an algorithm's animation without writing raw JSON. */
 export class AnimationBuilder {
   private steps: AnimationStep[] = []
   private sid = 1
   private pendingDesc = ''
+  private pendingDescEn = ''
   private pendingLine = -1 // -1 = unset (no code-line highlight)
   // Running cumulative stats, auto-derived from emitted events.
   private comparisons = 0
@@ -189,7 +315,7 @@ export class AnimationBuilder {
     this.type = type
   }
 
-  desc(zh: string): this { this.pendingDesc = zh; return this }
+  desc(zh: string, en?: string): this { this.pendingDesc = zh; this.pendingDescEn = en ?? ''; return this }
 
   /** Mark which source-code line subsequent steps map to (1-based, as shown in the
    *  editor). Drives the "current line" arrow. Persists until changed. */
@@ -198,6 +324,7 @@ export class AnimationBuilder {
   private add(events: AlgorithmEvent[], action: Action): this {
     if (this.truncated) {
       this.pendingDesc = ''
+      this.pendingDescEn = ''
       this.pendingVarHighlights.clear()
       return this
     }
@@ -206,12 +333,13 @@ export class AnimationBuilder {
       this.steps.push({
         stepId: this.sid++,
         codeLine: this.pendingLine,
-        description: { zh, en: zh },
+        description: { zh, en: `Animation reached the ${MAX_STEPS}-step cap; further repetitive search/backtracking steps are omitted. The final result is still computed.` },
         action: this.act('annotate', [], 'muted'),
         stats: { comparisons: this.comparisons, swaps: this.swaps, accesses: this.accesses },
         events: [{ type: 'scene.note', text: zh }],
       })
       this.pendingDesc = ''
+      this.pendingDescEn = ''
       this.pendingVarHighlights.clear()
       this.truncated = true
       return this
@@ -226,6 +354,7 @@ export class AnimationBuilder {
     // humanized event family rather than just the step number.
     const fallback = events[0] ? `执行 ${events[0].type.split('.')[0]} 操作` : `步骤 ${this.sid}`
     const zh = this.pendingDesc || defaultDescFor(events[0]) || fallback
+    const en = this.pendingDescEn || defaultDescEnFor(events[0]) || zh
     const d = statDelta(events[0]?.type ?? '')
     this.comparisons += d.c
     this.swaps += d.s
@@ -233,12 +362,13 @@ export class AnimationBuilder {
     this.steps.push({
       stepId: this.sid++,
       codeLine: this.pendingLine,
-      description: { zh, en: zh },
+      description: { zh, en },
       action,
       stats: { comparisons: this.comparisons, swaps: this.swaps, accesses: this.accesses },
       events: allEvents,
     })
     this.pendingDesc = ''
+    this.pendingDescEn = ''
     return this
   }
 
@@ -743,12 +873,14 @@ export class AnimationBuilder {
   }
 
   // ── note / escape ──
-  note(text: string): this {
+  note(text: string, en?: string): this {
+    if (en) { this.pendingDesc = this.pendingDesc || text; this.pendingDescEn = en }
     return this.add([{ type: 'scene.note', text }], this.act('annotate', [], 'muted'))
   }
   result(value: AnimationScript['result']): this {
     this.resultValue = value
-    return this.desc(`输出结果：${formatResult(value)}`).note(`result = ${formatResult(value)}`)
+    return this.desc(`输出结果：${formatResult(value)}`, `Result: ${formatResult(value)}`)
+      .note(`result = ${formatResult(value)}`)
   }
   emit(event: AlgorithmEvent): this {
     return this.add([event], this.act('highlight', [], 'primary'))
