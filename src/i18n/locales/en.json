@@ -58,6 +58,8 @@
     "comparisons": "Comparisons",
     "swaps": "Swaps",
     "accesses": "Accesses",
+    "statsEstimateNote": "* Counts are estimated from visualized operations, not the algorithm's true execution count",
+    "generatorPatchedVars": "AI code had {{count}} undeclared variable(s) patched to 0 ({{names}}); the animation may not match the original code",
     "complexity": "Complexity",
     "timeComplexity": "Time Complexity",
     "spaceComplexity": "Space Complexity",

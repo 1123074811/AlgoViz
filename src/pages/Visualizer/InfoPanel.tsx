@@ -240,7 +240,23 @@ export default function InfoPanel({
               </div>
             ))}
           </div>
+          {/* AI 生成脚本的 stats 是按可视化操作推导的估算,而非算法真实计数——诚实标注,不伪装精确。 */}
+          {animationScript?.verification && (
+            <p className="mt-2 text-[10px] leading-snug text-slate-400">
+              {t('visualizer.statsEstimateNote')}
+            </p>
+          )}
         </div>
+
+        {/* AI 代码被执行期修补(未声明变量按 0 注入)→ 动画可能不准确,显式降可信度提示。 */}
+        {animationScript?.generatorWarnings && animationScript.generatorWarnings.length > 0 && (
+          <div role="note" className="p-3 rounded-lg border border-amber-300 bg-amber-50 text-[11px] leading-relaxed text-amber-800">
+            {t('visualizer.generatorPatchedVars', {
+              count: animationScript.generatorWarnings.length,
+              names: animationScript.generatorWarnings.join(', '),
+            })}
+          </div>
+        )}
 
         {complexity && (
           <div className="p-3 rounded-lg border border-border bg-surface">

@@ -56,7 +56,12 @@ function executeGeneratorAttempt(
     .join('\n')
   const fn = new Function('input', 'b', prefix ? `${prefix}\n${source}` : source) as (input: unknown, b: AnimationBuilder) => void
   fn(input, b)
-  return { ok: true, script: b.build() }
+  const script = b.build()
+  // 引用了未声明变量并被按 0 注入修补 → 记录到脚本,供 UI 提示动画可能不准确。
+  if (recoveredGlobals.size > 0) {
+    script.generatorWarnings = [...recoveredGlobals]
+  }
+  return { ok: true, script }
 }
 
 function getMissingVariableName(error: unknown): string | null {

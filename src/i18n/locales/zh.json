@@ -58,6 +58,8 @@
     "comparisons": "比较次数",
     "swaps": "交换次数",
     "accesses": "访问次数",
+    "statsEstimateNote": "* 计数基于动画可视化操作估算，非算法真实执行计数",
+    "generatorPatchedVars": "AI 代码有 {{count}} 处未声明变量已按 0 处理（{{names}}），动画可能与原代码不符",
     "complexity": "复杂度",
     "timeComplexity": "时间复杂度",
     "spaceComplexity": "空间复杂度",

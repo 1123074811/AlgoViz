@@ -16,6 +16,18 @@ b.result(total)
     expect(result.ok).toBe(true)
     // 注入的 total 从 0 起累加 1+2+3 = 6，证明确实注入为 0 而非其它值。
     expect(result.script?.result).toBe(6)
+    // 修补痕迹必须暴露到脚本上,供 UI 提示动画可能不准确。
+    expect(result.script?.generatorWarnings).toEqual(['total'])
+  })
+
+  it('未触发变量注入时不附加 generatorWarnings', () => {
+    const body = `let total = 0
+b.arrayCreate(input)
+for (const n of input) { total += n }
+b.result(total)`
+    const result = executeGenerator(body, [1, 2, 3], { algorithm: 'sum', type: 'array' })
+    expect(result.ok).toBe(true)
+    expect(result.script?.generatorWarnings).toBeUndefined()
   })
 
   it('引用多个（≤4）不同未声明变量时逐个恢复', () => {

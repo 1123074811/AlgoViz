@@ -199,6 +199,9 @@ export interface AnimationScript {
     /** 本可真实执行(JS/Python)但执行失败,降级到 @expect 自证——校验强度被削弱。 */
     degraded?: boolean
   }
+  /** 执行期对 AI 生成器代码的修补记录(如把未声明变量按 0 注入的变量名),
+   *  用于 UI 降低可信度提示——动画建立在被修补的代码上,可能不准确。内置预设无此字段。 */
+  generatorWarnings?: string[]
   presentation?: PresentationConfig
   steps: AnimationStep[]
 }
