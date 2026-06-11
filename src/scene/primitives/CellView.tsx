@@ -102,5 +102,8 @@ const DEDICATED_PREFIXES = ['queue_', 'stack_', 'deque_', 'set_', 'hashbucket_',
 function showColLabel(id: string): boolean {
   if (DEDICATED_PREFIXES.some(p => id.startsWith(p))) return false
   if (/^s_\d+_\d+$/.test(id)) return false // string char cells (StringView draws indices)
+  // 数组格(arr_*)的下标轴改由 SceneCanvas 的固定层绘制(见 renderArrayIndexAxis),
+  // 这样值互换动画里格子滑动时,下标标签仍钉在槽位上,不跟着滑。
+  if (/^arr_\d+$/.test(id)) return false
   return true
 }

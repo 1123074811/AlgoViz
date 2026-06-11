@@ -28,7 +28,7 @@ import AlgorithmOverlays from './overlays/AlgorithmOverlays'
 import ColorLegend from './ColorLegend'
 import { SEMANTIC_COLORS, NEUTRALS } from './tokens'
 import { EDGE_FLOW_KEYFRAMES } from './primitives/sharedMotion'
-import type { SceneCell, SceneEntity, SceneNode } from './types'
+import type { SceneCell, SceneEntity, SceneNode, SceneState } from './types'
 import type { DPTableModel } from './overlays'
 
 interface SceneCanvasProps {
@@ -267,6 +267,7 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1 }: S
         })()}
         <g className="pointer-events-auto">
           {edges.map((edge) => <EdgeView key={edge.id} edge={edge} scene={scene} />)}
+          {renderArrayIndexAxis(targetScene)}
           {entities.map((entity) => entity.type === 'cell' ? <CellView key={entity.id} cell={entity} /> : null)}
           {(() => {
             const autoCells = entities.filter((e): e is SceneCell => e.type === 'cell' && e.id.startsWith('auto_'))
@@ -357,6 +358,38 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1 }: S
         ) : null
       })()}
     </div>
+  )
+}
+
+/**
+ * 数组下标轴:从「目标场景」(未补间、位置固定)绘制每个数组格的下标标签。
+ * 值互换动画里格子会滑动交叉,但下标代表的是固定槽位,必须钉在原处不跟着滑——
+ * 因此独立于会滑动的 CellView,直接按目标位置绘制。
+ */
+function renderArrayIndexAxis(targetScene: SceneState) {
+  const cells = Object.values(targetScene.entities).filter(
+    (e): e is SceneCell => e.type === 'cell' && /^arr_\d+$/.test(e.id) && e.row === undefined && e.col !== undefined,
+  )
+  if (cells.length === 0) return null
+  return (
+    <g aria-hidden="true">
+      {cells.map((cell) => {
+        const h = cell.size?.height ?? 44
+        return (
+          <text
+            key={`idxaxis_${cell.id}`}
+            x={cell.position.x}
+            y={cell.position.y + h / 2 + 14}
+            textAnchor="middle"
+            fontSize="10"
+            fill="#94A3B8"
+            fontFamily="monospace"
+          >
+            {cell.col}
+          </text>
+        )
+      })}
+    </g>
   )
 }
 

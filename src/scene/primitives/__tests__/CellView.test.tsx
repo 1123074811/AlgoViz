@@ -22,13 +22,18 @@ function visibleText(el: Element): string {
 }
 
 describe('CellView', () => {
-  it('renders a rect and value text with index label', () => {
+  it('renders a rect and value text', () => {
     const { container } = render(<svg><CellView cell={cell()} /></svg>)
     expect(container.querySelector('rect')).toBeTruthy()
     const texts = Array.from(container.querySelectorAll('text')).map(visibleText)
     expect(texts).toContain('7')
-    // col label
-    expect(texts).toContain('0')
+  })
+
+  it('does NOT draw the array index label itself (axis layer owns it so it stays pinned during swaps)', () => {
+    const { container } = render(<svg><CellView cell={cell({ id: 'arr_0', col: 0, value: 7 })} /></svg>)
+    const texts = Array.from(container.querySelectorAll('text')).map(visibleText)
+    expect(texts).toContain('7')      // value still drawn by the cell
+    expect(texts).not.toContain('0')  // index label delegated to renderArrayIndexAxis
   })
 
   it('renders row,col index label when row is present', () => {
