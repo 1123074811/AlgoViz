@@ -25,6 +25,18 @@ function isPrime(n: number): boolean {
   return true
 }
 
+/** 统计一次素数判断的真实试除次数(模运算 = 一次比较),用于诚实的运行计数。 */
+function trialDivisionCount(n: number): number {
+  const m = Math.abs(n)
+  if (m < 2) return 0
+  let count = 0
+  for (let d = 2; d * d <= m; d++) {
+    count++
+    if (m % d === 0) break
+  }
+  return count
+}
+
 export function generateACM(input?: unknown): AnimationScript {
   const steps: AnimationStep[] = []
   let sid = 1
@@ -34,11 +46,17 @@ export function generateACM(input?: unknown): AnimationScript {
   const powValue = first ** exponent
   const primeIndices = nums.map((value, index) => isPrime(Math.abs(value)) ? index : -1).filter(index => index >= 0)
   const mid = Math.floor(nums.length / 2)
+  // 真实运行计数:快速幂迭代次数 = ⌈log2(exp)⌉;素数判断 = 各数试除次数之和。
+  const fastPowSteps = Math.max(1, Math.ceil(Math.log2(exponent + 1)))
+  const primeComparisons = nums.reduce((sum, v) => sum + trialDivisionCount(v), 0)
 
   steps.push({
     stepId: sid++,
     codeLine: 0,
-    description: { zh: `ACM 常用算法模板，示例数据来自输入：${nums.join(', ')}`, en: `ACM common templates, using input data: ${nums.join(', ')}` },
+    description: {
+      zh: `ACM 技巧示例橱窗(快速幂 / 素数判断 / 二分答案的独立演示，非单一连贯算法)，数据来自输入：${nums.join(', ')}`,
+      en: `ACM technique showcase (independent demos of fast power / primality / binary search — not one continuous algorithm), input: ${nums.join(', ')}`,
+    },
     action: { type: 'highlight', targets: [], color: 'primary' },
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
     events: [{ type: 'array.create', values: [...nums] }],
@@ -47,9 +65,9 @@ export function generateACM(input?: unknown): AnimationScript {
   steps.push({
     stepId: sid++,
     codeLine: 2,
-    description: { zh: `快速幂: pow(${first}, ${exponent}) = ${powValue} (O(log n))`, en: `Fast power: pow(${first}, ${exponent}) = ${powValue} (O(log n))` },
+    description: { zh: `快速幂: pow(${first}, ${exponent}) = ${powValue}，约 ${fastPowSteps} 次平方迭代 (O(log n))`, en: `Fast power: pow(${first}, ${exponent}) = ${powValue}, ~${fastPowSteps} squaring iterations (O(log n))` },
     action: { type: 'highlight', targets: [0], color: 'warning' },
-    stats: { comparisons: 0, swaps: 0, accesses: 1 },
+    stats: { comparisons: 0, swaps: 0, accesses: fastPowSteps },
     events: [{ type: 'array.compare', indices: [0, Math.min(1, nums.length - 1)] }],
   })
 
@@ -61,7 +79,7 @@ export function generateACM(input?: unknown): AnimationScript {
       en: `Sieve / primality check: prime indices in input are [${primeIndices.join(', ') || 'none'}]`,
     },
     action: { type: 'mark', targets: primeIndices, color: 'success' },
-    stats: { comparisons: nums.length, swaps: 0, accesses: nums.length },
+    stats: { comparisons: primeComparisons, swaps: 0, accesses: nums.length },
     events: primeIndices.length > 0
       ? [{ type: 'array.mark_sorted', indices: primeIndices }]
       : [{ type: 'array.compare', indices: [0, 0] }],

@@ -38,6 +38,11 @@ export function generateLeetCode(input?: unknown): AnimationScript {
   const { nums, target, truncated, original } = parseInput(input)
   const seen = new Map<number, number>()
   let found: [number, number] | null = null
+  // 真实累加的运行计数(替代旧版 i+1 估算):
+  //   comps = 哈希查找次数(每轮一次 seen.get 判断是否命中)
+  //   acc   = 数据访问次数(展示读一遍 + 每轮读 nums[i] 与一次 map 访问)
+  let comps = 0
+  let acc = nums.length
 
   if (truncated) {
     steps.push({
@@ -72,8 +77,11 @@ export function generateLeetCode(input?: unknown): AnimationScript {
 
   for (let i = 0; i < nums.length; i++) {
     const value = nums[i]
+    acc++ // 读 nums[i]
     const need = target - value
     const mate = seen.get(need)
+    comps++ // 一次哈希查找(判断 need 是否已记录)
+    acc++ // 一次 map 访问
     if (mate !== undefined) {
       found = [mate, i]
       steps.push({
@@ -84,7 +92,7 @@ export function generateLeetCode(input?: unknown): AnimationScript {
           en: `i=${i}: nums[${i}]=${value}, check target-${value}=${need} -> found index ${mate}, result=[${mate},${i}]`,
         },
         action: { type: 'mark', targets: [mate, i], color: 'success' },
-        stats: { comparisons: i + 1, swaps: 0, accesses: i + 1 },
+        stats: { comparisons: comps, swaps: 0, accesses: acc },
         events: [{ type: 'array.compare', indices: [i, mate] }],
       })
       break
@@ -98,7 +106,7 @@ export function generateLeetCode(input?: unknown): AnimationScript {
         en: `i=${i}: nums[${i}]=${value}, check map for ${need} -> no, store ${value} -> ${i}`,
       },
       action: { type: 'compare', targets: [i], color: 'warning' },
-      stats: { comparisons: i + 1, swaps: 0, accesses: i + 1 },
+      stats: { comparisons: comps, swaps: 0, accesses: acc },
       events: [{ type: 'array.compare', indices: [i, i] }],
     })
     if (!seen.has(value)) seen.set(value, i)
@@ -111,7 +119,7 @@ export function generateLeetCode(input?: unknown): AnimationScript {
       ? { zh: `返回下标 [${found[0]}, ${found[1]}]，对应值 ${nums[found[0]]} + ${nums[found[1]]} = ${target}`, en: `Return indices [${found[0]}, ${found[1]}], values ${nums[found[0]]} + ${nums[found[1]]} = ${target}` }
       : { zh: `遍历结束，没有两数之和等于 target=${target}`, en: `Traversal finished; no pair sums to target=${target}` },
     action: { type: 'mark', targets: found ? [...found] : [], color: found ? 'success' : 'danger' },
-    stats: { comparisons: nums.length, swaps: 0, accesses: nums.length },
+    stats: { comparisons: comps, swaps: 0, accesses: acc },
   })
 
   return {

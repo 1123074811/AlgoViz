@@ -28,3 +28,24 @@ describe('generateLeetCode input truncation notice', () => {
     expect(script.steps[0].description.zh).not.toContain('截断')
   })
 })
+
+describe('generateLeetCode stats are real running counts (not i+1 estimates)', () => {
+  it('accumulates accesses faster than comparisons (2 accesses + 1 compare per round)', () => {
+    // 旧实现硬编码 comparisons === accesses === i+1;真实累加下 accesses > comparisons。
+    const script = generateLeetCode({ nums: [2, 7, 11, 15], target: 9 })
+    const last = script.steps[script.steps.length - 1]
+    expect(last.stats.accesses).toBeGreaterThan(last.stats.comparisons)
+  })
+
+  it('stats are monotonically non-decreasing across steps', () => {
+    const script = generateLeetCode({ nums: [3, 1, 4, 1, 5, 9, 2, 6], target: 8 })
+    let prevComp = -1
+    let prevAcc = -1
+    for (const step of script.steps) {
+      expect(step.stats.comparisons).toBeGreaterThanOrEqual(prevComp)
+      expect(step.stats.accesses).toBeGreaterThanOrEqual(prevAcc)
+      prevComp = step.stats.comparisons
+      prevAcc = step.stats.accesses
+    }
+  })
+})
