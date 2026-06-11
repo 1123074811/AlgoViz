@@ -4,8 +4,8 @@ export type VerifyStatus = 'pass' | 'fail' | 'skipped'
 
 export interface VerifyOutcome {
   status: VerifyStatus
-  /** 校验依据:'expect' = AI 自报期望值;'js-exec' = 真实执行用户 JS 代码。 */
-  source?: 'expect' | 'js-exec'
+  /** 校验依据:'expect' = AI 自报期望值;'js-exec'/'py-exec' = 真实执行用户代码。 */
+  source?: 'expect' | 'js-exec' | 'py-exec'
   expected?: unknown
   actual?: unknown
   /** skipped 时的原因,给 UI 与日志看。 */
