@@ -25,6 +25,7 @@ import StringView from './primitives/StringView'
 import VariablesView from './primitives/VariablesView'
 import GraphAnalysisView from './primitives/GraphAnalysisView'
 import AlgorithmOverlays from './overlays/AlgorithmOverlays'
+import ColorLegend from './ColorLegend'
 import { SEMANTIC_COLORS, NEUTRALS } from './tokens'
 import { EDGE_FLOW_KEYFRAMES } from './primitives/sharedMotion'
 import type { SceneCell, SceneEntity, SceneNode } from './types'
@@ -49,6 +50,18 @@ function durationForSpeed(speedMultiplier: number): number {
   if (speedMultiplier <= 0.5) return MOTION.duration.slow
   if (speedMultiplier >= 2) return MOTION.duration.fast
   return MOTION.duration.base
+}
+
+/** 结构性大动作放慢，旁注类加快，让位移看得清、说明不拖节奏。 */
+export function durationForStep(speedMultiplier: number, actionType: string | undefined): number {
+  const base = durationForSpeed(speedMultiplier)
+  if (actionType === 'swap' || actionType === 'move' || actionType === 'insert' || actionType === 'delete') {
+    return Math.round(base * 1.35)
+  }
+  if (actionType === 'annotate' || actionType === 'mark') {
+    return Math.round(base * 0.7)
+  }
+  return base
 }
 
 /** 可视化画布：处理空状态、外层卡片容器与渲染错误边界，渲染主体委托给 SceneCanvasInner。 */
@@ -101,7 +114,7 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1 }: S
   // 逻辑步骤 key：补间只在「脚本或步骤」变化时重启，避免 deriveSceneState 每帧新引用
   // 导致动画反复重启而抖动。
   const transitionKey = `${script.algorithm}|${script.steps.length}|${currentStep}`
-  const scene = useSceneTransition(targetScene, durationForSpeed(speed), transitionKey)
+  const scene = useSceneTransition(targetScene, durationForStep(speed, currentStepData?.action?.type), transitionKey)
   const entities = Object.values(scene.entities)
   const edges = Object.values(scene.edges)
   const pointers = Object.values(scene.pointers)
@@ -288,6 +301,7 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1 }: S
         <style>{EDGE_FLOW_KEYFRAMES}</style>
       </svg>
       <AlgorithmOverlays overlays={scene.overlays} />
+      {!isEmpty && <ColorLegend />}
 
       {/* Floating Zoom / Pan Controls */}
       <div 
