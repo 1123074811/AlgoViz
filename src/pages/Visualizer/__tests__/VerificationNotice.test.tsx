@@ -4,10 +4,26 @@ import { VerificationNotice } from '../VerificationNotice'
 import '@/i18n'
 
 describe('VerificationNotice', () => {
-  it('shows a green badge with source strength on pass', () => {
+  it('shows a green badge with source strength on real-execution pass', () => {
     render(<VerificationNotice verification={{ status: 'pass', source: 'js-exec' }} />)
     const badge = screen.getByRole('status')
     expect(badge.textContent).toMatch(/真实执行|real execution/i)
+    expect(badge.className).toContain('emerald')
+  })
+
+  it('does NOT show a green "verified" badge for AI-self-reported (@expect) pass', () => {
+    render(<VerificationNotice verification={{ status: 'pass', source: 'expect' }} />)
+    const badge = screen.getByRole('status')
+    // @expect 是 AI 自证,不能给绿色"已验证"——必须用警告色 + 诚实措辞
+    expect(badge.className).not.toContain('emerald')
+    expect(badge.className).toContain('amber')
+    expect(badge.textContent).toMatch(/未.*独立验证|AI 自查|not independently/i)
+  })
+
+  it('marks a degraded @expect pass (real execution attempted but unavailable)', () => {
+    render(<VerificationNotice verification={{ status: 'pass', source: 'expect', degraded: true }} />)
+    const badge = screen.getByRole('status')
+    expect(badge.textContent).toMatch(/真实执行不可用|real execution unavailable/i)
   })
 
   it('shows a neutral badge with the reason on skipped', () => {
@@ -19,6 +35,7 @@ describe('VerificationNotice', () => {
     const { container } = render(<VerificationNotice verification={undefined} />)
     expect(container.firstChild).toBeNull()
   })
+
   it('shows a warning with expected/actual on failure', () => {
     render(
       <VerificationNotice

@@ -77,3 +77,26 @@ describe('verifyAndTag for live-regen (no @expect)', () => {
     expect(outcome.status).toBe('skipped')
   })
 })
+
+describe('verifyAndTag degraded flag (real execution attempted but unavailable)', () => {
+  it('marks degraded when Python real-exec fails and falls back to @expect', async () => {
+    // jsdom 无 Worker → Pyodide 真值执行不可用 → 落回 @expect 自证
+    const script = scriptWithResult(9)
+    const outcome = await verifyAndTag(script, {
+      expectRaw: '9', language: 'python', userCode: 'def f(x):\n    return 9', input: [1], sourceCode: 'def f(x):\n    return 9',
+    })
+    expect(outcome.status).toBe('pass')
+    expect(outcome.source).toBe('expect')
+    expect(script.verification?.degraded).toBe(true)
+  })
+
+  it('does NOT mark degraded for languages that never support real-exec (e.g. cpp)', async () => {
+    const script = scriptWithResult(9)
+    const outcome = await verifyAndTag(script, {
+      expectRaw: '9', language: 'cpp', userCode: 'int f(){return 9;}', input: [1], sourceCode: 'int f(){return 9;}',
+    })
+    expect(outcome.status).toBe('pass')
+    expect(outcome.source).toBe('expect')
+    expect(script.verification?.degraded).toBeUndefined()
+  })
+})

@@ -79,7 +79,8 @@
       "failTitle": "Animation failed the consistency check:",
       "failDetail": "the original code is expected to return {{expected}}, but the animation produced {{actual}}. The animation may not match the real execution.",
       "passExec": "Consistency check passed (real execution)",
-      "passExpect": "Consistency check passed (AI-derived expectation)",
+      "passExpect": "AI self-check only · not independently verified (AI-reported result)",
+      "passExpectDegraded": "real execution unavailable · AI self-check only, not independently verified",
       "skipped": "Not verified: {{reason}}"
     }
   },

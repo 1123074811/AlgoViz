@@ -196,6 +196,8 @@ export interface AnimationScript {
     expected?: string
     actual?: string
     message?: string
+    /** 本可真实执行(JS/Python)但执行失败,降级到 @expect 自证——校验强度被削弱。 */
+    degraded?: boolean
   }
   presentation?: PresentationConfig
   steps: AnimationStep[]

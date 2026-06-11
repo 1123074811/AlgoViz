@@ -79,7 +79,8 @@
       "failTitle": "动画未通过一致性校验:",
       "failDetail": "原代码预期结果 {{expected}}，动画输出 {{actual}}。动画过程可能与代码真实执行不符，仅供参考。",
       "passExec": "已通过一致性校验（真实执行原代码比对）",
-      "passExpect": "已通过一致性校验（AI 推演结果比对）",
+      "passExpect": "AI 自查一致 · 未经独立验证（结果由 AI 自报，仅供参考）",
+      "passExpectDegraded": "真实执行不可用 · 当前为 AI 自查，未经独立验证",
       "skipped": "未校验：{{reason}}"
     }
   },

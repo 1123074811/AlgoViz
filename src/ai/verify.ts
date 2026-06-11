@@ -10,6 +10,8 @@ export interface VerifyOutcome {
   actual?: unknown
   /** skipped 时的原因,给 UI 与日志看。 */
   message?: string
+  /** 本可真实执行(JS/Python)但执行失败,降级到 @expect——告知 UI 校验强度被削弱。 */
+  degraded?: boolean
 }
 
 /** 解析 @expect 原文:优先 JSON,否则视为裸字符串。空白视为缺失。 */

@@ -44,14 +44,17 @@ export interface VerifyAndTagArgs {
 
 export async function verifyAndTag(script: AnimationScript, args: VerifyAndTagArgs): Promise<VerifyOutcome> {
   let outcome: VerifyOutcome | null = null
+  // 该语言本可真实执行(JS/Python),用于区分"语言不支持真值"与"真值降级"。
+  const lang = args.language.toLowerCase()
+  const realExecCapable = lang === 'javascript' || lang === 'python'
 
-  if (args.language.toLowerCase() === 'javascript') {
+  if (lang === 'javascript') {
     const truth = await runUserJsSandboxed(args.userCode, args.input)
     if (truth.ok) {
       outcome = verifyAgainstGroundTruth(script, truth.value)
     }
   }
-  if (!outcome && args.language.toLowerCase() === 'python') {
+  if (!outcome && lang === 'python') {
     const truth = await runUserPySandboxed(args.userCode, args.input)
     if (truth.ok) {
       outcome = { ...verifyAgainstGroundTruth(script, truth.value), source: 'py-exec' }
@@ -62,12 +65,18 @@ export async function verifyAndTag(script: AnimationScript, args: VerifyAndTagAr
     if (!outcome || byExpect.status !== 'skipped') outcome = byExpect
   }
 
+  // 本可真值却最终落到 @expect 自证 → 标记降级,UI 据此提示"真实执行不可用"。
+  if (realExecCapable && outcome.source === 'expect' && outcome.status !== 'skipped') {
+    outcome = { ...outcome, degraded: true }
+  }
+
   script.verification = {
     status: outcome.status,
     ...(outcome.source && { source: outcome.source }),
     ...(outcome.expected !== undefined && { expected: formatVerifyValue(outcome.expected) }),
     ...(outcome.actual !== undefined && { actual: formatVerifyValue(outcome.actual) }),
     ...(outcome.message && { message: outcome.message }),
+    ...(outcome.degraded && { degraded: true }),
   }
   sanitizeLineMapping(script, args.sourceCode)
   return outcome
