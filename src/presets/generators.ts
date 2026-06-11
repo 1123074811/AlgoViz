@@ -29,7 +29,9 @@ export function generateBubbleSort(arr: number[]): AnimationScript {
             rng('sorted', '已排序后缀', n - i, n, 'sorted'),
           ),
         ),
-        ...evt(sid === 2 ? [{ type: 'array.create', values: [...arr] }] : [{ type: 'array.compare', indices: [j, j + 1] }]),
+        ...evt(sid === 2
+          ? [{ type: 'math.init', vars: [{ name: 'i', value: 0 }, { name: 'j', value: 0 }, { name: '是否交换', value: '否' }] }, { type: 'array.create', values: [...arr] }, { type: 'math.set', name: 'i', value: i }, { type: 'math.set', name: 'j', value: j }]
+          : [{ type: 'array.compare', indices: [j, j + 1] }, { type: 'math.set', name: 'i', value: i }, { type: 'math.set', name: 'j', value: j }, ...(j === 0 ? [{ type: 'math.set', name: '是否交换', value: '否' } as const] : [])]),
       })
       if (data[j] > data[j + 1]) {
         steps.push({
@@ -39,7 +41,7 @@ export function generateBubbleSort(arr: number[]): AnimationScript {
             'swap', [j, j + 1], 'danger', comps, sw, acc,
             sortTeaching({ i, j, swapped: true }),
           ),
-          ...evt([{ type: 'array.swap', indices: [j, j + 1] }]),
+          ...evt([{ type: 'array.swap', indices: [j, j + 1] }, { type: 'math.set', name: '是否交换', value: '是' }]),
         })
         ;[data[j], data[j + 1]] = [data[j + 1], data[j]]; sw++; acc += 2; swapped = true
         { const noteZh = `交换后: [${data.join(', ')}]`
@@ -65,7 +67,7 @@ export function generateBubbleSort(arr: number[]): AnimationScript {
           rng('sorted', '已排序后缀', n - i - 1, n, 'sorted'),
         ),
       ),
-      ...evt([{ type: 'array.mark_sorted', indices: [n - 1 - i] }]),
+      ...evt([{ type: 'array.mark_sorted', indices: [n - 1 - i] }, { type: 'math.set', name: '是否交换', value: swapped ? '是' : '否' }]),
     })
     if (!swapped && i === 0) {
       steps.push({
@@ -115,7 +117,9 @@ export function generateSelectionSort(arr: number[]): AnimationScript {
           rng('unsorted', '未排序', i, n, 'unsorted'),
         ),
       ),
-      ...evt(sid === 2 ? [{ type: 'array.create', values: [...arr] }] : [{ type: 'scene.note', text: noteZh }]),
+      ...evt(sid === 2
+        ? [{ type: 'math.init', vars: [{ name: 'i', value: i }, { name: 'j', value: i }, { name: 'min', value: minIdx }] }, { type: 'array.create', values: [...arr] }]
+        : [{ type: 'scene.note', text: noteZh }, { type: 'math.set', name: 'i', value: i }, { type: 'math.set', name: 'min', value: minIdx }]),
     })}
     for (let j = i + 1; j < n; j++) {
       steps.push({
@@ -125,14 +129,14 @@ export function generateSelectionSort(arr: number[]): AnimationScript {
           'compare', [minIdx, j], 'warning', ++comps, sw, acc += 2,
           sortTeaching({ i, j, minIdx }, rng('sorted', '已排序', 0, i, 'sorted')),
         ),
-        ...evt([{ type: 'array.compare', indices: [minIdx, j] }]),
+        ...evt([{ type: 'array.compare', indices: [minIdx, j] }, { type: 'math.set', name: 'j', value: j }]),
       })
       if (data[j] < data[minIdx]) {
         minIdx = j
         { const noteZh = `找到更小值 arr[${j}]=${data[j]}，更新 minIdx=${j}`
         steps.push({
           ...makeStep(sid++, 5, noteZh, `Found smaller value arr[${j}]=${data[j]}, update minIdx=${j}`, 'highlight', [j], 'danger', comps, sw, acc += 1, sortTeaching({ i, j, minIdx }, rng('sorted', '已排序', 0, i, 'sorted'))),
-          ...evt([{ type: 'scene.note', text: noteZh }]),
+          ...evt([{ type: 'scene.note', text: noteZh }, { type: 'math.set', name: 'min', value: minIdx }]),
         })}
       } else {
         { const noteZh = `arr[${j}] 不小于当前最小值，保持 minIdx`
@@ -200,7 +204,9 @@ export function generateInsertionSort(arr: number[]): AnimationScript {
       'mark', [0], 'success', comps, sw, acc += 1,
       sortTeaching({ key: data[0] }, rng('sorted', '已排序', 0, 1, 'sorted')),
     ),
-    ...evt(sid === 2 ? [{ type: 'array.create', values: [...arr] }] : [{ type: 'array.mark_sorted', indices: [0] }]),
+    ...evt(sid === 2
+      ? [{ type: 'math.init', vars: [{ name: 'i', value: 0 }, { name: 'key', value: data[0] }, { name: 'j', value: -1 }] }, { type: 'array.create', values: [...arr] }]
+      : [{ type: 'array.mark_sorted', indices: [0] }]),
   })
   for (let i = 1; i < n; i++) {
     const key = data[i]
@@ -212,7 +218,7 @@ export function generateInsertionSort(arr: number[]): AnimationScript {
         rng('sorted', '已排序', 0, i, 'sorted'),
         rng('unsorted', '未排序', i, n, 'unsorted'),
       )),
-      ...evt([{ type: 'scene.note', text: noteZh }]),
+      ...evt([{ type: 'scene.note', text: noteZh }, { type: 'math.set', name: 'i', value: i }, { type: 'math.set', name: 'key', value: key }]),
     })}
     let j = i - 1
     while (j >= 0) {
@@ -223,7 +229,7 @@ export function generateInsertionSort(arr: number[]): AnimationScript {
           'compare', [j, j + 1], 'warning', ++comps, sw, acc += 2,
           sortTeaching({ i, j, key }),
         ),
-        ...evt([{ type: 'array.compare', indices: [j, j + 1] }]),
+        ...evt([{ type: 'array.compare', indices: [j, j + 1] }, { type: 'math.set', name: 'j', value: j }]),
       })
       if (data[j] > key) {
         steps.push({
@@ -288,7 +294,9 @@ export function generateQuickSort(arr: number[]): AnimationScript {
         sortTeaching({ low, high, pivot, pivotIndex: high },
           rng('active', '当前分区区间', low, high + 1, 'current')),
       ),
-      ...evt(sid === 2 ? [{ type: 'array.create', values: [...arr] }] : [{ type: 'scene.note', text: noteZh }]),
+      ...evt(sid === 2
+        ? [{ type: 'math.init', vars: [{ name: 'pivot', value: pivot }, { name: 'i', value: low - 1 }, { name: 'j', value: low }] }, { type: 'array.create', values: [...arr] }, { type: 'math.set', name: 'pivot', value: pivot }]
+        : [{ type: 'scene.note', text: noteZh }, { type: 'math.set', name: 'pivot', value: pivot }, { type: 'math.set', name: 'i', value: low - 1 }]),
     })}
 
     let i = low - 1
@@ -301,7 +309,7 @@ export function generateQuickSort(arr: number[]): AnimationScript {
           sortTeaching({ low, high, i, j, pivot },
             rng('active', '当前区间', low, high + 1, 'current')),
         ),
-        ...evt([{ type: 'array.compare', indices: [j, high] }]),
+        ...evt([{ type: 'array.compare', indices: [j, high] }, { type: 'math.set', name: 'j', value: j }, { type: 'math.set', name: 'i', value: i }]),
       })
       if (data[j] <= pivot) {
         i++
@@ -312,7 +320,7 @@ export function generateQuickSort(arr: number[]): AnimationScript {
               `Swap arr[${i}]=${data[i]} ↔ arr[${j}]=${data[j]}, move small element to left`,
               'swap', [i, j], 'danger', comps, 0, 0,
               sortTeaching({ low, high, i, j, pivot })),
-            ...evt([{ type: 'array.swap', indices: [i, j] }]),
+            ...evt([{ type: 'array.swap', indices: [i, j] }, { type: 'math.set', name: 'i', value: i }]),
           })
           ;[data[i], data[j]] = [data[j], data[i]]
         }
@@ -378,7 +386,7 @@ export function generateHeapSort(arr: number[]): AnimationScript {
           sortTeaching({ heapSize: nH, parent: i, left: l, right: r },
             rng('heap', '堆范围', 0, nH, 'unsorted')),
         ),
-        ...evt([{ type: 'array.compare', indices: [largest, l] }]),
+        ...evt([{ type: 'array.compare', indices: [largest, l] }, { type: 'math.set', name: '堆大小', value: nH }, { type: 'math.set', name: '父', value: i }, { type: 'math.set', name: '子', value: l }]),
       })
       if (data[l] > data[largest]) largest = l
     }
@@ -391,7 +399,7 @@ export function generateHeapSort(arr: number[]): AnimationScript {
           sortTeaching({ heapSize: nH, parent: i, left: l, right: r },
             rng('heap', '堆范围', 0, nH, 'unsorted')),
         ),
-        ...evt([{ type: 'array.compare', indices: [largest, r] }]),
+        ...evt([{ type: 'array.compare', indices: [largest, r] }, { type: 'math.set', name: '堆大小', value: nH }, { type: 'math.set', name: '父', value: i }, { type: 'math.set', name: '子', value: r }]),
       })
       if (data[r] > data[largest]) largest = r
     }
@@ -419,7 +427,9 @@ export function generateHeapSort(arr: number[]): AnimationScript {
       'highlight', [Math.floor(n / 2) - 1], 'primary', comps, 0, 0,
       sortTeaching({ heapSize: n }, rng('heap', '建堆范围', 0, n, 'unsorted')),
     ),
-    ...evt(sid === 2 ? [{ type: 'array.create', values: [...arr] }] : [{ type: 'scene.note', text: noteZh }]),
+    ...evt(sid === 2
+      ? [{ type: 'math.init', vars: [{ name: '堆大小', value: n }, { name: '父', value: Math.floor(n / 2) - 1 }, { name: '子', value: 2 * (Math.floor(n / 2) - 1) + 1 }] }, { type: 'array.create', values: [...arr] }]
+      : [{ type: 'scene.note', text: noteZh }]),
   })}
   for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
     heapify(n, i)
@@ -442,7 +452,7 @@ export function generateHeapSort(arr: number[]): AnimationScript {
           rng('sorted', '已排序后缀', i, n, 'sorted'),
         ),
       ),
-      ...evt([{ type: 'array.swap', indices: [0, i] }]),
+      ...evt([{ type: 'array.swap', indices: [0, i] }, { type: 'math.set', name: '堆大小', value: i }]),
     })
     ;[data[0], data[i]] = [data[i], data[0]]
     steps.push({
@@ -487,7 +497,9 @@ export function generateShellSort(arr: number[]): AnimationScript {
         'highlight', [0, gap], 'primary', comps, sw, acc,
         sortTeaching({ gap, i: gap }, rng('active', `gap=${gap}`, 0, n, 'unsorted')),
       ),
-      ...evt(sid === 2 ? [{ type: 'array.create', values: [...arr] }] : [{ type: 'scene.note', text: noteZh }]),
+      ...evt(sid === 2
+        ? [{ type: 'math.init', vars: [{ name: 'gap', value: gap }, { name: 'i', value: gap }, { name: 'j', value: gap }] }, { type: 'array.create', values: [...arr] }, { type: 'math.set', name: 'gap', value: gap }]
+        : [{ type: 'scene.note', text: noteZh }, { type: 'math.set', name: 'gap', value: gap }]),
     })}
     for (let i = gap; i < n; i++) {
       for (let j = i; j >= gap; j -= gap) {
@@ -498,7 +510,7 @@ export function generateShellSort(arr: number[]): AnimationScript {
             'compare', [j - gap, j], 'warning', ++comps, sw, acc += 2,
             sortTeaching({ gap, i, j, 'j-gap': j - gap }),
           ),
-          ...evt([{ type: 'array.compare', indices: [j - gap, j] }]),
+          ...evt([{ type: 'array.compare', indices: [j - gap, j] }, { type: 'math.set', name: 'i', value: i }, { type: 'math.set', name: 'j', value: j }]),
         })
         if (data[j - gap] > data[j]) {
           steps.push({
@@ -564,8 +576,11 @@ export function generateCountingSort(arr: number[]): AnimationScript {
         [auxArr('count', '计数数组', count)],
       ),
     ),
-    ...evt(sid === 2 ? [{ type: 'array.create', values: [...arr.map(v => Math.max(0, Math.floor(v)))] }] : [{ type: 'scene.note', text: noteZh }]),
+    ...evt(sid === 2
+      ? [{ type: 'math.init', vars: [{ name: 'max', value: maxVal }, { name: 'i', value: 0 }, { name: '当前值', value: '-' }] }, { type: 'array.create', values: [...arr.map(v => Math.max(0, Math.floor(v)))] }]
+      : [{ type: 'scene.note', text: noteZh }]),
   })}
+  let scanIdx = 0
   for (const num of data) {
     count[num]++
     steps.push({
@@ -577,8 +592,9 @@ export function generateCountingSort(arr: number[]): AnimationScript {
           [auxArr('count', '计数数组', count, [num])],
         ),
       ),
-      ...evt([{ type: 'array.mark_sorted', indices: [num] }]),
+      ...evt([{ type: 'array.mark_sorted', indices: [num] }, { type: 'math.set', name: 'i', value: scanIdx }, { type: 'math.set', name: '当前值', value: num }]),
     })
+    scanIdx++
   }
 
   // Prefix sum for stable counting sort
@@ -783,7 +799,7 @@ export function generateBinarySearch(arr: number[], target?: number): AnimationS
   { const noteZh = `有序数组 [${sorted.join(', ')}]，搜索 target=${t}`
   steps.push({
     ...makeStep(sid++, 1, noteZh, `Sorted array [${sorted.join(', ')}], search target=${t}`, 'highlight', [], 'primary', comps, 0, acc),
-    ...evt([{ type: 'array.create', values: sorted }]),
+    ...evt([{ type: 'math.init', vars: [{ name: 'target', value: t }, { name: 'left', value: 0 }, { name: 'right', value: sorted.length - 1 }, { name: 'mid', value: 0 }] }, { type: 'array.create', values: sorted }]),
   })}
 
   let left = 0, right = sorted.length - 1
@@ -792,7 +808,7 @@ export function generateBinarySearch(arr: number[], target?: number): AnimationS
     { const noteZh = `left=${left}, right=${right}，mid=${mid}，arr[${mid}]=${sorted[mid]}`
     steps.push({
       ...makeStep(sid++, 3, noteZh, `left=${left}, right=${right}, mid=${mid}, arr[${mid}]=${sorted[mid]}`, 'highlight', [mid], 'warning', comps, 0, acc += 2),
-      ...evt([{ type: 'scene.note', text: noteZh }]),
+      ...evt([{ type: 'scene.note', text: noteZh }, { type: 'math.set', name: 'left', value: left }, { type: 'math.set', name: 'right', value: right }, { type: 'math.set', name: 'mid', value: mid }]),
     })}
     { const noteZh = `比较 arr[${mid}]=${sorted[mid]} == target=${t}？`
     steps.push({
@@ -811,14 +827,14 @@ export function generateBinarySearch(arr: number[], target?: number): AnimationS
       { const noteZh = `${sorted[mid]} < ${t}，left = ${mid + 1}`
       steps.push({
         ...makeStep(sid++, 6, noteZh, `${sorted[mid]} < ${t}, left = ${mid + 1}`, 'highlight', [mid], 'muted', comps, 0, acc),
-        ...evt([{ type: 'scene.note', text: noteZh }]),
+        ...evt([{ type: 'scene.note', text: noteZh }, { type: 'math.set', name: 'left', value: mid + 1 }]),
       })}
       left = mid + 1
     } else {
       { const noteZh = `${sorted[mid]} > ${t}，right = ${mid - 1}`
       steps.push({
         ...makeStep(sid++, 6, noteZh, `${sorted[mid]} > ${t}, right = ${mid - 1}`, 'highlight', [mid], 'muted', comps, 0, acc),
-        ...evt([{ type: 'scene.note', text: noteZh }]),
+        ...evt([{ type: 'scene.note', text: noteZh }, { type: 'math.set', name: 'right', value: mid - 1 }]),
       })}
       right = mid - 1
     }
