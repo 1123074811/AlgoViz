@@ -231,16 +231,20 @@ export function trimAnchor(scene: SceneState, entityId: string, from: Point, to:
     return { x: center.x + dx * k, y: center.y + dy * k }
   }
 
-  // 矩形结点/单元格：沿用从锚点按半宽/半高裁剪到边界的逻辑。
-  const dx = to.x - from.x
-  const dy = to.y - from.y
+  // 矩形结点/单元格：从「中心」沿朝向对方的方向裁到矩形边界 + gap。
+  // 与圆形分支同理——不能把 from 当中心:带 side 端口的结点(如链表节点)其
+  // resolveAnchor 返回的已是边缘锚点,若再按半宽/半高裁剪会二次裁剪、把端点拽进
+  // 结点内部,导致箭头头部被结点矩形遮挡。无端口的 cell 其锚点本就是中心,结果不变。
+  const center = ('position' in entity && entity.position) ? entity.position : from
+  const dx = to.x - center.x
+  const dy = to.y - center.y
   const dist = Math.sqrt(dx * dx + dy * dy)
   if (dist === 0) return from
   const halfW = entity.size.width / 2
   const halfH = entity.size.height / 2
   const scale = Math.min(halfW / Math.max(Math.abs(dx), 0.001), halfH / Math.max(Math.abs(dy), 0.001))
-  const boundaryX = from.x + dx * scale
-  const boundaryY = from.y + dy * scale
+  const boundaryX = center.x + dx * scale
+  const boundaryY = center.y + dy * scale
   return {
     x: boundaryX + (dx / dist) * gap,
     y: boundaryY + (dy / dist) * gap,
