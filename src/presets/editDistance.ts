@@ -1,68 +1,67 @@
-import type { AnimationScript, AnimationStep } from '@/types/animation'
+import type { AnimationScript } from '@/types/animation'
+import { generateDPTable, rowMajorOrder } from './dpTable'
 
+/** 编辑距离:dp[i][j] = word1 前 i 个变成 word2 前 j 个的最少操作数。统一 DP 状态表 + 变量。 */
 export function generateEditDistance(w1?: string, w2?: string): AnimationScript {
   const word1 = w1 ?? 'horse'
   const word2 = w2 ?? 'ros'
   const m = word1.length, n = word2.length
-  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
-  for (let i = 0; i <= m; i++) dp[i][0] = i
-  for (let j = 0; j <= n; j++) dp[0][j] = j
-  const initialDp = dp.map((row) => [...row])
-  const steps: AnimationStep[] = []
-  let sid = 1
 
-  steps.push({
-    stepId: sid++, codeLine: 0,
-    description: { zh: `单词1: "${word1}" (${m}), 单词2: "${word2}" (${n})`, en: `Word1: "${word1}" (${m}), Word2: "${word2}" (${n})` },
-    action: { type: 'highlight', targets: [], color: 'primary' },
-    events: [{ type: 'matrix.create', rows: m + 1, cols: n + 1, values: initialDp }],
-    stats: { comparisons: 0, swaps: 0, accesses: 0 },
-  })
+  const rowLabels = ['∅', ...word1.split('')]
+  const colLabels = ['∅', ...word2.split('')]
+  // 基态:dp[i][0]=i(删 i 个)、dp[0][j]=j(插 j 个)。
+  const initial: Array<Array<number | null>> = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)),
+  )
 
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      if (word1[i - 1] === word2[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1]
-        steps.push({
-          stepId: sid++, codeLine: 5,
-          description: { zh: `${word1[i-1]} == ${word2[j-1]}，dp[${i}][${j}]=dp[${i-1}][${j-1}]=${dp[i][j]}`, en: `${word1[i-1]} == ${word2[j-1]}, dp[${i}][${j}]=${dp[i][j]}` },
-          action: { type: 'compare', targets: [i * (n + 1) + j], color: 'success' },
-          events: [
-            { type: 'scene.clear_highlight' },
-            { type: 'matrix.mark_path', cells: [{ row: i - 1, col: j - 1 }] },
-            { type: 'matrix.update_cell', row: i, col: j, value: dp[i][j] },
-          ],
-          stats: { comparisons: sid, swaps: 0, accesses: 0 },
-        })
-      } else {
-        dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
-        steps.push({
-          stepId: sid++, codeLine: 7,
-          description: { zh: `${word1[i-1]} ≠ ${word2[j-1]}，dp[${i}][${j}]=1+min(删${dp[i-1][j]},插${dp[i][j-1]},换${dp[i-1][j-1]})=${dp[i][j]}`, en: `${word1[i-1]} ≠ ${word2[j-1]}, dp[${i}][${j}]=1+min(del${dp[i-1][j]},ins${dp[i][j-1]},rep${dp[i-1][j-1]})=${dp[i][j]}` },
-          action: { type: 'compare', targets: [i * (n + 1) + j], color: 'warning' },
-          events: [
-            { type: 'scene.clear_highlight' },
-            { type: 'matrix.mark_path', cells: [{ row: i - 1, col: j }, { row: i, col: j - 1 }, { row: i - 1, col: j - 1 }] },
-            { type: 'matrix.update_cell', row: i, col: j, value: dp[i][j] },
-          ],
-          stats: { comparisons: sid, swaps: 0, accesses: 0 },
-        })
-      }
-    }
-  }
-
-  steps.push({
-    stepId: sid++, codeLine: 9,
-    description: { zh: `编辑距离 = ${dp[m][n]}（操作：${word1} → ${word2}）`, en: `Edit distance = ${dp[m][n]} (ops: ${word1} → ${word2})` },
-    action: { type: 'mark', targets: [], color: 'success' },
-    stats: { comparisons: m * n, swaps: 0, accesses: 0 },
-  })
-
-  return {
+  return generateDPTable({
     algorithm: 'edit_distance',
+    title: { zh: '编辑距离 DP 状态表', en: 'Edit Distance DP Table' },
+    rows: m + 1,
+    cols: n + 1,
+    rowLabels,
+    colLabels,
+    initial,
+    vars: [
+      { name: 'i', value: 0 },
+      { name: 'j', value: 0 },
+      { name: '当前距离', value: 0 },
+    ],
+    order: rowMajorOrder(m + 1, n + 1),
+    intro: {
+      zh: `编辑距离:单词1="${word1}"(${m}),单词2="${word2}"(${n})。字符相等沿对角,否则 1+min(删/插/换)`,
+      en: `Edit Distance: word1="${word1}"(${m}), word2="${word2}"(${n}). Equal → diagonal, else 1+min(del/ins/rep)`,
+    },
     complexity: { time: { best: 'O(m*n)', average: 'O(m*n)', worst: 'O(m*n)' }, space: 'O(m*n)' },
-    presentation: { engine: 'scene', module: 'matrix', variant: 'dp_table' },
-    initialState: { type: 'matrix', data: initialDp.flat(), matrix: initialDp },
-    steps: steps as AnimationScript['steps'],
-  }
+    answer: { row: m, col: n },
+    done: { zh: `编辑距离 = dp[${m}][${n}]("${word1}" → "${word2}")`, en: `Edit distance = dp[${m}][${n}] ("${word1}" → "${word2}")` },
+    compute: (i, j, dp) => {
+      const a = word1[i - 1], b = word2[j - 1]
+      if (a === b) {
+        const value = dp[i - 1][j - 1]
+        return {
+          value,
+          vars: { i, j, '当前距离': value },
+          deps: [{ row: i - 1, col: j - 1 }],
+          formula: {
+            zh: `'${a}' == '${b}' → dp[${i}][${j}] = dp[${i - 1}][${j - 1}] = ${value}`,
+            en: `'${a}' == '${b}' → dp[${i}][${j}] = dp[${i - 1}][${j - 1}] = ${value}`,
+          },
+          desc: { zh: `字符相等 '${a}'='${b}',无需操作,沿对角 = ${value}`, en: `Match '${a}'='${b}', no op, diagonal = ${value}` },
+        }
+      }
+      const del = dp[i - 1][j], ins = dp[i][j - 1], rep = dp[i - 1][j - 1]
+      const value = 1 + Math.min(del, ins, rep)
+      return {
+        value,
+        vars: { i, j, '当前距离': value },
+        deps: [{ row: i - 1, col: j }, { row: i, col: j - 1 }, { row: i - 1, col: j - 1 }],
+        formula: {
+          zh: `'${a}' ≠ '${b}' → dp[${i}][${j}] = 1+min(删 ${del}, 插 ${ins}, 换 ${rep}) = ${value}`,
+          en: `'${a}' ≠ '${b}' → dp[${i}][${j}] = 1+min(del ${del}, ins ${ins}, rep ${rep}) = ${value}`,
+        },
+        desc: { zh: `字符不等 '${a}'≠'${b}',1+min(删${del},插${ins},换${rep}) = ${value}`, en: `Mismatch, 1+min(del${del},ins${ins},rep${rep}) = ${value}` },
+      }
+    },
+  })
 }
