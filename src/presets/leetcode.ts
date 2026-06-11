@@ -5,13 +5,15 @@ const DEFAULT_NUMS = [2, 7, 11, 15]
 const DEFAULT_TARGET = 9
 const DEMO_CAP = 12
 
-function parseInput(input?: unknown): { nums: number[]; target: number; truncated: boolean; original: number } {
+interface ParsedLeetInput { nums: number[]; target: number; truncated: boolean; original: number; usedDefault: boolean }
+
+function parseInput(input?: unknown): ParsedLeetInput {
   if (Array.isArray(input)) {
     const all = input.map(Number).filter(Number.isFinite)
     const { data, truncated, original } = clampForDemo(all, DEMO_CAP)
     return data.length > 0
-      ? { nums: data, target: DEFAULT_TARGET, truncated, original }
-      : { nums: DEFAULT_NUMS, target: DEFAULT_TARGET, truncated: false, original: DEFAULT_NUMS.length }
+      ? { nums: data, target: DEFAULT_TARGET, truncated, original, usedDefault: false }
+      : { nums: DEFAULT_NUMS, target: DEFAULT_TARGET, truncated: false, original: DEFAULT_NUMS.length, usedDefault: true }
   }
 
   if (typeof input === 'object' && input !== null) {
@@ -25,19 +27,34 @@ function parseInput(input?: unknown): { nums: number[]; target: number; truncate
         ? obj.param
         : DEFAULT_TARGET
     return data.length > 0
-      ? { nums: data, target, truncated, original }
-      : { nums: DEFAULT_NUMS, target: DEFAULT_TARGET, truncated: false, original: DEFAULT_NUMS.length }
+      ? { nums: data, target, truncated, original, usedDefault: false }
+      : { nums: DEFAULT_NUMS, target: DEFAULT_TARGET, truncated: false, original: DEFAULT_NUMS.length, usedDefault: true }
   }
 
-  return { nums: DEFAULT_NUMS, target: DEFAULT_TARGET, truncated: false, original: DEFAULT_NUMS.length }
+  return { nums: DEFAULT_NUMS, target: DEFAULT_TARGET, truncated: false, original: DEFAULT_NUMS.length, usedDefault: true }
 }
 
 export function generateLeetCode(input?: unknown): AnimationScript {
   const steps: AnimationStep[] = []
   let sid = 1
-  const { nums, target, truncated, original } = parseInput(input)
+  const { nums, target, truncated, original, usedDefault } = parseInput(input)
   const seen = new Map<number, number>()
   let found: [number, number] | null = null
+
+  // 输入无法解析时静默用示例数据会误导用户以为是自己的输入——显式说明。
+  if (usedDefault) {
+    steps.push({
+      stepId: sid++,
+      codeLine: 0,
+      description: {
+        zh: `未检测到有效输入，已用示例数据 [${DEFAULT_NUMS.join(', ')}] 演示`,
+        en: `No valid input detected; demonstrating with sample data [${DEFAULT_NUMS.join(', ')}]`,
+      },
+      action: { type: 'highlight', targets: [], color: 'warning' },
+      stats: { comparisons: 0, swaps: 0, accesses: 0 },
+      events: [{ type: 'scene.note', text: `未检测到有效输入，使用示例数据 [${DEFAULT_NUMS.join(', ')}]` }],
+    })
+  }
   // 真实累加的运行计数(替代旧版 i+1 估算):
   //   comps = 哈希查找次数(每轮一次 seen.get 判断是否命中)
   //   acc   = 数据访问次数(展示读一遍 + 每轮读 nums[i] 与一次 map 访问)

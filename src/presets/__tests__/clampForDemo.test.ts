@@ -29,6 +29,18 @@ describe('generateLeetCode input truncation notice', () => {
   })
 })
 
+describe('generateLeetCode default-data fallback notice', () => {
+  it('explicitly discloses when invalid input falls back to sample data', () => {
+    const script = generateLeetCode({ nums: 'not-an-array' })
+    expect(script.steps[0].description.zh).toContain('示例数据')
+    expect(script.steps[0].description.en).toContain('sample data')
+  })
+  it('does not show the fallback notice when valid input is provided', () => {
+    const script = generateLeetCode({ nums: [2, 7, 11, 15], target: 9 })
+    expect(script.steps[0].description.zh).not.toContain('示例数据')
+  })
+})
+
 describe('generateLeetCode stats are real running counts (not i+1 estimates)', () => {
   it('accumulates accesses faster than comparisons (2 accesses + 1 compare per round)', () => {
     // 旧实现硬编码 comparisons === accesses === i+1;真实累加下 accesses > comparisons。
