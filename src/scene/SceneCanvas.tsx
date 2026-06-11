@@ -567,10 +567,9 @@ function createDPPanelEntities(entities: SceneEntity[], tables: DPTableModel[]):
   )
   const hasOther = positioned.length > 0
   const bounds = hasOther ? boundsFor(positioned) : { minX: 120, minY: 120, maxX: 880, maxY: 320 }
-  // DP 表通常很宽,是画面主体。把它水平居中到场景中轴(SCENE_CENTER_X),并堆叠在其它
-  // 内容(如变量面板)下方,而不是挂在窄变量面板右侧——后者会让宽表左半盖住变量、整体右偏出框。
-  const SCENE_CENTER_X = 500
-  const centerX = SCENE_CENTER_X
+  // DP 表左对齐:左边缘对齐到其它内容(变量面板)的左边缘,并堆叠在其下方,
+  // 而不是挂在窄变量面板右侧(宽表左半会盖住变量、整体右偏出框)。
+  const leftX = hasOther ? bounds.minX : 140
   // 有其它内容(变量面板/数组)时堆在其下方,留出间距;纯 DP 场景从顶部起。
   let cursorY = hasOther ? bounds.maxY + 56 : 120
   return tables.map((model) => {
@@ -581,7 +580,7 @@ function createDPPanelEntities(entities: SceneEntity[], tables: DPTableModel[]):
     const height = 64 + focusHeight + 24 + model.rowCount * 58 + footerHeight
     const panel: DPPanelEntity = {
       id: `dp_panel_${model.id}`,
-      position: { x: centerX, y: cursorY + height / 2 },
+      position: { x: leftX + width / 2, y: cursorY + height / 2 },
       size: { width, height },
       model,
     }

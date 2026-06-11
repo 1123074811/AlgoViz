@@ -512,29 +512,28 @@ function renderAuxiliaryArrays(scene: SceneState, teachingState: TeachingState |
 
   scene = { ...scene, entities, labels }
 
-  // 主数组(arr_*)的水平中心:辅助数组(计数/输出等)对齐到它,使输入/计数/输出
-  // 各行的中心一致、上下居中对齐;主数组本身保持原位,不影响其它算法。
-  let mainMinX = Infinity, mainMaxX = -Infinity
+  // 主数组(arr_*)的左边缘:辅助数组(计数/输出等)左对齐到它,使输入/计数/输出
+  // 各行共享同一左边缘;主数组本身保持原位,不影响其它算法。
+  let mainMinX = Infinity
   for (const [id, e] of Object.entries(scene.entities)) {
     if (!/^arr_\d+$/.test(id)) continue
     if ('position' in e && e.position) {
       const w = ('size' in e && e.size ? e.size.width : 44)
       mainMinX = Math.min(mainMinX, e.position.x - w / 2)
-      mainMaxX = Math.max(mainMaxX, e.position.x + w / 2)
     }
   }
-  const rowCenterX = Number.isFinite(mainMinX) ? (mainMinX + mainMaxX) / 2 : 500
+  const rowLeftX = Number.isFinite(mainMinX) ? mainMinX : 140
 
   for (let ai = 0; ai < auxArrays.length; ai++) {
     const arr = auxArrays[ai]
     const startY = maxY + 60 + ai * ARRAY_GAP
     const count = arr.data.length
     const cellWidths = arr.data.map(estimateAuxiliaryCellWidth)
-    // Center the row on the main array's center so all rows line up vertically.
+    // 左对齐:各行从主数组的左边缘开始,共享左边缘(不居中)。
     const totalWidth = cellWidths.reduce((sum, width) => sum + width, 0) + Math.max(0, count - 1) * AUX_CELL_GAP
-    const startX = rowCenterX - totalWidth / 2
+    const startX = rowLeftX
 
-    // Label - perfectly centered over the array
+    // Label - centered over this row (which is left-aligned to rowLeftX)
     scene = {
       ...scene,
       labels: {
@@ -543,7 +542,7 @@ function renderAuxiliaryArrays(scene: SceneState, teachingState: TeachingState |
           id: `aux_label_${arr.id}`,
           type: 'label',
           text: arr.label,
-          position: { x: rowCenterX, y: startY - LABEL_H },
+          position: { x: startX + totalWidth / 2, y: startY - LABEL_H },
         },
       },
     }
