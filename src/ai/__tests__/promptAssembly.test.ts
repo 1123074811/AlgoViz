@@ -42,4 +42,9 @@ describe('buildGeneratorSystemPrompt（core + 类别装配）', () => {
     const prompt = CORE_PROMPT('Python')
     expect(prompt).toContain("b.desc(中文描述, 'English description')")
   })
+
+  it('CORE_PROMPT documents b.phase', () => {
+    const prompt = CORE_PROMPT('Python')
+    expect(prompt).toContain('b.phase')
+  })
 })

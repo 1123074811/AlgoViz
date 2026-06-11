@@ -28,6 +28,35 @@ function countTypes(ctx: QualityContext, wanted: string[]): number {
   return eventTypes(ctx).filter(t => set.has(t)).length
 }
 
+const BACKTRACK_PATTERN = /backtrack|回溯|n_?queens?|sudoku|数独|permut|combin|subset|全排列|组合|子集/i
+
+/** 回溯类动画如果只画调用栈、不画搜索树，用户看不到搜索空间与剪枝位置。 */
+export const searchTreeRule: QualityRule = {
+  id: 'recursion.missing-search-tree',
+  appliesTo: ['recursion'],
+  check(ctx) {
+    const hay = `${ctx.script.algorithm ?? ''}\n${ctx.sourceCode ?? ''}`
+    if (!BACKTRACK_PATTERN.test(hay)) return []
+
+    let hasCallstackPush = false
+    let hasTreeEvent = false
+    for (const step of ctx.script.steps ?? []) {
+      for (const ev of step.events ?? []) {
+        if (ev.type === 'callstack.push') hasCallstackPush = true
+        if (ev.type.startsWith('tree.')) hasTreeEvent = true
+      }
+    }
+
+    if (!hasCallstackPush || hasTreeEvent) return []
+    return [{
+      code: 'recursion.missing-search-tree',
+      severity: 'error',
+      message: '回溯算法只画了调用栈，没有搜索树：用户看不到搜索空间形状与剪枝发生的位置。',
+      hint: '在调用栈之外补建搜索树：第一步 b.searchRoot(初始状态标签)；每次做选择 const id = b.searchTry(父节点id, 选择标签)；冲突/剪枝 b.searchFail(id)；撤销 b.searchBack(id)；到达解 b.searchOk(id)。只展开前 2~4 层代表性分支。',
+    }]
+  },
+}
+
 /** 用谓词构造一条类别规则；谓词为真=通过(无 issue)，为假=报一条 error。 */
 function rule(
   category: AlgorithmCategory,
@@ -78,6 +107,7 @@ export const CATEGORY_RULES: Record<AlgorithmCategory, QualityRule[]> = {
       '进入每层递归 b.callPush(...)，返回/回溯 b.callPop()/callReturn(...)，使栈高随递归深度增减。',
       ctx => countTypes(ctx, ['callstack.push']) > 0,
     ),
+    searchTreeRule,
   ],
   grid: [
     rule(
