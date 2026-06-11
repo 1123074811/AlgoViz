@@ -114,7 +114,9 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1 }: S
   // 逻辑步骤 key：补间只在「脚本或步骤」变化时重启，避免 deriveSceneState 每帧新引用
   // 导致动画反复重启而抖动。
   const transitionKey = `${script.algorithm}|${script.steps.length}|${currentStep}`
-  const scene = useSceneTransition(targetScene, durationForStep(speed, currentStepData?.action?.type), transitionKey)
+  // 脚本对象引用在同一算法逐步播放时稳定,切换算法/重新生成时改变——作为「快照」信号,
+  // 切换时直接显示新场景,不残留上个算法的结构。
+  const scene = useSceneTransition(targetScene, durationForStep(speed, currentStepData?.action?.type), transitionKey, script)
   const entities = Object.values(scene.entities)
   const edges = Object.values(scene.edges)
   const pointers = Object.values(scene.pointers)

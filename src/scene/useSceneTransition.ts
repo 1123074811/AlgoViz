@@ -25,6 +25,7 @@ export function useSceneTransition(
   target: SceneState,
   durationMs: number = MOTION.duration.base,
   transitionKey?: string | number,
+  resetKey?: unknown,
 ): SceneState {
   const [displayed, setDisplayed] = useState(target)
   const fromRef = useRef(target)
@@ -36,6 +37,18 @@ export function useSceneTransition(
   useEffect(() => {
     targetRef.current = target
   })
+
+  // 脚本/算法切换（resetKey 变化）时直接快照到新场景,不做跨算法的淡入淡出——
+  // 否则补间会把上个算法「旧有、新无」的结构淡出,在新动画上残留旧结构的幽灵。
+  // 声明在动画 effect 之前,使其先把 fromRef 设为新 target,动画 effect 读到后变为空跑。
+  useEffect(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+    fromRef.current = targetRef.current
+    setDisplayed(targetRef.current)
+  }, [resetKey])
 
   const instant = prefersReducedMotion() || durationMs <= 0
   // 传了 key 就用 key 决定何时重启；没传则退回 target 引用（旧行为）。
