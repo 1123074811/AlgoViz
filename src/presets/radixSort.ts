@@ -19,7 +19,11 @@ export function generateRadixSort(arr: number[]): AnimationScript {
         { id: 'output', label: '输出数组 output', data: new Array(n).fill('') },
       ])
     ),
-    events: [{ type: 'array.create', values: [...data] }, { type: 'scene.highlight', entityId: 'arr_0', role: 'active', color: 'primary' }],
+    events: [
+      { type: 'array.create', values: [...data] },
+      { type: 'math.init', vars: [{ name: '最大值', value: maxVal }, { name: '位 exp', value: 1 }, { name: '下标 i', value: 0 }, { name: '当前值', value: data[0] ?? 0 }] },
+      { type: 'scene.highlight', entityId: 'arr_0', role: 'active', color: 'primary' },
+    ],
   })
 
   let exp = 1
@@ -39,7 +43,7 @@ export function generateRadixSort(arr: number[]): AnimationScript {
           { id: 'output', label: `输出 output / ${digitPlace}`, data: new Array(n).fill('') },
         ])
       ),
-      events: [{ type: 'scene.note', text: `按${digitNameZh}排序 (exp=${exp})` }],
+      events: [{ type: 'scene.note', text: `按${digitNameZh}排序 (exp=${exp})` }, { type: 'math.set', name: '位 exp', value: exp }],
     })
 
     // Count digit occurrences
@@ -65,7 +69,7 @@ export function generateRadixSort(arr: number[]): AnimationScript {
             { id: 'output', label: `输出 output / ${digitPlace}`, data: new Array(n).fill('') },
           ])
         ),
-        events: [{ type: 'array.compare', indices: [i, i] }, { type: 'scene.highlight', entityId: `arr_${i}`, role: 'comparing', color: 'warning' }],
+        events: [{ type: 'array.compare', indices: [i, i] }, { type: 'scene.highlight', entityId: `arr_${i}`, role: 'comparing', color: 'warning' }, { type: 'math.set', name: '下标 i', value: i }, { type: 'math.set', name: '当前值', value: data[i] }],
       })
     }
 
@@ -111,7 +115,7 @@ export function generateRadixSort(arr: number[]): AnimationScript {
             outArr,
           ])
         ),
-        events: [{ type: 'array.compare', indices: [i, pos] }],
+        events: [{ type: 'array.compare', indices: [i, pos] }, { type: 'math.set', name: '下标 i', value: i }, { type: 'math.set', name: '当前值', value: data[i] }],
       })
     }
 

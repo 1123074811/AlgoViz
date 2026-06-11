@@ -30,7 +30,11 @@ export function generateBucketSort(arr: number[]): AnimationScript {
       'highlight', [], 'primary', 0, 0, n,
       sortTeachingWithAux({ bucketCount, maxVal, phase: '初始化 / Init' }, bucketState())
     ),
-    events: [{ type: 'array.create', values: [...data] }, { type: 'scene.highlight', entityId: 'arr_0', role: 'active', color: 'primary' }],
+    events: [
+      { type: 'array.create', values: [...data] },
+      { type: 'math.init', vars: [{ name: '桶数', value: bucketCount }, { name: '当前值', value: data[0] ?? 0 }, { name: '桶号', value: 0 }] },
+      { type: 'scene.highlight', entityId: 'arr_0', role: 'active', color: 'primary' },
+    ],
   })
 
   // Step 2: distribute elements into buckets
@@ -46,7 +50,7 @@ export function generateBucketSort(arr: number[]): AnimationScript {
         sortTeachingWithAux({ bucketCount, value: num, targetBucket: bi, phase: 'distribute' },
           bucketState(bi, buckets[bi].length - 1))
       ),
-      events: [{ type: 'scene.note', text: `${num} → 桶[${bi}]` }],
+      events: [{ type: 'scene.note', text: `${num} → 桶[${bi}]` }, { type: 'math.set', name: '当前值', value: num }, { type: 'math.set', name: '桶号', value: bi }],
     })
   }
 
@@ -97,6 +101,8 @@ export function generateBucketSort(arr: number[]): AnimationScript {
         events: [
           { type: 'array.set_value', index: idx, value: v },
           { type: 'scene.highlight', entityId: `arr_${idx}`, role: 'inserted', color: 'success'},
+          { type: 'math.set', name: '当前值', value: v },
+          { type: 'math.set', name: '桶号', value: i },
         ],
       }
       step.action.value = v

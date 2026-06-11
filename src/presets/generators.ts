@@ -691,7 +691,7 @@ export function generateMergeSort(arr: number[]): AnimationScript {
             rng('active', '合并区间', start, end + 1, 'current'),
           ),
         ),
-        ...evt([{ type: 'array.compare', indices: [start + i, mid + 1 + j] }]),
+        ...evt([{ type: 'array.compare', indices: [start + i, mid + 1 + j] }, { type: 'math.set', name: '左i', value: i }, { type: 'math.set', name: '右j', value: j }]),
       })
       if (left[i] <= right[j]) {
         temp.push(left[i])
@@ -767,7 +767,9 @@ export function generateMergeSort(arr: number[]): AnimationScript {
           rng('right_part', '右子区间', mid + 1, end + 1, 'unsorted'),
         ),
       ),
-      ...evt(sid === 2 ? [{ type: 'array.create', values: [...original] }] : [{ type: 'array.compare', indices: [start, end] }]),
+      ...evt(sid === 2
+        ? [{ type: 'array.create', values: [...original] }, { type: 'math.init', vars: [{ name: '当前区间', value: `[${start},${end}]` }, { name: '左i', value: 0 }, { name: '右j', value: 0 }] }]
+        : [{ type: 'array.compare', indices: [start, end] }, { type: 'math.set', name: '当前区间', value: `[${start},${end}]` }]),
     })}
     mergeSort(data, start, mid)
     mergeSort(data, mid + 1, end)
