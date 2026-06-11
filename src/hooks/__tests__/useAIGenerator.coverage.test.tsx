@@ -171,7 +171,11 @@ describe('useAIGenerator — analyze: AI generator (Phase 2)', () => {
     expect(res!.ok).toBe(true)
     expect(res!.generatorBody).toBe('BODY')
     expect(res!.generatorType).toBe('array')
-    expect(result.current.generator).toEqual({ body: 'BODY', type: 'array' })
+    expect(result.current.generator).toMatchObject({
+      body: 'BODY',
+      type: 'array',
+      verify: { language: 'javascript', userCode: 'function f(){}' },
+    })
     expect(applyScript).toHaveBeenCalledWith(script)
     expect(setStatus).toHaveBeenCalledWith('success')
   })
@@ -207,7 +211,7 @@ describe('useAIGenerator — analyze: AI generator (Phase 2)', () => {
 
 describe('useAIGenerator — analyze: top-level AI failure', () => {
   it('applies a fallback scene and reports the error', async () => {
-    const { opts, applyScript, setStatus } = makeOpts()
+    const { opts, setStatus } = makeOpts()
     analyzeCodeGenerator.mockResolvedValue({
       success: false,
       error: '分析失败',

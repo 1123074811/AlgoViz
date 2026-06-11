@@ -57,3 +57,23 @@ describe('verifyAndTag', () => {
     expect(script.steps[0].codeLine).toBe(-1)
   })
 })
+
+describe('verifyAndTag for live-regen (no @expect)', () => {
+  it('verifies via JS ground truth alone when expectRaw is omitted', async () => {
+    const script = scriptWithResult(9)
+    const userCode = 'function add(nums, target) { return nums[0] + target }'
+    const outcome = await verifyAndTag(script, {
+      language: 'javascript', userCode, input: { nums: [5], target: 4 }, sourceCode: userCode,
+    })
+    expect(outcome.status).toBe('pass')
+    expect(script.verification?.source).toBe('js-exec')
+  })
+
+  it('tags skipped (not fail) for non-JS code without expectRaw', async () => {
+    const script = scriptWithResult(9)
+    const outcome = await verifyAndTag(script, {
+      language: 'python', userCode: 'def f(): pass', input: [], sourceCode: 'def f(): pass',
+    })
+    expect(outcome.status).toBe('skipped')
+  })
+})

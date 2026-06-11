@@ -9,10 +9,16 @@ import { repairGenerator } from '@/ai/repairGenerator'
 import { buildFallbackScene, type FallbackKind } from '@/ai/fallbackScene'
 import { verifyAgainstExpect, verifyAgainstGroundTruth, sanitizeLineMapping, formatVerifyValue, type VerifyOutcome } from '@/ai/verify'
 import { runUserJsSandboxed } from '@/sandbox/runUserCode'
+import { runUserPySandboxed } from '@/sandbox/runUserPython'
 import type { AnimationScript, InitialState } from '@/types/animation'
 import type { AIStatus } from '@/store/algorithmStore'
 
 export type GeneratorType = 'array' | 'graph' | 'tree' | 'linked_list' | 'union_find'
+type LiveGenerator = {
+  body: string
+  type: GeneratorType
+  verify?: { language: string; userCode: string }
+}
 
 /**
  * 把一次失败映射到三类可读兜底态：
@@ -43,6 +49,12 @@ export async function verifyAndTag(script: AnimationScript, args: VerifyAndTagAr
     const truth = await runUserJsSandboxed(args.userCode, args.input)
     if (truth.ok) {
       outcome = verifyAgainstGroundTruth(script, truth.value)
+    }
+  }
+  if (!outcome && args.language.toLowerCase() === 'python') {
+    const truth = await runUserPySandboxed(args.userCode, args.input)
+    if (truth.ok) {
+      outcome = { ...verifyAgainstGroundTruth(script, truth.value), source: 'py-exec' }
     }
   }
   if (!outcome || outcome.status === 'skipped') {
@@ -156,7 +168,7 @@ export interface UseAIGeneratorReturn {
   /** Recognized built-in algorithm id (Phase 1 live mode), or null. */
   liveAlgoId: string | null
   /** AI-generated generator (Phase 2 live mode), or null. */
-  generator: { body: string; type: GeneratorType } | null
+  generator: LiveGenerator | null
   /** Run one AI analysis pass: recognize → Phase 1 (preset) / Phase 2 (sandbox + @sample retry + complexity).
    *  Sets liveAlgoId/generator and (on success) applies the script. Returns a result for the caller's history.
    *  @param currentInputValid whether the current input box already holds valid input (skip @sample auto-fill).
@@ -169,14 +181,14 @@ export interface UseAIGeneratorReturn {
   /** Clear live mode (no live regen until the next analyze). */
   reset: () => void
   /** Restore live mode directly (e.g. from a saved history entry). Pass null to clear. */
-  setLive: (live: { algoId: string } | { generator: { body: string; type: GeneratorType } } | null) => void
+  setLive: (live: { algoId: string } | { generator: LiveGenerator } | null) => void
 }
 
 export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorReturn {
   const { inputData, parseInput, applyScript, setStatus } = opts
 
   const [liveAlgoId, setLiveAlgoId] = useState<string | null>(null)
-  const [generator, setGenerator] = useState<{ body: string; type: GeneratorType } | null>(null)
+  const [generator, setGenerator] = useState<LiveGenerator | null>(null)
 
   // Keep the latest page-injected callbacks in refs so the live-regen effect
   // doesn't re-fire (and re-debounce) just because a parent re-render produced
@@ -196,7 +208,7 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
   }, [])
 
   const setLive = useCallback(
-    (live: { algoId: string } | { generator: { body: string; type: GeneratorType } } | null) => {
+    (live: { algoId: string } | { generator: LiveGenerator } | null) => {
       if (live === null) {
         setLiveAlgoId(null)
         setGenerator(null)
@@ -272,8 +284,9 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
 
       // Phase 2: AI generator — execute it in the sandbox.
       const genType: GeneratorType = gen.type === 'matrix' ? 'array' : gen.type
+      const verify = { language: params.language, userCode: params.code }
       setLiveAlgoId(null)
-      setGenerator({ body: gen.body, type: genType })
+      setGenerator({ body: gen.body, type: genType, verify })
 
       const parsed = parseInputRef.current(effectiveInput)
       let sandboxResult = parsed.valid
@@ -312,7 +325,7 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
             if (retry.ok && retry.script) {
               sandboxResult = retry
               activeBody = repaired.body
-              setGenerator({ body: repaired.body, type: genType })
+              setGenerator({ body: repaired.body, type: genType, verify })
             }
           }
         }
@@ -339,7 +352,7 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
                 if (errs2.length < errs.length) {
                   sandboxResult = retry
                   activeBody = repaired.body
-                  setGenerator({ body: repaired.body, type: genType })
+                  setGenerator({ body: repaired.body, type: genType, verify })
                 }
               }
             }
@@ -377,7 +390,7 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
               if (retryOutcome.status !== 'fail') {
                 sandboxResult = retry
                 activeBody = repaired.body
-                setGenerator({ body: repaired.body, type: genType })
+                setGenerator({ body: repaired.body, type: genType, verify })
               }
             }
           }
@@ -431,6 +444,14 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
         const result = await runGeneratorSandboxed(generator.body, parsed.value, { algorithm: 'custom', type: generator.type })
         if (cancelled) return
         if (result.ok && result.script) {
+          if (generator.verify) {
+            await verifyAndTag(result.script, {
+              language: generator.verify.language,
+              userCode: generator.verify.userCode,
+              input: parsed.value,
+              sourceCode: generator.verify.userCode,
+            })
+          }
           applyScriptRef.current(result.script); setStatusRef.current('success')
         } else {
           // 输入变化后重生成失败：兜底场景，避免空白或残留旧动画。

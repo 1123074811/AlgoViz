@@ -5,10 +5,30 @@ interface VerificationNoticeProps {
   verification: AnimationScript['verification']
 }
 
-/** AI 动画一致性校验失败时的警示条。pass/skipped 不渲染任何内容。 */
+/** AI 动画一致性校验状态：fail 警示，pass/skipped 也以小徽标可见。 */
 export function VerificationNotice({ verification }: VerificationNoticeProps) {
   const { t } = useTranslation()
-  if (!verification || verification.status !== 'fail') return null
+  if (!verification) return null
+
+  if (verification.status === 'pass') {
+    return (
+      <div role="status" className="mx-3 mb-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[10px] font-medium text-emerald-700">
+        <span aria-hidden>✓</span>
+        {verification.source === 'js-exec' || verification.source === 'py-exec'
+          ? t('visualizer.verification.passExec')
+          : t('visualizer.verification.passExpect')}
+      </div>
+    )
+  }
+
+  if (verification.status === 'skipped') {
+    return (
+      <div role="status" className="mx-3 mb-2 inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-[10px] text-slate-500">
+        {t('visualizer.verification.skipped', { reason: verification.message ?? '' })}
+      </div>
+    )
+  }
+
   return (
     <div
       role="alert"
