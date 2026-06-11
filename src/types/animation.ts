@@ -180,6 +180,8 @@ export interface AnimationStep {
   events?: AlgorithmEvent[]
   stats: StepStats
   teachingState?: TeachingState
+  /** 阶段标记：该步开启算法的一个新阶段，UI 据此分段展示长动画。 */
+  phase?: { zh: string; en: string }
 }
 
 export interface AnimationScript {
@@ -190,7 +192,7 @@ export interface AnimationScript {
   /** AI 生成动画的语义一致性校验结果(见 src/ai/verify.ts)。内置生成器无此字段。 */
   verification?: {
     status: 'pass' | 'fail' | 'skipped'
-    source?: 'expect' | 'js-exec'
+    source?: 'expect' | 'js-exec' | 'py-exec'
     expected?: string
     actual?: string
     message?: string

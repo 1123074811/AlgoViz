@@ -130,8 +130,6 @@ describe('statDelta（累计 comparisons / swaps / accesses）', () => {
 
 describe('defaultDescFor（无 desc 时按事件家族推导中文描述）', () => {
   const placeholder = /^步骤\s*\d+$/
-  const descOf = (build: () => ReturnType<AnimationBuilder['build']>, idx: number) =>
-    build().steps[idx].description.zh
 
   it('array 家族', () => {
     const b = new AnimationBuilder('x', 'array')

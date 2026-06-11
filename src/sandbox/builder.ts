@@ -288,6 +288,7 @@ export class AnimationBuilder {
   private sid = 1
   private pendingDesc = ''
   private pendingDescEn = ''
+  private pendingPhase: { zh: string; en: string } | null = null
   private pendingLine = -1 // -1 = unset (no code-line highlight)
   // Running cumulative stats, auto-derived from emitted events.
   private comparisons = 0
@@ -318,6 +319,9 @@ export class AnimationBuilder {
 
   desc(zh: string, en?: string): this { this.pendingDesc = zh; this.pendingDescEn = en ?? ''; return this }
 
+  /** 标记算法进入新阶段，阶段名会附着到下一个操作步骤。 */
+  phase(zh: string, en?: string): this { this.pendingPhase = { zh, en: en ?? zh }; return this }
+
   /** Mark which source-code line subsequent steps map to (1-based, as shown in the
    *  editor). Drives the "current line" arrow. Persists until changed. */
   line(n: number): this { this.pendingLine = Math.max(0, Math.floor(n) - 1); return this }
@@ -326,6 +330,7 @@ export class AnimationBuilder {
     if (this.truncated) {
       this.pendingDesc = ''
       this.pendingDescEn = ''
+      this.pendingPhase = null
       this.pendingVarHighlights.clear()
       return this
     }
@@ -341,6 +346,7 @@ export class AnimationBuilder {
       })
       this.pendingDesc = ''
       this.pendingDescEn = ''
+      this.pendingPhase = null
       this.pendingVarHighlights.clear()
       this.truncated = true
       return this
@@ -367,9 +373,11 @@ export class AnimationBuilder {
       action,
       stats: { comparisons: this.comparisons, swaps: this.swaps, accesses: this.accesses },
       events: allEvents,
+      ...(this.pendingPhase && { phase: this.pendingPhase }),
     })
     this.pendingDesc = ''
     this.pendingDescEn = ''
+    this.pendingPhase = null
     return this
   }
 
