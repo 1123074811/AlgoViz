@@ -42,6 +42,11 @@ export default function EdgeView({ edge, scene }: EdgeViewProps) {
   // Default thickness: structural=1.5, trajectory=1.2
   const thickness = edge.style?.thickness ?? (edge.style?.dashed ? 1.2 : 1.5)
 
+  // 数组移动/右移:在格子上方画一道明显拱起的跳跃弧,避免挤在相邻格子缝隙里。
+  if (edge.variant === 'hop') {
+    return renderHopArc(edge, scene, color, thickness, dashArray, markerEnd)
+  }
+
   let path = ''
   if (edge.style?.curved) {
     path = computeCurvedPath(from, to, edge)
@@ -111,6 +116,51 @@ function computeCurvedPath(from: Point, to: Point, edge: SceneEdge): string {
   const controlX = (from.x + to.x) / 2 + bulgeX
   const controlY = (from.y + to.y) / 2
   return `M ${from.x} ${from.y} Q ${controlX} ${controlY} ${to.x} ${to.y}`
+}
+
+/**
+ * 渲染数组「移动 / 右移」的跳跃弧:从源格顶部上方明显拱起到目标格顶部。
+ * 直接读取格子真实位置(而非端口锚点),弧顶抬到格子上方,弧高随跨度自适应,
+ * 既不挤在相邻格子的缝隙里,也避开格子下方的索引标签。
+ */
+function renderHopArc(
+  edge: SceneEdge,
+  scene: SceneState,
+  color: string,
+  thickness: number,
+  dashArray: string | undefined,
+  markerEnd: string | undefined,
+): React.ReactElement | null {
+  const fromEnt = scene.entities[edge.from.entityId]
+  const toEnt = scene.entities[edge.to.entityId]
+  if (!fromEnt || !toEnt || !('position' in fromEnt) || !('position' in toEnt)) return null
+  if (!fromEnt.position || !toEnt.position) return null
+  const fromHalfH = ('size' in fromEnt ? fromEnt.size?.height ?? 44 : 44) / 2
+  const toHalfH = ('size' in toEnt ? toEnt.size?.height ?? 44 : 44) / 2
+  const start = { x: fromEnt.position.x, y: fromEnt.position.y - fromHalfH }
+  const end = { x: toEnt.position.x, y: toEnt.position.y - toHalfH }
+  const span = Math.abs(end.x - start.x)
+  // 弧顶净空:近距离也保证 ~34px,远距离按跨度放大(上限 120),避免过分夸张。
+  const lift = Math.min(120, Math.max(34, span * 0.5))
+  const topY = Math.min(start.y, end.y) - lift
+  const ctrlX = (start.x + end.x) / 2
+  const path = `M ${start.x} ${start.y} Q ${ctrlX} ${topY} ${end.x} ${end.y}`
+  return (
+    <g>
+      <title>{`${edge.id}: ${edge.from.entityId} → ${edge.to.entityId}`}</title>
+      <path
+        d={path}
+        fill="none"
+        stroke={color}
+        strokeWidth={thickness}
+        strokeDasharray={dashArray}
+        strokeOpacity={0.85}
+        strokeLinecap="round"
+        markerEnd={markerEnd}
+        className={edge.state?.pulse ? 'scene-edge-flow' : undefined}
+      />
+    </g>
+  )
 }
 
 /**

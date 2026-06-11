@@ -84,7 +84,9 @@ function compileArrayEventBody(event: ArrayAlgorithmEvent, context: CompileConte
       const fromCell = context.scene.entities[cellId(event.from)]
       const value = fromCell?.type === 'cell' ? fromCell.value : undefined
       return [
-        { type: 'connect', edge: AuxiliaryUnit.arrow({ id: `move_${event.from}_${event.to}`, fromEntity: cellId(event.from), toEntity: cellId(event.to), curved: true, dashed: true, thickness: 1.2, color: 'primary', pulse: true }) },
+        // variant 'hop':在格子上方画一道明显拱起的弧线箭头(见 EdgeView.renderHopArc),
+        // 而非挤在相邻格子的缝隙里。
+        { type: 'connect', edge: AuxiliaryUnit.arrow({ id: `move_${event.from}_${event.to}`, fromEntity: cellId(event.from), toEntity: cellId(event.to), curved: true, dashed: true, thickness: 1.8, color: 'primary', pulse: true, variant: 'hop' }) },
         { type: 'set_cell', cellId: cellId(event.to), value, state: { role: 'current', color: 'primary', pulse: true } },
         { type: 'set_state', entityId: cellId(event.from), state: { role: 'idle', color: 'muted' }, merge: true },
       ]

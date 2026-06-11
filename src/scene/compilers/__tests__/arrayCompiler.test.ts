@@ -62,12 +62,14 @@ describe('arrayCompiler · 移动箭头保持瞬时(不累积)', () => {
     expect(disconnected).toContain('move_1_2')
   })
 
-  it('move 事件先清除旧箭头,再连上本步的新箭头', () => {
+  it('move 事件先清除旧箭头,再连上本步的新箭头(hop 变体,弧线在格子上方)', () => {
     const cmds = arrayCompiler.compile({ type: 'array.move', from: 1, to: 2 }, ctxWith(['move_0_1']))
     const disconnected = cmds.filter(c => c.type === 'disconnect').map(c => (c as { edgeId: string }).edgeId)
-    const connected = cmds.filter(c => c.type === 'connect').map(c => (c as { edge: { id: string } }).edge.id)
+    const connectEdges = cmds.filter(c => c.type === 'connect').map(c => (c as { edge: { id: string; variant?: string } }).edge)
     expect(disconnected).toContain('move_0_1') // 旧箭头被清掉
-    expect(connected).toContain('move_1_2')    // 本步新箭头连上
+    const newEdge = connectEdges.find(e => e.id === 'move_1_2')
+    expect(newEdge).toBeTruthy()                // 本步新箭头连上
+    expect(newEdge?.variant).toBe('hop')        // 用上方拱起弧线,不挤在格子缝隙
   })
 
   it('mark_sorted 事件也清除残留 move_ 箭头,确保最终态干净', () => {
