@@ -19,7 +19,26 @@ export const arrayCompiler: EventCompiler = {
   compile: (event, context) => compileArrayEvent(event as ArrayAlgorithmEvent, context),
 }
 
+/** 收集所有残留 `move_` 箭头的断开命令,使移动箭头保持「瞬时」:只在当前移动步
+ *  可见,下一步即清除。否则插入/选择排序的右移箭头会从头累积到尾,堆在格子之间
+ *  形成一堆无意义的蓝色虚线(蓝色本应只代表「当前操作」,见画布图例)。 */
+function clearStaleMoveEdges(context: CompileContext): SceneCommand[] {
+  const edges = context.scene?.edges
+  if (!edges) return []
+  return Object.keys(edges)
+    .filter(id => id.startsWith('move_'))
+    .map(id => ({ type: 'disconnect' as const, edgeId: id }))
+}
+
 function compileArrayEvent(event: ArrayAlgorithmEvent, context: CompileContext): SceneCommand[] {
+  const body = compileArrayEventBody(event, context)
+  // create 时尚无场景,无需清理;其余事件一律先清掉上一步的移动箭头,
+  // move 分支会在清理之后重新连上属于本步的新箭头。
+  if (event.type === 'array.create') return body
+  return [...clearStaleMoveEdges(context), ...body]
+}
+
+function compileArrayEventBody(event: ArrayAlgorithmEvent, context: CompileContext): SceneCommand[] {
   switch (event.type) {
     case 'array.create': {
       // Each cell sizes to its own content (e.g. interval pairs like "[1,3]")
