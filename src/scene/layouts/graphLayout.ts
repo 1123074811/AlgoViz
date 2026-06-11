@@ -22,6 +22,32 @@ const PRESET_ANGLES: Record<string, number> = {
   'S': 0, 'T': 7, // Source / Sink
 }
 
+/** DFS 三色法检测有向图是否含环(存在回边即有环)。 */
+function hasDirectedCycle(ids: string[], adj: Map<string, string[]>): boolean {
+  const WHITE = 0, GRAY = 1, BLACK = 2
+  const color = new Map<string, number>(ids.map(id => [id, WHITE]))
+  const stack: Array<{ id: string; i: number }> = []
+  for (const start of ids) {
+    if (color.get(start) !== WHITE) continue
+    stack.push({ id: start, i: 0 })
+    color.set(start, GRAY)
+    while (stack.length > 0) {
+      const top = stack[stack.length - 1]
+      const neighbors = adj.get(top.id) ?? []
+      if (top.i < neighbors.length) {
+        const w = neighbors[top.i++]
+        const c = color.get(w)
+        if (c === GRAY) return true // 回边 → 有环
+        if (c === WHITE) { color.set(w, GRAY); stack.push({ id: w, i: 0 }) }
+      } else {
+        color.set(top.id, BLACK)
+        stack.pop()
+      }
+    }
+  }
+  return false
+}
+
 export function layoutGraph(scene: SceneState): Record<string, Point> {
   const vertices = Object.values(scene.entities)
     .filter(e => e.type === 'node' && e.variant === 'graph.vertex')
@@ -61,6 +87,17 @@ export function layoutGraph(scene: SceneState): Record<string, Point> {
         adj.get(e.from.entityId)!.push(e.to.entityId)
       }
     })
+
+    // 含环的有向图(如 Tarjan/SCC 的输入)没有干净的拓扑分层,强行 BFS 分层会把
+    // 整条环退化成「每个结点各占一列」的水平一行。改用力导向布局,让环/强连通分量
+    // 自然聚成 2D 簇,充分利用画布空间。DAG 仍走下面的分层布局以体现拓扑流向。
+    if (hasDirectedCycle(vertices.map(v => v.id), adj)) {
+      const structuralEdges = Object.values(scene.edges)
+        .filter(e => e.directed)
+        .map(e => [e.from.entityId, e.to.entityId] as [string, string])
+        .filter(([a, b]) => a !== b && adj.has(a) && adj.has(b))
+      return forceLayout(vertices.map(v => v.id), structuralEdges, { cx, cy, minClearance })
+    }
 
     // 2. Find in-degrees to identify source nodes
     const inDegrees: Record<string, number> = {}

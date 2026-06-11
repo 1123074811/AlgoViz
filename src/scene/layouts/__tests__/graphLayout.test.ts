@@ -89,4 +89,17 @@ describe('layoutGraph', () => {
     ))
     expect(positions['Y'].y).toBeLessThan(positions['X'].y)
   })
+
+  it('uses 2D force layout for cyclic directed graphs (not a degenerate single row)', () => {
+    // Tarjan SCC 风格:0→1→2→0(环)+ 2→3 + 3→4→3(环)。分层布局会把每个结点排成
+    // 独立一列(水平一行);改用力导向后应在 2D 散开,各行 y 不应全部相同。
+    const positions = layoutGraph(makeGraphScene(
+      ['0', '1', '2', '3', '4'],
+      [['0', '1'], ['1', '2'], ['2', '0'], ['2', '3'], ['3', '4'], ['4', '3']],
+      true,
+    ))
+    const ys = ['0', '1', '2', '3', '4'].map(id => positions[id].y)
+    const uniqueYs = new Set(ys.map(y => Math.round(y / 10)))
+    expect(uniqueYs.size).toBeGreaterThan(1) // 不是单一水平行
+  })
 })
