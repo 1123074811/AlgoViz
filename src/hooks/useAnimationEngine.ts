@@ -203,6 +203,15 @@ export function useAnimationEngine(script: AnimationScript | null) {
     updatePlayback((prev) => ({ ...prev, isPlaying: false, currentStep: totalSteps }))
   }, [totalSteps, updatePlayback])
 
+  /** 跳转到任意步，用于进度条拖拽和步骤列表点击；跳转后暂停自动播放。 */
+  const goToStep = useCallback((step: number) => {
+    updatePlayback((prev) => ({
+      ...prev,
+      isPlaying: false,
+      currentStep: Math.max(0, Math.min(Math.floor(step), totalSteps)),
+    }))
+  }, [totalSteps, updatePlayback])
+
   const togglePlay = useCallback(() => {
     updatePlayback((prev) => {
       const normalizedStep = Math.min(prev.currentStep, totalSteps)
@@ -229,6 +238,7 @@ export function useAnimationEngine(script: AnimationScript | null) {
     stepBackward,
     reset,
     goToEnd,
+    goToStep,
     togglePlay,
     loadScript,
   }

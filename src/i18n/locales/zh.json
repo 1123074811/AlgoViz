@@ -38,6 +38,7 @@
     "pause": "暂停",
     "nextStep": "下一步",
     "end": "末尾",
+    "progress": "进度",
     "speed": "速度",
     "aiAnalyze": "AI 分析",
     "aiAnalyzing": "AI 分析中...",
@@ -71,9 +72,15 @@
       "analyze": "AI 分析我的代码",
       "restore": "还原模板"
     },
+    "stepList": {
+      "title": "全部步骤"
+    },
     "verification": {
       "failTitle": "动画未通过一致性校验:",
-      "failDetail": "原代码预期结果 {{expected}}，动画输出 {{actual}}。动画过程可能与代码真实执行不符，仅供参考。"
+      "failDetail": "原代码预期结果 {{expected}}，动画输出 {{actual}}。动画过程可能与代码真实执行不符，仅供参考。",
+      "passExec": "已通过一致性校验（真实执行原代码比对）",
+      "passExpect": "已通过一致性校验（AI 推演结果比对）",
+      "skipped": "未校验：{{reason}}"
     }
   },
   "settings": {
@@ -133,6 +140,17 @@
     "deleteConfirmMessage": "确定要删除这条历史记录吗？此操作不可撤销。",
     "clearAllConfirmTitle": "清空全部历史",
     "clearAllConfirmMessage": "确定要清空全部历史记录吗？此操作不可撤销。"
+  },
+  "scene": {
+    "legend": {
+      "title": "图例",
+      "toggle": "展开/收起图例",
+      "current": "当前操作",
+      "comparing": "比较中",
+      "done": "完成 / 命中",
+      "conflict": "交换 / 冲突",
+      "untouched": "未处理"
+    }
   },
   "common": {
     "save": "保存",

@@ -78,8 +78,17 @@ export default function Playground() {
   const {
     visualState, currentStepData,
     isPlaying, speed, currentStep, totalSteps,
-    setSpeed, stepForward, stepBackward, reset, goToEnd, togglePlay,
+    setSpeed, stepForward, stepBackward, reset, goToEnd, goToStep, togglePlay,
   } = useAnimationEngine(activeAnimationScript)
+
+  const currentPhase = useMemo(() => {
+    if (!activeAnimationScript || currentStep === 0) return undefined
+    for (let i = Math.min(currentStep, activeAnimationScript.steps.length) - 1; i >= 0; i--) {
+      const phase = activeAnimationScript.steps[i].phase
+      if (phase) return lang === 'zh' ? phase.zh : phase.en
+    }
+    return undefined
+  }, [activeAnimationScript, currentStep, lang])
 
   useEffect(() => {
     if (hasTrackedAnalysis) return
@@ -551,6 +560,8 @@ export default function Playground() {
             onStepForward={stepForward}
             onGoToEnd={goToEnd}
             onSpeedChange={setSpeed}
+            onSeek={goToStep}
+            currentPhase={currentPhase}
           />
         </div>
       </div>

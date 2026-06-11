@@ -38,6 +38,7 @@
     "pause": "Pause",
     "nextStep": "Next",
     "end": "End",
+    "progress": "Progress",
     "speed": "Speed",
     "aiAnalyze": "AI Analyze",
     "aiAnalyzing": "AI Analyzing...",
@@ -71,9 +72,15 @@
       "analyze": "Analyze my code with AI",
       "restore": "Restore template"
     },
+    "stepList": {
+      "title": "All steps"
+    },
     "verification": {
       "failTitle": "Animation failed the consistency check:",
-      "failDetail": "the original code is expected to return {{expected}}, but the animation produced {{actual}}. The animation may not match the real execution."
+      "failDetail": "the original code is expected to return {{expected}}, but the animation produced {{actual}}. The animation may not match the real execution.",
+      "passExec": "Consistency check passed (real execution)",
+      "passExpect": "Consistency check passed (AI-derived expectation)",
+      "skipped": "Not verified: {{reason}}"
     }
   },
   "settings": {
@@ -133,6 +140,17 @@
     "deleteConfirmMessage": "Are you sure you want to delete this history record? This action cannot be undone.",
     "clearAllConfirmTitle": "Clear All History",
     "clearAllConfirmMessage": "Are you sure you want to clear all history records? This action cannot be undone."
+  },
+  "scene": {
+    "legend": {
+      "title": "Legend",
+      "toggle": "Toggle legend",
+      "current": "Active",
+      "comparing": "Comparing",
+      "done": "Done / Hit",
+      "conflict": "Swap / Conflict",
+      "untouched": "Untouched"
+    }
   },
   "common": {
     "save": "Save",

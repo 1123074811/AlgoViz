@@ -11,6 +11,10 @@ interface PlaybackControlsProps {
   onStepForward: () => void
   onGoToEnd: () => void
   onSpeedChange: (speed: number) => void
+  /** 进度条拖拽/点击跳步。不传则进度条保持纯展示。 */
+  onSeek?: (step: number) => void
+  /** 当前阶段名，显示在步数旁。 */
+  currentPhase?: string
   disabled?: boolean
   compact?: boolean
   className?: string
@@ -23,6 +27,7 @@ interface PlaybackControlsProps {
     nextStep: string
     end: string
     speed: string
+    progress?: string
   }
 }
 
@@ -34,6 +39,7 @@ const defaultLabels = {
   nextStep: 'Next',
   end: 'End',
   speed: 'Speed',
+  progress: 'Progress',
 }
 
 export default function PlaybackControls({
@@ -47,6 +53,8 @@ export default function PlaybackControls({
   onStepForward,
   onGoToEnd,
   onSpeedChange,
+  onSeek,
+  currentPhase,
   disabled = false,
   compact = false,
   className = '',
@@ -88,12 +96,31 @@ export default function PlaybackControls({
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1 sm:flex-none justify-center order-3 sm:order-none w-full sm:w-auto">
+        {currentPhase && (
+          <span className="hidden sm:inline max-w-24 truncate rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600">
+            {currentPhase}
+          </span>
+        )}
         <span className="text-[11px] sm:text-xs text-slate-400 font-code min-w-[58px] sm:min-w-[72px] text-right">
           {currentStep} / {totalSteps}
         </span>
-        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden flex-1 sm:w-28 md:w-32 max-w-48">
-          <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
-        </div>
+        {onSeek ? (
+          <input
+            type="range"
+            min={0}
+            max={totalSteps}
+            step={1}
+            value={currentStep}
+            onChange={(e) => onSeek(parseInt(e.target.value, 10))}
+            disabled={disabled || totalSteps === 0}
+            aria-label={labels.progress ?? 'Progress'}
+            className="seek-bar flex-1 sm:w-28 md:w-32 max-w-48 h-1.5 cursor-pointer accent-primary"
+          />
+        ) : (
+          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden flex-1 sm:w-28 md:w-32 max-w-48">
+            <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
@@ -116,6 +143,10 @@ export default function PlaybackControls({
         .playback-btn { width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:8px; border:none; background:transparent; color:#64748B; cursor:pointer; transition:all .15s; flex-shrink:0; }
         .playback-btn:hover:not(:disabled) { background:#F1F5F9; color:#1E293B; }
         .playback-btn:disabled { opacity:.45; cursor:not-allowed; }
+        .seek-bar { -webkit-appearance:none; appearance:none; background:#F1F5F9; border-radius:9999px; outline:none; }
+        .seek-bar::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:var(--color-primary,#3B82F6); border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.25); cursor:grab; }
+        .seek-bar::-moz-range-thumb { width:12px; height:12px; border-radius:50%; background:var(--color-primary,#3B82F6); border:2px solid #fff; cursor:grab; }
+        .seek-bar:disabled { opacity:.45; cursor:not-allowed; }
       `}</style>
     </div>
   )
