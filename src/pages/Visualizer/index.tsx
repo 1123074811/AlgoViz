@@ -20,7 +20,6 @@ import {
 } from '@/data/algorithms'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
 import { REQUEST_AI_REPAIR_EVENT } from '@/components/ErrorBoundary'
-import { getSceneDiagnosticSummary, getSceneEventStats, usesSceneEngine } from '@/scene'
 import { getOperationsForAlgo } from '@/presets/operationPresets'
 import { useResizablePanels } from './useResizablePanels'
 import { useCodeScope } from './useCodeScope'
@@ -433,9 +432,6 @@ export default function Visualizer() {
   }
 
   const complexity = animationScript?.complexity
-  const isSceneEngineActive = usesSceneEngine(animationScript)
-  const sceneEventStats = getSceneEventStats(animationScript)
-  const sceneDiagnosticSummary = getSceneDiagnosticSummary(animationScript)
 
   return (
     <div className="h-full flex flex-col">
@@ -529,9 +525,6 @@ export default function Visualizer() {
             lang={lang}
             selectedAlgorithm={selectedAlgorithm}
             complexity={complexity}
-            isSceneEngineActive={isSceneEngineActive}
-            sceneEventStats={sceneEventStats}
-            sceneDiagnosticSummary={sceneDiagnosticSummary}
             aiStatus={aiStatus}
             aiError={aiError}
             aiRawResponse={aiRawResponse}

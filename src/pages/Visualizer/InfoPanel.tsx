@@ -3,7 +3,6 @@ import StepListPanel from '@/components/Controls/StepListPanel'
 import type { AIStatus, AlgorithmType } from '@/store/algorithmStore'
 import type { AnimationScript, AnimationStep } from '@/types/animation'
 import { ALGORITHM_DEFS, getAlgorithmDescription } from '@/data/algorithms'
-import type { SceneDiagnostic } from '@/scene/diagnostics'
 import DefinitionCard from './DefinitionCard'
 import { VerificationNotice } from './VerificationNotice'
 
@@ -15,13 +14,6 @@ interface InfoPanelProps {
   lang: 'zh' | 'en'
   selectedAlgorithm: AlgorithmType
   complexity: AnimationScript['complexity'] | null | undefined
-  isSceneEngineActive: boolean
-  sceneEventStats: { eventSteps: number; totalEvents: number }
-  sceneDiagnosticSummary: {
-    diagnostics: SceneDiagnostic[]
-    errors: number
-    warnings: number
-  }
   aiStatus: AIStatus
   aiError: string
   aiRawResponse: string
@@ -41,9 +33,6 @@ export default function InfoPanel({
   lang,
   selectedAlgorithm,
   complexity,
-  isSceneEngineActive,
-  sceneEventStats,
-  sceneDiagnosticSummary,
   aiStatus,
   aiError,
   aiRawResponse,
@@ -126,17 +115,6 @@ export default function InfoPanel({
           </div>
         )}
 
-        {currentStepData && (
-          <div className="p-3 rounded-lg border border-warning-50 bg-warning-50">
-            <div className="text-[10px] text-warning uppercase tracking-wide font-semibold mb-1">
-              {t('visualizer.stepLabel')} {currentStepData.stepId}
-            </div>
-            <p className="text-xs text-slate-700 leading-relaxed">
-              {lang === 'zh' ? currentStepData.description.zh : currentStepData.description.en}
-            </p>
-          </div>
-        )}
-
         {animationScript && animationScript.steps.length > 1 && (
           <div className="p-3 rounded-lg border border-border bg-surface">
             <h4 className="text-xs font-semibold text-slate-700 mb-2">
@@ -151,76 +129,6 @@ export default function InfoPanel({
           </div>
         )}
 
-        <div className="p-3 rounded-lg border border-border bg-surface">
-          <h4 className="text-xs font-semibold text-slate-700 mb-2">
-            {lang === 'zh' ? '渲染引擎' : 'Render Engine'}
-          </h4>
-          <div className="flex items-center justify-between gap-2">
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${isSceneEngineActive ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-500'}`}
-            >
-              {isSceneEngineActive
-                ? lang === 'zh'
-                  ? '物理场景引擎'
-                  : 'Scene Engine'
-                : lang === 'zh'
-                  ? '经典渲染器'
-                  : 'Classic Renderer'}
-            </span>
-            {animationScript?.presentation?.module && (
-              <span className="text-[10px] font-code text-slate-400">
-                {animationScript.presentation.module}
-              </span>
-            )}
-          </div>
-          {isSceneEngineActive && (
-            <>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
-                <div className="rounded-lg bg-white px-2 py-1.5">
-                  <div className="text-slate-400">
-                    {lang === 'zh' ? '动画帧数' : 'event steps'}
-                  </div>
-                  <div className="font-code font-semibold text-slate-700">
-                    {sceneEventStats.eventSteps}
-                  </div>
-                </div>
-                <div className="rounded-lg bg-white px-2 py-1.5">
-                  <div className="text-slate-400">
-                    {lang === 'zh' ? '动作指令数' : 'events'}
-                  </div>
-                  <div className="font-code font-semibold text-slate-700">
-                    {sceneEventStats.totalEvents}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-2 flex items-center gap-2 text-[10px]">
-                <span
-                  className={`rounded-full px-2 py-0.5 ${sceneDiagnosticSummary.errors > 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}
-                >
-                  {lang === 'zh' ? '错误' : 'errors'} {sceneDiagnosticSummary.errors}
-                </span>
-                <span
-                  className={`rounded-full px-2 py-0.5 ${sceneDiagnosticSummary.warnings > 0 ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}
-                >
-                  {lang === 'zh' ? '警告' : 'warnings'} {sceneDiagnosticSummary.warnings}
-                </span>
-              </div>
-              {sceneDiagnosticSummary.diagnostics.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {sceneDiagnosticSummary.diagnostics.slice(0, 2).map((diagnostic) => (
-                    <div
-                      key={`${diagnostic.stepId}-${diagnostic.eventIndex}-${diagnostic.message}`}
-                      className="rounded-lg bg-red-50 px-2 py-1 text-[10px] text-red-600"
-                    >
-                      {lang === 'zh' ? `第 ${diagnostic.stepId} 步` : `Step ${diagnostic.stepId}`}
-                      : {diagnostic.message}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
 
         <div className="p-3 rounded-lg border border-border bg-surface">
           <h4 className="text-xs font-semibold text-slate-700 mb-2">
