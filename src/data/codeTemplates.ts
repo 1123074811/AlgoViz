@@ -2952,6 +2952,90 @@ public class NQueens {
                         board[i][j] = '.'
                 return False
     return True`,
+    javascript: `function solveSudoku(board) {
+    function isValid(row, col, num) {
+        for (let i = 0; i < 9; i++) {
+            if (board[row][i] === num) return false;
+            if (board[i][col] === num) return false;
+            const r = 3 * Math.floor(row / 3) + Math.floor(i / 3);
+            const c = 3 * Math.floor(col / 3) + (i % 3);
+            if (board[r][c] === num) return false;
+        }
+        return true;
+    }
+    for (let i = 0; i < 9; i++) {
+        for (let j = 0; j < 9; j++) {
+            if (board[i][j] === '.') {
+                for (const num of '123456789') {
+                    if (isValid(i, j, num)) {
+                        board[i][j] = num;
+                        if (solveSudoku(board)) return true;
+                        board[i][j] = '.';
+                    }
+                }
+                return false;
+            }
+        }
+    }
+    return true;
+}`,
+    cpp: `#include <vector>
+using namespace std;
+
+bool isValid(vector<vector<char>>& board, int row, int col, char num) {
+    for (int i = 0; i < 9; i++) {
+        if (board[row][i] == num) return false;
+        if (board[i][col] == num) return false;
+        if (board[3 * (row / 3) + i / 3][3 * (col / 3) + i % 3] == num) return false;
+    }
+    return true;
+}
+
+bool solveSudoku(vector<vector<char>>& board) {
+    for (int i = 0; i < 9; i++) {
+        for (int j = 0; j < 9; j++) {
+            if (board[i][j] == '.') {
+                for (char num = '1'; num <= '9'; num++) {
+                    if (isValid(board, i, j, num)) {
+                        board[i][j] = num;
+                        if (solveSudoku(board)) return true;
+                        board[i][j] = '.';
+                    }
+                }
+                return false;
+            }
+        }
+    }
+    return true;
+}`,
+    java: `public class Sudoku {
+    public static boolean isValid(char[][] board, int row, int col, char num) {
+        for (int i = 0; i < 9; i++) {
+            if (board[row][i] == num) return false;
+            if (board[i][col] == num) return false;
+            if (board[3 * (row / 3) + i / 3][3 * (col / 3) + i % 3] == num) return false;
+        }
+        return true;
+    }
+
+    public static boolean solveSudoku(char[][] board) {
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                if (board[i][j] == '.') {
+                    for (char num = '1'; num <= '9'; num++) {
+                        if (isValid(board, i, j, num)) {
+                            board[i][j] = num;
+                            if (solveSudoku(board)) return true;
+                            board[i][j] = '.';
+                        }
+                    }
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+}`,
   },
   kmp: {
     python: `def kmp_search(text, pattern):
@@ -2970,6 +3054,75 @@ public class NQueens {
             if j: j = lps[j - 1]
             else: i += 1
     return -1`,
+    javascript: `function kmpSearch(text, pattern) {
+    function buildLps(p) {
+        const lps = new Array(p.length).fill(0);
+        let length = 0, i = 1;
+        while (i < p.length) {
+            if (p[i] === p[length]) { length++; lps[i] = length; i++; }
+            else if (length) { length = lps[length - 1]; }
+            else { lps[i] = 0; i++; }
+        }
+        return lps;
+    }
+    const lps = buildLps(pattern);
+    let i = 0, j = 0;
+    while (i < text.length) {
+        if (text[i] === pattern[j]) { i++; j++; }
+        if (j === pattern.length) return i - j;
+        else if (i < text.length && text[i] !== pattern[j]) {
+            if (j) j = lps[j - 1];
+            else i++;
+        }
+    }
+    return -1;
+}`,
+    cpp: `#include <string>
+#include <vector>
+using namespace std;
+
+int kmpSearch(const string& text, const string& pattern) {
+    int m = pattern.size();
+    vector<int> lps(m, 0);
+    int length = 0, i = 1;
+    while (i < m) {
+        if (pattern[i] == pattern[length]) { length++; lps[i] = length; i++; }
+        else if (length) { length = lps[length - 1]; }
+        else { lps[i] = 0; i++; }
+    }
+    i = 0; int j = 0;
+    while (i < (int)text.size()) {
+        if (text[i] == pattern[j]) { i++; j++; }
+        if (j == m) return i - j;
+        else if (i < (int)text.size() && text[i] != pattern[j]) {
+            if (j) j = lps[j - 1];
+            else i++;
+        }
+    }
+    return -1;
+}`,
+    java: `public class KMP {
+    public static int kmpSearch(String text, String pattern) {
+        int m = pattern.length();
+        int[] lps = new int[m];
+        int length = 0, i = 1;
+        while (i < m) {
+            if (pattern.charAt(i) == pattern.charAt(length)) { length++; lps[i] = length; i++; }
+            else if (length != 0) { length = lps[length - 1]; }
+            else { lps[i] = 0; i++; }
+        }
+        i = 0; int j = 0;
+        while (i < text.length()) {
+            if (text.charAt(i) == pattern.charAt(j)) { i++; j++; }
+            if (j == m) return i - j;
+            else if (i < text.length() && text.charAt(i) != pattern.charAt(j)) {
+                if (j != 0) j = lps[j - 1];
+                else i++;
+            }
+        }
+        return -1;
+    }
+}`,
   },
   manacher: {
     python: `def longest_palindrome(s):
@@ -2984,6 +3137,76 @@ public class NQueens {
     center = P.index(max(P))
     start = (center - max(P)) // 2
     return s[start:start + max(P)]`,
+    javascript: `function longestPalindrome(s) {
+    const T = '#' + s.split('').join('#') + '#';
+    const n = T.length;
+    const P = new Array(n).fill(0);
+    let C = 0, R = 0;
+    for (let i = 0; i < n; i++) {
+        const mirror = 2 * C - i;
+        if (i < R) P[i] = Math.min(R - i, P[mirror]);
+        while (i + P[i] + 1 < n && i - P[i] - 1 >= 0 && T[i + P[i] + 1] === T[i - P[i] - 1]) {
+            P[i]++;
+        }
+        if (i + P[i] > R) { C = i; R = i + P[i]; }
+    }
+    let maxLen = 0, center = 0;
+    for (let i = 0; i < n; i++) {
+        if (P[i] > maxLen) { maxLen = P[i]; center = i; }
+    }
+    const start = (center - maxLen) / 2;
+    return s.substring(start, start + maxLen);
+}`,
+    cpp: `#include <string>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+string longestPalindrome(const string& s) {
+    string T = "#";
+    for (char c : s) { T += c; T += '#'; }
+    int n = T.size();
+    vector<int> P(n, 0);
+    int C = 0, R = 0;
+    for (int i = 0; i < n; i++) {
+        int mirror = 2 * C - i;
+        if (i < R) P[i] = min(R - i, P[mirror]);
+        while (i + P[i] + 1 < n && i - P[i] - 1 >= 0 && T[i + P[i] + 1] == T[i - P[i] - 1]) {
+            P[i]++;
+        }
+        if (i + P[i] > R) { C = i; R = i + P[i]; }
+    }
+    int maxLen = 0, center = 0;
+    for (int i = 0; i < n; i++) {
+        if (P[i] > maxLen) { maxLen = P[i]; center = i; }
+    }
+    int start = (center - maxLen) / 2;
+    return s.substr(start, maxLen);
+}`,
+    java: `public class Manacher {
+    public static String longestPalindrome(String s) {
+        StringBuilder sb = new StringBuilder("#");
+        for (char c : s.toCharArray()) { sb.append(c).append('#'); }
+        String T = sb.toString();
+        int n = T.length();
+        int[] P = new int[n];
+        int C = 0, R = 0;
+        for (int i = 0; i < n; i++) {
+            int mirror = 2 * C - i;
+            if (i < R) P[i] = Math.min(R - i, P[mirror]);
+            while (i + P[i] + 1 < n && i - P[i] - 1 >= 0 && T.charAt(i + P[i] + 1) == T.charAt(i - P[i] - 1)) {
+                P[i]++;
+            }
+            if (i + P[i] > R) { C = i; R = i + P[i]; }
+        }
+        int maxLen = 0, center = 0;
+        for (int i = 0; i < n; i++) {
+            if (P[i] > maxLen) { maxLen = P[i]; center = i; }
+        }
+        int start = (center - maxLen) / 2;
+        return s.substring(start, start + maxLen);
+    }
+}`,
   },
   segment_tree: {
     python: `class SegmentTree:
@@ -2997,6 +3220,69 @@ public class NQueens {
             self.build(arr, 2*node+1, start, mid)
             self.build(arr, 2*node+2, mid+1, end)
             self.tree[node] = self.tree[2*node+1] + self.tree[2*node+2]`,
+    javascript: `class SegmentTree {
+    constructor(arr) {
+        this.n = arr.length;
+        this.tree = new Array(4 * this.n).fill(0);
+        this.build(arr, 0, 0, this.n - 1);
+    }
+    build(arr, node, start, end) {
+        if (start === end) {
+            this.tree[node] = arr[start];
+        } else {
+            const mid = Math.floor((start + end) / 2);
+            this.build(arr, 2 * node + 1, start, mid);
+            this.build(arr, 2 * node + 2, mid + 1, end);
+            this.tree[node] = this.tree[2 * node + 1] + this.tree[2 * node + 2];
+        }
+    }
+}`,
+    cpp: `#include <vector>
+using namespace std;
+
+class SegmentTree {
+public:
+    int n;
+    vector<int> tree;
+
+    SegmentTree(vector<int>& arr) {
+        n = arr.size();
+        tree.assign(4 * n, 0);
+        build(arr, 0, 0, n - 1);
+    }
+
+    void build(vector<int>& arr, int node, int start, int end) {
+        if (start == end) {
+            tree[node] = arr[start];
+        } else {
+            int mid = (start + end) / 2;
+            build(arr, 2 * node + 1, start, mid);
+            build(arr, 2 * node + 2, mid + 1, end);
+            tree[node] = tree[2 * node + 1] + tree[2 * node + 2];
+        }
+    }
+};`,
+    java: `public class SegmentTree {
+    int n;
+    int[] tree;
+
+    public SegmentTree(int[] arr) {
+        n = arr.length;
+        tree = new int[4 * n];
+        build(arr, 0, 0, n - 1);
+    }
+
+    void build(int[] arr, int node, int start, int end) {
+        if (start == end) {
+            tree[node] = arr[start];
+        } else {
+            int mid = (start + end) / 2;
+            build(arr, 2 * node + 1, start, mid);
+            build(arr, 2 * node + 2, mid + 1, end);
+            tree[node] = tree[2 * node + 1] + tree[2 * node + 2];
+        }
+    }
+}`,
   },
   fenwick_tree: {
     python: `class FenwickTree:
@@ -3011,6 +3297,76 @@ public class NQueens {
         return s
     def range_sum(self, l, r):
         return self.query(r) - self.query(l - 1)`,
+    javascript: `class FenwickTree {
+    constructor(n) {
+        this.n = n;
+        this.tree = new Array(n + 1).fill(0);
+    }
+    update(i, delta) {
+        i += 1;
+        while (i <= this.n) { this.tree[i] += delta; i += i & -i; }
+    }
+    query(i) {
+        let s = 0;
+        i += 1;
+        while (i > 0) { s += this.tree[i]; i -= i & -i; }
+        return s;
+    }
+    rangeSum(l, r) {
+        return this.query(r) - this.query(l - 1);
+    }
+}`,
+    cpp: `#include <vector>
+using namespace std;
+
+class FenwickTree {
+public:
+    int n;
+    vector<int> tree;
+
+    FenwickTree(int n) : n(n), tree(n + 1, 0) {}
+
+    void update(int i, int delta) {
+        i += 1;
+        while (i <= n) { tree[i] += delta; i += i & -i; }
+    }
+
+    int query(int i) {
+        int s = 0;
+        i += 1;
+        while (i > 0) { s += tree[i]; i -= i & -i; }
+        return s;
+    }
+
+    int rangeSum(int l, int r) {
+        return query(r) - query(l - 1);
+    }
+};`,
+    java: `public class FenwickTree {
+    int n;
+    int[] tree;
+
+    public FenwickTree(int n) {
+        this.n = n;
+        this.tree = new int[n + 1];
+    }
+
+    public void update(int i, int delta) {
+        i += 1;
+        while (i <= n) { tree[i] += delta; i += i & -i; }
+    }
+
+    public int query(int i) {
+        int s = 0;
+        i += 1;
+        while (i > 0) { s += tree[i]; i -= i & -i; }
+        return s;
+    }
+
+    public int rangeSum(int l, int r) {
+        return query(r) - query(l - 1);
+    }
+}`,
   },
   monotonic_stack: {
     python: `def next_greater_element(nums):
@@ -3188,6 +3544,88 @@ def sieve(n):
             primes.append(i)
             for j in range(i * i, n + 1, i): is_prime[j] = False
     return primes`,
+    javascript: `// ACM Common Templates
+const MOD = 1000000007n;
+
+function powMod(a, b, mod = MOD) {
+    a = BigInt(a); b = BigInt(b);
+    let result = 1n;
+    while (b > 0n) {
+        if (b & 1n) result = result * a % mod;
+        a = a * a % mod;
+        b >>= 1n;
+    }
+    return result;
+}
+
+function sieve(n) {
+    const isPrime = new Array(n + 1).fill(true);
+    const primes = [];
+    for (let i = 2; i <= n; i++) {
+        if (isPrime[i]) {
+            primes.push(i);
+            for (let j = i * i; j <= n; j += i) isPrime[j] = false;
+        }
+    }
+    return primes;
+}`,
+    cpp: `#include <vector>
+using namespace std;
+
+const long long MOD = 1000000007LL;
+
+long long powMod(long long a, long long b, long long mod = MOD) {
+    long long result = 1;
+    a %= mod;
+    while (b) {
+        if (b & 1) result = result * a % mod;
+        a = a * a % mod;
+        b >>= 1;
+    }
+    return result;
+}
+
+vector<int> sieve(int n) {
+    vector<bool> isPrime(n + 1, true);
+    vector<int> primes;
+    for (int i = 2; i <= n; i++) {
+        if (isPrime[i]) {
+            primes.push_back(i);
+            for (long long j = (long long)i * i; j <= n; j += i) isPrime[j] = false;
+        }
+    }
+    return primes;
+}`,
+    java: `import java.util.ArrayList;
+import java.util.List;
+
+public class AcmTemplates {
+    static final long MOD = 1000000007L;
+
+    public static long powMod(long a, long b, long mod) {
+        long result = 1;
+        a %= mod;
+        while (b > 0) {
+            if ((b & 1) == 1) result = result * a % mod;
+            a = a * a % mod;
+            b >>= 1;
+        }
+        return result;
+    }
+
+    public static List<Integer> sieve(int n) {
+        boolean[] isPrime = new boolean[n + 1];
+        java.util.Arrays.fill(isPrime, true);
+        List<Integer> primes = new ArrayList<>();
+        for (int i = 2; i <= n; i++) {
+            if (isPrime[i]) {
+                primes.add(i);
+                for (long j = (long) i * i; j <= n; j += i) isPrime[(int) j] = false;
+            }
+        }
+        return primes;
+    }
+}`,
   },
   linked_list_insert: {
     python: `def insert_after(prev_node, new_val):
@@ -4082,6 +4520,60 @@ def reservoir_sampling(stream, k=1):
             if j < k:
                 reservoir[j] = x
     return reservoir`,
+    javascript: `function reservoirSampling(stream, k = 1) {
+    // 水塘抽样：从未知长度的数据流中等概率抽取 k 个样本
+    const reservoir = [];
+    let i = 0;
+    for (const x of stream) {
+        if (i < k) {
+            reservoir.push(x);
+        } else {
+            const j = Math.floor(Math.random() * (i + 1)); // 第 i 个元素以 k/(i+1) 概率入选
+            if (j < k) reservoir[j] = x;
+        }
+        i++;
+    }
+    return reservoir;
+}`,
+    cpp: `#include <vector>
+#include <cstdlib>
+using namespace std;
+
+vector<int> reservoirSampling(const vector<int>& stream, int k = 1) {
+    // 水塘抽样：从未知长度的数据流中等概率抽取 k 个样本
+    vector<int> reservoir;
+    for (int i = 0; i < (int)stream.size(); i++) {
+        int x = stream[i];
+        if (i < k) {
+            reservoir.push_back(x);
+        } else {
+            int j = rand() % (i + 1); // 第 i 个元素以 k/(i+1) 概率入选
+            if (j < k) reservoir[j] = x;
+        }
+    }
+    return reservoir;
+}`,
+    java: `import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+public class ReservoirSampling {
+    public static List<Integer> reservoirSampling(int[] stream, int k) {
+        // 水塘抽样：从未知长度的数据流中等概率抽取 k 个样本
+        List<Integer> reservoir = new ArrayList<>();
+        Random rand = new Random();
+        for (int i = 0; i < stream.length; i++) {
+            int x = stream[i];
+            if (i < k) {
+                reservoir.add(x);
+            } else {
+                int j = rand.nextInt(i + 1); // 第 i 个元素以 k/(i+1) 概率入选
+                if (j < k) reservoir.set(j, x);
+            }
+        }
+        return reservoir;
+    }
+}`,
   },
   convex_hull: {
     python: `def convex_hull(points):
@@ -4104,6 +4596,104 @@ def reservoir_sampling(stream, k=1):
             upper.pop()
         upper.append(p)
     return lower[:-1] + upper[:-1]`,
+    javascript: `function convexHull(points) {
+    // Andrew 单调链：O(n log n) 求凸包
+    const uniq = [...new Set(points.map(p => p[0] + ',' + p[1]))]
+        .map(s => s.split(',').map(Number));
+    uniq.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    if (uniq.length <= 2) return uniq;
+
+    const cross = (o, a, b) =>
+        (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+
+    const lower = [];
+    for (const p of uniq) {
+        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) {
+            lower.pop();
+        }
+        lower.push(p);
+    }
+    const upper = [];
+    for (let i = uniq.length - 1; i >= 0; i--) {
+        const p = uniq[i];
+        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) {
+            upper.pop();
+        }
+        upper.push(p);
+    }
+    return lower.slice(0, -1).concat(upper.slice(0, -1));
+}`,
+    cpp: `#include <vector>
+#include <algorithm>
+using namespace std;
+
+long long cross(const pair<int,int>& o, const pair<int,int>& a, const pair<int,int>& b) {
+    return (long long)(a.first - o.first) * (b.second - o.second)
+         - (long long)(a.second - o.second) * (b.first - o.first);
+}
+
+vector<pair<int,int>> convexHull(vector<pair<int,int>> points) {
+    // Andrew 单调链：O(n log n) 求凸包
+    sort(points.begin(), points.end());
+    points.erase(unique(points.begin(), points.end()), points.end());
+    int n = points.size();
+    if (n <= 2) return points;
+
+    vector<pair<int,int>> lower, upper;
+    for (auto& p : points) {
+        while (lower.size() >= 2 && cross(lower[lower.size()-2], lower.back(), p) <= 0)
+            lower.pop_back();
+        lower.push_back(p);
+    }
+    for (int i = n - 1; i >= 0; i--) {
+        auto& p = points[i];
+        while (upper.size() >= 2 && cross(upper[upper.size()-2], upper.back(), p) <= 0)
+            upper.pop_back();
+        upper.push_back(p);
+    }
+    lower.pop_back();
+    upper.pop_back();
+    lower.insert(lower.end(), upper.begin(), upper.end());
+    return lower;
+}`,
+    java: `import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class ConvexHull {
+    static long cross(int[] o, int[] a, int[] b) {
+        return (long)(a[0] - o[0]) * (b[1] - o[1]) - (long)(a[1] - o[1]) * (b[0] - o[0]);
+    }
+
+    public static List<int[]> convexHull(int[][] points) {
+        // Andrew 单调链：O(n log n) 求凸包
+        int[][] pts = Arrays.stream(points).distinct()
+            .sorted((a, b) -> a[0] != b[0] ? a[0] - b[0] : a[1] - b[1])
+            .toArray(int[][]::new);
+        int n = pts.length;
+        List<int[]> result = new ArrayList<>();
+        if (n <= 2) {
+            for (int[] p : pts) result.add(p);
+            return result;
+        }
+        List<int[]> lower = new ArrayList<>();
+        for (int[] p : pts) {
+            while (lower.size() >= 2 && cross(lower.get(lower.size()-2), lower.get(lower.size()-1), p) <= 0)
+                lower.remove(lower.size() - 1);
+            lower.add(p);
+        }
+        List<int[]> upper = new ArrayList<>();
+        for (int i = n - 1; i >= 0; i--) {
+            int[] p = pts[i];
+            while (upper.size() >= 2 && cross(upper.get(upper.size()-2), upper.get(upper.size()-1), p) <= 0)
+                upper.remove(upper.size() - 1);
+            upper.add(p);
+        }
+        result.addAll(lower.subList(0, lower.size() - 1));
+        result.addAll(upper.subList(0, upper.size() - 1));
+        return result;
+    }
+}`,
   },
   kmp_automaton: {
     python: `def kmp_search(pattern, text):
@@ -4128,6 +4718,87 @@ def reservoir_sampling(stream, k=1):
             res.append(i - m + 1)
             state = fail[state-1]
     return res`,
+    javascript: `function kmpSearch(pattern, text) {
+    // 构建失败函数(前缀函数)
+    const m = pattern.length;
+    const fail = new Array(m).fill(0);
+    let k = 0;
+    for (let i = 1; i < m; i++) {
+        while (k > 0 && pattern[i] !== pattern[k]) k = fail[k - 1];
+        if (pattern[i] === pattern[k]) k++;
+        fail[i] = k;
+    }
+    // 在 text 上跑自动机
+    const res = [];
+    let state = 0;
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        while (state > 0 && ch !== pattern[state]) state = fail[state - 1];
+        if (ch === pattern[state]) state++;
+        if (state === m) {
+            res.push(i - m + 1);
+            state = fail[state - 1];
+        }
+    }
+    return res;
+}`,
+    cpp: `#include <string>
+#include <vector>
+using namespace std;
+
+vector<int> kmpSearch(const string& pattern, const string& text) {
+    // 构建失败函数(前缀函数)
+    int m = pattern.size();
+    vector<int> fail(m, 0);
+    int k = 0;
+    for (int i = 1; i < m; i++) {
+        while (k > 0 && pattern[i] != pattern[k]) k = fail[k - 1];
+        if (pattern[i] == pattern[k]) k++;
+        fail[i] = k;
+    }
+    // 在 text 上跑自动机
+    vector<int> res;
+    int state = 0;
+    for (int i = 0; i < (int)text.size(); i++) {
+        char ch = text[i];
+        while (state > 0 && ch != pattern[state]) state = fail[state - 1];
+        if (ch == pattern[state]) state++;
+        if (state == m) {
+            res.push_back(i - m + 1);
+            state = fail[state - 1];
+        }
+    }
+    return res;
+}`,
+    java: `import java.util.ArrayList;
+import java.util.List;
+
+public class KmpAutomaton {
+    public static List<Integer> kmpSearch(String pattern, String text) {
+        // 构建失败函数(前缀函数)
+        int m = pattern.length();
+        int[] fail = new int[m];
+        int k = 0;
+        for (int i = 1; i < m; i++) {
+            while (k > 0 && pattern.charAt(i) != pattern.charAt(k)) k = fail[k - 1];
+            if (pattern.charAt(i) == pattern.charAt(k)) k++;
+            fail[i] = k;
+        }
+        // 在 text 上跑自动机
+        List<Integer> res = new ArrayList<>();
+        int state = 0;
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            while (state > 0 && ch != pattern.charAt(state)) state = fail[state - 1];
+            if (ch == pattern.charAt(state)) state++;
+            if (state == m) {
+                res.add(i - m + 1);
+                state = fail[state - 1];
+            }
+        }
+        return res;
+    }
+}`,
   },
   tarjan_scc: {
     python: `def tarjan_scc(graph):
@@ -4157,6 +4828,131 @@ def reservoir_sampling(stream, k=1):
         if node not in disc:
             dfs(node)
     return sccs`,
+    javascript: `function tarjanScc(graph) {
+    // Tarjan 求强连通分量：O(V+E)
+    let index = 0;
+    const disc = new Map(), low = new Map(), onStack = new Set();
+    const stack = [], sccs = [];
+
+    function dfs(u) {
+        index++;
+        disc.set(u, index); low.set(u, index);
+        stack.push(u); onStack.add(u);
+        for (const v of (graph[u] || [])) {
+            if (!disc.has(v)) {
+                dfs(v);
+                low.set(u, Math.min(low.get(u), low.get(v)));
+            } else if (onStack.has(v)) {
+                low.set(u, Math.min(low.get(u), disc.get(v)));
+            }
+        }
+        if (low.get(u) === disc.get(u)) {
+            const comp = [];
+            while (true) {
+                const w = stack.pop(); onStack.delete(w); comp.push(w);
+                if (w === u) break;
+            }
+            sccs.push(comp);
+        }
+    }
+
+    for (const node of Object.keys(graph)) {
+        if (!disc.has(node)) dfs(node);
+    }
+    return sccs;
+}`,
+    cpp: `#include <vector>
+#include <unordered_map>
+#include <unordered_set>
+#include <algorithm>
+using namespace std;
+
+class TarjanScc {
+    unordered_map<int, vector<int>>& graph;
+    int index = 0;
+    unordered_map<int, int> disc, low;
+    unordered_set<int> onStack;
+    vector<int> stk;
+    vector<vector<int>> sccs;
+
+    void dfs(int u) {
+        // Tarjan 求强连通分量：O(V+E)
+        index++;
+        disc[u] = low[u] = index;
+        stk.push_back(u); onStack.insert(u);
+        for (int v : graph[u]) {
+            if (!disc.count(v)) {
+                dfs(v);
+                low[u] = min(low[u], low[v]);
+            } else if (onStack.count(v)) {
+                low[u] = min(low[u], disc[v]);
+            }
+        }
+        if (low[u] == disc[u]) {
+            vector<int> comp;
+            while (true) {
+                int w = stk.back(); stk.pop_back();
+                onStack.erase(w); comp.push_back(w);
+                if (w == u) break;
+            }
+            sccs.push_back(comp);
+        }
+    }
+
+public:
+    TarjanScc(unordered_map<int, vector<int>>& g) : graph(g) {}
+
+    vector<vector<int>> run() {
+        for (auto& kv : graph) {
+            if (!disc.count(kv.first)) dfs(kv.first);
+        }
+        return sccs;
+    }
+};`,
+    java: `import java.util.*;
+
+public class TarjanScc {
+    Map<Integer, List<Integer>> graph;
+    int index = 0;
+    Map<Integer, Integer> disc = new HashMap<>(), low = new HashMap<>();
+    Set<Integer> onStack = new HashSet<>();
+    Deque<Integer> stack = new ArrayDeque<>();
+    List<List<Integer>> sccs = new ArrayList<>();
+
+    public TarjanScc(Map<Integer, List<Integer>> graph) {
+        this.graph = graph;
+    }
+
+    void dfs(int u) {
+        // Tarjan 求强连通分量：O(V+E)
+        index++;
+        disc.put(u, index); low.put(u, index);
+        stack.push(u); onStack.add(u);
+        for (int v : graph.getOrDefault(u, Collections.emptyList())) {
+            if (!disc.containsKey(v)) {
+                dfs(v);
+                low.put(u, Math.min(low.get(u), low.get(v)));
+            } else if (onStack.contains(v)) {
+                low.put(u, Math.min(low.get(u), disc.get(v)));
+            }
+        }
+        if (low.get(u).equals(disc.get(u))) {
+            List<Integer> comp = new ArrayList<>();
+            while (true) {
+                int w = stack.pop(); onStack.remove(w); comp.add(w);
+                if (w == u) break;
+            }
+            sccs.add(comp);
+        }
+    }
+
+    public List<List<Integer>> run() {
+        for (int node : graph.keySet()) {
+            if (!disc.containsKey(node)) dfs(node);
+        }
+        return sccs;
+    }
+}`,
   },
 };
 
