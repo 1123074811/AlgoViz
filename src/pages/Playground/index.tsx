@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import type { OnMount } from '@monaco-editor/react'
@@ -50,6 +51,7 @@ export default function Playground() {
   const [aiErrorReport, setAiErrorReport] = useState<AIErrorReport | null>(null)
   const [aiRepairHistory, setAiRepairHistory] = useState<AIRepairAttempt[] | null>(null)
   const [showRawResponse, setShowRawResponse] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const [confirmState, setConfirmState] = useState<{ type: 'delete'; id: string } | { type: 'clearAll' } | null>(null)
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null)
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
@@ -294,6 +296,26 @@ export default function Playground() {
     window.addEventListener(REQUEST_AI_REPAIR_EVENT, handleRepairRequest)
     return () => window.removeEventListener(REQUEST_AI_REPAIR_EVENT, handleRepairRequest)
   }, [handleAnalyze])
+
+  // ── 动画全屏(与可视化工作台一致)──
+  const fullscreenRef = useRef<HTMLDivElement>(null)
+  const toggleFullscreen = useCallback(() => setIsFullscreen((v) => !v), [])
+  useEffect(() => {
+    if (!isFullscreen) return
+    const el = fullscreenRef.current
+    if (el && document.fullscreenElement == null && el.requestFullscreen) {
+      el.requestFullscreen().catch(() => {})
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsFullscreen(false) }
+    const onFsChange = () => { if (document.fullscreenElement == null) setIsFullscreen(false) }
+    window.addEventListener('keydown', onKey)
+    document.addEventListener('fullscreenchange', onFsChange)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.removeEventListener('fullscreenchange', onFsChange)
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+    }
+  }, [isFullscreen])
 
   const handleRestore = (entry: AIHistoryEntry) => {
     setCode(entry.code)
@@ -546,25 +568,74 @@ export default function Playground() {
         {/* Visualization */}
         <div className="flex-[1.5] flex flex-col min-w-0 min-h-0">
           <div className="flex-1 min-h-0">
-            <SceneCanvas script={activeAnimationScript} currentStep={visualState.currentStep} currentStepData={currentStepData} speed={speed} />
+            {isFullscreen ? (
+              <div className="h-full flex items-center justify-center text-sm text-slate-400 select-none">
+                {lang === 'zh' ? '动画已全屏显示，按 Esc 或点击退出返回' : 'Animation is in fullscreen — press Esc to return'}
+              </div>
+            ) : (
+              <SceneCanvas
+                script={activeAnimationScript}
+                currentStep={visualState.currentStep}
+                currentStepData={currentStepData}
+                speed={speed}
+                isFullscreen={isFullscreen}
+                onToggleFullscreen={toggleFullscreen}
+              />
+            )}
           </div>
-          <PlaybackControls
-            compact
-            isPlaying={isPlaying}
-            currentStep={currentStep}
-            totalSteps={totalSteps}
-            speed={speed}
-            onReset={reset}
-            onStepBackward={stepBackward}
-            onTogglePlay={togglePlay}
-            onStepForward={stepForward}
-            onGoToEnd={goToEnd}
-            onSpeedChange={setSpeed}
-            onSeek={goToStep}
-            currentPhase={currentPhase}
-          />
+          {!isFullscreen && (
+            <PlaybackControls
+              compact
+              isPlaying={isPlaying}
+              currentStep={currentStep}
+              totalSteps={totalSteps}
+              speed={speed}
+              onReset={reset}
+              onStepBackward={stepBackward}
+              onTogglePlay={togglePlay}
+              onStepForward={stepForward}
+              onGoToEnd={goToEnd}
+              onSpeedChange={setSpeed}
+              onSeek={goToStep}
+              currentPhase={currentPhase}
+            />
+          )}
         </div>
       </div>
+
+      {/* 全屏覆盖层:画布(撑满)+ 始终保留的下方播放条 */}
+      {isFullscreen && createPortal(
+        <div ref={fullscreenRef} className="fixed inset-0 z-[60] flex flex-col bg-white overflow-hidden">
+          <div className="flex-1 min-h-0 flex flex-col">
+            <SceneCanvas
+              script={activeAnimationScript}
+              currentStep={visualState.currentStep}
+              currentStepData={currentStepData}
+              speed={speed}
+              isFullscreen={isFullscreen}
+              onToggleFullscreen={toggleFullscreen}
+            />
+          </div>
+          <div className="shrink-0">
+            <PlaybackControls
+              compact
+              isPlaying={isPlaying}
+              currentStep={currentStep}
+              totalSteps={totalSteps}
+              speed={speed}
+              onReset={reset}
+              onStepBackward={stepBackward}
+              onTogglePlay={togglePlay}
+              onStepForward={stepForward}
+              onGoToEnd={goToEnd}
+              onSpeedChange={setSpeed}
+              onSeek={goToStep}
+              currentPhase={currentPhase}
+            />
+          </div>
+        </div>,
+        document.body,
+      )}
 
       {/* Enhanced Error overlay */}
       {aiStatus === 'error' && (
