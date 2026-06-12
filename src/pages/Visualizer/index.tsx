@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import type { OnMount } from '@monaco-editor/react'
 import { Icon } from '@/icons'
@@ -51,6 +52,7 @@ export default function Visualizer() {
   })
   const [showRawResponse, setShowRawResponse] = useState(false)
   const [showDefinition, setShowDefinition] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const [operationIdByAlgo, setOperationIdByAlgo] = useState<Record<string, string>>({})
   const [operationParam, setOperationParam] = useState<string>('5')
 
@@ -415,6 +417,27 @@ export default function Visualizer() {
     return () => window.removeEventListener(REQUEST_AI_REPAIR_EVENT, handleRepairRequest)
   }, [handleAIAnalyze])
 
+  // ── 动画全屏 ──
+  const fullscreenRef = useRef<HTMLDivElement>(null)
+  const toggleFullscreen = useCallback(() => setIsFullscreen((v) => !v), [])
+  useEffect(() => {
+    if (!isFullscreen) return
+    // 尽力而为地进入原生全屏(失败也无妨,CSS 覆盖层已覆盖整个视口)。
+    const el = fullscreenRef.current
+    if (el && document.fullscreenElement == null && el.requestFullscreen) {
+      el.requestFullscreen().catch(() => {})
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsFullscreen(false) }
+    const onFsChange = () => { if (document.fullscreenElement == null) setIsFullscreen(false) }
+    window.addEventListener('keydown', onKey)
+    document.addEventListener('fullscreenchange', onFsChange)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.removeEventListener('fullscreenchange', onFsChange)
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+    }
+  }, [isFullscreen])
+
   if (!selectedAlgorithm) {
     return (
       <div className="h-full flex items-center justify-center bg-surface">
@@ -432,6 +455,44 @@ export default function Visualizer() {
   }
 
   const complexity = animationScript?.complexity
+
+  // 画布与播放控件的属性集中定义,使其既能在常规三栏布局里渲染,也能在全屏覆盖层里渲染
+  // (同一时刻只渲染其一,不会双实例)。
+  const canvasPanelProps = {
+    hasOperations, operations, currentOperationId, setCurrentOperationId,
+    setOperationParam, animationScript, visualState, currentStepData, speed, lang,
+    isFullscreen, onToggleFullscreen: toggleFullscreen,
+  }
+  const playbackControlsProps = {
+    isPlaying, currentStep, totalSteps, speed,
+    onReset: reset, onStepBackward: stepBackward, onTogglePlay: togglePlay,
+    onStepForward: stepForward, onGoToEnd: goToEnd, onSpeedChange: setSpeed,
+    onSeek: goToStep, currentPhase,
+    labels: {
+      reset: t('controls.reset'), prevStep: t('controls.prevStep'), play: t('controls.play'),
+      pause: t('controls.pause'), nextStep: t('controls.nextStep'), end: t('controls.end'),
+      speed: t('controls.speed'), progress: t('controls.progress'),
+    },
+    extraActions: (
+      <button
+        onClick={handleAIAnalyze}
+        disabled={aiStatus === 'analyzing' || !hasApiConfig}
+        className="flex items-center gap-1.5 px-2 sm:px-3 h-8 rounded-lg text-xs sm:text-sm font-medium
+                   bg-gradient-to-r from-violet-500 to-purple-600 text-white
+                   hover:from-violet-600 hover:to-purple-700
+                   disabled:opacity-50 disabled:cursor-not-allowed
+                   transition-all cursor-pointer border-none shadow-sm"
+        title={!hasApiConfig ? t('controls.aiConfigureHint') : t('controls.aiAnalyze')}
+      >
+        {aiStatus === 'analyzing' ? (
+          <Icon name="loader2" size={14} className="animate-spin" />
+        ) : (
+          <Icon name="brain" size={14} />
+        )}
+        <span className="hidden sm:inline">{t('controls.aiAnalyze')}</span>
+      </button>
+    ),
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -489,18 +550,13 @@ export default function Visualizer() {
           className="flex-1 xl:flex-none border-b xl:border-b-0 border-border min-w-0 min-h-0 flex flex-col"
           style={isDesktop ? { width: `${100 - leftWidth - rightWidth}%` } : undefined}
         >
-          <CanvasPanel
-            hasOperations={hasOperations}
-            operations={operations}
-            currentOperationId={currentOperationId}
-            setCurrentOperationId={setCurrentOperationId}
-            setOperationParam={setOperationParam}
-            animationScript={animationScript}
-            visualState={visualState}
-            currentStepData={currentStepData}
-            speed={speed}
-            lang={lang}
-          />
+          {isFullscreen ? (
+            <div className="flex-1 min-h-0 flex items-center justify-center text-sm text-slate-400 select-none">
+              {lang === 'zh' ? '动画已全屏显示，按 Esc 或点击退出返回' : 'Animation is in fullscreen — press Esc to return'}
+            </div>
+          ) : (
+            <CanvasPanel {...canvasPanelProps} />
+          )}
         </div>
 
         {/* Center-Right Resizer Bar */}
@@ -542,50 +598,19 @@ export default function Visualizer() {
         </div>
       </div>
 
-      {/* Bottom: Control Bar */}
-      <PlaybackControls
-        isPlaying={isPlaying}
-        currentStep={currentStep}
-        totalSteps={totalSteps}
-        speed={speed}
-        onReset={reset}
-        onStepBackward={stepBackward}
-        onTogglePlay={togglePlay}
-        onStepForward={stepForward}
-        onGoToEnd={goToEnd}
-        onSpeedChange={setSpeed}
-        onSeek={goToStep}
-        currentPhase={currentPhase}
-        labels={{
-          reset: t('controls.reset'),
-          prevStep: t('controls.prevStep'),
-          play: t('controls.play'),
-          pause: t('controls.pause'),
-          nextStep: t('controls.nextStep'),
-          end: t('controls.end'),
-          speed: t('controls.speed'),
-          progress: t('controls.progress'),
-        }}
-        extraActions={
-          <button
-            onClick={handleAIAnalyze}
-            disabled={aiStatus === 'analyzing' || !hasApiConfig}
-            className="flex items-center gap-1.5 px-2 sm:px-3 h-8 rounded-lg text-xs sm:text-sm font-medium
-                       bg-gradient-to-r from-violet-500 to-purple-600 text-white
-                       hover:from-violet-600 hover:to-purple-700
-                       disabled:opacity-50 disabled:cursor-not-allowed
-                       transition-all cursor-pointer border-none shadow-sm"
-            title={!hasApiConfig ? t('controls.aiConfigureHint') : t('controls.aiAnalyze')}
-          >
-            {aiStatus === 'analyzing' ? (
-              <Icon name="loader2" size={14} className="animate-spin" />
-            ) : (
-              <Icon name="brain" size={14} />
-            )}
-            <span className="hidden sm:inline">{t('controls.aiAnalyze')}</span>
-          </button>
-        }
-      />
+      {/* Bottom: Control Bar(全屏时移入覆盖层) */}
+      {!isFullscreen && <PlaybackControls {...playbackControlsProps} />}
+
+      {/* 全屏覆盖层:画布 + 播放控件占满整个视口 */}
+      {isFullscreen && createPortal(
+        <div ref={fullscreenRef} className="fixed inset-0 z-[60] flex flex-col bg-white">
+          <div className="flex-1 min-h-0">
+            <CanvasPanel {...canvasPanelProps} />
+          </div>
+          <PlaybackControls {...playbackControlsProps} />
+        </div>,
+        document.body,
+      )}
 
       <style>{`
         .active-line {

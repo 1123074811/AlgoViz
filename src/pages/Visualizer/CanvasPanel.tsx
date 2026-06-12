@@ -15,6 +15,8 @@ interface CanvasPanelProps {
   currentStepData: AnimationStep | null
   speed: number
   lang: 'zh' | 'en'
+  isFullscreen?: boolean
+  onToggleFullscreen?: () => void
 }
 
 export default function CanvasPanel({
@@ -28,6 +30,8 @@ export default function CanvasPanel({
   currentStepData,
   speed,
   lang,
+  isFullscreen,
+  onToggleFullscreen,
 }: CanvasPanelProps) {
   return (
     <>
@@ -67,6 +71,8 @@ export default function CanvasPanel({
           currentStep={visualState.currentStep}
           currentStepData={currentStepData}
           speed={speed}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={onToggleFullscreen}
         />
       </div>
     </>

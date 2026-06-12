@@ -153,6 +153,10 @@
       "done": "Done / Hit",
       "conflict": "Swap / Conflict",
       "untouched": "Untouched"
+    },
+    "fullscreen": {
+      "enter": "Fullscreen",
+      "exit": "Exit fullscreen (Esc)"
     }
   },
   "common": {

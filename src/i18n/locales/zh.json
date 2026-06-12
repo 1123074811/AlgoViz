@@ -153,6 +153,10 @@
       "done": "完成 / 命中",
       "conflict": "交换 / 冲突",
       "untouched": "未处理"
+    },
+    "fullscreen": {
+      "enter": "全屏",
+      "exit": "退出全屏 (Esc)"
     }
   },
   "common": {

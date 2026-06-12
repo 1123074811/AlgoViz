@@ -36,6 +36,10 @@ interface SceneCanvasProps {
   currentStep: number
   currentStepData?: AnimationStep | null
   speed?: number
+  /** 是否处于全屏态(决定全屏按钮图标)。 */
+  isFullscreen?: boolean
+  /** 提供时,在缩放控件簇里显示全屏切换按钮。 */
+  onToggleFullscreen?: () => void
 }
 
 interface SceneCanvasInnerProps {
@@ -43,6 +47,8 @@ interface SceneCanvasInnerProps {
   currentStep: number
   currentStepData?: AnimationStep | null
   speed?: number
+  isFullscreen?: boolean
+  onToggleFullscreen?: () => void
 }
 
 /** 播放速度→补间时长：慢放更舒缓、快放更利落。 */
@@ -65,7 +71,7 @@ export function durationForStep(speedMultiplier: number, actionType: string | un
 }
 
 /** 可视化画布：处理空状态、外层卡片容器与渲染错误边界，渲染主体委托给 SceneCanvasInner。 */
-export default function SceneCanvas({ script, currentStep, currentStepData, speed = 1 }: SceneCanvasProps) {
+export default function SceneCanvas({ script, currentStep, currentStepData, speed = 1, isFullscreen, onToggleFullscreen }: SceneCanvasProps) {
   if (!script) {
     return (
       <div className="h-full flex items-center justify-center bg-slate-50">
@@ -99,15 +105,15 @@ export default function SceneCanvas({ script, currentStep, currentStepData, spee
             />
           )}
         >
-          <SceneCanvasInner script={script} currentStep={currentStep} currentStepData={currentStepData} speed={speed} />
+          <SceneCanvasInner script={script} currentStep={currentStep} currentStepData={currentStepData} speed={speed} isFullscreen={isFullscreen} onToggleFullscreen={onToggleFullscreen} />
         </ErrorBoundary>
       </div>
     </div>
   )
 }
 
-function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1 }: SceneCanvasInnerProps) {
-  const { i18n } = useTranslation()
+function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isFullscreen, onToggleFullscreen }: SceneCanvasInnerProps) {
+  const { i18n, t } = useTranslation()
   const lang = i18n.language as 'zh' | 'en'
 
   const targetScene = deriveSceneState(script, currentStep)
@@ -339,6 +345,24 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1 }: S
             <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
           </svg>
         </button>
+        {onToggleFullscreen && (
+          <>
+            <div className="h-4 w-px bg-slate-200 mx-0.5" />
+            <button
+              onClick={onToggleFullscreen}
+              title={isFullscreen ? t('scene.fullscreen.exit') : t('scene.fullscreen.enter')}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 active:scale-95 transition-all"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                {isFullscreen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0v4m0-4h4m6 5l5-5m0 0v4m0-4h-4m-6 6l-5 5m0 0v-4m0 4h4m6-5l5 5m0 0v-4m0 4h-4" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                )}
+              </svg>
+            </button>
+          </>
+        )}
       </div>
 
       {isEmpty && (
