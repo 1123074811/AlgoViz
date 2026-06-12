@@ -4628,8 +4628,9 @@ public class ReservoirSampling {
 using namespace std;
 
 long long cross(const pair<int,int>& o, const pair<int,int>& a, const pair<int,int>& b) {
-    return (long long)(a.first - o.first) * (b.second - o.second)
-         - (long long)(a.second - o.second) * (b.first - o.first);
+    long long t1 = (long long)(a.first - o.first) * (b.second - o.second);
+    long long t2 = (long long)(a.second - o.second) * (b.first - o.first);
+    return t1 - t2;
 }
 
 vector<pair<int,int>> convexHull(vector<pair<int,int>> points) {
@@ -4667,9 +4668,8 @@ public class ConvexHull {
 
     public static List<int[]> convexHull(int[][] points) {
         // Andrew 单调链：O(n log n) 求凸包
-        int[][] pts = Arrays.stream(points).distinct()
-            .sorted((a, b) -> a[0] != b[0] ? a[0] - b[0] : a[1] - b[1])
-            .toArray(int[][]::new);
+        int[][] pts = Arrays.stream(points).distinct().toArray(int[][]::new);
+        Arrays.sort(pts, (a, b) -> a[0] != b[0] ? a[0] - b[0] : a[1] - b[1]);
         int n = pts.length;
         List<int[]> result = new ArrayList<>();
         if (n <= 2) {

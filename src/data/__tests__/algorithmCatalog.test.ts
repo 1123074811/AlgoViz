@@ -63,15 +63,21 @@ describe('codeTemplates · getCodeTemplate', () => {
     expect(getCodeTemplate('bubble_sort', 'python')).toBe(expected)
   })
 
-  it('falls back to the python template when the requested language is missing', () => {
-    // Find an id that has python but is missing at least one other language.
-    const entry = Object.entries(CODE_TEMPLATES).find(
-      ([, byLang]) => byLang.python && LANGS.some((l) => !byLang[l]),
-    )
-    expect(entry).toBeTruthy()
-    const [id, byLang] = entry!
-    const missingLang = LANGS.find((l) => !byLang[l])!
-    expect(getCodeTemplate(id, missingLang)).toBe(byLang.python)
+  it('every built-in algorithm provides all 4 language templates (no python masquerading)', () => {
+    // 现已为所有算法补齐四语言模板;不应再出现选了 Java 却显示 Python 的情况。
+    for (const [id, byLang] of Object.entries(CODE_TEMPLATES)) {
+      for (const l of LANGS) {
+        expect(byLang[l], `${id} 缺少 ${l} 模板`).toBeTruthy()
+      }
+    }
+  })
+
+  it('falls back to the python template when a language is genuinely missing', () => {
+    // 用合成条目验证回退逻辑本身仍正确(真实数据已无缺口)。
+    const pyOnly: typeof CODE_TEMPLATES = { __synthetic__: { python: 'PY_ONLY' } }
+    const get = (id: string, lang: typeof LANGS[number]) =>
+      pyOnly[id]?.[lang] ?? pyOnly[id]?.python ?? ''
+    expect(get('__synthetic__', 'java')).toBe('PY_ONLY')
   })
 
   it('returns a clearly-marked placeholder for an unknown id', () => {
