@@ -601,13 +601,17 @@ export default function Visualizer() {
       {/* Bottom: Control Bar(全屏时移入覆盖层) */}
       {!isFullscreen && <PlaybackControls {...playbackControlsProps} />}
 
-      {/* 全屏覆盖层:画布 + 播放控件占满整个视口 */}
+      {/* 全屏覆盖层:画布(撑满)+ 始终保留的下方播放条 */}
       {isFullscreen && createPortal(
-        <div ref={fullscreenRef} className="fixed inset-0 z-[60] flex flex-col bg-white">
-          <div className="flex-1 min-h-0">
+        <div ref={fullscreenRef} className="fixed inset-0 z-[60] flex flex-col bg-white overflow-hidden">
+          {/* 画布容器需为 flex flex-col,CanvasPanel 内部的 flex-1 才能正确撑开 */}
+          <div className="flex-1 min-h-0 flex flex-col">
             <CanvasPanel {...canvasPanelProps} />
           </div>
-          <PlaybackControls {...playbackControlsProps} />
+          {/* 播放条固定在底部,不被画布挤出 */}
+          <div className="shrink-0">
+            <PlaybackControls {...playbackControlsProps} />
+          </div>
         </div>,
         document.body,
       )}
