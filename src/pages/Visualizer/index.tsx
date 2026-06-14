@@ -16,9 +16,11 @@ import {
 } from '@/utils/inputParser'
 import {
   ALGORITHM_DEFAULT_INPUTS,
-  getCodeTemplate,
   type CodeLang,
 } from '@/data/algorithms'
+// 直接从 codeTemplates 引入(不走 @/data/algorithms barrel)——使 4975 行模板随本
+// 懒加载路由 chunk 加载,而非被 store 经 barrel 拖进首屏主包。
+import { getCodeTemplate } from '@/data/codeTemplates'
 import PlaybackControls from '@/components/Controls/PlaybackControls'
 import { REQUEST_AI_REPAIR_EVENT } from '@/components/ErrorBoundary'
 import { getOperationsForAlgo } from '@/presets/operationPresets'
