@@ -178,6 +178,16 @@ export function apiProxyMiddleware(options: ApiProxyMiddlewareOptions = {}) {
   }
 }
 
+/** 把重型第三方依赖拆到独立 chunk，改善首屏并行加载与缓存命中。导出以便单测。 */
+export function manualChunks(id: string): string | undefined {
+  if (!id.includes('node_modules')) return undefined
+  if (/[\\/]node_modules[\\/](@monaco-editor[\\/]react|monaco-editor)[\\/]/.test(id)) return 'vendor-monaco'
+  if (/[\\/]node_modules[\\/]d3(-[a-z]+)?[\\/]/.test(id)) return 'vendor-d3'
+  if (/[\\/]node_modules[\\/]framer-motion[\\/]/.test(id)) return 'vendor-motion'
+  if (/[\\/]node_modules[\\/](react|react-dom|react-router-dom|scheduler)[\\/]/.test(id)) return 'vendor-react'
+  return undefined
+}
+
 export default defineConfig({
   plugins: [react(), apiProxyMiddleware()],
   resolve: {
@@ -188,5 +198,12 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true,
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks,
+      },
+    },
   },
 })
