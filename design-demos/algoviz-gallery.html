@@ -1,0 +1,1019 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>方向 B · 编辑数据可视化 / Observable · D3</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg:#ffffff; --ink:#232323; --muted:#8a8a8a;
+    --font-body:'Helvetica Neue',Arial,'Noto Sans SC',sans-serif;
+    --font-display:Georgia,'Times New Roman',serif;
+    --font-val:'Helvetica Neue',Arial,sans-serif; --font-cap:Georgia,'Times New Roman',serif;
+    --display-weight:600; --display-tracking:0; --eyebrow-font:600 11px 'Helvetica Neue',sans-serif;
+    --accent:#4E79A7; --accent-ink:#ffffff;
+    --radius:3px; --bar-radius:1px;
+    --card-bg:#fff; --card-border:1px solid #e7e7e7; --card-shadow:none;
+    --tab-border:1px solid #d9d9d9; --tab-shadow:none;
+    --el-border:1px solid #cfcfcf; --el-shadow:none; --el-shadow-svg:none;
+    --idle-fill:#f3f3f4; --idle-stroke:#cfcfcf;
+    --cmp-fill:#FBE7D3; --cmp-stroke:#F28E2B; --cmp-shadow:none;
+    --act-fill:#E1E9F1; --act-stroke:#4E79A7; --act-shadow-svg:none;
+    --done-fill:#E6EFE4; --done-stroke:#59A14F; --done-text:#3c7a36; --done-shadow:none;
+    --edge-stroke:#d3d3d3; --edge-w:1.2;
+    --node-stroke-w:1.4; --box-stroke-w:1.2;
+    --empty-fill:#fafafa; --empty-stroke:#e3e3e3; --empty-dash:3 3;
+    --lift:translateY(-6px); --lens-bg:radial-gradient(120px 90px at 50% 80%, rgba(242,142,43,.13), transparent 70%);
+    --ease:cubic-bezier(.4,0,.2,1);
+  }
+  /* ===== 以下结构 CSS 三版完全一致，只有上面的 :root 主题不同 ===== */
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--font-body); background:var(--bg); color:var(--ink); min-height:100vh; padding:36px 26px 50px; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:940px; margin:0 auto; }
+  .eyebrow { font:var(--eyebrow-font); letter-spacing:.2em; text-transform:uppercase; color:var(--accent); display:inline-block; margin-bottom:14px; }
+  h1 { font-family:var(--font-display); font-size:30px; font-weight:var(--display-weight); letter-spacing:var(--display-tracking); color:var(--ink); }
+  h1 .accent { color:var(--muted); font-weight:400; font-style:italic; }
+  .sub { color:var(--muted); font-size:13.5px; margin-top:8px; max-width:700px; line-height:1.65; }
+  .tabs { display:flex; flex-wrap:wrap; gap:10px; margin:22px 0 14px; }
+  .tab { font:600 13px var(--font-body); color:var(--ink); cursor:pointer; border:var(--tab-border); background:var(--card-bg); padding:8px 17px; border-radius:var(--radius); box-shadow:var(--tab-shadow); transition:all .15s var(--ease); }
+  .tab:hover { border-color:var(--accent); color:var(--accent); }
+  .tab.on { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+  .controls { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+  .btn { font:600 13px var(--font-body); color:var(--ink); cursor:pointer; border:var(--tab-border); background:var(--card-bg); padding:8px 16px; border-radius:var(--radius); box-shadow:var(--tab-shadow); transition:all .15s var(--ease); }
+  .btn:hover { border-color:var(--accent); color:var(--accent); }
+  .btn.primary { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+  .btn.primary:hover { color:var(--accent-ink); filter:brightness(1.05); }
+  .speed { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+  .speed input { accent-color:var(--accent); }
+  .card { background:var(--card-bg); border:var(--card-border); border-radius:var(--radius); box-shadow:var(--card-shadow); padding:22px 24px 24px; }
+  .ctitle { font-family:var(--font-display); font-size:18px; font-weight:var(--display-weight); }
+  .status { font-size:13px; color:var(--muted); margin:8px 0 2px; min-height:18px; font-family:var(--font-cap); font-style:italic; }
+  .stage { position:relative; height:350px; margin-top:10px; }
+  .stage svg { width:100%; height:100%; overflow:visible; }
+  .barcell { position:absolute; bottom:30px; width:46px; display:flex; flex-direction:column; align-items:center; transition:transform .55s var(--ease); }
+  .barcell .inner { display:flex; flex-direction:column; align-items:center; transition:transform .4s var(--ease); }
+  .bar { width:46px; height:40px; border-radius:var(--bar-radius); background:var(--idle-fill); border:var(--el-border); box-shadow:var(--el-shadow); transition:background .3s,border-color .3s,box-shadow .3s; }
+  .bval { font:600 13px var(--font-val); margin-top:8px; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .axn { position:absolute; bottom:6px; width:46px; text-align:center; font:500 10px var(--font-val); color:var(--muted); }
+  .barcell.compare .bar { background:var(--cmp-fill); border-color:var(--cmp-stroke); box-shadow:var(--cmp-shadow); }
+  .barcell.compare .inner { transform:var(--lift); }
+  .barcell.sorted .bar { background:var(--done-fill); border-color:var(--done-stroke); box-shadow:var(--done-shadow); }
+  .barcell.bump .inner { animation:bump .5s var(--ease); }
+  @keyframes bump { 0%{transform:scale(1)} 35%{transform:scale(1.05)} 100%{transform:scale(1)} }
+  .lens { position:absolute; bottom:30px; height:200px; border-radius:8px; opacity:0; pointer-events:none; background:var(--lens-bg); transition:left .5s var(--ease),width .5s var(--ease),opacity .3s; }
+  .node circle { fill:var(--idle-fill); stroke:var(--idle-stroke); stroke-width:var(--node-stroke-w); filter:var(--el-shadow-svg); transition:fill .3s,stroke .3s; }
+  .node text { font:600 14px var(--font-val); fill:var(--ink); text-anchor:middle; dominant-baseline:central; }
+  .node.frontier circle { fill:var(--cmp-fill); stroke:var(--cmp-stroke); }
+  .node.active circle { fill:var(--act-fill); stroke:var(--act-stroke); filter:var(--act-shadow-svg); }
+  .node.visited circle { fill:var(--done-fill); stroke:var(--done-stroke); } .node.visited text { fill:var(--done-text); }
+  .edge { stroke:var(--edge-stroke); stroke-width:var(--edge-w); fill:none; transition:stroke .3s; }
+  .edge.on { stroke:var(--act-stroke); }
+  .box { fill:var(--idle-fill); stroke:var(--idle-stroke); stroke-width:var(--box-stroke-w); filter:var(--el-shadow-svg); transition:fill .3s,stroke .3s; }
+  .box.empty { fill:var(--empty-fill); stroke:var(--empty-stroke); stroke-dasharray:var(--empty-dash); filter:none; }
+  .box.cmp { fill:var(--cmp-fill); stroke:var(--cmp-stroke); }
+  .box.act { fill:var(--act-fill); stroke:var(--act-stroke); filter:var(--act-shadow-svg); }
+  .box.ok { fill:var(--done-fill); stroke:var(--done-stroke); }
+  .boxv { font:600 15px var(--font-val); fill:var(--ink); text-anchor:middle; dominant-baseline:central; font-variant-numeric:tabular-nums; }
+  .boxv.pop { animation:vpop .4s var(--ease); }
+  @keyframes vpop { 0%{opacity:0;transform:translateY(4px)} 100%{opacity:1;transform:translateY(0)} }
+  .dsidx { font:500 10px var(--font-val); fill:var(--muted); text-anchor:middle; dominant-baseline:central; }
+  .dscap { font:italic 500 12px var(--font-cap); fill:var(--muted); }
+  .focusdot { fill:rgba(78,121,167,.12); opacity:0; transition:cx .5s var(--ease),cy .5s var(--ease),opacity .3s; }
+  .hashbox { fill:#EEF1F6; stroke:var(--accent); stroke-width:1.2; }
+  .hashtext { font:600 13px var(--font-val); fill:var(--accent); text-anchor:middle; dominant-baseline:central; }
+  .chain { stroke:#cdcdcd; stroke-width:1.4; fill:none; }
+  .dsptr2 { text-anchor:middle; font:600 11px var(--font-val); transition:opacity .3s; }
+  .seqchip { font:600 13px var(--font-val); fill:var(--done-text); text-anchor:middle; }
+  /* 网格 */
+  .gc { fill:#f3f3f4; stroke:#e2e2e2; stroke-width:1; transition:fill .35s,stroke .35s; }
+  .gc.wall { fill:#5a6470; stroke:#4a525c; }
+  .gc.frontier { fill:#FBE7D3; stroke:#F28E2B; }
+  .gc.visited { fill:#E1E9F1; stroke:#c3d3e6; }
+  .gc.path { fill:#E6EFE4; stroke:#59A14F; }
+  .gc.start { fill:#59A14F; stroke:#59A14F; }
+  .gc.end { fill:#4E79A7; stroke:#4E79A7; }
+  .gtag { font:600 11px var(--font-val); fill:#fff; text-anchor:middle; dominant-baseline:central; }
+  /* 链表 */
+  .lln rect { fill:#f3f3f4; stroke:#cfcfcf; stroke-width:1.2; transition:fill .3s,stroke .3s; }
+  .lln text { font:600 15px var(--font-val); fill:var(--ink); text-anchor:middle; dominant-baseline:central; }
+  .lln.curr rect { fill:#E1E9F1; stroke:#4E79A7; stroke-width:1.8; }
+  .lln.prev rect { fill:#E6EFE4; stroke:#59A14F; }
+  .lln.nextn rect { fill:#FBE7D3; stroke:#F28E2B; }
+  .llarrow { stroke:#b0b0b0; stroke-width:1.4; fill:none; transition:opacity .4s var(--ease); }
+  .llarrow.hide { opacity:0; }
+  .llptr { font:600 11px var(--font-val); text-anchor:middle; transition:opacity .4s; }
+  .llptr.p { fill:#3c7a36; } .llptr.c { fill:#4E79A7; } .llptr.n { fill:#c47a1f; }
+  /* DP 表 */
+  .dpc { fill:#fff; stroke:#dcdcdc; stroke-width:1; transition:fill .3s,stroke .3s; }
+  .dpc.active { fill:#E1E9F1; stroke:#4E79A7; stroke-width:1.8; }
+  .dpc.dep { fill:#FBE7D3; stroke:#F28E2B; }
+  .dpc.ans { fill:#E6EFE4; stroke:#59A14F; stroke-width:1.8; }
+  .dpv { font:600 15px var(--font-val); fill:var(--ink); text-anchor:middle; dominant-baseline:central; }
+  .dpv.pop { animation:vpop .4s var(--ease); }
+  .dphdr { font:600 14px var(--font-cap); fill:var(--muted); text-anchor:middle; dominant-baseline:central; }
+  /* 动态树：节点滑动 + 边随 d 过渡，旋转/分裂/合并平滑变形 */
+  .avlnode, .btnode, .hfnode, .rbnode { transition:transform .55s var(--ease); }
+  .tedge { stroke:var(--edge-stroke); stroke-width:var(--edge-w); fill:none; transition:d .55s var(--ease); }
+  .tedge.on { stroke:var(--accent); }
+  .nsub { font:500 9px var(--font-val); fill:var(--muted); text-anchor:middle; dominant-baseline:central; }
+  /* 红黑树着色 */
+  .rbnode circle { stroke-width:1.6; }
+  .rbnode.rb-red circle { fill:#E15759; stroke:#bf3f3d; }
+  .rbnode.rb-black circle { fill:#3a3f47; stroke:#2a2e35; }
+  .rbnode text { fill:#fff; }
+  .rbnode.active circle { stroke:var(--accent); stroke-width:3.2; }
+  /* 带权图 / 排除态 */
+  .wlabel { font:600 10px var(--font-val); fill:#8a8a8a; text-anchor:middle; }
+  .distlbl { font:600 11px var(--font-val); fill:var(--accent); text-anchor:middle; }
+  .box.dim { opacity:.35; }
+  .foot { margin-top:22px; font-size:12px; color:var(--muted); line-height:1.65; font-family:var(--font-cap); }
+  .foot b { color:var(--ink); font-style:normal; }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">方向 B · 标杆迁移</div>
+  <h1>编辑数据可视化 <span class="accent">/ Observable · D3</span></h1>
+  <p class="sub">迁移自 Mike Bostock / The Pudding 一脉的解释性数据可视化语言：极细的发线描边、大量留白、衬线斜体注解、克制的分类配色。气质是「权威、可信、像出版物里的图」，适合正式课件与论文级呈现。现已覆盖 <b>26 类</b>算法与结构：排序 · 堆 · 图 BFS · 树遍历 · 链表 · 二分查找 · 滑动窗口 · KMP · 哈希表 · 队列 · 栈 · 单调栈 · 并查集 · Trie · 线段树 · 跳表 · AVL · <b>红黑树</b> · B 树 · 哈夫曼树 · Dijkstra · 拓扑排序 · 网格寻路 · DP 表 · 网格 DP · Floyd。</p>
+  <div class="tabs" id="tabs"></div>
+  <div class="controls">
+    <button class="btn primary" id="play">▶ 播放</button>
+    <button class="btn" id="restart">↺ 重置</button>
+    <label class="speed">速度 <input type="range" id="speed" min="220" max="1100" value="560" step="20" /></label>
+  </div>
+  <div class="card">
+    <div class="ctitle" id="ctitle"></div>
+    <div class="status" id="status"></div>
+    <div class="stage" id="stage"></div>
+  </div>
+  <div class="foot"><b>为什么是这个方向：</b>算法可视化的世界级标杆就在 Observable / D3 / NYT Graphics —— 它们靠"少即是多"的精确排版传达可信感。细描边 + 衬线注解 + Tableau 式低饱和配色，让画面像被审校过的出版图表。<b>代价：</b>视觉冲击弱，需要读者愿意"静下来看"；不适合需要强吸睛的短视频。</div>
+</div>
+
+<script>
+(() => {
+  const NS = 'http://www.w3.org/2000/svg';
+  const E = (t, a = {}) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  const D = (c, h) => { const e = document.createElement('div'); if (c) e.className = c; if (h != null) e.innerHTML = h; return e; };
+
+  function sortMod() {
+    const DATA = [5, 2, 8, 1, 9, 3, 7, 4, 6], N = 9, CW = 46, STEP = 62, bh = v => 30 + (v - 1) / 8 * 140;
+    function gen() { const a = [...DATA], s = []; for (let i = 0; i < N; i++) { for (let j = 0; j < N - 1 - i; j++) { s.push({ t: 'compare', i: j, j: j + 1, vi: a[j], vj: a[j + 1] }); if (a[j] > a[j + 1]) { [a[j], a[j + 1]] = [a[j + 1], a[j]]; s.push({ t: 'swap', i: j, j: j + 1 }); } } s.push({ t: 'sorted', i: N - 1 - i }); } s.push({ t: 'sorted', i: 0 }); s.push({ t: 'done' }); return s; }
+    let C, lens, off;
+    return {
+      title: '排序 · 冒泡排序', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; const W = (N - 1) * STEP + CW; off = (st.clientWidth - W) / 2; if (off < 10) off = 10;
+        lens = D('lens'); st.appendChild(lens);
+        for (let k = 0; k < N; k++) { const ax = D('axn'); ax.style.left = (off + k * STEP) + 'px'; ax.textContent = k; st.appendChild(ax); }
+        C = []; DATA.forEach((v, k) => { const c = D('barcell'); c.style.transform = `translateX(${off + k * STEP}px)`; c.appendChild(D('inner', `<div class="bar" style="height:${bh(v)}px"></div><div class="bval">${v}</div>`)); st.appendChild(c); C.push(c); });
+      },
+      _pl(e, sl) { e.style.transform = `translateX(${off + sl * STEP}px)`; },
+      apply(s) {
+        if (s.t === 'compare') { C.forEach(e => e.classList.remove('compare')); [s.i, s.j].forEach(k => C[k].classList.add('compare')); const lo = Math.min(s.i, s.j), hi = Math.max(s.i, s.j); lens.style.left = (off + lo * STEP - 6) + 'px'; lens.style.width = ((hi - lo) * STEP + CW + 12) + 'px'; lens.style.opacity = '1'; }
+        else if (s.t === 'swap') { const a = C[s.i], b = C[s.j]; C[s.i] = b; C[s.j] = a; this._pl(a, s.j); this._pl(b, s.i); [a, b].forEach(e => { e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); }); }
+        else if (s.t === 'sorted') { C.forEach(e => e.classList.remove('compare')); C[s.i].classList.add('sorted'); lens.style.opacity = '0'; }
+        else { C.forEach(e => e.classList.remove('compare')); lens.style.opacity = '0'; }
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'compare') return `比较 a[${s.i}]=${s.vi} 与 a[${s.j}]=${s.vj} → ${s.vi > s.vj ? '需交换' : '顺序正确'}`; if (s.t === 'swap') return `a[${s.i}] > a[${s.j}]，交换`; if (s.t === 'sorted') return `a[${s.i}] 已归位`; return '排序完成 ✓'; }
+    };
+  }
+
+  function heapMod() {
+    const INS = [5, 3, 8, 1, 9, 2], TP = { 0: [300, 46], 1: [178, 122], 2: [424, 122], 3: [114, 196], 4: [244, 196], 5: [368, 196] }, AX0 = 92, AY = 278, AW = 52, AG = 8;
+    function gen() { const h = [], s = []; INS.forEach(v => { h.push(v); let i = h.length - 1; s.push({ t: 'add', i, v }); while (i > 0) { const p = (i - 1) >> 1; s.push({ t: 'cmp', i, p }); if (h[i] < h[p]) { [h[i], h[p]] = [h[p], h[i]]; s.push({ t: 'swap', i, p, vi: h[i], vp: h[p] }); i = p; } else { s.push({ t: 'rest' }); break; } } if (i === 0) s.push({ t: 'rest' }); }); s.push({ t: 'done' }); return s; }
+    let svg, tN, aC, vals;
+    return {
+      title: '堆 · 最小堆（树 ↔ 数组双视图）', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: '0 0 540 340' });
+        svg.appendChild(E('text', { class: 'dscap', x: 30, y: 34 })).textContent = '完全二叉树';
+        svg.appendChild(E('text', { class: 'dscap', x: AX0 - 26, y: AY + AW / 2, 'dominant-baseline': 'central', 'text-anchor': 'end' })).textContent = '数组';
+        aC = []; for (let i = 0; i < INS.length; i++) { const x = AX0 + i * (AW + AG); const r = E('rect', { class: 'box empty', x, y: AY, width: AW, height: AW, rx: 4 }); const t = E('text', { class: 'boxv', x: x + AW / 2, y: AY + AW / 2 }); svg.appendChild(r); svg.appendChild(t); svg.appendChild(E('text', { class: 'dsidx', x: x + AW / 2, y: AY + AW + 15 })).textContent = i; aC.push({ r, t }); }
+        svg.appendChild(E('text', { class: 'dscap', x: 300, y: 250, 'text-anchor': 'middle' })).textContent = '节点 i ↔ 数组[i] · 左子 2i+1 右子 2i+2';
+        tN = {}; vals = []; st.appendChild(svg);
+      },
+      _set(i, v) { vals[i] = v; if (tN[i]) tN[i].querySelector('text').textContent = v; const c = aC[i]; c.t.textContent = v; c.t.classList.remove('pop'); void c.t.offsetWidth; c.t.classList.add('pop'); },
+      apply(s) {
+        Object.values(tN).forEach(g => g.classList.remove('active', 'frontier')); aC.forEach(c => c.r.classList.remove('act', 'cmp'));
+        if (s.t === 'add') { const [x, y] = TP[s.i]; if (s.i > 0) { const p = (s.i - 1) >> 1, [px, py] = TP[p]; svg.insertBefore(E('line', { class: 'edge', x1: px, y1: py, x2: x, y2: y }), svg.firstChild); } const g = E('g', { class: 'node active', transform: `translate(${x},${y})` }); g.appendChild(E('circle', { r: 21 })); const t = E('text'); t.textContent = s.v; g.appendChild(t); svg.appendChild(g); tN[s.i] = g; aC[s.i].r.classList.remove('empty'); aC[s.i].r.classList.add('act'); this._set(s.i, s.v); }
+        else if (s.t === 'cmp') { tN[s.i].classList.add('frontier'); tN[s.p].classList.add('frontier'); aC[s.i].r.classList.add('cmp'); aC[s.p].r.classList.add('cmp'); }
+        else if (s.t === 'swap') { this._set(s.i, s.vi); this._set(s.p, s.vp); tN[s.i].classList.add('active'); tN[s.p].classList.add('active'); aC[s.i].r.classList.add('act'); aC[s.p].r.classList.add('act'); }
+        else if (s.t === 'done') { Object.values(tN).forEach(g => { g.classList.remove('active', 'frontier'); g.classList.add('visited'); }); aC.forEach(c => { c.r.classList.remove('act', 'cmp', 'empty'); c.r.classList.add('ok'); }); }
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'add') return `插入 ${s.v} → 放到末尾 数组[${s.i}]`; if (s.t === 'cmp') return `与父节点 数组[${s.p}] 比较`; if (s.t === 'swap') return `比父节点小 → 上浮交换（树、数组同步）`; if (s.t === 'rest') return `已满足堆序`; return '最小堆构建完成 · 根为最小值 ✓'; }
+    };
+  }
+
+  function hashMod() {
+    const SIZE = 7, KEYS = [5, 12, 8, 19, 3, 15], BX = 200, BY = 16, BW = 56, BH = 38, ROW = 44, GAP = 22, NW = 52;
+    const hash = k => k % SIZE;
+    function gen() { const buckets = Array.from({ length: SIZE }, () => []), s = []; KEYS.forEach(key => { const idx = hash(key); s.push({ t: 'hash', key, idx }); s.push({ t: 'probe', idx, key }); const pos = buckets[idx].length; buckets[idx].push(key); s.push({ t: 'place', idx, key, pos, collide: pos > 0 }); }); s.push({ t: 'done' }); return s; }
+    let svg, bEls, htext;
+    return {
+      title: '哈希表 · 链地址法（h(k) = k mod 7）', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: '0 0 600 340' });
+        const defs = E('defs'); const m = E('marker', { id: 'har', markerWidth: 8, markerHeight: 8, refX: 6, refY: 3, orient: 'auto' }); m.appendChild(E('path', { d: 'M0,0 L6,3 L0,6 Z', fill: '#9aa3ad' })); defs.appendChild(m); svg.appendChild(defs);
+        svg.appendChild(E('rect', { class: 'hashbox', x: 24, y: 142, width: 130, height: 54, rx: 3 }));
+        svg.appendChild(E('text', { class: 'dscap', x: 89, y: 130, 'text-anchor': 'middle' })).textContent = '哈希函数';
+        htext = E('text', { class: 'hashtext', x: 89, y: 170 }); htext.textContent = 'h(k)=k%7'; svg.appendChild(htext);
+        svg.appendChild(E('line', { class: 'chain', 'marker-end': 'url(#har)', x1: 156, y1: 170, x2: BX - 24, y2: 170 }));
+        svg.appendChild(E('text', { class: 'dscap', x: BX, y: BY - 1 })).textContent = '桶数组';
+        bEls = [];
+        for (let i = 0; i < SIZE; i++) { const y = BY + 8 + i * ROW; svg.appendChild(E('text', { class: 'dsidx', x: BX - 14, y: y + BH / 2 })).textContent = i; const r = E('rect', { class: 'box empty', x: BX, y, width: BW, height: BH, rx: 3 }); const t = E('text', { class: 'boxv', x: BX + BW / 2, y: y + BH / 2 }); svg.appendChild(r); svg.appendChild(t); bEls.push({ r, t, y }); }
+        st.appendChild(svg);
+      },
+      apply(s) {
+        if (s.t === 'hash') htext.textContent = `h(${s.key})=${s.key}%7=${s.idx}`;
+        else if (s.t === 'probe') { bEls.forEach(b => b.r.classList.remove('act')); bEls[s.idx].r.classList.add('act'); }
+        else if (s.t === 'place') { const b = bEls[s.idx]; b.r.classList.remove('act', 'empty'); b.r.classList.add('ok'); if (s.pos === 0) { b.t.textContent = s.key; b.t.classList.add('pop'); } else { const x = BX + s.pos * (NW + GAP), prevX = s.pos === 1 ? BX + BW : BX + (s.pos - 1) * (NW + GAP) + NW; svg.appendChild(E('line', { class: 'chain', 'marker-end': 'url(#har)', x1: prevX, y1: b.y + BH / 2, x2: x - 2, y2: b.y + BH / 2 })); svg.appendChild(E('rect', { class: 'box ok', x, y: b.y, width: NW, height: BH, rx: 3 })); const t = E('text', { class: 'boxv pop', x: x + NW / 2, y: b.y + BH / 2 }); t.textContent = s.key; svg.appendChild(t); } }
+        else if (s.t === 'done') bEls.forEach(b => b.r.classList.remove('act'));
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'hash') return `计算 h(${s.key}) = ${s.key} mod 7 = ${s.idx}`; if (s.t === 'probe') return `定位到桶 ${s.idx}`; if (s.t === 'place') return s.collide ? `冲突！用链地址法挂到桶 ${s.idx} 的链尾` : `存入桶 ${s.idx}`; return '插入完成 · 冲突键以链表挂在同一桶 ✓'; }
+    };
+  }
+
+  function queueMod() {
+    const N = 7, X0 = 56, Y = 130, W = 58, H = 54, GAP = 10;
+    const OPS = [{ e: 'A' }, { e: 'B' }, { e: 'C' }, { d: 1 }, { e: 'D' }, { d: 1 }, { e: 'E' }, { e: 'F' }];
+    function gen() { const s = []; let front = 0, rear = -1; OPS.forEach(op => { if (op.e) { rear++; s.push({ t: 'enq', slot: rear, val: op.e, front, rear }); } else { s.push({ t: 'deq', slot: front, front: front + 1, rear }); front++; } }); s.push({ t: 'done' }); return s; }
+    let svg, cells, fptr, rptr;
+    const cx = i => X0 + i * (W + GAP) + W / 2;
+    return {
+      title: '队列 · FIFO（先进先出）', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: '0 0 540 240' }); cells = [];
+        for (let i = 0; i < N; i++) { const x = X0 + i * (W + GAP); const r = E('rect', { class: 'box empty', x, y: Y, width: W, height: H, rx: 3 }); const t = E('text', { class: 'boxv', x: x + W / 2, y: Y + H / 2 }); svg.appendChild(r); svg.appendChild(t); svg.appendChild(E('text', { class: 'dsidx', x: x + W / 2, y: Y + H + 16 })).textContent = i; cells.push({ r, t }); }
+        fptr = E('text', { class: 'dsptr2', y: Y - 14, fill: '#59A14F' }); fptr.textContent = '▼ front'; fptr.style.opacity = '0';
+        rptr = E('text', { class: 'dsptr2', y: Y - 32, fill: '#F28E2B' }); rptr.textContent = '▼ rear'; rptr.style.opacity = '0';
+        svg.appendChild(fptr); svg.appendChild(rptr); st.appendChild(svg);
+      },
+      _mv(p, i) { if (i < 0 || i >= N) { p.style.opacity = '0'; return; } p.style.opacity = '1'; p.setAttribute('x', cx(i)); },
+      apply(s) {
+        cells.forEach(c => c.r.classList.remove('act'));
+        if (s.t === 'enq') { const c = cells[s.slot]; c.r.classList.remove('empty'); c.r.classList.add('act'); c.t.textContent = s.val; c.t.classList.remove('pop'); void c.t.offsetWidth; c.t.classList.add('pop'); setTimeout(() => { c.r.classList.remove('act'); c.r.classList.add('ok'); }, 300); this._mv(fptr, s.front); this._mv(rptr, s.rear); }
+        else if (s.t === 'deq') { const c = cells[s.slot]; c.r.classList.remove('ok'); c.r.classList.add('empty'); c.t.textContent = ''; this._mv(fptr, s.front <= s.rear ? s.front : -1); this._mv(rptr, s.rear); }
+        else if (s.t === 'done') cells.forEach(c => c.r.classList.remove('act'));
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'enq') return `enqueue(${s.val})：从队尾 rear=${s.rear} 入队`; if (s.t === 'deq') return `dequeue()：从队首 front 出队，front 右移`; return '演示完成 · front 右移留下空槽 → 实战用环形队列复用 ✓'; }
+    };
+  }
+
+  function stackMod() {
+    const X = 150, W = 120, H = 44, BASEY = 296, GAP = 5;
+    const OPS = [{ p: 1 }, { p: 2 }, { p: 3 }, { o: 1 }, { p: 4 }, { o: 1 }, { o: 1 }];
+    function gen() { const s = [], st = []; OPS.forEach(op => { if (op.p != null) { st.push(op.p); s.push({ t: 'push', idx: st.length - 1, val: op.p }); } else { const v = st.pop(); s.push({ t: 'pop', idx: st.length, val: v, size: st.length }); } }); s.push({ t: 'done' }); return s; }
+    let svg, slots, topptr;
+    const slotY = i => BASEY - (i + 1) * (H + GAP);
+    return {
+      title: '栈 · LIFO（后进先出）', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: '0 0 420 340' });
+        svg.appendChild(E('line', { x1: X - 12, y1: BASEY, x2: X + W + 12, y2: BASEY, stroke: '#b8b8b8', 'stroke-width': 1.6 }));
+        svg.appendChild(E('line', { x1: X - 12, y1: BASEY, x2: X - 12, y2: BASEY - 268, stroke: '#e2e2e2', 'stroke-width': 1.2 }));
+        svg.appendChild(E('line', { x1: X + W + 12, y1: BASEY, x2: X + W + 12, y2: BASEY - 268, stroke: '#e2e2e2', 'stroke-width': 1.2 }));
+        svg.appendChild(E('text', { class: 'dscap', x: X + W / 2, y: BASEY + 22, 'text-anchor': 'middle' })).textContent = '栈底 base';
+        topptr = E('text', { class: 'dsptr2', x: X + W + 50, fill: '#4E79A7' }); topptr.textContent = '← top'; topptr.style.opacity = '0'; topptr.style.textAnchor = 'start';
+        svg.appendChild(topptr); slots = []; st.appendChild(svg);
+      },
+      apply(s) {
+        if (s.t === 'push') { const y = slotY(s.idx); const r = E('rect', { class: 'box act', x: X, y, width: W, height: H, rx: 3 }); const t = E('text', { class: 'boxv pop', x: X + W / 2, y: y + H / 2 }); t.textContent = s.val; svg.appendChild(r); svg.appendChild(t); slots[s.idx] = { r, t }; setTimeout(() => { r.classList.remove('act'); r.classList.add('ok'); }, 300); topptr.style.opacity = '1'; topptr.setAttribute('y', y + H / 2 + 4); }
+        else if (s.t === 'pop') { const sl = slots[s.idx]; if (sl) { sl.r.classList.remove('ok'); sl.r.classList.add('act'); const rr = sl.r, tt = sl.t; setTimeout(() => { rr.remove(); tt.remove(); }, 240); slots[s.idx] = null; } if (s.size > 0) { topptr.style.opacity = '1'; topptr.setAttribute('y', slotY(s.size - 1) + H / 2 + 4); } else topptr.style.opacity = '0'; }
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'push') return `push(${s.val})：压入栈顶`; if (s.t === 'pop') return `pop() → ${s.val}：弹出栈顶元素`; return '演示完成 · 只在栈顶一端操作，后进先出 ✓'; }
+    };
+  }
+
+  function unionFindMod() {
+    const N = 7, X0 = 75, DX = 72, Y = 235, R = 22;
+    const cx = i => X0 + i * DX;
+    function gen() { const par = Array.from({ length: N }, (_, i) => i), s = []; const root = x => { while (par[x] !== x) x = par[x]; return x; }; const uni = (a, b) => { const ra = root(a), rb = root(b); if (ra === rb) return; par[ra] = rb; s.push({ t: 'union', a, b, ra, rb }); }; uni(0, 1); uni(1, 2); uni(2, 3); uni(3, 4); uni(5, 6); const path = []; let x = 0; while (par[x] !== x) { path.push(x); x = par[x]; } const rt = x; s.push({ t: 'findwalk', path: [...path, rt], root: rt }); path.forEach(n => { par[n] = rt; }); s.push({ t: 'compress', nodes: path, root: rt }); s.push({ t: 'done' }); return s; }
+    let svg, arcs, nodes;
+    const arcPath = (i, j) => { const xi = cx(i), xj = cx(j), mid = (xi + xj) / 2, h = 40 + Math.abs(i - j) * 18; return `M${xi},${Y - R} Q${mid},${Y - R - h} ${xj},${Y - R}`; };
+    return {
+      title: '并查集 · union + 路径压缩', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: '0 0 560 300' });
+        const defs = E('defs'); const m = E('marker', { id: 'uar', markerWidth: 8, markerHeight: 8, refX: 6, refY: 3, orient: 'auto' }); m.appendChild(E('path', { d: 'M0,0 L6,3 L0,6 Z', fill: '#9aa3ad' })); defs.appendChild(m); svg.appendChild(defs);
+        svg.appendChild(E('text', { class: 'dscap', x: 24, y: Y + 56 })).textContent = '每个箭头指向父节点；根节点无箭头';
+        arcs = {}; nodes = [];
+        for (let i = 0; i < N; i++) { const g = E('g', { class: 'node', transform: `translate(${cx(i)},${Y})` }); g.appendChild(E('circle', { r: R })); const t = E('text'); t.textContent = i; g.appendChild(t); svg.appendChild(g); nodes.push(g); }
+        st.appendChild(svg);
+      },
+      _arc(i, j, cls) { if (arcs[i]) arcs[i].remove(); const p = E('path', { class: 'edge' + (cls ? ' ' + cls : ''), 'marker-end': 'url(#uar)', d: arcPath(i, j) }); svg.insertBefore(p, nodes[0]); arcs[i] = p; },
+      apply(s) {
+        if (s.t === 'union') { this._arc(s.ra, s.rb); nodes[s.ra].classList.add('visited'); }
+        else if (s.t === 'findwalk') { nodes.forEach(g => g.classList.remove('active')); Object.values(arcs).forEach(a => a.classList.remove('on')); s.path.forEach(n => { nodes[n].classList.add('active'); if (arcs[n]) arcs[n].classList.add('on'); }); }
+        else if (s.t === 'compress') { s.nodes.forEach(n => { this._arc(n, s.root, 'on'); nodes[n].classList.remove('active'); nodes[n].classList.add('visited'); }); nodes[s.root].classList.add('visited'); }
+        else if (s.t === 'done') nodes.forEach(g => g.classList.remove('active'));
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'union') return `union(${s.a},${s.b})：把根 ${s.ra} 挂到根 ${s.rb} 下`; if (s.t === 'findwalk') return `find(0)：沿父指针走到根 ${s.root}（长链 ${s.path.join('→')}）`; if (s.t === 'compress') return `路径压缩：链上每个节点直接指向根 ${s.root} → 树被压扁`; return '完成 · 路径压缩后 find 近似 O(1) ✓'; }
+    };
+  }
+
+  function trieMod() {
+    const RT = [300, 44];
+    const NODES = { c: { p: 'root', pos: [180, 116], ch: 'c' }, d: { p: 'root', pos: [440, 116], ch: 'd' }, a: { p: 'c', pos: [180, 190], ch: 'a' }, o: { p: 'd', pos: [440, 190], ch: 'o' }, t: { p: 'a', pos: [92, 264], ch: 't' }, r: { p: 'a', pos: [180, 264], ch: 'r' }, b: { p: 'a', pos: [268, 264], ch: 'b' }, g: { p: 'o', pos: [440, 264], ch: 'g' } };
+    const INS = [{ w: 'cat', path: ['c', 'a', 't'], create: ['c', 'a', 't'], end: 't' }, { w: 'car', path: ['c', 'a', 'r'], create: ['r'], end: 'r' }, { w: 'cab', path: ['c', 'a', 'b'], create: ['b'], end: 'b' }, { w: 'do', path: ['d', 'o'], create: ['d', 'o'], end: 'o' }, { w: 'dog', path: ['d', 'o', 'g'], create: ['g'], end: 'g' }];
+    function gen() { const s = []; INS.forEach(ins => { s.push({ t: 'word', w: ins.w }); ins.path.forEach(id => s.push({ t: ins.create.includes(id) ? 'create' : 'visit', id })); s.push({ t: 'end', id: ins.end, w: ins.w }); }); s.push({ t: 'done' }); return s; }
+    let svg, nodeEls;
+    const pos = id => id === 'root' ? RT : NODES[id].pos;
+    return {
+      title: 'Trie 字典树 · 前缀共享', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: '0 0 600 320' });
+        const g = E('g', { class: 'node visited', transform: `translate(${RT[0]},${RT[1]})` }); g.appendChild(E('circle', { r: 20 })); const t = E('text'); t.textContent = '∅'; g.appendChild(t); svg.appendChild(g); nodeEls = { root: g }; st.appendChild(svg);
+      },
+      _ensure(id) { if (nodeEls[id]) return; const [x, y] = pos(id), pp = pos(NODES[id].p); svg.insertBefore(E('line', { class: 'edge', x1: pp[0], y1: pp[1], x2: x, y2: y }), svg.firstChild); const g = E('g', { class: 'node', transform: `translate(${x},${y})` }); g.appendChild(E('circle', { r: 20 })); const t = E('text'); t.textContent = NODES[id].ch; g.appendChild(t); svg.appendChild(g); nodeEls[id] = g; },
+      apply(s) {
+        Object.values(nodeEls).forEach(g => g.classList.remove('active', 'frontier'));
+        if (s.t === 'create') { this._ensure(s.id); nodeEls[s.id].classList.add('frontier'); }
+        else if (s.t === 'visit') nodeEls[s.id] && nodeEls[s.id].classList.add('active');
+        else if (s.t === 'end') { const g = nodeEls[s.id]; g.classList.add('visited'); g.querySelector('circle').setAttribute('stroke-width', '3'); }
+        else if (s.t === 'done') Object.values(nodeEls).forEach(g => g.classList.remove('active', 'frontier'));
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'word') return `插入单词 "${s.w}"`; if (s.t === 'create') return `新建节点 '${NODES[s.id].ch}'`; if (s.t === 'visit') return `复用已有前缀 '${NODES[s.id].ch}'`; if (s.t === 'end') return `标记 "${s.w}" 的结尾`; return '完成 · 公共前缀只存一次（cat/car/cab 共享 "ca"）✓'; }
+    };
+  }
+
+  function segTreeMod() {
+    const ARR = [2, 5, 1, 4];
+    const NODE = { root: { r: '[0,3]', pos: [310, 48] }, L: { r: '[0,1]', pos: [165, 130] }, R: { r: '[2,3]', pos: [455, 130] }, l0: { r: '[0,0]', pos: [95, 212], leaf: 0 }, l1: { r: '[1,1]', pos: [235, 212], leaf: 1 }, l2: { r: '[2,2]', pos: [385, 212], leaf: 2 }, l3: { r: '[3,3]', pos: [525, 212], leaf: 3 } };
+    const PAR = { L: 'root', R: 'root', l0: 'L', l1: 'L', l2: 'R', l3: 'R' };
+    function gen() { const s = []; ['l0', 'l1', 'l2', 'l3'].forEach(id => s.push({ t: 'leaf', id, v: ARR[NODE[id].leaf] })); s.push({ t: 'merge', id: 'L', from: ['l0', 'l1'], v: ARR[0] + ARR[1] }); s.push({ t: 'merge', id: 'R', from: ['l2', 'l3'], v: ARR[2] + ARR[3] }); s.push({ t: 'merge', id: 'root', from: ['L', 'R'], v: ARR[0] + ARR[1] + ARR[2] + ARR[3] }); s.push({ t: 'query', ids: ['l1', 'R'], v: ARR[1] + ARR[2] + ARR[3], range: '[1,3]' }); s.push({ t: 'done' }); return s; }
+    let svg, nodeEls, aCells;
+    return {
+      title: '线段树 · 区间和（数组 → 区间树）', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: '0 0 620 340' });
+        Object.keys(PAR).forEach(id => { const a = NODE[PAR[id]].pos, b = NODE[id].pos; svg.appendChild(E('line', { class: 'edge', x1: a[0], y1: a[1], x2: b[0], y2: b[1] })); });
+        nodeEls = {};
+        Object.entries(NODE).forEach(([id, n]) => { const [x, y] = n.pos; const r = E('rect', { class: 'box empty', x: x - 34, y: y - 22, width: 68, height: 44, rx: 3 }); svg.appendChild(r); svg.appendChild(E('text', { class: 'dsidx', x, y: y - 10 })).textContent = n.r; const t = E('text', { class: 'boxv', x, y: y + 8 }); svg.appendChild(t); nodeEls[id] = { r, t }; });
+        svg.appendChild(E('text', { class: 'dscap', x: 64, y: 290, 'text-anchor': 'end' })).textContent = '源数组';
+        aCells = []; ARR.forEach((v, i) => { const x = 80 + i * 64; const r = E('rect', { class: 'box', x, y: 268, width: 48, height: 40, rx: 3 }); const t = E('text', { class: 'boxv', x: x + 24, y: 288 }); t.textContent = v; svg.appendChild(r); svg.appendChild(t); svg.appendChild(E('text', { class: 'dsidx', x: x + 24, y: 322 })).textContent = i; aCells.push({ r, t }); });
+        st.appendChild(svg);
+      },
+      apply(s) {
+        Object.values(nodeEls).forEach(n => n.r.classList.remove('act', 'cmp')); aCells.forEach(c => c.r.classList.remove('cmp'));
+        if (s.t === 'leaf') { const n = nodeEls[s.id]; n.r.classList.remove('empty'); n.r.classList.add('act'); n.t.textContent = s.v; n.t.classList.add('pop'); aCells[NODE[s.id].leaf].r.classList.add('cmp'); }
+        else if (s.t === 'merge') { const n = nodeEls[s.id]; n.r.classList.remove('empty'); n.r.classList.add('act'); n.t.textContent = s.v; n.t.classList.remove('pop'); void n.t.offsetWidth; n.t.classList.add('pop'); s.from.forEach(f => nodeEls[f].r.classList.add('cmp')); }
+        else if (s.t === 'query') { Object.values(nodeEls).forEach(n => n.r.classList.add('ok')); s.ids.forEach(id => { nodeEls[id].r.classList.remove('ok'); nodeEls[id].r.classList.add('cmp'); }); }
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'leaf') return `叶子 ${NODE[s.id].r} ← 数组[${NODE[s.id].leaf}] = ${s.v}`; if (s.t === 'merge') return `内部节点 ${NODE[s.id].r} = 左右子之和 = ${s.v}`; if (s.t === 'query') return `查询 ${s.range}：拆成 ${s.ids.map(i => NODE[i].r).join(' + ')} = ${s.v}（O(log n) 个节点）`; return '完成 · 任意区间和由 O(log n) 个节点拼出 ✓'; }
+    };
+  }
+
+  function skipMod() {
+    const COLS = [{ id: 'H', lv: 3 }, { v: 1, lv: 1 }, { v: 3, lv: 1 }, { v: 5, lv: 2 }, { v: 7, lv: 1 }, { v: 9, lv: 3 }];
+    const X0 = 70, DX = 88, LV = 3, ROWY = [206, 146, 86], BW = 54, BH = 36, TARGET = 7;
+    const cx = i => X0 + i * DX, present = (i, l) => COLS[i].lv > l;
+    function gen() { const s = [{ t: 'build' }]; let i = 0, l = LV - 1; while (l >= 0) { s.push({ t: 'at', i, l }); let j = i + 1; while (j < COLS.length && !present(j, l)) j++; if (j < COLS.length && COLS[j].v !== undefined && COLS[j].v <= TARGET) { s.push({ t: 'cmp', i, j, l, res: COLS[j].v < TARGET ? 'right' : 'found' }); if (COLS[j].v === TARGET) { s.push({ t: 'found', j }); break; } i = j; } else { s.push({ t: 'down', i, l }); l--; } } s.push({ t: 'done' }); return s; }
+    let svg, cells;
+    return {
+      title: '跳表 · 多层索引加速查找（搜索 7）', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: '0 0 600 260' });
+        const defs = E('defs'); const m = E('marker', { id: 'sla', markerWidth: 7, markerHeight: 7, refX: 5, refY: 3, orient: 'auto' }); m.appendChild(E('path', { d: 'M0,0 L5,3 L0,6 Z', fill: '#9aa3ad' })); defs.appendChild(m); svg.appendChild(defs);
+        for (let l = 0; l < LV; l++) svg.appendChild(E('text', { class: 'dsidx', x: 26, y: ROWY[l] + BH / 2 })).textContent = 'L' + l;
+        for (let l = 0; l < LV; l++) { let prev = null; for (let i = 0; i < COLS.length; i++) { if (present(i, l)) { if (prev !== null) svg.appendChild(E('line', { class: 'edge', x1: cx(prev) + BW, y1: ROWY[l] + BH / 2, x2: cx(i), y2: ROWY[l] + BH / 2, 'marker-end': 'url(#sla)' })); prev = i; } } }
+        cells = {};
+        for (let i = 0; i < COLS.length; i++) for (let l = 0; l < LV; l++) { if (!present(i, l)) continue; const x = cx(i), y = ROWY[l]; const r = E('rect', { class: 'box', x, y, width: BW, height: BH, rx: 3 }); const t = E('text', { class: 'boxv', x: x + BW / 2, y: y + BH / 2 }); t.textContent = COLS[i].id ? 'head' : COLS[i].v; if (COLS[i].id) t.style.fontSize = '12px'; svg.appendChild(r); svg.appendChild(t); cells[i + '_' + l] = { r, t }; }
+        st.appendChild(svg);
+      },
+      _clear() { Object.values(cells).forEach(c => c.r.classList.remove('act', 'cmp')); },
+      apply(s) {
+        this._clear();
+        if (s.t === 'at') cells[s.i + '_' + s.l] && cells[s.i + '_' + s.l].r.classList.add('act');
+        else if (s.t === 'cmp') { cells[s.i + '_' + s.l] && cells[s.i + '_' + s.l].r.classList.add('act'); cells[s.j + '_' + s.l] && cells[s.j + '_' + s.l].r.classList.add('cmp'); }
+        else if (s.t === 'down') cells[s.i + '_' + s.l] && cells[s.i + '_' + s.l].r.classList.add('act');
+        else if (s.t === 'found') for (let l = 0; l < LV; l++) if (cells[s.j + '_' + l]) cells[s.j + '_' + l].r.classList.add('ok');
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'build') return '三层索引：L0 是完整链表，越高层越稀疏（"快速通道"）'; if (s.t === 'at') return `当前在 L${s.l}`; if (s.t === 'cmp') return s.res === 'found' ? `L${s.l} 右侧节点 = 7，命中！` : `L${s.l} 右侧节点 ≤ 7，向右前进`; if (s.t === 'down') return `右侧过大/不存在 → 下降到 L${s.l - 1}`; if (s.t === 'found') return '找到 7 · 高层索引让查找跳过大量节点，平均 O(log n) ✓'; return '完成 ✓'; }
+    };
+  }
+
+  function graphMod() {
+    const P = { 0: [70, 170], 1: [185, 85], 2: [185, 255], 3: [305, 55], 4: [305, 170], 5: [305, 280], 6: [440, 115], 7: [440, 235] };
+    const EDG = [[0, 1], [0, 2], [1, 3], [1, 4], [2, 4], [2, 5], [3, 6], [4, 6], [4, 7], [5, 7]];
+    const adj = {}; Object.keys(P).forEach(k => adj[k] = []); EDG.forEach(([a, b]) => { adj[a].push(b); adj[b].push(a); }); Object.values(adj).forEach(l => l.sort((x, y) => x - y));
+    function gen() { const q = [0], seen = new Set([0]), s = [{ t: 'enq', n: 0 }]; while (q.length) { const u = q.shift(); s.push({ t: 'visit', n: u }); for (const v of adj[u]) { s.push({ t: 'exam', a: u, b: v }); if (!seen.has(v)) { seen.add(v); q.push(v); s.push({ t: 'enq', n: v }); } } s.push({ t: 'settle', n: u }); } s.push({ t: 'done' }); return s; }
+    let nodes, edges, focus; const ekey = (a, b) => [Math.min(a, b), Math.max(a, b)].join('-');
+    return {
+      title: '图 · 广度优先搜索（BFS）', steps: gen(),
+      init(stage) {
+        stage.innerHTML = ''; const svg = E('svg', { viewBox: '0 0 520 340' });
+        focus = E('circle', { class: 'focusdot', r: 30 }); svg.appendChild(focus);
+        edges = {}; EDG.forEach(([a, b]) => { const ln = E('line', { class: 'edge', x1: P[a][0], y1: P[a][1], x2: P[b][0], y2: P[b][1] }); svg.appendChild(ln); edges[ekey(a, b)] = ln; });
+        nodes = {}; Object.entries(P).forEach(([id, [x, y]]) => { const g = E('g', { class: 'node', transform: `translate(${x},${y})` }); g.appendChild(E('circle', { r: 22 })); const t = E('text'); t.textContent = id; g.appendChild(t); svg.appendChild(g); nodes[id] = g; });
+        stage.appendChild(svg);
+      },
+      apply(s) {
+        if (s.t === 'enq') nodes[s.n].classList.add('frontier');
+        else if (s.t === 'visit') { nodes[s.n].classList.remove('frontier'); nodes[s.n].classList.add('active'); const [x, y] = P[s.n]; focus.setAttribute('cx', x); focus.setAttribute('cy', y); focus.style.opacity = '1'; }
+        else if (s.t === 'exam') { Object.values(edges).forEach(e => e.classList.remove('on')); edges[ekey(s.a, s.b)].classList.add('on'); }
+        else if (s.t === 'settle') { nodes[s.n].classList.remove('active'); nodes[s.n].classList.add('visited'); }
+        else if (s.t === 'done') { Object.values(edges).forEach(e => e.classList.remove('on')); focus.style.opacity = '0'; }
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'enq') return `节点 ${s.n} 入队（发现）`; if (s.t === 'visit') return `出队访问节点 ${s.n}，开始扩展邻居`; if (s.t === 'exam') return `检查边 ${s.a}—${s.b}`; if (s.t === 'settle') return `节点 ${s.n} 的邻居已全部入队 ✓`; return 'BFS 完成 · 所有可达节点已访问 ✓'; }
+    };
+  }
+
+  function treeMod() {
+    const P = { 5: [260, 55], 3: [140, 150], 8: [380, 150], 2: [75, 245], 4: [205, 245], 6: [315, 245], 9: [445, 245] };
+    const EDG = [[5, 3], [5, 8], [3, 2], [3, 4], [8, 6], [8, 9]]; const INORDER = [2, 3, 4, 5, 6, 8, 9];
+    let nodes, focus, seqG;
+    return {
+      title: '树 · 二叉搜索树中序遍历', steps: INORDER.map((n, i) => ({ t: 'visit', n, i })).concat([{ t: 'done' }]),
+      init(stage) {
+        stage.innerHTML = ''; const svg = E('svg', { viewBox: '0 0 520 340' });
+        focus = E('circle', { class: 'focusdot', r: 30 }); svg.appendChild(focus);
+        EDG.forEach(([a, b]) => svg.appendChild(E('line', { class: 'edge', x1: P[a][0], y1: P[a][1], x2: P[b][0], y2: P[b][1] })));
+        nodes = {}; Object.entries(P).forEach(([id, [x, y]]) => { const g = E('g', { class: 'node', transform: `translate(${x},${y})` }); g.appendChild(E('circle', { r: 22 })); const t = E('text'); t.textContent = id; g.appendChild(t); svg.appendChild(g); nodes[id] = g; });
+        const lbl = E('text', { x: 30, y: 312, class: 'dphdr' }); lbl.style.textAnchor = 'start'; lbl.textContent = '输出序列：'; svg.appendChild(lbl);
+        seqG = E('g'); svg.appendChild(seqG); stage.appendChild(svg);
+      },
+      apply(s) {
+        if (s.t === 'visit') { Object.values(nodes).forEach(g => g.classList.remove('active')); const g = nodes[s.n]; g.classList.add('active'); const [x, y] = P[s.n]; focus.setAttribute('cx', x); focus.setAttribute('cy', y); focus.style.opacity = '1'; setTimeout(() => { g.classList.remove('active'); g.classList.add('visited'); }, 260); const chip = E('text', { class: 'seqchip', x: 130 + s.i * 30, y: 312 }); chip.textContent = s.n; seqG.appendChild(chip); }
+        else { Object.values(nodes).forEach(g => g.classList.remove('active')); focus.style.opacity = '0'; }
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'visit') return `中序访问节点 ${s.n}（左→根→右），输出到序列`; return '中序遍历完成 · 输出即为升序：2 3 4 5 6 8 9 ✓'; }
+    };
+  }
+
+  function gridMod() {
+    const R = 6, C = 10, CS = 46, GAP = 6, start = [0, 0], end = [5, 9];
+    const wall = new Set(); for (let r = 0; r < 5; r++) wall.add(r + ',3'); for (let r = 1; r < 6; r++) wall.add(r + ',6');
+    const key = (r, c) => r + ',' + c;
+    function gen() {
+      const q = [start], seen = new Set([key(...start)]), par = {}, s = [{ t: 'mark', r: start[0], c: start[1], cls: 'start', tag: 'S' }, { t: 'mark', r: end[0], c: end[1], cls: 'end', tag: 'E' }];
+      while (q.length) { const [r, c] = q.shift(); if (!(r === start[0] && c === start[1])) s.push({ t: 'visit', r, c }); if (r === end[0] && c === end[1]) break; for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) { const nr = r + dr, nc = c + dc; if (nr < 0 || nc < 0 || nr >= R || nc >= C || wall.has(key(nr, nc)) || seen.has(key(nr, nc))) continue; seen.add(key(nr, nc)); par[key(nr, nc)] = key(r, c); q.push([nr, nc]); if (!(nr === end[0] && nc === end[1])) s.push({ t: 'frontier', r: nr, c: nc }); } }
+      let cur = key(...end); const path = []; while (cur && cur !== key(...start)) { path.push(cur); cur = par[cur]; } path.push(key(...start)); path.reverse();
+      path.forEach(k => { const [r, c] = k.split(',').map(Number); s.push({ t: 'path', r, c }); }); s.push({ t: 'done', len: path.length - 1 }); return s;
+    }
+    let cellAt;
+    return {
+      title: '网格 · BFS 最短路径', steps: gen(),
+      init(stage) {
+        stage.innerHTML = ''; const W = C * (CS + GAP) - GAP, H = R * (CS + GAP) - GAP; const svg = E('svg', { viewBox: `0 0 ${W} ${H}` }); svg.style.maxHeight = '300px';
+        cellAt = [];
+        for (let r = 0; r < R; r++) { cellAt[r] = []; for (let c = 0; c < C; c++) { const g = E('g'); const rect = E('rect', { class: 'gc' + (wall.has(key(r, c)) ? ' wall' : ''), x: c * (CS + GAP), y: r * (CS + GAP), width: CS, height: CS, rx: 3 }); g.appendChild(rect); const tg = E('text', { class: 'gtag', x: c * (CS + GAP) + CS / 2, y: r * (CS + GAP) + CS / 2 }); g.appendChild(tg); svg.appendChild(g); cellAt[r][c] = { rect, tg }; } }
+        stage.appendChild(svg);
+      },
+      apply(s) {
+        if (s.t === 'mark') { const c = cellAt[s.r][s.c]; c.rect.classList.add(s.cls); c.tg.textContent = s.tag; }
+        else if (s.t === 'frontier') cellAt[s.r][s.c].rect.classList.add('frontier');
+        else if (s.t === 'visit') { const c = cellAt[s.r][s.c]; c.rect.classList.remove('frontier'); c.rect.classList.add('visited'); }
+        else if (s.t === 'path') { const c = cellAt[s.r][s.c]; if (!c.rect.classList.contains('start') && !c.rect.classList.contains('end')) { c.rect.classList.remove('visited'); c.rect.classList.add('path'); } }
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'mark') return s.cls === 'start' ? '起点 S' : '终点 E · 目标'; if (s.t === 'frontier') return `(${s.r},${s.c}) 入队，扩展边界`; if (s.t === 'visit') return `访问 (${s.r},${s.c})`; if (s.t === 'path') return `回溯最短路径 (${s.r},${s.c})`; return `找到最短路径 · 共 ${s.len} 步 ✓`; }
+    };
+  }
+
+  function listMod() {
+    const VALS = [1, 2, 3, 4, 5], N = VALS.length, X0 = 50, DX = 105, Y = 150, NW = 64, NH = 48;
+    function gen() { const s = [{ t: 'init' }]; let prev = -1, curr = 0; while (curr < N) { s.push({ t: 'point', prev, curr, next: curr + 1 < N ? curr + 1 : -1 }); s.push({ t: 'flip', curr, prev }); s.push({ t: 'adv', prev: curr, curr: curr + 1 }); prev = curr; curr++; } s.push({ t: 'done' }); return s; }
+    let nodes, arrowsF, arrowsB, ptrP, ptrC, ptrN; const cx = i => X0 + i * DX + NW / 2;
+    return {
+      title: '链表 · 单链表反转（三指针）', steps: gen(),
+      init(stage) {
+        stage.innerHTML = ''; const svg = E('svg', { viewBox: '0 0 600 230' });
+        const defs = E('defs'); const mk = (id, color) => { const m = E('marker', { id, markerWidth: 8, markerHeight: 8, refX: 6, refY: 3, orient: 'auto' }); m.appendChild(E('path', { d: 'M0,0 L6,3 L0,6 Z', fill: color })); return m; }; defs.appendChild(mk('ah', '#9aa3ad')); svg.appendChild(defs);
+        arrowsF = []; arrowsB = [];
+        for (let i = 0; i < N - 1; i++) { const f = E('path', { class: 'llarrow', 'marker-end': 'url(#ah)', d: `M${X0 + i * DX + NW},${Y + NH / 2} L${X0 + (i + 1) * DX - 2},${Y + NH / 2}` }); const b = E('path', { class: 'llarrow hide', 'marker-end': 'url(#ah)', d: `M${X0 + (i + 1) * DX - 4},${Y + NH / 2 + 14} L${X0 + i * DX + NW - 2},${Y + NH / 2 + 14}` }); svg.appendChild(f); svg.appendChild(b); arrowsF.push(f); arrowsB.push(b); }
+        nodes = []; VALS.forEach((v, i) => { const g = E('g', { class: 'lln' }); g.appendChild(E('rect', { x: X0 + i * DX, y: Y, width: NW, height: NH, rx: 3 })); const t = E('text', { x: cx(i), y: Y + NH / 2 }); t.textContent = v; g.appendChild(t); svg.appendChild(g); nodes.push(g); });
+        ptrP = E('text', { class: 'llptr p', y: Y - 30 }); ptrP.textContent = 'prev'; ptrC = E('text', { class: 'llptr c', y: Y - 30 }); ptrC.textContent = 'curr'; ptrN = E('text', { class: 'llptr n', y: Y - 30 }); ptrN.textContent = 'next';
+        [ptrP, ptrC, ptrN].forEach(p => { p.style.opacity = '0'; svg.appendChild(p); }); stage.appendChild(svg);
+      },
+      _movePtr(p, idx) { if (idx < 0 || idx == null) { p.style.opacity = '0'; return; } p.style.opacity = '1'; p.setAttribute('x', cx(idx)); },
+      apply(s) {
+        if (s.t === 'init') return; nodes.forEach(g => g.classList.remove('prev', 'curr', 'nextn'));
+        if (s.t === 'point') { if (s.prev >= 0) nodes[s.prev].classList.add('prev'); nodes[s.curr].classList.add('curr'); if (s.next >= 0) nodes[s.next].classList.add('nextn'); this._movePtr(ptrP, s.prev); this._movePtr(ptrC, s.curr); this._movePtr(ptrN, s.next); }
+        else if (s.t === 'flip') { if (s.prev >= 0) { arrowsF[s.prev].classList.add('hide'); arrowsB[s.prev].classList.remove('hide'); nodes[s.prev].classList.add('prev'); } nodes[s.curr].classList.add('curr'); }
+        else if (s.t === 'adv') { if (s.prev >= 0) nodes[s.prev].classList.add('prev'); if (s.curr < nodes.length) nodes[s.curr].classList.add('curr'); this._movePtr(ptrP, s.prev); this._movePtr(ptrC, s.curr < nodes.length ? s.curr : -1); this._movePtr(ptrN, -1); }
+        else if (s.t === 'done') { nodes.forEach(g => g.classList.remove('curr', 'nextn')); nodes.forEach(g => g.classList.add('prev')); [ptrP, ptrC, ptrN].forEach(p => p.style.opacity = '0'); }
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'init') return '初始链表 1→2→3→4→5，准备三指针反转'; if (s.t === 'point') return `定位：prev=${s.prev < 0 ? 'null' : VALS[s.prev]}, curr=${VALS[s.curr]}, next=${s.next < 0 ? 'null' : VALS[s.next]}`; if (s.t === 'flip') return `反转指针：curr(${VALS[s.curr]}) 指向 prev`; if (s.t === 'adv') return `前进：prev 与 curr 各右移一位`; return '反转完成 · 链表变为 5→4→3→2→1 ✓'; }
+    };
+  }
+
+  function dpMod() {
+    const W1 = 'CAT', W2 = 'CAR', R = W1.length + 1, C = W2.length + 1, CS = 58, OX = 90, OY = 70;
+    function gen() {
+      const dp = Array.from({ length: R }, () => Array(C).fill(0)), s = [];
+      for (let j = 0; j < C; j++) { dp[0][j] = j; s.push({ t: 'base', i: 0, j, v: j }); }
+      for (let i = 1; i < R; i++) { dp[i][0] = i; s.push({ t: 'base', i, j: 0, v: i }); }
+      for (let i = 1; i < R; i++) for (let j = 1; j < C; j++) { const match = W1[i - 1] === W2[j - 1]; dp[i][j] = match ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]); s.push({ t: 'focus', i, j, v: dp[i][j], match, deps: [[i - 1, j], [i, j - 1], [i - 1, j - 1]] }); }
+      s.push({ t: 'done', i: R - 1, j: C - 1, v: dp[R - 1][C - 1] }); return s;
+    }
+    let cellAt;
+    return {
+      title: 'DP 表 · 编辑距离（"CAT" → "CAR"）', steps: gen(),
+      init(stage) {
+        stage.innerHTML = ''; const svg = E('svg', { viewBox: `0 0 ${OX + C * CS + 20} ${OY + R * CS + 20}` }); svg.style.maxHeight = '320px';
+        for (let j = 0; j < C; j++) { const t = E('text', { class: 'dphdr', x: OX + j * CS + CS / 2, y: OY - 22 }); t.textContent = j === 0 ? 'ε' : W2[j - 1]; svg.appendChild(t); }
+        for (let i = 0; i < R; i++) { const t = E('text', { class: 'dphdr', x: OX - 26, y: OY + i * CS + CS / 2 }); t.textContent = i === 0 ? 'ε' : W1[i - 1]; svg.appendChild(t); }
+        cellAt = [];
+        for (let i = 0; i < R; i++) { cellAt[i] = []; for (let j = 0; j < C; j++) { const g = E('g'); const rect = E('rect', { class: 'dpc', x: OX + j * CS, y: OY + i * CS, width: CS - 6, height: CS - 6, rx: 3 }); const t = E('text', { class: 'dpv', x: OX + j * CS + (CS - 6) / 2, y: OY + i * CS + (CS - 6) / 2 }); g.appendChild(rect); g.appendChild(t); svg.appendChild(g); cellAt[i][j] = { rect, t }; } }
+        stage.appendChild(svg);
+      },
+      _clearActive() { cellAt.forEach(row => row.forEach(c => c.rect.classList.remove('active', 'dep'))); },
+      apply(s) {
+        if (s.t === 'base') { const c = cellAt[s.i][s.j]; c.t.textContent = s.v; c.t.classList.add('pop'); }
+        else if (s.t === 'focus') { this._clearActive(); s.deps.forEach(([r, c]) => cellAt[r][c].rect.classList.add('dep')); const c = cellAt[s.i][s.j]; c.rect.classList.add('active'); c.t.textContent = s.v; c.t.classList.remove('pop'); void c.t.offsetWidth; c.t.classList.add('pop'); }
+        else if (s.t === 'done') { this._clearActive(); cellAt[s.i][s.j].rect.classList.add('ans'); }
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'base') return `边界：dp[${s.i}][${s.j}] = ${s.v}`; if (s.t === 'focus') return s.match ? `'${W1[s.i - 1]}'='${W2[s.j - 1]}' 字符相同 → 取左上对角 = ${s.v}` : `字符不同 → 1 + min(上,左,左上) = ${s.v}`; return `编辑距离 = ${s.v}（右下角即为答案）✓`; }
+    };
+  }
+
+  // 共享：树视图（节点按 id 复用并滑动，边用 path 的 d 过渡平滑变形）
+  function treeView(svg, makeNode) {
+    const eG = E('g'), nG = E('g'); svg.appendChild(eG); svg.appendChild(nG);
+    const nEls = {}, eEls = {};
+    function frame(nodes, edges, hl) {
+      hl = hl || []; const ns = new Set(), es = new Set();
+      edges.forEach(e => { es.add(String(e.id)); let p = eEls[e.id]; if (!p) { p = E('path', { class: 'tedge' }); eG.appendChild(p); eEls[e.id] = p; } p.setAttribute('d', `M${e.x1},${e.y1} L${e.x2},${e.y2}`); p.classList.toggle('on', !!e.on); });
+      Object.keys(eEls).forEach(id => { if (!es.has(id)) { eEls[id].remove(); delete eEls[id]; } });
+      nodes.forEach(n => { ns.add(String(n.id)); let o = nEls[n.id]; if (!o) { o = makeNode(n); nG.appendChild(o.g); nEls[n.id] = o; } o.g.setAttribute('transform', `translate(${n.x},${n.y})`); if (o.set) o.set(n); o.g.classList.toggle('active', hl.includes(n.id)); o.g.classList.toggle('visited', !!n.done); });
+      Object.keys(nEls).forEach(id => { if (!ns.has(id)) { nEls[id].g.remove(); delete nEls[id]; } });
+    }
+    return { frame };
+  }
+
+  /* ── AVL 树 · 旋转再平衡 ── */
+  function avlMod() {
+    const INS = [10, 20, 30, 40, 50, 25], X0 = 70, XS = 74, Y0 = 46, YS = 76;
+    function gen() {
+      let root = null; const steps = [];
+      const h = n => n ? n.h : 0, bf = n => n ? h(n.l) - h(n.r) : 0;
+      const updAll = n => { if (!n) return 0; n.h = 1 + Math.max(updAll(n.l), updAll(n.r)); return n.h; };
+      function rotL(x) { const y = x.r; x.r = y.l; if (y.l) y.l.p = x; y.p = x.p; if (!x.p) root = y; else if (x.p.l === x) x.p.l = y; else x.p.r = y; y.l = x; x.p = y; }
+      function rotR(y) { const x = y.l; y.l = x.r; if (x.r) x.r.p = y; x.p = y.p; if (!y.p) root = x; else if (y.p.l === y) y.p.l = x; else y.p.r = x; x.r = y; y.p = x; }
+      function lowest() { let r = null; (function go(n) { if (!n) return; go(n.l); go(n.r); if (!r && Math.abs(bf(n)) > 1) r = n; })(root); return r; }
+      function frame(hl, note, done) {
+        updAll(root); const nodes = [], edges = []; let idx = 0;
+        (function lay(n, d) { if (!n) return; lay(n.l, d + 1); n._x = X0 + idx * XS; n._y = Y0 + d * YS; idx++; lay(n.r, d + 1); })(root, 0);
+        (function w(n) { if (!n) return; nodes.push({ id: n.key, x: n._x, y: n._y, key: n.key, done: !!done }); if (n.l) { edges.push({ id: 'e' + n.l.key, x1: n._x, y1: n._y, x2: n.l._x, y2: n.l._y }); w(n.l); } if (n.r) { edges.push({ id: 'e' + n.r.key, x1: n._x, y1: n._y, x2: n.r._x, y2: n.r._y }); w(n.r); } })(root);
+        steps.push({ t: 'frame', nodes, edges, hl: hl || [], note });
+      }
+      INS.forEach(k => {
+        let cur = root, par = null, dir = 0;
+        while (cur) { par = cur; if (k < cur.key) { cur = cur.l; dir = -1; } else { cur = cur.r; dir = 1; } }
+        const node = { key: k, l: null, r: null, h: 1, p: par };
+        if (!par) root = node; else if (dir < 0) par.l = node; else par.r = node;
+        frame([k], `插入 ${k}（先按 BST 放入，可能失衡）`);
+        updAll(root); const z = lowest();
+        if (z) { const b = bf(z); let kind; if (b > 1) { if (bf(z.l) < 0) { rotL(z.l); kind = '左-右双旋 (LR)'; } else kind = '右旋 (LL)'; rotR(z); } else { if (bf(z.r) > 0) { rotR(z.r); kind = '右-左双旋 (RL)'; } else kind = '左旋 (RR)'; rotL(z); } frame([root.key], `失衡于 ${z.key} → ${kind}，旋转重新平衡`); }
+      });
+      const last = steps[steps.length - 1]; steps.push({ t: 'done', nodes: last.nodes.map(n => ({ ...n, done: true })), edges: last.edges, hl: [], note: 'AVL 构建完成 · 任意节点左右子树高度差 ≤ 1 ✓' });
+      return steps;
+    }
+    let tv;
+    return {
+      title: 'AVL 树 · 旋转再平衡', steps: gen(),
+      init(st) { st.innerHTML = ''; const svg = E('svg', { viewBox: '0 0 560 340' }); tv = treeView(svg, () => { const g = E('g', { class: 'node avlnode' }); g.appendChild(E('circle', { r: 20 })); const t = E('text'); g.appendChild(t); return { g, set: o => { t.textContent = o.key; } }; }); st.appendChild(svg); },
+      apply(s) { if (s.nodes) tv.frame(s.nodes, s.edges, s.hl); },
+      reset() { this.init(this._h); }, narrate(s) { return s.note; }
+    };
+  }
+
+  /* ── B 树 · 2-3 树节点分裂 ── */
+  function btreeMod() {
+    const INS = [10, 20, 30, 40, 50, 60], X0 = 70, XS = 92, Y0 = 50, YS = 92, KW = 30, KH = 36;
+    let uid = 0;
+    function gen() {
+      let root = { id: ++uid, keys: [10], children: [] }; const INS2 = [20, 30, 40, 50, 60]; const steps = [];
+      function lay() { let slot = 0; (function go(n, d) { if (!n.children.length) { n._x = X0 + slot * XS; slot++; } else { n.children.forEach(c => go(c, d + 1)); n._x = (n.children[0]._x + n.children[n.children.length - 1]._x) / 2; } n._y = Y0 + d * YS; })(root, 0); }
+      function frame(hl, note, done) {
+        lay(); const nodes = [], edges = [];
+        (function w(n) { nodes.push({ id: n.id, x: n._x, y: n._y, keys: n.keys.slice(), done: !!done }); n.children.forEach(c => { edges.push({ id: 'e' + c.id, x1: n._x, y1: n._y, x2: c._x, y2: c._y }); w(c); }); })(root);
+        steps.push({ t: 'frame', nodes, edges, hl: hl || [], note });
+      }
+      function findLeaf(n, k, path) { path.push(n); if (!n.children.length) return; let i = 0; while (i < n.keys.length && k > n.keys[i]) i++; findLeaf(n.children[i], k, path); }
+      function insert(k) {
+        const path = []; findLeaf(root, k, path); let leaf = path[path.length - 1];
+        leaf.keys.push(k); leaf.keys.sort((a, b) => a - b);
+        frame([leaf.id], `插入 ${k} 到叶子`);
+        // split upward
+        let pi = path.length - 1;
+        while (path[pi].keys.length === 3) {
+          const n = path[pi], mid = n.keys[1];
+          const left = n, right = { id: ++uid, keys: [n.keys[2]], children: [] };
+          if (n.children.length) { right.children = n.children.slice(2); n.children = n.children.slice(0, 2); }
+          left.keys = [n.keys[0]];
+          if (pi === 0) { root = { id: ++uid, keys: [mid], children: [left, right] }; frame([root.id], `根分裂：${mid} 上升为新根`); break; }
+          const par = path[pi - 1]; const ci = par.children.indexOf(n);
+          par.keys.push(mid); par.keys.sort((a, b) => a - b); par.children.splice(ci + 1, 0, right);
+          frame([par.id], `节点溢出 → 分裂，中键 ${mid} 上移`); pi--;
+        }
+      }
+      frame([root.id], '初始：插入 10'); INS2.forEach(insert);
+      const last = steps[steps.length - 1]; steps.push({ t: 'done', nodes: last.nodes.map(n => ({ ...n, done: true })), edges: last.edges, hl: [], note: '2-3 树构建完成 · 所有叶子等深、每节点 1~2 键 ✓' });
+      return steps;
+    }
+    let tv;
+    function makeBT() {
+      const g = E('g', { class: 'btnode' }); const inner = E('g'); g.appendChild(inner);
+      return { g, set: o => { inner.innerHTML = ''; const w = o.keys.length * KW; o.keys.forEach((k, i) => { const x = -w / 2 + i * KW; inner.appendChild(E('rect', { class: 'box', x, y: -KH / 2, width: KW, height: KH, rx: 3 })); const t = E('text', { class: 'boxv', x: x + KW / 2, y: 0, 'dominant-baseline': 'central' }); t.style.fontSize = '13px'; t.textContent = k; inner.appendChild(t); }); } };
+    }
+    return {
+      title: 'B 树 · 2-3 树节点分裂', steps: gen(),
+      init(st) { st.innerHTML = ''; const svg = E('svg', { viewBox: '0 0 560 340' }); tv = treeView(svg, makeBT); st.appendChild(svg); },
+      apply(s) { if (s.nodes) tv.frame(s.nodes, s.edges, s.hl); },
+      reset() { this.init(this._h); }, narrate(s) { return s.note; }
+    };
+  }
+
+  /* ── 哈夫曼树 · 贪心合并 ── */
+  function huffMod() {
+    const FREQ = [['A', 5], ['B', 9], ['C', 12], ['D', 13], ['E', 16], ['F', 45]];
+    const X0 = 70, XS = 84, Y0 = 270, YS = 62;
+    function gen() {
+      let uid = 0, pool = FREQ.map(([c, f]) => ({ id: ++uid, ch: c, f, l: null, r: null }));
+      const merges = [];
+      const work = pool.slice();
+      while (work.length > 1) { work.sort((a, b) => a.f - b.f); const a = work.shift(), b = work.shift(); const p = { id: ++uid, ch: null, f: a.f + b.f, l: a, r: b }; merges.push(p); work.push(p); }
+      const root = work[0];
+      // layout final tree: in-order x for leaves, depth from root
+      let idx = 0, maxD = 0; (function lay(n, d) { if (!n) return; maxD = Math.max(maxD, d); lay(n.l, d + 1); if (!n.l && !n.r) { n._x = X0 + idx * XS; idx++; } lay(n.r, d + 1); if (n.l) n._x = (n.l._x + n.r._x) / 2; })(root, 0);
+      (function setY(n, d) { if (!n) return; n._d = d; setY(n.l, d + 1); setY(n.r, d + 1); })(root, 0);
+      const posY = n => Y0 - (maxD - n._d) * YS;
+      const steps = [], vis = new Set(), vEdge = [];
+      function frame(hl, note, done) {
+        const nodes = [], edges = [];
+        (function w(n) { if (!n) return; if (vis.has(n.id)) { nodes.push({ id: n.id, x: n._x, y: posY(n), ch: n.ch, f: n.f, done: !!done }); [n.l, n.r].forEach(c => { if (c && vis.has(c.id)) { edges.push({ id: 'e' + c.id, x1: n._x, y1: posY(n), x2: c._x, y2: posY(c) }); } }); } w(n.l); w(n.r); })(root);
+        steps.push({ t: 'frame', nodes, edges, hl: hl || [], note });
+      }
+      pool.forEach(n => vis.add(n.id)); frame([], '初始：每个字符是一棵单节点树（按频率）');
+      merges.forEach(p => { vis.add(p.id); frame([p.id, p.l.id, p.r.id], `合并两个最小频率 ${p.l.f}+${p.r.f}=${p.f}`); });
+      const last = steps[steps.length - 1]; steps.push({ t: 'done', nodes: last.nodes.map(n => ({ ...n, done: true })), edges: last.edges, hl: [], note: '哈夫曼树完成 · 频率越高离根越近，编码越短 ✓' });
+      return steps;
+    }
+    let tv;
+    function makeHF() { const g = E('g', { class: 'node hfnode' }); g.appendChild(E('circle', { r: 19 })); const t = E('text'); g.appendChild(t); const sub = E('text', { class: 'nsub', y: 30 }); g.appendChild(sub); return { g, set: o => { t.textContent = o.ch || o.f; t.style.fontSize = o.ch ? '14px' : '12px'; sub.textContent = o.ch ? o.f : ''; } }; }
+    return {
+      title: '哈夫曼树 · 贪心合并最小频率', steps: gen(),
+      init(st) { st.innerHTML = ''; const svg = E('svg', { viewBox: '0 0 600 320' }); tv = treeView(svg, makeHF); st.appendChild(svg); },
+      apply(s) { if (s.nodes) tv.frame(s.nodes, s.edges, s.hl); },
+      reset() { this.init(this._h); }, narrate(s) { return s.note; }
+    };
+  }
+
+  /* ── 单调栈 · 下一个更大元素 ── */
+  function monoMod() {
+    const ARR = [2, 1, 5, 6, 3, 8], N = ARR.length, X0 = 60, AW = 60, GAP = 12, AY = 70, SY = 220, SW = 56;
+    function gen() {
+      const s = [], st = [], ans = Array(N).fill(-1);
+      for (let i = 0; i < N; i++) {
+        s.push({ t: 'cur', i, stack: st.slice() });
+        while (st.length && ARR[st[st.length - 1]] < ARR[i]) { const j = st.pop(); ans[j] = ARR[i]; s.push({ t: 'pop', i, j, stack: st.slice(), ans: ans.slice() }); }
+        st.push(i); s.push({ t: 'push', i, stack: st.slice(), ans: ans.slice() });
+      }
+      s.push({ t: 'done', stack: st.slice(), ans: ans.slice(), note: '完成 · 单调递减栈一次遍历求出每个元素的「下一个更大」✓' });
+      return s;
+    }
+    let svg, aCells, ansEls, stackG;
+    const ax = i => X0 + i * (AW + GAP);
+    return {
+      title: '单调栈 · 下一个更大元素', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: '0 0 520 300' });
+        svg.appendChild(E('text', { class: 'dscap', x: 12, y: AY + AW / 2, 'dominant-baseline': 'central' })).textContent = '数组';
+        svg.appendChild(E('text', { class: 'dscap', x: 12, y: SY + 18, 'dominant-baseline': 'central' })).textContent = '栈';
+        aCells = []; ansEls = [];
+        for (let i = 0; i < N; i++) { const x = ax(i); const r = E('rect', { class: 'box', x, y: AY, width: AW, height: 44, rx: 3 }); const t = E('text', { class: 'boxv', x: x + AW / 2, y: AY + 22 }); t.textContent = ARR[i]; svg.appendChild(r); svg.appendChild(t); svg.appendChild(E('text', { class: 'dsidx', x: x + AW / 2, y: AY + 60 })).textContent = i; const an = E('text', { class: 'nsub', x: x + AW / 2, y: AY + 80, fill: '#c47a1f' }); svg.appendChild(an); aCells.push(r); ansEls.push(an); }
+        svg.appendChild(E('text', { class: 'dscap', x: X0, y: AY + 96, 'text-anchor': 'start', 'font-style': 'italic' })).textContent = 'NGE →';
+        stackG = E('g'); svg.appendChild(stackG); st.appendChild(svg);
+      },
+      _draw(stack, curI, ans) {
+        aCells.forEach((r, i) => { r.classList.remove('act', 'cmp', 'ok'); if (ans && ans[i] !== -1) r.classList.add('ok'); });
+        if (curI != null && curI < N) aCells[curI].classList.add('act');
+        stack.forEach(i => aCells[i].classList.add('cmp'));
+        if (ans) ansEls.forEach((e, i) => e.textContent = ans[i] !== -1 ? ans[i] : '');
+        stackG.innerHTML = '';
+        stack.forEach((idx, k) => { const x = X0 + k * (SW + 8); const r = E('rect', { class: 'box cmp', x, y: SY, width: SW, height: 40, rx: 3 }); const t = E('text', { class: 'boxv', x: x + SW / 2, y: SY + 20 }); t.textContent = ARR[idx]; stackG.appendChild(r); stackG.appendChild(t); stackG.appendChild(E('text', { class: 'nsub', x: x + SW / 2, y: SY + 54 })).textContent = 'i=' + idx; });
+      },
+      apply(s) { this._draw(s.stack, s.t === 'cur' ? s.i : (s.t === 'push' ? s.i : null), s.ans); },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'cur') return `当前元素 a[${s.i}]=${ARR[s.i]}`; if (s.t === 'pop') return `栈顶 a[${s.j}]=${ARR[s.j]} < ${ARR[s.i]} → 弹出，它的下一个更大 = ${ARR[s.i]}`; if (s.t === 'push') return `a[${s.i}]=${ARR[s.i]} 入栈（保持栈内递减）`; return s.note; }
+    };
+  }
+
+  /* ── 网格 DP · 最小路径和 + 回溯 ── */
+  function gridDpMod() {
+    const G = [[3, 1, 2, 4], [2, 1, 5, 1], [4, 2, 1, 3], [1, 5, 2, 2]], R = 4, C = 4, CS = 64, GAP = 8, OX = 40, OY = 30;
+    function gen() {
+      const dp = Array.from({ length: R }, () => Array(C).fill(0)), from = Array.from({ length: R }, () => Array(C).fill(null)), s = [];
+      for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) {
+        let deps = [];
+        if (i === 0 && j === 0) dp[i][j] = G[i][j];
+        else if (i === 0) { dp[i][j] = dp[i][j - 1] + G[i][j]; from[i][j] = [i, j - 1]; deps = [[i, j - 1]]; }
+        else if (j === 0) { dp[i][j] = dp[i - 1][j] + G[i][j]; from[i][j] = [i - 1, j]; deps = [[i - 1, j]]; }
+        else { if (dp[i - 1][j] < dp[i][j - 1]) { dp[i][j] = dp[i - 1][j] + G[i][j]; from[i][j] = [i - 1, j]; } else { dp[i][j] = dp[i][j - 1] + G[i][j]; from[i][j] = [i, j - 1]; } deps = [[i - 1, j], [i, j - 1]]; }
+        s.push({ t: 'fill', i, j, v: dp[i][j], deps });
+      }
+      const path = []; let cur = [R - 1, C - 1]; while (cur) { path.push(cur); cur = from[cur[0]][cur[1]]; } path.reverse();
+      path.forEach(([i, j]) => s.push({ t: 'path', i, j }));
+      s.push({ t: 'done', v: dp[R - 1][C - 1], note: `最小路径和 = ${dp[R - 1][C - 1]} · 先自左上递推 dp，再沿来源回溯最优路径 ✓` });
+      return s;
+    }
+    let svg, cells;
+    return {
+      title: '网格 DP · 最小路径和 + 路径回溯', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: `0 0 ${OX + C * (CS + GAP)} ${OY + R * (CS + GAP) + 10}` }); svg.style.maxHeight = '320px';
+        cells = [];
+        for (let i = 0; i < R; i++) { cells[i] = []; for (let j = 0; j < C; j++) { const x = OX + j * (CS + GAP), y = OY + i * (CS + GAP); const r = E('rect', { class: 'box empty', x, y, width: CS, height: CS, rx: 3 }); svg.appendChild(r); const gv = E('text', { class: 'dsidx', x: x + CS - 11, y: y + 12 }); gv.textContent = G[i][j]; svg.appendChild(gv); const t = E('text', { class: 'boxv', x: x + CS / 2, y: y + CS / 2 + 4 }); t.style.fontSize = '18px'; svg.appendChild(t); cells[i][j] = { r, t }; } }
+        st.appendChild(svg);
+      },
+      apply(s) {
+        cells.forEach(row => row.forEach(c => c.r.classList.remove('act', 'cmp')));
+        if (s.t === 'fill') { (s.deps || []).forEach(([r, c]) => cells[r][c].r.classList.add('cmp')); const c = cells[s.i][s.j]; c.r.classList.remove('empty'); c.r.classList.add('act'); c.t.textContent = s.v; c.t.classList.remove('pop'); void c.t.offsetWidth; c.t.classList.add('pop'); }
+        else if (s.t === 'path') { const c = cells[s.i][s.j]; c.r.classList.remove('empty'); c.r.classList.add('ok'); }
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'fill') return s.i === 0 && s.j === 0 ? `起点 dp[0][0] = ${s.v}` : `dp[${s.i}][${s.j}] = ${s.v}（格值 + 上/左较小者）`; if (s.t === 'path') return `回溯最优路径 (${s.i},${s.j})`; return s.note; }
+    };
+  }
+
+  /* ── 二分查找 ── */
+  function binMod() {
+    const ARR = [1, 3, 5, 7, 9, 11, 13, 15, 17], N = ARR.length, T = 13, X0 = 50, W = 50, GAP = 6, Y = 120;
+    function gen() {
+      const s = []; let lo = 0, hi = N - 1;
+      while (lo <= hi) { const mid = (lo + hi) >> 1; s.push({ t: 'probe', lo, hi, mid }); if (ARR[mid] === T) { s.push({ t: 'found', mid }); break; } if (ARR[mid] < T) { s.push({ t: 'right', lo, hi, mid }); lo = mid + 1; } else { s.push({ t: 'left', lo, hi, mid }); hi = mid - 1; } }
+      s.push({ t: 'done', note: `找到 ${T} · 每次砍掉一半，O(log n) ✓` }); return s;
+    }
+    let svg, cells, plo, phi, pmid; const cx = i => X0 + i * (W + GAP) + W / 2;
+    return {
+      title: '二分查找 · 有序数组（找 13）', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: '0 0 540 220' }); cells = [];
+        for (let i = 0; i < N; i++) { const x = X0 + i * (W + GAP); const r = E('rect', { class: 'box', x, y: Y, width: W, height: 48, rx: 3 }); const t = E('text', { class: 'boxv', x: x + W / 2, y: Y + 24 }); t.textContent = ARR[i]; svg.appendChild(r); svg.appendChild(t); svg.appendChild(E('text', { class: 'dsidx', x: x + W / 2, y: Y + 64 })).textContent = i; cells.push(r); }
+        plo = E('text', { class: 'dsptr2', y: Y - 14, fill: '#3c7a36' }); plo.textContent = '▼ lo';
+        phi = E('text', { class: 'dsptr2', y: Y - 14, fill: '#c47a1f' }); phi.textContent = '▼ hi';
+        pmid = E('text', { class: 'dsptr2', y: Y - 32, fill: '#4E79A7' }); pmid.textContent = '▼ mid';
+        [plo, phi, pmid].forEach(p => { p.style.opacity = '0'; svg.appendChild(p); }); st.appendChild(svg);
+      },
+      apply(s) {
+        cells.forEach((r, i) => { r.classList.remove('act', 'cmp'); });
+        if (s.t === 'found') { cells[s.mid].classList.add('ok'); [plo, phi, pmid].forEach(p => p.style.opacity = '0'); pmid.style.opacity = '1'; pmid.setAttribute('x', cx(s.mid)); return; }
+        if (s.lo != null) { cells.forEach((r, i) => r.classList.toggle('dim', i < s.lo || i > s.hi)); plo.style.opacity = '1'; plo.setAttribute('x', cx(s.lo)); phi.style.opacity = '1'; phi.setAttribute('x', cx(s.hi)); }
+        if (s.mid != null && s.t === 'probe') { cells[s.mid].classList.add('act'); pmid.style.opacity = '1'; pmid.setAttribute('x', cx(s.mid)); }
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'probe') return `mid=${s.mid}, a[${s.mid}]=${ARR[s.mid]}，与 ${T} 比较`; if (s.t === 'right') return `a[${s.mid}] < ${T} → 丢弃左半，lo=${s.mid + 1}`; if (s.t === 'left') return `a[${s.mid}] > ${T} → 丢弃右半，hi=${s.mid - 1}`; if (s.t === 'found') return `a[${s.mid}] = ${T}，命中！`; return s.note; }
+    };
+  }
+
+  /* ── 滑动窗口 · 最长无重复子串 ── */
+  function slideMod() {
+    const STR = 'abcabcbb', N = STR.length, X0 = 80, W = 56, GAP = 8, Y = 120;
+    function gen() {
+      const s = [], pos = {}; let l = 0, best = 0, bl = 0, br = 0;
+      for (let r = 0; r < N; r++) {
+        if (pos[STR[r]] !== undefined && pos[STR[r]] >= l) { const nl = pos[STR[r]] + 1; s.push({ t: 'shrink', l: nl, r, ch: STR[r] }); l = nl; }
+        pos[STR[r]] = r; s.push({ t: 'expand', l, r }); if (r - l + 1 > best) { best = r - l + 1; bl = l; br = r; s.push({ t: 'best', l, r, best }); }
+      }
+      s.push({ t: 'done', bl, br, best, note: `最长无重复子串 = "${STR.slice(bl, br + 1)}"，长度 ${best} ✓` }); return s;
+    }
+    let svg, cells, pl, pr; const cx = i => X0 + i * (W + GAP) + W / 2;
+    return {
+      title: '滑动窗口 · 最长无重复子串', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: '0 0 560 220' }); cells = [];
+        for (let i = 0; i < N; i++) { const x = X0 + i * (W + GAP); const r = E('rect', { class: 'box', x, y: Y, width: W, height: 48, rx: 3 }); const t = E('text', { class: 'boxv', x: x + W / 2, y: Y + 24 }); t.textContent = STR[i]; svg.appendChild(r); svg.appendChild(t); svg.appendChild(E('text', { class: 'dsidx', x: x + W / 2, y: Y + 64 })).textContent = i; cells.push(r); }
+        pl = E('text', { class: 'dsptr2', y: Y - 14, fill: '#3c7a36' }); pl.textContent = '▼ l';
+        pr = E('text', { class: 'dsptr2', y: Y - 32, fill: '#4E79A7' }); pr.textContent = '▼ r';
+        [pl, pr].forEach(p => { p.style.opacity = '0'; svg.appendChild(p); }); st.appendChild(svg);
+      },
+      _win(l, r, cls) { cells.forEach((c, i) => { c.classList.remove('act', 'cmp', 'ok'); if (i >= l && i <= r) c.classList.add(cls || 'cmp'); }); cells[r] && cells[r].classList.add('act'); pl.style.opacity = '1'; pl.setAttribute('x', cx(l)); pr.style.opacity = '1'; pr.setAttribute('x', cx(r)); },
+      apply(s) { if (s.t === 'done') { this._win(s.bl, s.br, 'ok'); [pl, pr].forEach(p => p.style.opacity = '0'); return; } this._win(s.l, s.r, s.t === 'best' ? 'ok' : 'cmp'); },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'shrink') return `'${s.ch}' 重复 → 左边界右移到 ${s.l}`; if (s.t === 'expand') return `右边界扩到 ${s.r}，窗口 [${s.l},${s.r}]`; if (s.t === 'best') return `更新最优：长度 ${s.best}`; return s.note; }
+    };
+  }
+
+  /* ── KMP · 字符串匹配 ── */
+  function kmpMod() {
+    const TXT = 'ababcabcabababd', PAT = 'ababd', N = TXT.length, M = PAT.length, X0 = 30, W = 36, GAP = 3, TY = 90, PY = 160;
+    function fail() { const f = Array(M).fill(0); let k = 0; for (let i = 1; i < M; i++) { while (k && PAT[i] !== PAT[k]) k = f[k - 1]; if (PAT[i] === PAT[k]) k++; f[i] = k; } return f; }
+    function gen() {
+      const f = fail(), s = []; let i = 0, j = 0;
+      while (i < N) {
+        s.push({ t: 'cmp', i, j, off: i - j, match: TXT[i] === PAT[j] });
+        if (TXT[i] === PAT[j]) { i++; j++; if (j === M) { s.push({ t: 'found', off: i - j }); break; } }
+        else if (j > 0) { s.push({ t: 'skip', off: i - f[j - 1], j: f[j - 1], from: j }); j = f[j - 1]; }
+        else i++;
+      }
+      s.push({ t: 'done', note: '匹配完成 · 失配时用 next 数组跳过，无需回退文本指针 ✓' }); return s;
+    }
+    let svg, tCells, pCells, pg; const tx = i => X0 + i * (W + GAP);
+    return {
+      title: 'KMP · 字符串匹配（next 跳转）', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: `0 0 ${X0 * 2 + N * (W + GAP)} 230` });
+        svg.appendChild(E('text', { class: 'dscap', x: 4, y: TY + W / 2, 'dominant-baseline': 'central' })).textContent = '文本';
+        tCells = []; for (let i = 0; i < N; i++) { const x = tx(i); const r = E('rect', { class: 'box', x, y: TY, width: W, height: W, rx: 3 }); const t = E('text', { class: 'boxv', x: x + W / 2, y: TY + W / 2 }); t.style.fontSize = '14px'; t.textContent = TXT[i]; svg.appendChild(r); svg.appendChild(t); tCells.push(r); }
+        svg.appendChild(E('text', { class: 'dscap', x: 4, y: PY + W / 2, 'dominant-baseline': 'central' })).textContent = '模式';
+        pg = E('g'); svg.appendChild(pg); pCells = [];
+        for (let j = 0; j < M; j++) { const r = E('rect', { class: 'box', x: 0, y: PY, width: W, height: W, rx: 3 }); const t = E('text', { class: 'boxv', x: W / 2, y: PY + W / 2 }); t.style.fontSize = '14px'; t.textContent = PAT[j]; const g = E('g'); g.appendChild(r); g.appendChild(t); pg.appendChild(g); pCells.push({ g, r }); }
+        this._place(0, -1); st.appendChild(svg);
+      },
+      _place(off, jHi) { pCells.forEach((c, j) => { c.g.setAttribute('transform', `translate(${tx(off + j)},0)`); c.r.classList.remove('act', 'cmp', 'ok'); if (j < jHi) c.r.classList.add('ok'); }); },
+      apply(s) {
+        tCells.forEach(r => r.classList.remove('act', 'cmp', 'ok'));
+        if (s.t === 'cmp') { this._place(s.off, s.j); const c = pCells[s.j]; c.r.classList.add(s.match ? 'ok' : 'cmp'); tCells[s.i].classList.add(s.match ? 'ok' : 'cmp'); for (let k = 0; k < s.j; k++) tCells[s.off + k].classList.add('ok'); }
+        else if (s.t === 'skip') { this._place(s.off, s.j); for (let k = 0; k < s.j; k++) tCells[s.off + k].classList.add('ok'); }
+        else if (s.t === 'found') { this._place(s.off, M); for (let k = 0; k < M; k++) tCells[s.off + k].classList.add('ok'); }
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'cmp') return s.match ? `文本[${s.i}]=模式[${s.j}]='${PAT[s.j]}' 匹配，前移` : `文本[${s.i}]≠模式[${s.j}] 失配`; if (s.t === 'skip') return `用 next 跳转：模式指针 ${s.from}→${s.j}（保留已匹配前缀，文本指针不回退）`; if (s.t === 'found') return `在文本位置 ${s.off} 找到完整匹配！`; return s.note; }
+    };
+  }
+
+  /* ── Dijkstra · 带权最短路 ── */
+  function dijkstraMod() {
+    const P = { 0: [60, 90], 1: [200, 50], 2: [200, 200], 3: [340, 90], 4: [340, 210], 5: [470, 140] };
+    const EW = [[0, 1, 4], [0, 2, 1], [2, 1, 2], [1, 3, 5], [2, 4, 8], [3, 5, 3], [4, 5, 6], [3, 4, 2]];
+    const adj = {}; Object.keys(P).forEach(k => adj[k] = []); EW.forEach(([a, b, w]) => { adj[a].push([b, w]); adj[b].push([a, w]); });
+    function gen() {
+      const INF = 1e9, dist = {}, done = {}, s = []; Object.keys(P).forEach(k => dist[k] = INF); dist[0] = 0;
+      s.push({ t: 'init', dist: { ...dist } });
+      for (let it = 0; it < 6; it++) {
+        let u = -1; Object.keys(P).forEach(k => { if (!done[k] && dist[k] < (u < 0 ? INF : dist[u])) u = +k; });
+        if (u < 0) break; done[u] = 1; s.push({ t: 'settle', u, dist: { ...dist } });
+        adj[u].forEach(([v, w]) => { if (!done[v] && dist[u] + w < dist[v]) { dist[v] = dist[u] + w; s.push({ t: 'relax', u, v, w, dist: { ...dist } }); } });
+      }
+      s.push({ t: 'done', dist: { ...dist }, note: '完成 · 每轮取当前最近的未确定点，松弛其邻居（贪心）✓' }); return s;
+    }
+    let svg, nodeEls, distEls, edgeEls; const ek = (a, b) => Math.min(a, b) + '-' + Math.max(a, b);
+    return {
+      title: 'Dijkstra · 单源最短路（源 0）', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: '0 0 540 280' }); edgeEls = {};
+        EW.forEach(([a, b, w]) => { const ln = E('line', { class: 'edge', x1: P[a][0], y1: P[a][1], x2: P[b][0], y2: P[b][1] }); svg.appendChild(ln); edgeEls[ek(a, b)] = ln; svg.appendChild(E('text', { class: 'wlabel', x: (P[a][0] + P[b][0]) / 2, y: (P[a][1] + P[b][1]) / 2 - 4 })).textContent = w; });
+        nodeEls = {}; distEls = {};
+        Object.entries(P).forEach(([id, [x, y]]) => { const g = E('g', { class: 'node', transform: `translate(${x},${y})` }); g.appendChild(E('circle', { r: 20 })); const t = E('text'); t.textContent = id; g.appendChild(t); svg.appendChild(g); nodeEls[id] = g; const d = E('text', { class: 'distlbl', x, y: y + 34 }); svg.appendChild(d); distEls[id] = d; });
+        st.appendChild(svg);
+      },
+      _dist(dist) { Object.keys(distEls).forEach(k => distEls[k].textContent = dist[k] >= 1e9 ? '∞' : dist[k]); },
+      apply(s) {
+        Object.values(nodeEls).forEach(g => g.classList.remove('active')); Object.values(edgeEls).forEach(e => e.classList.remove('on'));
+        if (s.dist) this._dist(s.dist);
+        if (s.t === 'settle') { nodeEls[s.u].classList.add('visited'); nodeEls[s.u].classList.add('active'); }
+        else if (s.t === 'relax') { edgeEls[ek(s.u, s.v)].classList.add('on'); nodeEls[s.v].classList.add('active'); }
+        else if (s.t === 'done') Object.values(nodeEls).forEach(g => g.classList.add('visited'));
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'init') return '初始化：源点距离 0，其余 ∞'; if (s.t === 'settle') return `确定最近点 ${s.u}（dist=${s.dist[s.u]}），开始松弛邻居`; if (s.t === 'relax') return `松弛边 ${s.u}→${s.v}(w=${s.w})：dist[${s.v}] 更新为 ${s.dist[s.v]}`; return s.note; }
+    };
+  }
+
+  /* ── 拓扑排序 · Kahn ── */
+  function topoMod() {
+    const P = { 0: [70, 60], 1: [70, 200], 2: [220, 60], 3: [220, 200], 4: [370, 130], 5: [490, 130] };
+    const ED = [[0, 2], [1, 3], [2, 3], [2, 4], [3, 4], [4, 5]];
+    function gen() {
+      const indeg = {}, adj = {}; Object.keys(P).forEach(k => { indeg[k] = 0; adj[k] = []; }); ED.forEach(([a, b]) => { adj[a].push(b); indeg[b]++; });
+      const s = [{ t: 'init', indeg: { ...indeg } }]; const q = Object.keys(P).filter(k => indeg[k] === 0).map(Number).sort((a, b) => a - b); const out = [];
+      while (q.length) { const u = q.shift(); out.push(u); s.push({ t: 'pick', u, out: [...out], indeg: { ...indeg } }); adj[u].forEach(v => { indeg[v]--; s.push({ t: 'dec', u, v, indeg: { ...indeg } }); if (indeg[v] === 0) q.push(v); }); q.sort((a, b) => a - b); }
+      s.push({ t: 'done', out: [...out], note: `拓扑序：${out.join(' → ')} · 反复移除入度 0 的点 ✓` }); return s;
+    }
+    let svg, nodeEls, degEls, edgeEls, seqG; const ek = (a, b) => a + '-' + b;
+    return {
+      title: '拓扑排序 · Kahn 算法（入度法）', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: '0 0 560 300' });
+        const defs = E('defs'); const m = E('marker', { id: 'tar', markerWidth: 8, markerHeight: 8, refX: 17, refY: 3, orient: 'auto' }); m.appendChild(E('path', { d: 'M0,0 L6,3 L0,6 Z', fill: '#9aa3ad' })); defs.appendChild(m); svg.appendChild(defs);
+        edgeEls = {}; ED.forEach(([a, b]) => { const ln = E('line', { class: 'edge', 'marker-end': 'url(#tar)', x1: P[a][0], y1: P[a][1], x2: P[b][0], y2: P[b][1] }); svg.appendChild(ln); edgeEls[ek(a, b)] = ln; });
+        nodeEls = {}; degEls = {};
+        Object.entries(P).forEach(([id, [x, y]]) => { const g = E('g', { class: 'node', transform: `translate(${x},${y})` }); g.appendChild(E('circle', { r: 20 })); const t = E('text'); t.textContent = id; g.appendChild(t); svg.appendChild(g); nodeEls[id] = g; const d = E('text', { class: 'distlbl', x, y: y - 30 }); svg.appendChild(d); degEls[id] = d; });
+        svg.appendChild(E('text', { class: 'dscap', x: 20, y: 288 })).textContent = '拓扑序：'; seqG = E('g'); svg.appendChild(seqG);
+        st.appendChild(svg);
+      },
+      _deg(indeg) { Object.keys(degEls).forEach(k => degEls[k].textContent = '入度' + indeg[k]); },
+      apply(s) {
+        Object.values(nodeEls).forEach(g => g.classList.remove('active'));
+        if (s.indeg) this._deg(s.indeg);
+        if (s.t === 'pick') { nodeEls[s.u].classList.add('visited', 'active'); seqG.innerHTML = ''; s.out.forEach((n, i) => { const c = E('text', { class: 'seqchip', x: 90 + i * 26, y: 288 }); c.textContent = n; seqG.appendChild(c); }); }
+        else if (s.t === 'dec') { edgeEls[ek(s.u, s.v)] && edgeEls[ek(s.u, s.v)].classList.add('on'); nodeEls[s.v].classList.add('active'); setTimeout(() => { edgeEls[ek(s.u, s.v)] && edgeEls[ek(s.u, s.v)].classList.remove('on'); }, 250); }
+        else if (s.t === 'done') Object.values(nodeEls).forEach(g => g.classList.add('visited'));
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'init') return '统计每个节点入度'; if (s.t === 'pick') return `节点 ${s.u} 入度为 0 → 输出，移除`; if (s.t === 'dec') return `${s.u}→${s.v}：${s.v} 入度减 1`; return s.note; }
+    };
+  }
+
+  /* ── 红黑树 · 变色 + 旋转 ── */
+  function rbMod() {
+    const INS = [10, 20, 30, 15, 25, 5, 1], X0 = 60, XS = 64, Y0 = 46, YS = 72;
+    function gen() {
+      let root = null; const steps = [];
+      const col = n => n ? n.c : 'B';
+      function rotL(x) { const y = x.r; x.r = y.l; if (y.l) y.l.p = x; y.p = x.p; if (!x.p) root = y; else if (x.p.l === x) x.p.l = y; else x.p.r = y; y.l = x; x.p = y; }
+      function rotR(y) { const x = y.l; y.l = x.r; if (x.r) x.r.p = y; x.p = y.p; if (!y.p) root = x; else if (y.p.l === y) y.p.l = x; else y.p.r = x; x.r = y; y.p = x; }
+      function frame(hl, note, done) {
+        const nodes = [], edges = []; let idx = 0;
+        (function lay(n, d) { if (!n) return; lay(n.l, d + 1); n._x = X0 + idx * XS; n._y = Y0 + d * YS; idx++; lay(n.r, d + 1); })(root, 0);
+        (function w(n) { if (!n) return; nodes.push({ id: n.key, x: n._x, y: n._y, key: n.key, color: n.c, done: !!done }); ['l', 'r'].forEach(s2 => { if (n[s2]) { edges.push({ id: 'e' + n[s2].key, x1: n._x, y1: n._y, x2: n[s2]._x, y2: n[s2]._y }); } }); w(n.l); w(n.r); })(root);
+        steps.push({ t: 'frame', nodes, edges, hl: hl || [], note });
+      }
+      function fix(z) {
+        while (z.p && z.p.c === 'R') {
+          const gp = z.p.p;
+          if (z.p === gp.l) { const y = gp.r; if (col(y) === 'R') { z.p.c = 'B'; y.c = 'B'; gp.c = 'R'; frame([gp.key], `叔叔为红 → 变色，黑高上移`); z = gp; } else { if (z === z.p.r) { z = z.p; rotL(z); } z.p.c = 'B'; gp.c = 'R'; rotR(gp); frame([z.p.key], `叔叔为黑 → 旋转 + 变色`); } }
+          else { const y = gp.l; if (col(y) === 'R') { z.p.c = 'B'; y.c = 'B'; gp.c = 'R'; frame([gp.key], `叔叔为红 → 变色，黑高上移`); z = gp; } else { if (z === z.p.l) { z = z.p; rotR(z); } z.p.c = 'B'; gp.c = 'R'; rotL(gp); frame([z.p.key], `叔叔为黑 → 旋转 + 变色`); } }
+        }
+        if (root.c !== 'B') { root.c = 'B'; }
+      }
+      INS.forEach(k => {
+        let cur = root, par = null, dir = 0;
+        while (cur) { par = cur; if (k < cur.key) { cur = cur.l; dir = -1; } else { cur = cur.r; dir = 1; } }
+        const z = { key: k, c: 'R', l: null, r: null, p: par };
+        if (!par) root = z; else if (dir < 0) par.l = z; else par.r = z;
+        frame([k], `插入 ${k}（新节点染红）`); fix(z);
+        if (root.c !== 'B') { root.c = 'B'; }
+        frame([], `修复后（根恒为黑）`);
+      });
+      const last = steps[steps.length - 1]; steps.push({ t: 'done', nodes: last.nodes.map(n => ({ ...n, done: true })), edges: last.edges, hl: [], note: '红黑树完成 · 根黑、红节点无红子、各路径黑节点数相同 ✓' });
+      return steps;
+    }
+    let tv;
+    function makeRB() { const g = E('g', { class: 'rbnode' }); g.appendChild(E('circle', { r: 19 })); const t = E('text'); g.appendChild(t); return { g, set: o => { t.textContent = o.key; g.classList.toggle('rb-red', o.color === 'R'); g.classList.toggle('rb-black', o.color === 'B'); } }; }
+    return {
+      title: '红黑树 · 变色 + 旋转', steps: gen(),
+      init(st) { st.innerHTML = ''; const svg = E('svg', { viewBox: '0 0 560 340' }); tv = treeView(svg, makeRB); st.appendChild(svg); },
+      apply(s) { if (s.nodes) tv.frame(s.nodes, s.edges, s.hl); },
+      reset() { this.init(this._h); }, narrate(s) { return s.note; }
+    };
+  }
+
+  /* ── Floyd · 全源最短路（矩阵 DP）── */
+  function floydMod() {
+    const INF = 1e9, N = 4, CS = 60, GAP = 8, OX = 70, OY = 60;
+    const init = [[0, 3, INF, 7], [8, 0, 2, INF], [5, INF, 0, 1], [2, INF, INF, 0]];
+    function gen() {
+      const d = init.map(r => r.slice()), s = [];
+      for (let k = 0; k < N; k++) { s.push({ t: 'pivot', k }); for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { if (i === j) continue; if (d[i][k] + d[k][j] < d[i][j]) { d[i][j] = d[i][k] + d[k][j]; s.push({ t: 'relax', k, i, j, v: d[i][j], snap: d.map(r => r.slice()) }); } } }
+      s.push({ t: 'done', snap: d.map(r => r.slice()), note: '完成 · 枚举中转点 k，dist[i][j]=min(dist[i][j], dist[i][k]+dist[k][j]) ✓' }); return s;
+    }
+    let svg, cells, rowH, colH;
+    return {
+      title: 'Floyd · 全源最短路（中转点 DP）', steps: gen(),
+      init(st) {
+        st.innerHTML = ''; svg = E('svg', { viewBox: `0 0 ${OX + N * (CS + GAP) + 20} ${OY + N * (CS + GAP) + 20}` }); svg.style.maxHeight = '320px';
+        for (let j = 0; j < N; j++) svg.appendChild(E('text', { class: 'dphdr', x: OX + j * (CS + GAP) + CS / 2, y: OY - 18 })).textContent = j;
+        for (let i = 0; i < N; i++) svg.appendChild(E('text', { class: 'dphdr', x: OX - 20, y: OY + i * (CS + GAP) + CS / 2 })).textContent = i;
+        cells = [];
+        for (let i = 0; i < N; i++) { cells[i] = []; for (let j = 0; j < N; j++) { const x = OX + j * (CS + GAP), y = OY + i * (CS + GAP); const r = E('rect', { class: 'box', x, y, width: CS, height: CS, rx: 3 }); const t = E('text', { class: 'boxv', x: x + CS / 2, y: y + CS / 2 }); t.textContent = init[i][j] >= INF ? '∞' : init[i][j]; svg.appendChild(r); svg.appendChild(t); cells[i][j] = { r, t }; } }
+        st.appendChild(svg);
+      },
+      _set(snap) { for (let i = 0; i < N; i++)for (let j = 0; j < N; j++) cells[i][j].t.textContent = snap[i][j] >= INF ? '∞' : snap[i][j]; },
+      apply(s) {
+        for (let i = 0; i < N; i++)for (let j = 0; j < N; j++) cells[i][j].r.classList.remove('act', 'cmp', 'dim');
+        if (s.t === 'pivot') { for (let i = 0; i < N; i++) { cells[s.k][i].r.classList.add('cmp'); cells[i][s.k].r.classList.add('cmp'); } }
+        else if (s.t === 'relax') { this._set(s.snap); for (let i = 0; i < N; i++) { cells[s.k][i].r.classList.add('dim'); cells[i][s.k].r.classList.add('dim'); } cells[s.i][s.k].r.classList.remove('dim'); cells[s.i][s.k].r.classList.add('cmp'); cells[s.k][s.j].r.classList.remove('dim'); cells[s.k][s.j].r.classList.add('cmp'); cells[s.i][s.j].r.classList.add('act'); cells[s.i][s.j].t.classList.remove('pop'); void cells[s.i][s.j].t.offsetWidth; cells[s.i][s.j].t.classList.add('pop'); }
+        else if (s.t === 'done') this._set(s.snap);
+      },
+      reset() { this.init(this._h); },
+      narrate(s) { if (s.t === 'pivot') return `以节点 ${s.k} 作为中转点，检查所有 (i,j)`; if (s.t === 'relax') return `经 ${s.k} 中转更短：dist[${s.i}][${s.j}] = ${s.v}`; return s.note; }
+    };
+  }
+
+  const $ = id => document.getElementById(id);
+  const MOD = [
+    { l: '排序', m: sortMod }, { l: '堆（树↔数组）', m: heapMod },
+    { l: '图 BFS', m: graphMod }, { l: '树遍历', m: treeMod }, { l: '链表反转', m: listMod },
+    { l: '二分查找', m: binMod }, { l: '滑动窗口', m: slideMod }, { l: 'KMP', m: kmpMod },
+    { l: '哈希表', m: hashMod }, { l: '队列', m: queueMod }, { l: '栈', m: stackMod }, { l: '单调栈', m: monoMod },
+    { l: '并查集', m: unionFindMod }, { l: 'Trie', m: trieMod }, { l: '线段树', m: segTreeMod }, { l: '跳表', m: skipMod },
+    { l: 'AVL 旋转', m: avlMod }, { l: '红黑树', m: rbMod }, { l: 'B 树', m: btreeMod }, { l: '哈夫曼树', m: huffMod },
+    { l: 'Dijkstra', m: dijkstraMod }, { l: '拓扑排序', m: topoMod },
+    { l: '网格寻路', m: gridMod }, { l: 'DP 表', m: dpMod }, { l: '网格 DP', m: gridDpMod }, { l: 'Floyd', m: floydMod }
+  ];
+  let mod, idx = 0, timer = null, playing = false;
+  const tabsEl = $('tabs');
+  MOD.forEach((o, i) => { const b = D('tab' + (i === 0 ? ' on' : ''), o.l); b.onclick = () => sel(i); o._b = b; tabsEl.appendChild(b); });
+  function load(i) { stop(); mod = MOD[i].m(); mod._h = $('stage'); mod.init($('stage')); idx = 0; $('ctitle').textContent = mod.title; $('status').textContent = '点击播放 ▶ 开始演示'; }
+  function sel(i) { MOD.forEach(o => o._b.classList.remove('on')); MOD[i]._b.classList.add('on'); load(i); }
+  function tick() { if (idx >= mod.steps.length) { stop(); return; } const s = mod.steps[idx++]; mod.apply(s); $('status').textContent = mod.narrate(s); if (s.t === 'done') { stop(); return; } timer = setTimeout(tick, +$('speed').value); }
+  function play() { if (playing) return; if (idx >= mod.steps.length) { mod.init($('stage')); idx = 0; } playing = true; $('play').textContent = '⏸ 暂停'; tick(); }
+  function stop() { playing = false; clearTimeout(timer); $('play').textContent = (mod && idx >= mod.steps.length) ? '↺ 重播' : '▶ 播放'; }
+  function restart() { stop(); mod.init($('stage')); idx = 0; $('status').textContent = '点击播放 ▶ 开始演示'; }
+  $('play').onclick = () => playing ? stop() : play();
+  $('restart').onclick = restart;
+  load(0);
+})();
+</script>
