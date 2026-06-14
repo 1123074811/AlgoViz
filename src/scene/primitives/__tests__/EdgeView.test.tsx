@@ -95,7 +95,7 @@ describe('EdgeView', () => {
     const scene = sceneWith([node('a', 0, 0), node('b', 200, 0)])
     const e = edge({ state: { color: 'danger' }, style: { color: 'primary' } })
     const { container } = render(<svg><EdgeView edge={e} scene={scene} /></svg>)
-    expect(container.querySelector('path')?.getAttribute('stroke')).toBe('#EF4444')
+    expect(container.querySelector('path')?.getAttribute('stroke')).toBe('#E15759')
   })
 
   it('renders a self-loop arc for clockwise rotation', () => {

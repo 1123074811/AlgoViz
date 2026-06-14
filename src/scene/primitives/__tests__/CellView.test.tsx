@@ -81,7 +81,7 @@ describe('CellView', () => {
     const { container } = render(
       <svg><CellView cell={cell({ state: { role: 'window' } })} /></svg>,
     )
-    const body = Array.from(container.querySelectorAll('rect')).find(r => r.getAttribute('fill') === '#F8FBFF')
+    const body = Array.from(container.querySelectorAll('rect')).find(r => r.getAttribute('fill') === '#F4F8FC')
     expect(body).toBeTruthy()
   })
 
@@ -90,14 +90,14 @@ describe('CellView', () => {
       <svg><CellView cell={cell({ state: { role: 'conflict' } })} /></svg>,
     )
     const valueText = Array.from(container.querySelectorAll('text')).find(t => visibleText(t) === '7')
-    expect(valueText?.getAttribute('fill')).toBe('#EF4444')
+    expect(valueText?.getAttribute('fill')).toBe('#C0413F')
   })
 
   it('maps legacy color names to semantic palette', () => {
     const { container } = render(
       <svg><CellView cell={cell({ state: { color: 'success' } })} /></svg>,
     )
-    const body = Array.from(container.querySelectorAll('rect')).find(r => r.getAttribute('fill') === '#ECFDF5')
+    const body = Array.from(container.querySelectorAll('rect')).find(r => r.getAttribute('fill') === '#E6EFE4')
     expect(body).toBeTruthy()
   })
 
