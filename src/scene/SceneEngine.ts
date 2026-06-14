@@ -39,89 +39,22 @@ function findNearestSnapshot(script: AnimationScript, targetStep: number): { ste
       best = entry
     }
   }
-  return best ? { step: best.step, scene: deepCloneScene(best.scene) } : null
+  return best ? { step: best.step, scene: cloneScene(best.scene) } : null
 }
 
 function saveSnapshot(script: AnimationScript, step: number, scene: SceneState) {
   const cache = getOrCreateCache(script)
   // Avoid duplicate snapshots for the same step
   if (cache.length > 0 && cache[cache.length - 1].step === step) return
-  cache.push({ step, scene: deepCloneScene(scene) })
+  cache.push({ step, scene: cloneScene(scene) })
 }
 
-/** Deep-clone a SceneState so snapshots don't share references with active state */
-function deepCloneScene(scene: SceneState): SceneState {
-  return {
-    entities: Object.fromEntries(Object.entries(scene.entities).map(([k, v]) => {
-      if (v.type === 'node') {
-        return [k, { ...v, ports: [...v.ports], fields: v.fields.map(f => ({ ...f })) }]
-      }
-      return [k, { ...v }]
-    })),
-    edges: Object.fromEntries(Object.entries(scene.edges).map(([k, v]) => [k, { ...v }])),
-    pointers: Object.fromEntries(Object.entries(scene.pointers).map(([k, v]) => [k, { ...v }])),
-    labels: Object.fromEntries(Object.entries(scene.labels).map(([k, v]) => [k, { ...v }])),
-    groups: Object.fromEntries(Object.entries(scene.groups).map(([k, v]) => [k, { ...v }])),
-    ...(scene.camera && { camera: { ...scene.camera } }),
-    ...(scene.selectedIds && { selectedIds: [...scene.selectedIds] }),
-    ...(scene.notes && { notes: [...scene.notes] }),
-    ...(scene.overlays && {
-      overlays: {
-        callStack: scene.overlays.callStack
-          ? {
-              ...scene.overlays.callStack,
-              frames: scene.overlays.callStack.frames.map((frame) => ({ ...frame })),
-              highlightedFrameIds: [...scene.overlays.callStack.highlightedFrameIds],
-            }
-          : undefined,
-        dpTables: Object.fromEntries(
-          Object.entries(scene.overlays.dpTables).map(([key, table]) => [
-            key,
-            {
-              ...table,
-              rowLabels: [...table.rowLabels],
-              colLabels: [...table.colLabels],
-              cells: table.cells.map((row) => row.map((cell) => ({ ...cell, highlights: [...cell.highlights] }))),
-              dependencies: table.dependencies.map((dependency) => ({
-                ...dependency,
-                from: { ...dependency.from },
-                to: { ...dependency.to },
-              })),
-              formulas: table.formulas.map((formula) => ({
-                ...formula,
-                target: { ...formula.target },
-              })),
-              traceback: table.traceback.map((coord) => ({ ...coord })),
-              roll: table.roll
-                ? {
-                    ...table.roll,
-                    window: table.roll.window ? { ...table.roll.window } : undefined,
-                  }
-                : undefined,
-            },
-          ]),
-        ),
-        grids: Object.fromEntries(
-          Object.entries(scene.overlays.grids).map(([key, grid]) => [
-            key,
-            {
-              ...grid,
-              cells: Object.fromEntries(
-                Object.entries(grid.cells).map(([cellKey, cell]) => [cellKey, { ...cell }]),
-              ),
-              frontier: grid.frontier.map(([row, col]) => [row, col]),
-              path: grid.path.map(([row, col]) => [row, col]),
-              arrows: grid.arrows.map((arrow) => ({
-                ...arrow,
-                from: [...arrow.from],
-                to: [...arrow.to],
-              })),
-            },
-          ]),
-        ),
-      },
-    }),
-  }
+/** Deep-clone a SceneState so snapshots don't share references with active state.
+ *  SceneState is plain JSON-serializable data (see types.ts — all interfaces, no
+ *  class/Map/Set/function), so structuredClone is correct and far less fragile
+ *  than the previous hand-maintained recursive copy. */
+export function cloneScene(scene: SceneState): SceneState {
+  return structuredClone(scene)
 }
 
 /**
