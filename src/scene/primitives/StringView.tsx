@@ -1,5 +1,5 @@
 import type { SceneCell } from '../types'
-import { NEUTRALS } from '../tokens'
+import { NEUTRALS, SEMANTIC_COLORS } from '../tokens'
 
 interface StringViewProps {
   /** All s_<row>_<index> char cells, any number of rows (1 = single string, 2 = text/pattern). */
@@ -10,8 +10,7 @@ interface StringViewProps {
 const STROKE = NEUTRALS.mutedText
 const STROKE_WIDTH = 1.4
 const INDEX_COLOR = NEUTRALS.mutedText
-// Indigo accent distinguishes the string structure from neutral chrome; intentional non-token hue.
-const LABEL_COLOR = '#6366F1'
+const LABEL_COLOR = SEMANTIC_COLORS.primary.stroke
 
 /** Default row labels for the common single / double (text-vs-pattern) layouts. */
 const ROW_LABELS = ['主串', '模式串']

@@ -1,7 +1,8 @@
 import type { SceneCell, SceneNode, SceneState } from '../types'
 import { NEUTRALS } from '../tokens'
 
-const GROUP_PALETTE = ['#2563EB', '#16A34A', '#D97706', '#DC2626', '#7C3AED', '#0891B2', '#DB2777', '#65A30D']
+// 低饱和 Tableau-10 分组色，贴合 Observable 风的分类配色（用于连通分量/分组着色）。
+const GROUP_PALETTE = ['#4E79A7', '#59A14F', '#F28E2B', '#E15759', '#B07AA1', '#76B7B2', '#EDC948', '#9C755F']
 
 interface Props { marker: SceneCell; scene: SceneState }
 interface Model { discLow: Record<string, [number, number]>; stack: string[]; components: Record<string, number> }

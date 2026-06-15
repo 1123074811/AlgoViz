@@ -1,12 +1,13 @@
 import type { SceneCell } from '../types'
+import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
 
 interface SetViewProps {
   cells: SceneCell[]
   hideTitle?: boolean
 }
 
-const SET_STROKE = '#6366F1'
-const BRACE_COLOR = '#818CF8'
+const SET_STROKE = SEMANTIC_COLORS.primary.stroke
+const BRACE_COLOR = SEMANTIC_COLORS.primary.stroke
 
 /**
  * Structural overlay for the dedicated set (集合) visual. The member cell bodies
@@ -60,7 +61,7 @@ export default function SetView({ cells, hideTitle }: SetViewProps) {
         x={left} y={top}
         width={right - left} height={height}
         rx={height / 2} ry={height / 2}
-        fill="#EEF2FF" fillOpacity={0.5}
+        fill={SEMANTIC_COLORS.primary.fill} fillOpacity={0.5}
         stroke={SET_STROKE} strokeWidth={1.8} strokeDasharray="6 3" opacity={0.85}
       />
 
@@ -72,7 +73,7 @@ export default function SetView({ cells, hideTitle }: SetViewProps) {
       {!hideTitle && (
         <text
           x={left} y={top - 8}
-          textAnchor="start" fontSize="11" fill="#6366F1" fontFamily="monospace"
+          textAnchor="start" fontSize="11" fill={NEUTRALS.labelText} fontFamily="monospace"
         >
           集合·去重无序
         </text>
