@@ -1,5 +1,5 @@
 import type { SceneCell } from '../types'
-import { NEUTRALS } from '../tokens'
+import { NEUTRALS, SEMANTIC_COLORS, SHAPE } from '../tokens'
 
 interface VariablesViewProps {
   vars: SceneCell[]
@@ -7,8 +7,8 @@ interface VariablesViewProps {
 }
 
 const STROKE = NEUTRALS.frameStroke
-// Deeper blue than the primary token: signals a variable that just changed.
-const ACTIVE = '#2563EB'
+// 变量刚变化的强调色——用 Observable 主色(steelblue)，与全局语义色单一事实源一致。
+const ACTIVE = SEMANTIC_COLORS.primary.stroke
 
 /**
  * Dedicated "variables / debugger locals" visual. Variables are drawn as plain
@@ -62,8 +62,8 @@ export default function VariablesView({ vars, hideTitle }: VariablesViewProps) {
       <rect
         x={minX - pad} y={frameTop - pad}
         width={maxX - minX + 2 * pad} height={(maxY - minY) + ROW_H + 2 * pad}
-        rx={4} ry={4}
-        fill={NEUTRALS.surface} fillOpacity={0.7} stroke={STROKE} strokeWidth={1} strokeDasharray="4 4" opacity={0.9}
+        rx={SHAPE.cellRadius} ry={SHAPE.cellRadius}
+        fill={SEMANTIC_COLORS.idle.fill} stroke={STROKE} strokeWidth={SHAPE.strokeWidth.thin}
       />
       {!hideTitle && (
         <text
@@ -78,8 +78,8 @@ export default function VariablesView({ vars, hideTitle }: VariablesViewProps) {
         const l = layouts[i]
         if (!l.name) return null
         const active = c.state?.pulse || c.state?.role === 'current' || c.state?.role === 'active'
-        const textColor = active ? ACTIVE : '#334155'
-        const labelColor = active ? '#1D4ED8' : NEUTRALS.labelText
+        const textColor = active ? ACTIVE : SEMANTIC_COLORS.idle.text
+        const labelColor = active ? ACTIVE : NEUTRALS.labelText
         const title = `${l.name} = ${String(c.value ?? l.meta?.value ?? '')}${l.meta?.delta ? ' ' + l.meta.delta : ''}`
         return (
           <g key={`var_meta_${c.id}`}>
