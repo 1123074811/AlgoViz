@@ -247,10 +247,10 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
             <path d="M1,1 L9,4 L1,7" fill="none" stroke={NEUTRALS.labelText} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
           </marker>
           <marker id="sceneDependencyArrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
-            <path d="M1,1 L9,4 L1,7" fill="none" stroke="#D97706" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M1,1 L9,4 L1,7" fill="none" stroke={SEMANTIC_COLORS.compare.stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
           </marker>
           <marker id="scenePointerArrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
-            <path d="M1,1 L9,4 L1,7" fill="none" stroke="#93C5FD" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M1,1 L9,4 L1,7" fill="none" stroke={SEMANTIC_COLORS.primary.stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
           </marker>
           {/* Trajectory arrow markers — even thinner, more subtle for animated paths */}
           <marker id="sceneTrajectorySuccess" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
@@ -456,8 +456,8 @@ function renderArrayWindowOverlay(entities: SceneEntity[], layer: 'backdrop' | '
         const top = first.position.y - height / 2
         const overlayWidth = right - left
         const color = first.state?.color === 'success'
-          ? { stroke: SEMANTIC_COLORS.success.stroke, fill: '#D1FAE5', rail: '#6EE7B7' }
-          : { stroke: '#2563EB', fill: '#DBEAFE', rail: '#93C5FD' }
+          ? { stroke: SEMANTIC_COLORS.success.stroke, fill: SEMANTIC_COLORS.success.fill, rail: SEMANTIC_COLORS.success.stroke }
+          : { stroke: SEMANTIC_COLORS.primary.stroke, fill: SEMANTIC_COLORS.primary.fill, rail: SEMANTIC_COLORS.window.stroke }
         const railY = height + 8
         const boundaryTop = -2
         const boundaryBottom = height + 10
