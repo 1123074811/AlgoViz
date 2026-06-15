@@ -1,7 +1,7 @@
 import type { SceneNode } from '../types'
 import { getAdaptiveCircleLayout } from '../engineUtils'
 import { measureNodeWidth, truncateToWidth } from '../textMetrics'
-import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS, SHAPE } from '../tokens'
 
 // Legacy scene color names map onto semantic tokens (warning→compare, muted→idle).
 const COLOR_MAP: Record<string, { stroke: string; fill: string }> = {
@@ -49,7 +49,7 @@ function renderCircle(
         {isActive && (
           <circle cx={0} cy={0} r={r + 4} fill={palette.stroke} opacity="0.08" className="node-active-ring" />
         )}
-        <circle cx={0} cy={0} r={r} fill={palette.fill} stroke={palette.stroke} strokeWidth={1.5} />
+        <circle cx={0} cy={0} r={r} fill={palette.fill} stroke={palette.stroke} strokeWidth={SHAPE.strokeWidth.base} />
         <text x={0} y={Math.round(fontSize * 0.3)} textAnchor="middle" fontSize={fontSize} fontFamily="monospace" fill={SEMANTIC_COLORS.idle.text} fontWeight="bold">{value}</text>
         {node.fields.length > 1 && node.fields.slice(1).map((field, i) => (
           <text key={field.id} x={0} y={r + 14 + i * 12} textAnchor="middle" fontSize="10" fill={NEUTRALS.mutedText}>
@@ -89,7 +89,7 @@ function renderRect(
             rx={12} fill={palette.stroke} opacity="0.08" className="node-active-ring" />
         )}
         <rect x={-width / 2} y={-height / 2} width={width} height={height} rx={8}
-          fill="white" stroke={palette.stroke} strokeWidth={1.5} />
+          fill="white" stroke={palette.stroke} strokeWidth={SHAPE.strokeWidth.base} />
         {node.fields.map((field, index) => {
           const x = -width / 2 + index * fieldWidth
           const isData = field.role === 'data' || field.role === 'key' || field.role === 'value'
@@ -100,7 +100,7 @@ function renderRect(
             <g key={field.id}>
               {index > 0 && (
                 <line x1={x} y1={-height / 2 + 4} x2={x} y2={height / 2 - 4}
-                  stroke={SEMANTIC_COLORS.idle.stroke} strokeWidth={1} />
+                  stroke={SEMANTIC_COLORS.idle.stroke} strokeWidth={SHAPE.strokeWidth.thin} />
               )}
               <text x={x + fieldWidth / 2} y={isData ? -2 : 0}
                 textAnchor="middle" fontSize={fontSize} fontFamily="monospace"
@@ -121,11 +121,11 @@ function renderRect(
   )
 }
 
+// Observable 风克制：当前/活动结点的强调环改为「静态柔光」(元素自带 opacity 0.08)，
+// 去掉无限脉冲动画；保留一次性 pop 落定。
 const NODE_STYLES = `
   .node-pulse { animation: node-pop 0.5s ease-in-out; transform-box: fill-box; transform-origin: center; }
-  .node-active-ring { animation: node-ring 0.9s ease-out infinite; transform-box: fill-box; transform-origin: center; }
   @keyframes node-pop { 0% { transform: scale(0.94); } 55% { transform: scale(1.04); } 100% { transform: scale(1); } }
-  @keyframes node-ring { from { opacity: 0.15; transform: scale(0.94); } to { opacity: 0.02; transform: scale(1.12); } }
 `
 
 function NodeStyles() {

@@ -1,7 +1,7 @@
 import React from 'react'
 import type { Point, SceneEdge, SceneState } from '../types'
 import { getAdaptiveCircleLayout } from '../engineUtils'
-import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS, SHAPE } from '../tokens'
 
 const COLOR_MAP = {
   primary: SEMANTIC_COLORS.primary.stroke,
@@ -39,8 +39,8 @@ export default function EdgeView({ edge, scene }: EdgeViewProps) {
     ? (edge.state?.pulse ? '6 4' : '5 5')
     : undefined
 
-  // Default thickness: structural=1.5, trajectory=1.2
-  const thickness = edge.style?.thickness ?? (edge.style?.dashed ? 1.2 : 1.5)
+  // Default thickness 接 token：结构实线=base，轨迹虚线=thin（Observable 更细）。
+  const thickness = edge.style?.thickness ?? (edge.style?.dashed ? SHAPE.strokeWidth.thin : SHAPE.strokeWidth.base)
 
   // 数组移动/右移:在格子上方画一道明显拱起的跳跃弧,避免挤在相邻格子缝隙里。
   if (edge.variant === 'hop') {
