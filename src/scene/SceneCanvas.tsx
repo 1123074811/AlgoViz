@@ -22,7 +22,7 @@ import DistributionView from './primitives/DistributionView'
 import RegionView from './primitives/RegionView'
 import SetView from './primitives/SetView'
 import StringView from './primitives/StringView'
-import VariablesView from './primitives/VariablesView'
+import VariablesPanel from './primitives/VariablesPanel'
 import GraphAnalysisView from './primitives/GraphAnalysisView'
 import AlgorithmOverlays from './overlays/AlgorithmOverlays'
 import ColorLegend from './ColorLegend'
@@ -124,6 +124,8 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
   // 切换时直接显示新场景,不残留上个算法的结构。
   const scene = useSceneTransition(targetScene, durationForStep(speed, currentStepData?.action?.type), transitionKey, script)
   const entities = Object.values(scene.entities)
+  // 变量(mathvar_)改由固定左上角的 HTML 覆盖层渲染(见 VariablesPanel)，不再画进 SVG 场景。
+  const mathVarCells = entities.filter((e): e is SceneCell => e.type === 'cell' && e.id.startsWith('mathvar_'))
   const edges = Object.values(scene.edges)
   const pointers = Object.values(scene.pointers)
   const labels = Object.values(scene.labels)
@@ -311,6 +313,7 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
       </svg>
       <AlgorithmOverlays overlays={scene.overlays} />
       {!isEmpty && <ColorLegend />}
+      <VariablesPanel vars={mathVarCells} />
 
       {/* Floating Zoom / Pan Controls */}
       <div 
@@ -551,8 +554,6 @@ function renderContainers(entities: SceneEntity[], composite: boolean) {
   // heap_<i> tree nodes (digit-suffixed only — excludes heap_variant marker)
   const heapNodes = cells.filter(c => /^heap_\d+$/.test(c.id))
     .sort((a, b) => parseInt(a.id.split('_')[1]) - parseInt(b.id.split('_')[1]))
-  const mathVars = cells.filter(c => c.id.startsWith('mathvar_'))
-    .sort((a, b) => (a.col ?? 0) - (b.col ?? 0))
   // Precise s_<row>_<index> match — avoids colliding with set_/stack_/etc.
   const stringCells = cells.filter(c => /^s_\d+_\d+$/.test(c.id))
   const bitCells = cells.filter(c => /^bit_\d+$/.test(c.id))
@@ -568,7 +569,6 @@ function renderContainers(entities: SceneEntity[], composite: boolean) {
       {auxCells.length > 0 && <ContainerView type="auxiliary" cells={auxCells} />}
       {hashBuckets.length > 0 && <HashTableView buckets={hashBuckets} entries={hashEntries} loadFactorCell={loadFactorCell} hideTitle={composite} />}
       {heapNodes.length > 0 && <HeapView nodes={heapNodes} hideTitle={composite} />}
-      {mathVars.length > 0 && <VariablesView vars={mathVars} hideTitle={composite} />}
       {stringCells.length > 0 && <StringView cells={stringCells} hideTitle={composite} />}
       {bitCells.length > 0 && <BitsetView bits={bitCells} labelCell={bitsetLabelCell} hideTitle={composite} />}
     </>

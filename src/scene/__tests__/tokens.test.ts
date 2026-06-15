@@ -45,7 +45,7 @@ describe('design tokens', () => {
       'primitives/NodeView.tsx', 'primitives/EdgeView.tsx', 'primitives/PointerView.tsx',
       'primitives/ContainerView.tsx', 'primitives/HashTableView.tsx', 'primitives/HeapView.tsx',
       'primitives/SetView.tsx', 'primitives/StringView.tsx', 'primitives/BitsetView.tsx',
-      'primitives/VariablesView.tsx', 'primitives/RegionView.tsx', 'SceneCanvas.tsx',
+      'primitives/VariablesPanel.tsx', 'primitives/RegionView.tsx', 'SceneCanvas.tsx',
     ]
     let total = 0
     for (const f of files) {
