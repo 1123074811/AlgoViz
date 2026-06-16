@@ -871,6 +871,7 @@ import { generateRedBlackTree } from './redBlackTree'
 import { generateLinkedListReverse } from './linkedListReverse'
 import { generateGridPathfinding, generateGridDP } from './gridPath'
 import { generateHuffman } from './huffman'
+import { generateSkipList } from './skipList'
 import { generateIntervalDP } from './intervalDP'
 import { generateStack } from './stack'
 import { generateQueue } from './queue'
@@ -1278,6 +1279,12 @@ const huffmanWrapper = (input: unknown) => {
   const pairs = nums.length ? nums.map((f, i) => [String.fromCharCode(97 + i), Math.max(1, f)] as [string, number]) : undefined
   return generateHuffman(pairs)
 }
+const skipListWrapper = (input: unknown) => {
+  const obj = (input && typeof input === 'object' && !Array.isArray(input)) ? input as Record<string, unknown> : undefined
+  const arr = Array.isArray(obj?.data) ? obj!.data as number[] : parseArr(input)
+  const target = typeof obj?.target === 'number' ? obj.target as number : undefined
+  return generateSkipList(arr, target)
+}
 const trieWrapper = (input: unknown) => {
   if (Array.isArray(input) && input.every(v => typeof v === 'string')) return generateTrie(input as string[])
   return generateTrie()
@@ -1603,6 +1610,7 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   grid_pathfinding: gridPathWrapper,
   grid_dp: gridDPWrapper,
   huffman: huffmanWrapper,
+  skip_list: skipListWrapper,
   trie: trieWrapper, btree: btreeWrapper, bplus_tree: bplusTreeWrapper,
   btree_search: btreeSearchWrapper, btree_insert: btreeInsertWrapper,
   bplus_tree_search: bplusSearchWrapper, bplus_tree_range_query: bplusRangeWrapper,

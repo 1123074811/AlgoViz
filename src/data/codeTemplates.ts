@@ -1,6 +1,195 @@
 export type CodeLang = 'python' | 'javascript' | 'cpp' | 'java'
 
 export const CODE_TEMPLATES: Record<string, Partial<Record<CodeLang, string>>> = {
+  skip_list: {
+    python: `import random
+
+class SkipNode:
+    def __init__(self, val, level):
+        self.val = val
+        self.forward = [None] * (level + 1)
+
+class SkipList:
+    MAX = 4
+    def __init__(self):
+        self.head = SkipNode(-1, self.MAX)
+        self.level = 0
+
+    def _rand_level(self):
+        lvl = 0
+        while random.random() < 0.5 and lvl < self.MAX:
+            lvl += 1
+        return lvl
+
+    def insert(self, val):
+        update = [None] * (self.MAX + 1)
+        cur = self.head
+        for i in range(self.level, -1, -1):
+            while cur.forward[i] and cur.forward[i].val < val:
+                cur = cur.forward[i]
+            update[i] = cur
+        lvl = self._rand_level()
+        if lvl > self.level:
+            for i in range(self.level + 1, lvl + 1):
+                update[i] = self.head
+            self.level = lvl
+        node = SkipNode(val, lvl)
+        for i in range(lvl + 1):
+            node.forward[i] = update[i].forward[i]
+            update[i].forward[i] = node
+
+    def search(self, target):
+        cur = self.head
+        for i in range(self.level, -1, -1):       # drop down levels
+            while cur.forward[i] and cur.forward[i].val < target:
+                cur = cur.forward[i]               # walk right
+        cur = cur.forward[0]
+        return cur is not None and cur.val == target`,
+    javascript: `const MAX = 4;
+
+class SkipNode {
+    constructor(val, level) {
+        this.val = val;
+        this.forward = new Array(level + 1).fill(null);
+    }
+}
+
+class SkipList {
+    constructor() {
+        this.head = new SkipNode(-1, MAX);
+        this.level = 0;
+    }
+
+    _randLevel() {
+        let lvl = 0;
+        while (Math.random() < 0.5 && lvl < MAX) lvl++;
+        return lvl;
+    }
+
+    insert(val) {
+        const update = new Array(MAX + 1).fill(this.head);
+        let cur = this.head;
+        for (let i = this.level; i >= 0; i--) {
+            while (cur.forward[i] && cur.forward[i].val < val) cur = cur.forward[i];
+            update[i] = cur;
+        }
+        const lvl = this._randLevel();
+        if (lvl > this.level) this.level = lvl;
+        const node = new SkipNode(val, lvl);
+        for (let i = 0; i <= lvl; i++) {
+            node.forward[i] = update[i].forward[i];
+            update[i].forward[i] = node;
+        }
+    }
+
+    search(target) {
+        let cur = this.head;
+        for (let i = this.level; i >= 0; i--) {        // drop down levels
+            while (cur.forward[i] && cur.forward[i].val < target) cur = cur.forward[i]; // walk right
+        }
+        cur = cur.forward[0];
+        return cur !== null && cur.val === target;
+    }
+}`,
+    cpp: `#include <vector>
+#include <cstdlib>
+using namespace std;
+
+const int MAXL = 4;
+
+struct SkipNode {
+    int val;
+    vector<SkipNode*> forward;
+    SkipNode(int v, int level) : val(v), forward(level + 1, nullptr) {}
+};
+
+struct SkipList {
+    SkipNode* head = new SkipNode(-1, MAXL);
+    int level = 0;
+
+    int randLevel() {
+        int lvl = 0;
+        while ((rand() & 1) && lvl < MAXL) lvl++;
+        return lvl;
+    }
+
+    void insert(int val) {
+        vector<SkipNode*> update(MAXL + 1, head);
+        SkipNode* cur = head;
+        for (int i = level; i >= 0; --i) {
+            while (cur->forward[i] && cur->forward[i]->val < val) cur = cur->forward[i];
+            update[i] = cur;
+        }
+        int lvl = randLevel();
+        if (lvl > level) level = lvl;
+        SkipNode* node = new SkipNode(val, lvl);
+        for (int i = 0; i <= lvl; ++i) {
+            node->forward[i] = update[i]->forward[i];
+            update[i]->forward[i] = node;
+        }
+    }
+
+    bool search(int target) {
+        SkipNode* cur = head;
+        for (int i = level; i >= 0; --i)               // drop down levels
+            while (cur->forward[i] && cur->forward[i]->val < target)
+                cur = cur->forward[i];                 // walk right
+        cur = cur->forward[0];
+        return cur != nullptr && cur->val == target;
+    }
+};`,
+    java: `import java.util.*;
+
+public class SkipList {
+    static final int MAX = 4;
+
+    static class SkipNode {
+        int val;
+        SkipNode[] forward;
+        SkipNode(int v, int level) {
+            val = v;
+            forward = new SkipNode[level + 1];
+        }
+    }
+
+    SkipNode head = new SkipNode(-1, MAX);
+    int level = 0;
+    Random rng = new Random();
+
+    int randLevel() {
+        int lvl = 0;
+        while (rng.nextBoolean() && lvl < MAX) lvl++;
+        return lvl;
+    }
+
+    void insert(int val) {
+        SkipNode[] update = new SkipNode[MAX + 1];
+        Arrays.fill(update, head);
+        SkipNode cur = head;
+        for (int i = level; i >= 0; i--) {
+            while (cur.forward[i] != null && cur.forward[i].val < val) cur = cur.forward[i];
+            update[i] = cur;
+        }
+        int lvl = randLevel();
+        if (lvl > level) level = lvl;
+        SkipNode node = new SkipNode(val, lvl);
+        for (int i = 0; i <= lvl; i++) {
+            node.forward[i] = update[i].forward[i];
+            update[i].forward[i] = node;
+        }
+    }
+
+    boolean search(int target) {
+        SkipNode cur = head;
+        for (int i = level; i >= 0; i--) {             // drop down levels
+            while (cur.forward[i] != null && cur.forward[i].val < target)
+                cur = cur.forward[i];                  // walk right
+        }
+        cur = cur.forward[0];
+        return cur != null && cur.val == target;
+    }
+}`,
+  },
   huffman: {
     python: `import heapq
 

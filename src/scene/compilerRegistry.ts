@@ -15,6 +15,7 @@ import { pointerCompiler } from './compilers/pointerCompiler'
 import { probCompiler } from './compilers/probCompiler'
 import { queueCompiler } from './compilers/queueCompiler'
 import { setCompiler } from './compilers/setCompiler'
+import { skipListCompiler } from './compilers/skipListCompiler'
 import { stackCompiler } from './compilers/stackCompiler'
 import { stringCompiler } from './compilers/stringCompiler'
 import { treeCompiler } from './compilers/treeCompiler'
@@ -29,7 +30,7 @@ import { unionFindCompiler } from './compilers/unionFindCompiler'
  * 后按合适位置加入本数组即可，无需改动 eventCompiler.ts。
  */
 export const sceneEventCompilers = [
-  pointerCompiler, linkedListCompiler, treeCompiler, unionFindCompiler,
+  pointerCompiler, linkedListCompiler, skipListCompiler, treeCompiler, unionFindCompiler,
   arrayCompiler, matrixCompiler, graphCompiler, stackCompiler, queueCompiler,
   stringCompiler, setCompiler, mapCompiler, dequeCompiler, hashTableCompiler,
   heapCompiler, bitsetCompiler, mathCompiler, geometryCompiler,

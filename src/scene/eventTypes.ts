@@ -129,6 +129,10 @@ export type BitsetAlgorithmEvent =
   | { type: 'bitset.set'; index: number; value: 0 | 1 }
   | { type: 'bitset.highlight'; index: number }
 
+export type SkipListAlgorithmEvent =
+  | { type: 'skip_list.create'; values: number[]; heights: number[] }
+  | { type: 'skip_list.search'; target: number; path: Array<[node: number, level: number]>; found: boolean }
+
 export type UnionFindAlgorithmEvent =
   | { type: 'union_find.create'; size: number; parent: number[]; rank?: number[] }
   | { type: 'union_find.find'; node: number; root: number; path: number[]; parent: number[]; rank?: number[] }
@@ -169,4 +173,4 @@ export type GraphAnalysisAlgorithmEvent =
   | { type: 'graph_analysis.update'; discLow?: Record<string, [number, number]>; stack?: string[]; components?: Record<string, number> }
   | { type: 'graph_analysis.clear' }
 
-export type AlgorithmEvent = CommonAlgorithmEvent | PointerAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | UnionFindAlgorithmEvent | MathAlgorithmEvent | GeometryAlgorithmEvent | AutomatonAlgorithmEvent | ProbAlgorithmEvent | GraphAnalysisAlgorithmEvent | CallStackEvent | DPEvent | GridEvent
+export type AlgorithmEvent = CommonAlgorithmEvent | PointerAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | SkipListAlgorithmEvent | UnionFindAlgorithmEvent | MathAlgorithmEvent | GeometryAlgorithmEvent | AutomatonAlgorithmEvent | ProbAlgorithmEvent | GraphAnalysisAlgorithmEvent | CallStackEvent | DPEvent | GridEvent
