@@ -11,6 +11,7 @@ import CellView from './primitives/CellView'
 import ContainerView from './primitives/ContainerView'
 import { DPTableView } from './primitives/DPTableView'
 import EdgeView from './primitives/EdgeView'
+import FocusLens from './primitives/FocusLens'
 import BitsetView from './primitives/BitsetView'
 import HashTableView from './primitives/HashTableView'
 import GeometryView from './primitives/GeometryView'
@@ -266,6 +267,7 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
           </marker>
         </defs>
         <NodeStyles />
+        <FocusLens entities={entities} />
         {Object.values(scene.groups).filter(g => g.id.startsWith('region_')).map(g => (
           <RegionView key={g.id} region={g} />
         ))}
