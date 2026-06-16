@@ -1,6 +1,107 @@
 export type CodeLang = 'python' | 'javascript' | 'cpp' | 'java'
 
 export const CODE_TEMPLATES: Record<string, Partial<Record<CodeLang, string>>> = {
+  huffman: {
+    python: `import heapq
+
+def huffman(freqs):  # freqs: dict char -> count
+    heap = [[w, i, c, None, None] for i, (c, w) in enumerate(freqs.items())]
+    heapq.heapify(heap)
+    nxt = len(heap)
+    while len(heap) > 1:
+        lo = heapq.heappop(heap)
+        hi = heapq.heappop(heap)
+        heapq.heappush(heap, [lo[0] + hi[0], nxt, None, lo, hi])
+        nxt += 1
+    codes = {}
+    def walk(node, prefix):
+        if node[2] is not None:        # leaf
+            codes[node[2]] = prefix or "0"
+            return
+        walk(node[3], prefix + "0")    # left  = 0
+        walk(node[4], prefix + "1")    # right = 1
+    walk(heap[0], "")
+    return codes`,
+    javascript: `function huffman(freqs) {
+    // freqs: { char: count }
+    let heap = Object.entries(freqs).map(([c, w]) => ({ freq: w, char: c }));
+    while (heap.length > 1) {
+        heap.sort((a, b) => a.freq - b.freq);
+        const lo = heap.shift();
+        const hi = heap.shift();
+        heap.push({ freq: lo.freq + hi.freq, left: lo, right: hi });
+    }
+    const codes = {};
+    (function walk(node, prefix) {
+        if (node.char !== undefined) { codes[node.char] = prefix || "0"; return; }
+        walk(node.left, prefix + "0");   // left  = 0
+        walk(node.right, prefix + "1");  // right = 1
+    })(heap[0], "");
+    return codes;
+}`,
+    cpp: `#include <queue>
+#include <map>
+#include <string>
+#include <vector>
+using namespace std;
+
+struct Node {
+    int freq; char ch; Node *left, *right;
+    Node(int f, char c) : freq(f), ch(c), left(nullptr), right(nullptr) {}
+    Node(int f, Node* l, Node* r) : freq(f), ch(0), left(l), right(r) {}
+};
+struct Cmp { bool operator()(Node* a, Node* b) { return a->freq > b->freq; } };
+
+void walk(Node* n, string p, map<char, string>& codes) {
+    if (!n->left && !n->right) { codes[n->ch] = p.empty() ? "0" : p; return; }
+    walk(n->left, p + "0", codes);   // left  = 0
+    walk(n->right, p + "1", codes);  // right = 1
+}
+
+map<char, string> huffman(map<char, int>& freqs) {
+    priority_queue<Node*, vector<Node*>, Cmp> pq;
+    for (auto& [c, w] : freqs) pq.push(new Node(w, c));
+    while (pq.size() > 1) {
+        Node* lo = pq.top(); pq.pop();
+        Node* hi = pq.top(); pq.pop();
+        pq.push(new Node(lo->freq + hi->freq, lo, hi));
+    }
+    map<char, string> codes;
+    walk(pq.top(), "", codes);
+    return codes;
+}`,
+    java: `import java.util.*;
+
+public class Huffman {
+    static class Node {
+        int freq; char ch; Node left, right;
+        Node(int f, char c) { freq = f; ch = c; }
+        Node(int f, Node l, Node r) { freq = f; left = l; right = r; }
+    }
+
+    static void walk(Node n, String p, Map<Character, String> codes) {
+        if (n.left == null && n.right == null) {
+            codes.put(n.ch, p.isEmpty() ? "0" : p);
+            return;
+        }
+        walk(n.left, p + "0", codes);   // left  = 0
+        walk(n.right, p + "1", codes);  // right = 1
+    }
+
+    static Map<Character, String> huffman(Map<Character, Integer> freqs) {
+        PriorityQueue<Node> pq = new PriorityQueue<>((a, b) -> a.freq - b.freq);
+        for (Map.Entry<Character, Integer> e : freqs.entrySet())
+            pq.add(new Node(e.getValue(), e.getKey()));
+        while (pq.size() > 1) {
+            Node lo = pq.poll(), hi = pq.poll();
+            pq.add(new Node(lo.freq + hi.freq, lo, hi));
+        }
+        Map<Character, String> codes = new HashMap<>();
+        walk(pq.poll(), "", codes);
+        return codes;
+    }
+}`,
+  },
   grid_pathfinding: {
     python: `from collections import deque
 

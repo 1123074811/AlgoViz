@@ -57,6 +57,7 @@ export const ALGORITHM_DESCRIPTIONS: Record<AlgorithmLang, Record<string, string
     linked_list_reversal: '三指针(prev/cur/next)迭代反转单链表，每步把当前节点的 next 指回前驱，O(n) 时间 O(1) 空间。',
     grid_pathfinding: '在带墙网格上用 BFS 逐层扩展前沿，找起点到终点的最短路并回溯路径。',
     grid_dp: '网格最小路径和：只能向右/下移动，dp[i][j]=min(上,左)+代价，再回溯最优路径。',
+    huffman: '贪心构造最优前缀码：反复取两个最小频率节点合并为父节点，直到只剩一棵树；左 0 右 1 即为编码。',
   },
   en: {
     bubble_sort:
@@ -122,6 +123,8 @@ export const ALGORITHM_DESCRIPTIONS: Record<AlgorithmLang, Record<string, string
       'BFS expands the frontier layer by layer on a walled grid to find and trace the shortest start→target path.',
     grid_dp:
       'Grid min path sum: move right/down only, dp[i][j]=min(up,left)+cost, then backtrack the optimal path.',
+    huffman:
+      'Greedy optimal prefix coding: repeatedly merge the two lowest-frequency nodes into a parent until one tree remains; left=0 right=1 yields each code.',
   },
 }
 
@@ -171,6 +174,7 @@ export const ALGORITHM_DEFAULT_INPUTS: Record<string, AlgorithmDefaultInput> = {
   linked_list_reversal: { value: '[1, 2, 3, 4, 5]', hint: '单链表节点值序列，观察指针逐个反转' },
   grid_pathfinding: { value: '(内置 4×5 网格演示)', hint: '内置网格示例，演示 BFS 前沿扩展与最短路回溯' },
   grid_dp: { value: '[[1,3,1],[1,5,1],[4,2,1]]', hint: '代价矩阵(行优先)，求左上到右下最小路径和' },
+  huffman: { value: '[5, 9, 12, 13, 16, 45]', hint: '字符频率数组(自动配 a,b,c… 标签)，构建哈夫曼编码' },
   binary_tree_traverse: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉树层序数组' },
   bst_insert: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉搜索树初始数值数组' },
   bst_delete: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉搜索树初始数值数组' },

@@ -456,6 +456,14 @@ export const DEFAULT_ALGORITHMS: AlgorithmType[] = [
 
   // ============ 进阶专题 ============
   {
+    id: 'huffman',
+    name: '哈夫曼树',
+    nameEn: 'Huffman Coding',
+    category: 'advanced',
+    difficulty: 'medium',
+    hasPreset: true,
+  },
+  {
     id: 'kmp',
     name: 'KMP 字符串匹配',
     nameEn: 'KMP',
