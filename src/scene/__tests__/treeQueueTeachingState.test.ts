@@ -54,7 +54,10 @@ describe('tree auxiliary queue rendering', () => {
     const scene = deriveSceneState(script, 1)
     const queueCells = Object.values(scene.entities).filter(entity => /^queue_\d+$/.test(entity.id))
 
-    expect(queueCells).toHaveLength(2)
-    expect(queueCells.map(cell => cell.type === 'cell' ? cell.value : null)).toEqual([1, 1])
+    // composite 队列已改为 demo 形态:固定槽位铺满,空槽为 empty_placeholder。
+    // 逻辑队列内容 = 占用槽(排除空 placeholder)。
+    const occupied = queueCells.filter(cell => cell.state?.role !== 'empty_placeholder')
+    expect(occupied).toHaveLength(2)
+    expect(occupied.map(cell => cell.type === 'cell' ? cell.value : null)).toEqual([1, 1])
   })
 })
