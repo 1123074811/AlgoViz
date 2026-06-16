@@ -274,6 +274,14 @@ export const DEFAULT_ALGORITHMS: AlgorithmType[] = [
     hasPreset: true,
   },
   {
+    id: 'red_black_tree',
+    name: '红黑树',
+    nameEn: 'Red-Black Tree',
+    category: 'data-structure',
+    difficulty: 'hard',
+    hasPreset: true,
+  },
+  {
     id: 'heap_ds',
     name: '堆操作演示 (上浮与下沉)',
     nameEn: 'Heap Operations (Bubble-up/Sink-down)',

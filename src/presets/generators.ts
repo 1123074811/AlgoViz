@@ -867,6 +867,7 @@ import { generateMatrixChain } from './matrixChain'
 import { generateSudoku } from './sudoku'
 import { generateManacher } from './manacher'
 import { generateSegmentTree } from './segmentTree'
+import { generateRedBlackTree } from './redBlackTree'
 import { generateIntervalDP } from './intervalDP'
 import { generateStack } from './stack'
 import { generateQueue } from './queue'
@@ -1259,6 +1260,7 @@ const unionFindWrapper = (input: unknown) => {
 const binaryTreeWrapper = (input: unknown) => generateBinaryTree(parseArr(input))
 const pathSumIIIWrapper = (input: unknown) => generatePathSumIII(input)
 const avlTreeWrapper = (input: unknown) => generateAVLTree(parseArr(input))
+const redBlackTreeWrapper = (_input: unknown) => generateRedBlackTree()
 const trieWrapper = (input: unknown) => {
   if (Array.isArray(input) && input.every(v => typeof v === 'string')) return generateTrie(input as string[])
   return generateTrie()
@@ -1579,6 +1581,7 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   bst_delete: bstDeleteWrapper,
   bst_search: bstSearchWrapper,
   avl_insert: avlTreeWrapper,
+  red_black_tree: redBlackTreeWrapper,
   trie: trieWrapper, btree: btreeWrapper, bplus_tree: bplusTreeWrapper,
   btree_search: btreeSearchWrapper, btree_insert: btreeInsertWrapper,
   bplus_tree_search: bplusSearchWrapper, bplus_tree_range_query: bplusRangeWrapper,

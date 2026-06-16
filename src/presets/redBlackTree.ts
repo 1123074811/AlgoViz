@@ -100,5 +100,5 @@ export function generateRedBlackTree(): AnimationScript {
 
   steps.push({ stepId: sid++, codeLine: 6, description: { zh: `查找 O(log n) | 插入/删除 O(log n) | 最坏情况也平衡`, en: `Search O(log n) | Insert/Delete O(log n) | Balanced even in worst case` }, action: { type: 'mark', targets: [], color: 'success' }, stats: { comparisons: 1, swaps: 0, accesses: 5 }, events: [{ type: 'tree.visit', nodeId: '0' }] })
 
-  return { algorithm: 'red_black_tree', complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' }, presentation: { engine: 'scene', module: 'tree' }, initialState: { type: 'tree', data: nums }, steps }
+  return { algorithm: 'red_black_tree', complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' }, presentation: { engine: 'scene', module: 'tree' }, initialState: { type: 'tree', data: nums }, result: 'balanced', steps }
 }

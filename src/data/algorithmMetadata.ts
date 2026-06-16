@@ -53,6 +53,7 @@ export const ALGORITHM_DESCRIPTIONS: Record<AlgorithmLang, Record<string, string
     sliding_window: '滑动窗口：维护一个大小可变的窗口，在线性时间内扫描数组。',
     btree: 'B树：多路平衡搜索树，节点可容纳多个关键码，广泛应用于数据库索引。',
     bplus_tree: 'B+树：B树变体，数据只存储在叶子层，叶子通过链表连接，支持高效范围查询。',
+    red_black_tree: '自平衡二叉搜索树，节点染红/黑，靠 5 条性质与旋转+变色保持近似平衡，最坏 O(log n)。',
   },
   en: {
     bubble_sort:
@@ -110,6 +111,8 @@ export const ALGORITHM_DESCRIPTIONS: Record<AlgorithmLang, Record<string, string
       'B-Tree: multi-way balanced search tree where nodes hold multiple keys, widely used in database indexes.',
     bplus_tree:
       'B+ Tree: B-Tree variant storing data only in leaf nodes connected via a linked list, enabling efficient range queries.',
+    red_black_tree:
+      'Self-balancing BST; nodes colored red/black, kept near-balanced via 5 invariants plus rotations/recoloring, O(log n) worst case.',
   },
 }
 
@@ -161,6 +164,7 @@ export const ALGORITHM_DEFAULT_INPUTS: Record<string, AlgorithmDefaultInput> = {
   bst_delete: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉搜索树初始数值数组' },
   bst_search: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉搜索树初始数值数组' },
   avl_insert: { value: '[8, 3, 10, 1, 6, 14]', hint: 'AVL自平衡树初始数组' },
+  red_black_tree: { value: '[13, 8, 17, 1, 11, 15, 25]', hint: '插入序列，演示红黑树插入后的变色与旋转' },
   stack: { value: '[1, 2, 3]', hint: '栈初始入栈元素列表' },
   queue: { value: '[1, 2, 3]', hint: '队列初始入队元素列表' },
   heap_ds: { value: '[4, 10, 3, 5, 1, 2]', hint: '堆初始数组' },
