@@ -144,7 +144,7 @@ export function generateGridDP(grid?: number[][]): AnimationScript {
     algorithm: 'grid_dp',
     complexity: { time: { best: 'O(mn)', average: 'O(mn)', worst: 'O(mn)' }, space: 'O(mn)' },
     presentation: { engine: 'scene', module: 'grid' },
-    initialState: { type: 'matrix', data: g },
+    initialState: { type: 'matrix', data: g.flat(), matrix: g },
     result: dp[rows - 1][cols - 1],
     steps: steps as AnimationScript['steps'],
   }

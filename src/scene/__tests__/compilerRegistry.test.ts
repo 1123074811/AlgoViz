@@ -8,8 +8,8 @@ import { arrayCompiler } from '../compilers/arrayCompiler'
 import { graphAnalysisCompiler } from '../compilers/graphAnalysisCompiler'
 
 describe('sceneEventCompilers 注册表', () => {
-  it('包含全部 21 个编译器', () => {
-    expect(sceneEventCompilers).toHaveLength(21)
+  it('包含全部 22 个编译器', () => {
+    expect(sceneEventCompilers).toHaveLength(22)
   })
 
   it('每个编译器都实现 supports() 与 compile()', () => {

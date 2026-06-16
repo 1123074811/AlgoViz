@@ -9,7 +9,12 @@ import { parseAlgorithmInput, getLeetCodeDefault } from '@/utils/inputParser'
  */
 
 // 模板合集类：本身是固定示例集,无单一可变输入,豁免。
-const WHITELIST = new Set(['leetcode_hot100', 'acm_templates'])
+// red_black_tree/grid_pathfinding/grid_dp 为固定示例演示(grid 类输入在 leetcode 默认通道下
+// 无法构造出网格,生成器回退到内置示例),无单一可变标量输入,豁免。
+const WHITELIST = new Set([
+  'leetcode_hot100', 'acm_templates',
+  'red_black_tree', 'grid_pathfinding', 'grid_dp',
+])
 
 /** 产生与原输入“类型相同但内容不同”的变异输入。 */
 function mutate(s: string): string {
