@@ -91,6 +91,13 @@ describe('EdgeView', () => {
     expect(path?.getAttribute('class')).toBe('scene-edge-flow')
   })
 
+  it('paints a structural (uncolored) edge with the light hairline edge stroke', () => {
+    const scene = sceneWith([node('a', 0, 0), node('b', 200, 0)])
+    const { container } = render(<svg><EdgeView edge={edge()} scene={scene} /></svg>)
+    // demo .edge = #D3D3D3 hairline; structural edges must not use the darker slate.
+    expect(container.querySelector('path')?.getAttribute('stroke')).toBe('#D3D3D3')
+  })
+
   it('uses edge state color over style color', () => {
     const scene = sceneWith([node('a', 0, 0), node('b', 200, 0)])
     const e = edge({ state: { color: 'danger' }, style: { color: 'primary' } })

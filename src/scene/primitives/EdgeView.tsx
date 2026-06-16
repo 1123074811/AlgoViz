@@ -8,8 +8,8 @@ const COLOR_MAP = {
   success: SEMANTIC_COLORS.success.stroke,
   warning: SEMANTIC_COLORS.compare.stroke,
   danger: SEMANTIC_COLORS.danger.stroke,
-  // Edge "muted" uses a darker slate than the idle cell stroke for line legibility.
-  muted: NEUTRALS.mutedText,
+  // Edge "muted" = demo 的发线色（极浅灰 #D3D3D3），结构边默认走它，高亮才上语义色。
+  muted: NEUTRALS.edgeStroke,
 }
 
 interface EdgeViewProps {
@@ -18,7 +18,7 @@ interface EdgeViewProps {
 }
 
 export default function EdgeView({ edge, scene }: EdgeViewProps) {
-  const color = edge.state?.color ? COLOR_MAP[edge.state.color] : edge.style?.color ? COLOR_MAP[edge.style.color] : NEUTRALS.mutedText
+  const color = edge.state?.color ? COLOR_MAP[edge.state.color] : edge.style?.color ? COLOR_MAP[edge.style.color] : NEUTRALS.edgeStroke
 
   // Self-loop: rotation arrows (clockwise / counterclockwise)
   if (edge.from.entityId === edge.to.entityId && (edge.variant === 'clockwise' || edge.variant === 'counterclockwise')) {
