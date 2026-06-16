@@ -73,13 +73,34 @@ describe('ContainerView', () => {
     expect(texts).toContain('MyStack')
   })
 
-  it('renders two parallel queue lines with 队首/队尾 labels', () => {
-    const cells = [cell('queue_0', 50, 100), cell('queue_1', 100, 100)]
-    const { container } = render(<svg><ContainerView type="queue" cells={cells} /></svg>)
-    expect(container.querySelectorAll('line').length).toBe(2)
+  it('renders a row of queue cells with index numbers and ▼front/▼rear pointers', () => {
+    const c0 = cell('queue_0', 50, 100); c0.col = 0; c0.meta = { queueFront: 0, queueRear: 1 }
+    const c1 = cell('queue_1', 102, 100); c1.col = 1
+    const c2 = cell('queue_2', 154, 100); c2.col = 2; c2.state = { role: 'empty_placeholder' }
+    const { container } = render(<svg><ContainerView type="queue" cells={[c0, c1, c2]} /></svg>)
+    // demo 形态:不再有大盒子的两条平行线
+    expect(container.querySelectorAll('line').length).toBe(0)
     const texts = Array.from(container.querySelectorAll('text')).map(t => t.textContent)
-    expect(texts).toContain('队首')
-    expect(texts).toContain('队尾')
+    // 每格下方索引数字
+    expect(texts).toContain('0')
+    expect(texts).toContain('1')
+    expect(texts).toContain('2')
+    // front/rear 指针
+    expect(texts).toContain('▼front')
+    expect(texts).toContain('▼rear')
+    // 空槽补画虚线方块
+    const dashed = Array.from(container.querySelectorAll('rect'))
+      .filter(r => r.getAttribute('stroke-dasharray') === '3 3')
+    expect(dashed.length).toBe(1)
+  })
+
+  it('omits front/rear pointers for an empty queue', () => {
+    const c0 = cell('queue_0', 50, 100); c0.col = 0
+    c0.state = { role: 'empty_placeholder' }; c0.meta = { queueFront: -1, queueRear: -1 }
+    const { container } = render(<svg><ContainerView type="queue" cells={[c0]} /></svg>)
+    const texts = Array.from(container.querySelectorAll('text')).map(t => t.textContent)
+    expect(texts).not.toContain('▼front')
+    expect(texts).not.toContain('▼rear')
   })
 
   it('renders one auxiliary panel rect per row', () => {
