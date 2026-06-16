@@ -152,6 +152,14 @@ export const DEFAULT_ALGORITHMS: AlgorithmType[] = [
     hasPreset: true,
   },
   {
+    id: 'grid_pathfinding',
+    name: '网格寻路(BFS)',
+    nameEn: 'Grid Pathfinding (BFS)',
+    category: 'graph',
+    difficulty: 'medium',
+    hasPreset: true,
+  },
+  {
     id: 'tarjan_scc',
     name: 'Tarjan 强连通分量',
     nameEn: 'Tarjan SCC',
@@ -401,6 +409,14 @@ export const DEFAULT_ALGORITHMS: AlgorithmType[] = [
     nameEn: 'Interval DP',
     category: 'dp',
     difficulty: 'hard',
+    hasPreset: true,
+  },
+  {
+    id: 'grid_dp',
+    name: '网格DP(最小路径和)',
+    nameEn: 'Grid DP (Min Path Sum)',
+    category: 'dp',
+    difficulty: 'medium',
     hasPreset: true,
   },
 

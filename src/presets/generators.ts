@@ -869,6 +869,7 @@ import { generateManacher } from './manacher'
 import { generateSegmentTree } from './segmentTree'
 import { generateRedBlackTree } from './redBlackTree'
 import { generateLinkedListReverse } from './linkedListReverse'
+import { generateGridPathfinding, generateGridDP } from './gridPath'
 import { generateIntervalDP } from './intervalDP'
 import { generateStack } from './stack'
 import { generateQueue } from './queue'
@@ -1263,6 +1264,12 @@ const pathSumIIIWrapper = (input: unknown) => generatePathSumIII(input)
 const avlTreeWrapper = (input: unknown) => generateAVLTree(parseArr(input))
 const redBlackTreeWrapper = (_input: unknown) => generateRedBlackTree()
 const linkedListReverseWrapper = (input: unknown) => generateLinkedListReverse(parseArr(input))
+const gridPathWrapper = (_input: unknown) => generateGridPathfinding()
+const parseGrid = (input: unknown): number[][] | undefined => {
+  const v = Array.isArray(input) ? input : (input && typeof input === 'object' ? (input as { data?: unknown }).data : undefined)
+  return Array.isArray(v) && v.every(r => Array.isArray(r)) ? v as number[][] : undefined
+}
+const gridDPWrapper = (input: unknown) => generateGridDP(parseGrid(input))
 const trieWrapper = (input: unknown) => {
   if (Array.isArray(input) && input.every(v => typeof v === 'string')) return generateTrie(input as string[])
   return generateTrie()
@@ -1585,6 +1592,8 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   avl_insert: avlTreeWrapper,
   red_black_tree: redBlackTreeWrapper,
   linked_list_reversal: linkedListReverseWrapper,
+  grid_pathfinding: gridPathWrapper,
+  grid_dp: gridDPWrapper,
   trie: trieWrapper, btree: btreeWrapper, bplus_tree: bplusTreeWrapper,
   btree_search: btreeSearchWrapper, btree_insert: btreeInsertWrapper,
   bplus_tree_search: bplusSearchWrapper, bplus_tree_range_query: bplusRangeWrapper,

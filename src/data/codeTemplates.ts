@@ -1,6 +1,167 @@
 export type CodeLang = 'python' | 'javascript' | 'cpp' | 'java'
 
 export const CODE_TEMPLATES: Record<string, Partial<Record<CodeLang, string>>> = {
+  grid_pathfinding: {
+    python: `from collections import deque
+
+def bfs(grid, start, target):
+    rows, cols = len(grid), len(grid[0])
+    q = deque([start]); prev = {start: None}
+    while q:
+        r, c = q.popleft()
+        if (r, c) == target: break
+        for dr, dc in ((-1,0),(1,0),(0,-1),(0,1)):
+            nr, nc = r+dr, c+dc
+            if 0<=nr<rows and 0<=nc<cols and grid[nr][nc]==0 and (nr,nc) not in prev:
+                prev[(nr,nc)] = (r,c); q.append((nr,nc))
+    path, cur = [], target
+    while cur: path.append(cur); cur = prev.get(cur)
+    return path[::-1]`,
+    javascript: `function bfs(grid, start, target) {
+    const rows = grid.length, cols = grid[0].length;
+    const key = (r, c) => r + ',' + c;
+    const q = [start];
+    const prev = new Map([[key(...start), null]]);
+    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+    while (q.length) {
+        const [r, c] = q.shift();
+        if (r === target[0] && c === target[1]) break;
+        for (const [dr, dc] of dirs) {
+            const nr = r + dr, nc = c + dc;
+            if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+            if (grid[nr][nc] !== 0 || prev.has(key(nr, nc))) continue;
+            prev.set(key(nr, nc), key(r, c));
+            q.push([nr, nc]);
+        }
+    }
+    const path = [];
+    let cur = key(...target);
+    while (cur != null) {
+        const [r, c] = cur.split(',').map(Number);
+        path.unshift([r, c]);
+        cur = prev.get(cur);
+    }
+    return path;
+}`,
+    cpp: `#include <vector>
+#include <queue>
+#include <map>
+using namespace std;
+
+vector<pair<int,int>> bfs(vector<vector<int>>& grid,
+                          pair<int,int> start, pair<int,int> target) {
+    int rows = grid.size(), cols = grid[0].size();
+    queue<pair<int,int>> q; q.push(start);
+    map<pair<int,int>, pair<int,int>> prev;
+    prev[start] = {-1, -1};
+    int dr[] = {-1,1,0,0}, dc[] = {0,0,-1,1};
+    while (!q.empty()) {
+        auto [r, c] = q.front(); q.pop();
+        if (r == target.first && c == target.second) break;
+        for (int k = 0; k < 4; ++k) {
+            int nr = r + dr[k], nc = c + dc[k];
+            if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+            if (grid[nr][nc] != 0 || prev.count({nr, nc})) continue;
+            prev[{nr, nc}] = {r, c};
+            q.push({nr, nc});
+        }
+    }
+    vector<pair<int,int>> path;
+    for (auto cur = target; cur.first != -1; cur = prev[cur])
+        path.insert(path.begin(), cur);
+    return path;
+}`,
+    java: `import java.util.*;
+
+public class GridPathfinding {
+    static List<int[]> bfs(int[][] grid, int[] start, int[] target) {
+        int rows = grid.length, cols = grid[0].length;
+        Deque<int[]> q = new ArrayDeque<>();
+        q.add(start);
+        Map<String, String> prev = new HashMap<>();
+        prev.put(start[0] + "," + start[1], null);
+        int[][] dirs = {{-1,0},{1,0},{0,-1},{0,1}};
+        while (!q.isEmpty()) {
+            int[] cell = q.poll();
+            int r = cell[0], c = cell[1];
+            if (r == target[0] && c == target[1]) break;
+            for (int[] d : dirs) {
+                int nr = r + d[0], nc = c + d[1];
+                if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+                String k = nr + "," + nc;
+                if (grid[nr][nc] != 0 || prev.containsKey(k)) continue;
+                prev.put(k, r + "," + c);
+                q.add(new int[]{nr, nc});
+            }
+        }
+        List<int[]> path = new ArrayList<>();
+        String cur = target[0] + "," + target[1];
+        while (cur != null) {
+            String[] p = cur.split(",");
+            path.add(0, new int[]{Integer.parseInt(p[0]), Integer.parseInt(p[1])});
+            cur = prev.get(cur);
+        }
+        return path;
+    }
+}`,
+  },
+  grid_dp: {
+    python: `def min_path_sum(grid):
+    rows, cols = len(grid), len(grid[0])
+    dp = [[0]*cols for _ in range(rows)]
+    for i in range(rows):
+        for j in range(cols):
+            if i==0 and j==0: dp[i][j] = grid[0][0]
+            elif i==0: dp[i][j] = dp[i][j-1] + grid[i][j]
+            elif j==0: dp[i][j] = dp[i-1][j] + grid[i][j]
+            else: dp[i][j] = min(dp[i-1][j], dp[i][j-1]) + grid[i][j]
+    return dp[-1][-1]`,
+    javascript: `function minPathSum(grid) {
+    const rows = grid.length, cols = grid[0].length;
+    const dp = Array.from({ length: rows }, () => new Array(cols).fill(0));
+    for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols; j++) {
+            if (i === 0 && j === 0) dp[i][j] = grid[0][0];
+            else if (i === 0) dp[i][j] = dp[i][j - 1] + grid[i][j];
+            else if (j === 0) dp[i][j] = dp[i - 1][j] + grid[i][j];
+            else dp[i][j] = Math.min(dp[i - 1][j], dp[i][j - 1]) + grid[i][j];
+        }
+    }
+    return dp[rows - 1][cols - 1];
+}`,
+    cpp: `#include <vector>
+#include <algorithm>
+using namespace std;
+
+int minPathSum(vector<vector<int>>& grid) {
+    int rows = grid.size(), cols = grid[0].size();
+    vector<vector<int>> dp(rows, vector<int>(cols, 0));
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            if (i == 0 && j == 0) dp[i][j] = grid[0][0];
+            else if (i == 0) dp[i][j] = dp[i][j - 1] + grid[i][j];
+            else if (j == 0) dp[i][j] = dp[i - 1][j] + grid[i][j];
+            else dp[i][j] = min(dp[i - 1][j], dp[i][j - 1]) + grid[i][j];
+        }
+    }
+    return dp[rows - 1][cols - 1];
+}`,
+    java: `public class GridDP {
+    static int minPathSum(int[][] grid) {
+        int rows = grid.length, cols = grid[0].length;
+        int[][] dp = new int[rows][cols];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (i == 0 && j == 0) dp[i][j] = grid[0][0];
+                else if (i == 0) dp[i][j] = dp[i][j - 1] + grid[i][j];
+                else if (j == 0) dp[i][j] = dp[i - 1][j] + grid[i][j];
+                else dp[i][j] = Math.min(dp[i - 1][j], dp[i][j - 1]) + grid[i][j];
+            }
+        }
+        return dp[rows - 1][cols - 1];
+    }
+}`,
+  },
   linked_list_reversal: {
     python: `class Node:
     def __init__(self, val):

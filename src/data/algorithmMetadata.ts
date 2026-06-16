@@ -55,6 +55,8 @@ export const ALGORITHM_DESCRIPTIONS: Record<AlgorithmLang, Record<string, string
     bplus_tree: 'B+树：B树变体，数据只存储在叶子层，叶子通过链表连接，支持高效范围查询。',
     red_black_tree: '自平衡二叉搜索树，节点染红/黑，靠 5 条性质与旋转+变色保持近似平衡，最坏 O(log n)。',
     linked_list_reversal: '三指针(prev/cur/next)迭代反转单链表，每步把当前节点的 next 指回前驱，O(n) 时间 O(1) 空间。',
+    grid_pathfinding: '在带墙网格上用 BFS 逐层扩展前沿，找起点到终点的最短路并回溯路径。',
+    grid_dp: '网格最小路径和：只能向右/下移动，dp[i][j]=min(上,左)+代价，再回溯最优路径。',
   },
   en: {
     bubble_sort:
@@ -116,6 +118,10 @@ export const ALGORITHM_DESCRIPTIONS: Record<AlgorithmLang, Record<string, string
       'Self-balancing BST; nodes colored red/black, kept near-balanced via 5 invariants plus rotations/recoloring, O(log n) worst case.',
     linked_list_reversal:
       'Iterative three-pointer (prev/cur/next) reversal of a singly list; redirect each next pointer to its predecessor. O(n) time, O(1) space.',
+    grid_pathfinding:
+      'BFS expands the frontier layer by layer on a walled grid to find and trace the shortest start→target path.',
+    grid_dp:
+      'Grid min path sum: move right/down only, dp[i][j]=min(up,left)+cost, then backtrack the optimal path.',
   },
 }
 
@@ -163,6 +169,8 @@ export const ALGORITHM_DEFAULT_INPUTS: Record<string, AlgorithmDefaultInput> = {
   linked_list_delete: { value: '[1, 2, 3]', hint: '单链表初始数值数组' },
   linked_list_search: { value: '[1, 2, 3]', hint: '单链表初始数值数组' },
   linked_list_reversal: { value: '[1, 2, 3, 4, 5]', hint: '单链表节点值序列，观察指针逐个反转' },
+  grid_pathfinding: { value: '(内置 4×5 网格演示)', hint: '内置网格示例，演示 BFS 前沿扩展与最短路回溯' },
+  grid_dp: { value: '[[1,3,1],[1,5,1],[4,2,1]]', hint: '代价矩阵(行优先)，求左上到右下最小路径和' },
   binary_tree_traverse: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉树层序数组' },
   bst_insert: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉搜索树初始数值数组' },
   bst_delete: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉搜索树初始数值数组' },
