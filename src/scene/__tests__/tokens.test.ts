@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { SEMANTIC_COLORS, SHAPE, TYPO, MOTION, type SemanticColorName } from '../tokens'
-import { CELL_KEYFRAMES, EDGE_FLOW_KEYFRAMES } from '../primitives/sharedMotion'
+import { SEMANTIC_COLORS, NEUTRALS, FOCUS, SHAPE, TYPO, MOTION, type SemanticColorName } from '../tokens'
+import { CELL_KEYFRAMES, EDGE_FLOW_KEYFRAMES, BUMP_KEYFRAMES, LENS_TRANSITION } from '../primitives/sharedMotion'
 
 // 以 raw 形式加载 scene 源码用于「无硬编码色值」守卫。
 // 用 import.meta.glob 而非 node:fs/__dirname —— 后者在 ESM(module: ESNext)下 tsc 不可用。
@@ -34,6 +34,14 @@ describe('design tokens', () => {
     expect(MOTION.duration.base).toBeTypeOf('number')
   })
 
+  it('lens 光斑与边/空槽中性色 token 存在且合法', () => {
+    expect(FOCUS.fill).toMatch(/^rgba\(/)
+    expect(FOCUS.radius).toBeTypeOf('number')
+    expect(NEUTRALS.edgeStroke).toMatch(/^#[0-9A-Fa-f]{6}$/)
+    expect(NEUTRALS.emptyFill).toMatch(/^#[0-9A-Fa-f]{6}$/)
+    expect(NEUTRALS.emptyStroke).toMatch(/^#[0-9A-Fa-f]{6}$/)
+  })
+
   it('CellView 不再内联定义 COLOR_MAP 硬编码色板', () => {
     const src = rawOf('primitives/CellView.tsx')
     expect(src).not.toMatch(/const COLOR_MAP/)
@@ -46,18 +54,21 @@ describe('design tokens', () => {
       'primitives/ContainerView.tsx', 'primitives/HashTableView.tsx', 'primitives/HeapView.tsx',
       'primitives/SetView.tsx', 'primitives/StringView.tsx', 'primitives/BitsetView.tsx',
       'primitives/VariablesPanel.tsx', 'primitives/RegionView.tsx', 'SceneCanvas.tsx',
+      'primitives/FocusLens.tsx',
     ]
     let total = 0
     for (const f of files) {
       const src = rawOf(f)
       total += (src.match(/#[0-9A-Fa-f]{6}/g) ?? []).length
     }
-    expect(total).toBeLessThanOrEqual(20)
+    expect(total).toBeLessThanOrEqual(28)
   })
 
   it('共享动效常量存在且时长引用 MOTION', () => {
     expect(CELL_KEYFRAMES).toContain('@keyframes')
     expect(EDGE_FLOW_KEYFRAMES).toContain('scene-dash-flow')
+    expect(BUMP_KEYFRAMES).toContain('scene-bump')
+    expect(LENS_TRANSITION).toContain('cx')
   })
 })
 

@@ -16,3 +16,14 @@ export const EDGE_FLOW_KEYFRAMES = `
   .scene-edge-flow { animation: scene-dash-flow 0.7s linear infinite; }
   @keyframes scene-dash-flow { to { stroke-dashoffset: -22; } }
 `
+
+// 落定 bump(对齐 demo .bump/@keyframes bump)：元素就位时一次性轻微放大回弹。
+// 与 cell-pop 区别：bump 不带初始缩小,用于"已存在元素被强调/落位"。
+export const BUMP_KEYFRAMES = `
+  .scene-bump { animation: scene-bump 0.5s ${MOTION.easing}; transform-box: fill-box; transform-origin: center; }
+  @keyframes scene-bump { 0% { transform: scale(1); } 35% { transform: scale(1.05); } 100% { transform: scale(1); } }
+`
+
+// lens 聚焦光斑跟随当前元素的过渡(对齐 demo .focusdot 的 transition:cx/cy)。
+// 集中时长到 MOTION,供 FocusLens 内联到 style。
+export const LENS_TRANSITION = `cx ${MOTION.duration.fast}ms ${MOTION.easing}, cy ${MOTION.duration.fast}ms ${MOTION.easing}, opacity 0.3s`

@@ -39,6 +39,11 @@ export const NEUTRALS = {
   shadow: '#0F172A',
   /** Pure white surface (panels, node bodies). */
   surface: '#FFFFFF',
+  /** 图/树结构边的发线色(对齐 demo .edge，比 idle 描边更轻、更安静)。 */
+  edgeStroke: '#D3D3D3',
+  /** 空槽(队列/栈未占用格)填充与虚线描边(对齐 demo .box.empty)。 */
+  emptyFill: '#FAFAFA',
+  emptyStroke: '#E3E3E3',
 } as const
 
 export const SHAPE = {
@@ -50,6 +55,12 @@ export const SHAPE = {
     soft: 'drop-shadow(0 1px 2px rgba(15,23,42,0.05))',
     raised: 'drop-shadow(0 2px 6px rgba(15,23,42,0.08))',
   },
+} as const
+
+/** 当前元素聚焦光斑(对齐 demo .focusdot)：半透明大圆，跟随 role current/active 的实体。 */
+export const FOCUS = {
+  fill: 'rgba(78,121,167,0.12)',
+  radius: 30,
 } as const
 
 export const TYPO = {
