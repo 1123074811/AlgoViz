@@ -227,40 +227,27 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
       return nodeId
     }
 
-    // 1. Process Queue
+    // 1. Process Queue — demo 形态:一排定宽小格(box),已入队 inserted,
+    //    其余补 empty_placeholder 空槽(虚线,由 ContainerView 画);front/rear
+    //    指针索引随 cells[0].meta 下传给 ContainerView 渲染 ▼front/▼rear。
     if (queue) {
-      const CELL_GAP = 44
+      const QUEUE_W = 44 // 单格宽
+      const QUEUE_GAP = 8 // 格间距(对齐 demo W/GAP)
+      const QUEUE_PITCH = QUEUE_W + QUEUE_GAP
+      const QUEUE_MIN_SLOTS = 6 // 至少铺这么多槽,空的画成虚线占位(对齐 demo 固定槽位)
       const START_Y = 550 // Shift downward slightly to prevent overlap with graph
 
-      if (queue.length > 0) {
-        const START_X = 500 - (queue.length * CELL_GAP) / 2
+      const slotCount = Math.max(queue.length, QUEUE_MIN_SLOTS)
+      const START_X = 500 - ((slotCount - 1) * QUEUE_PITCH) / 2
+      const frontIndex = queue.length > 0 ? 0 : -1
+      const rearIndex = queue.length > 0 ? queue.length - 1 : -1
 
-        queue.forEach((nodeId, index) => {
-          const value = getNodeLabel(nodeId)
-          const cellId = `queue_${index}`
-          scene = {
-            ...scene,
-            entities: {
-              ...scene.entities,
-              [cellId]: {
-                id: cellId,
-                type: 'cell',
-                position: { x: START_X + index * CELL_GAP, y: START_Y },
-                size: { width: 44, height: 44 },
-                value,
-                col: index,
-                state: {
-                  role: 'inserted',
-                  color: 'primary',
-                  pulse: index === queue.length - 1,
-                },
-              },
-            },
-          }
-        })
-      } else {
-        // Create an empty placeholder cell so that ContainerView can render an empty Queue container
-        const cellId = 'queue_0'
+      for (let index = 0; index < slotCount; index++) {
+        const cellId = `queue_${index}`
+        const occupied = index < queue.length
+        const value = occupied ? getNodeLabel(queue[index]) : ''
+        // front/rear 指针索引只挂在首格 meta 上,供 ContainerView 统一渲染指针。
+        const meta = index === 0 ? { queueFront: frontIndex, queueRear: rearIndex } : undefined
         scene = {
           ...scene,
           entities: {
@@ -268,30 +255,24 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
             [cellId]: {
               id: cellId,
               type: 'cell',
-              position: { x: 500, y: START_Y },
-              size: { width: 44, height: 44 },
-              value: '',
-              col: 0,
-              state: {
-                role: 'empty_placeholder',
-                color: 'muted',
-              },
+              position: { x: START_X + index * QUEUE_PITCH, y: START_Y },
+              size: { width: QUEUE_W, height: QUEUE_W },
+              value,
+              col: index,
+              ...(meta ? { meta } : {}),
+              state: occupied
+                ? {
+                    role: 'inserted',
+                    color: 'primary',
+                    pulse: index === rearIndex,
+                  }
+                : {
+                    role: 'empty_placeholder',
+                    color: 'muted',
+                  },
             },
           },
         }
-      }
-
-      scene = {
-        ...scene,
-        labels: {
-          ...scene.labels,
-          queue_label: {
-            id: 'queue_label',
-            type: 'label',
-            text: 'Queue (队列)',
-            position: { x: 500, y: START_Y - 55 }, // Higher up to avoid overlap with top container line
-          },
-        },
       }
     }
 

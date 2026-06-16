@@ -1,5 +1,5 @@
 import type { SceneCell, SceneNode } from '../types'
-import { SEMANTIC_COLORS, NEUTRALS, TYPO } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS, TYPO, SHAPE } from '../tokens'
 
 const CONTAINER_STROKE = NEUTRALS.mutedText
 const CONTAINER_STROKE_WIDTH = 2
@@ -101,24 +101,55 @@ export default function ContainerView({ type, cells, nodes, label }: ContainerVi
     )
   }
 
-  // Queue: two parallel horizontal lines (pipe)
+  // Queue: 对齐 demo —— 一排小格,空槽虚线,格下索引数字,格上 ▼front/▼rear 指针。
+  // 已占用格由 CellView 渲染(empty_placeholder 被 CellView 跳过),故空槽在此补画。
   if (type === 'queue') {
-    const firstX = cells[0].position.x - cellW / 2 - pad
-    const lastX = cells[cells.length - 1].position.x + cellW / 2 + pad
-    const topY = cells[0].position.y - cellH / 2 - pad - 4
-    const bottomY = cells[0].position.y + cellH / 2 + pad + 4
-    const labelY = bottomY + 6
+    const sorted = [...cells].sort((a, b) => a.position.x - b.position.x)
+    const meta = (cells[0]?.meta ?? {}) as { queueFront?: number; queueRear?: number }
+    const frontIndex = meta.queueFront ?? -1
+    const rearIndex = meta.queueRear ?? -1
+    const idxY = sorted[0].position.y + cellH / 2 + 12 // 索引数字基线(格子下方)
+    const cellAt = (i: number) => sorted.find(c => c.col === i) ?? sorted[i]
 
     return (
       <g>
-        <line x1={firstX} y1={topY} x2={lastX} y2={topY}
-          stroke={CONTAINER_STROKE} strokeWidth={CONTAINER_STROKE_WIDTH}
-          strokeLinecap="round" />
-        <line x1={firstX} y1={bottomY} x2={lastX} y2={bottomY}
-          stroke={CONTAINER_STROKE} strokeWidth={CONTAINER_STROKE_WIDTH}
-          strokeLinecap="round" />
-        <text x={firstX} y={labelY} textAnchor="start" fontSize="10" fill={NEUTRALS.labelText} fontFamily={TYPO.serif} dominantBaseline="hanging">队首</text>
-        <text x={lastX} y={labelY} textAnchor="end" fontSize="10" fill={NEUTRALS.labelText} fontFamily={TYPO.serif} dominantBaseline="hanging">队尾</text>
+        {sorted.map((c) => {
+          const isEmpty = c.state?.role === 'empty_placeholder'
+          const cw = c.size?.width ?? cellW
+          const ch = c.size?.height ?? cellH
+          return (
+            <g key={`q_${c.id}`}>
+              {/* CellView 不画 empty_placeholder,空槽虚线方块在此补画 */}
+              {isEmpty && (
+                <rect x={c.position.x - cw / 2} y={c.position.y - ch / 2}
+                  width={cw} height={ch} rx={SHAPE.cellRadius}
+                  fill={NEUTRALS.emptyFill} stroke={NEUTRALS.emptyStroke}
+                  strokeWidth={1.2} strokeDasharray="3 3" />
+              )}
+              {/* 格子下方索引数字 */}
+              <text x={c.position.x} y={idxY} textAnchor="middle"
+                fontSize={String(TYPO.size.index)} fill={NEUTRALS.mutedText}
+                fontFamily={TYPO.mono} dominantBaseline="middle">
+                {c.col ?? 0}
+              </text>
+            </g>
+          )
+        })}
+        {/* ▼front(绿) / ▼rear(橙) 指针 —— 仅在队列非空时显示 */}
+        {frontIndex >= 0 && cellAt(frontIndex) && (
+          <text x={cellAt(frontIndex)!.position.x} y={cellAt(frontIndex)!.position.y - cellH / 2 - 8}
+            textAnchor="middle" fontSize="11" fontWeight={600}
+            fill={SEMANTIC_COLORS.success.stroke} fontFamily={TYPO.mono}>
+            ▼front
+          </text>
+        )}
+        {rearIndex >= 0 && cellAt(rearIndex) && (
+          <text x={cellAt(rearIndex)!.position.x} y={cellAt(rearIndex)!.position.y - cellH / 2 - 24}
+            textAnchor="middle" fontSize="11" fontWeight={600}
+            fill={SEMANTIC_COLORS.compare.stroke} fontFamily={TYPO.mono}>
+            ▼rear
+          </text>
+        )}
       </g>
     )
   }

@@ -36,6 +36,24 @@ function ids(scene: ReturnType<typeof deriveSceneState>, prefix: string): string
   return Object.keys(scene.entities).filter((k) => k.startsWith(prefix))
 }
 
+/**
+ * Queue is rendered demo-style as a fixed row of slots: occupied entries are
+ * `inserted`, the remainder are `empty_placeholder` padding. These helpers read
+ * the *logical* queue contents (occupied slots, in col order) regardless of how
+ * many empty padding slots the row was widened to.
+ */
+function occupiedQueueIds(scene: ReturnType<typeof deriveSceneState>): string[] {
+  return ids(scene, 'queue_')
+    .filter((id) => {
+      const e = scene.entities[id]
+      return e?.type === 'cell' && e.state?.role !== 'empty_placeholder'
+    })
+    .sort((a, b) => Number(a.split('_')[1]) - Number(b.split('_')[1]))
+}
+function occupiedQueueValues(scene: ReturnType<typeof deriveSceneState>): SceneCell['value'][] {
+  return occupiedQueueIds(scene).map((id) => cellValue(scene, id))
+}
+
 // ── Step-boundary / clamping ────────────────────────────────────────────────────
 
 describe('deriveSceneState — step boundaries & clamping', () => {
@@ -173,17 +191,17 @@ describe('deriveSceneState — BFS queue reconstruction fallback', () => {
 
   it('rebuilds queue cells from enqueue events when teachingState.queue is absent', () => {
     const scene = deriveSceneState(graphScript(), 2)
-    const queueCells = ids(scene, 'queue_')
-    // A, B, C enqueued by step 2 (none dequeued yet)
-    expect(queueCells).toHaveLength(3)
-    expect(scene.labels['queue_label']?.text).toContain('Queue')
+    // A, B, C enqueued by step 2 (none dequeued yet) — demo row pads with empty
+    // slots, so assert the occupied count rather than total cell count.
+    expect(occupiedQueueIds(scene)).toHaveLength(3)
+    // 大标题 "Queue (队列)" 已移除,改由 ContainerView 画 ▼front/▼rear 指针。
+    expect(scene.labels['queue_label']).toBeUndefined()
   })
 
   it('removes dequeued nodes from the reconstructed queue', () => {
     const scene = deriveSceneState(graphScript(), 3)
-    const queueValues = ids(scene, 'queue_').map((id) => cellValue(scene, id))
     // After dequeue A, B and C remain
-    expect(queueValues).toEqual(['B', 'C'])
+    expect(occupiedQueueValues(scene)).toEqual(['B', 'C'])
   })
 
   it('renders an empty placeholder queue cell when the queue drains', () => {
@@ -252,8 +270,7 @@ describe('deriveSceneState — explicit teachingState queue/stack', () => {
       ],
     })
     const scene = deriveSceneState(script, 1)
-    const queueValues = ids(scene, 'queue_').map((id) => cellValue(scene, id))
-    expect(queueValues).toEqual(['Start', 'End'])
+    expect(occupiedQueueValues(scene)).toEqual(['Start', 'End'])
   })
 })
 
@@ -390,7 +407,7 @@ describe('deriveSceneState — tree auxiliary with tree relayout', () => {
       ],
     })
     const scene = deriveSceneState(script, 1)
-    expect(ids(scene, 'queue_')).toHaveLength(1)
+    expect(occupiedQueueIds(scene)).toHaveLength(1)
     // tree nodes exist and were laid out
     expect(scene.entities['0']).toBeDefined()
   })
@@ -492,11 +509,12 @@ describe('deriveSceneState — queue re-render clears stale cells', () => {
       ],
     })
     const wide = deriveSceneState(script, 1)
-    expect(ids(wide, 'queue_')).toHaveLength(3)
+    expect(occupiedQueueIds(wide)).toHaveLength(3)
 
     const narrow = deriveSceneState(script, 2)
-    // Stale queue_1 / queue_2 from the wider step must not linger
-    expect(ids(narrow, 'queue_')).toHaveLength(1)
+    // Stale occupied queue_1 / queue_2 from the wider step must not linger
+    // (the demo row pads with empty_placeholder slots, which are not "occupied").
+    expect(occupiedQueueIds(narrow)).toHaveLength(1)
   })
 })
 
