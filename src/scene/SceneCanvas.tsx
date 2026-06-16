@@ -247,7 +247,7 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
           </filter>
           {/* Academic open chevron arrowheads — minimalist, no fill */}
           <marker id="sceneArrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
-            <path d="M1,1 L9,4 L1,7" fill="none" stroke={NEUTRALS.labelText} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M1,1 L9,4 L1,7" fill="none" stroke={NEUTRALS.edgeStroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
           </marker>
           <marker id="sceneDependencyArrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
             <path d="M1,1 L9,4 L1,7" fill="none" stroke={SEMANTIC_COLORS.compare.stroke} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />

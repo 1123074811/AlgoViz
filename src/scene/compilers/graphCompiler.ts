@@ -27,9 +27,11 @@ function compileGraphEvent(event: GraphAlgorithmEvent, _context: CompileContext)
         { type: 'set_state', entityId: event.target, state: { role: event.success ? 'visited' : 'candidate', color: event.success ? 'success' : 'warning' }, merge: true },
       ]
     case 'graph.enqueue':
-      return [{ type: 'set_state', entityId: event.nodeId, state: { role: 'candidate', color: 'primary', badge: 'Q' }, merge: true }]
+      // 入队=frontier(已发现待处理)：对齐 demo .frontier 橙。
+      return [{ type: 'set_state', entityId: event.nodeId, state: { role: 'candidate', color: 'warning', badge: 'Q' }, merge: true }]
     case 'graph.dequeue':
-      return [{ type: 'set_state', entityId: event.nodeId, state: { role: 'current', color: 'warning', badge: undefined, pulse: true }, merge: true }]
+      // 出队=current(正在处理)：对齐 demo .active 钢蓝 + lens 光斑跟随。
+      return [{ type: 'set_state', entityId: event.nodeId, state: { role: 'current', color: 'primary', badge: undefined, pulse: true }, merge: true }]
   }
 }
 
