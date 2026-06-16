@@ -1,5 +1,5 @@
 import type { SceneCell } from '../types'
-import { NEUTRALS, SEMANTIC_COLORS } from '../tokens'
+import { NEUTRALS, SEMANTIC_COLORS, TYPO } from '../tokens'
 
 interface StringViewProps {
   /** All s_<row>_<index> char cells, any number of rows (1 = single string, 2 = text/pattern). */
@@ -56,7 +56,7 @@ export default function StringView({ cells, hideTitle }: StringViewProps) {
       {!hideTitle && (
         <text
           x={allMinX - pad} y={Math.min(...cells.map(c => c.position.y)) - cellH / 2 - pad - 8}
-          textAnchor="start" fontSize="11" fill={LABEL_COLOR} fontFamily="monospace"
+          textAnchor="start" fontSize="11" fill={LABEL_COLOR} fontFamily={TYPO.serif}
         >
           字符序列
         </text>
@@ -83,7 +83,7 @@ export default function StringView({ cells, hideTitle }: StringViewProps) {
             {isDouble && (
               <text
                 x={minX - pad - 8} y={rowY + 4}
-                textAnchor="end" fontSize="11" fill={LABEL_COLOR} fontFamily="monospace"
+                textAnchor="end" fontSize="11" fill={LABEL_COLOR} fontFamily={TYPO.serif}
               >
                 {ROW_LABELS[i] ?? `row${rowKey}`}
               </text>
@@ -94,7 +94,7 @@ export default function StringView({ cells, hideTitle }: StringViewProps) {
               <text
                 key={`idx_${c.id}`}
                 x={c.position.x} y={rowY + cellH / 2 + 14}
-                textAnchor="middle" fontSize="10" fill={INDEX_COLOR} fontFamily="monospace"
+                textAnchor="middle" fontSize="10" fill={INDEX_COLOR} fontFamily={TYPO.serif}
               >
                 {c.col ?? indexOf(c.id)}
               </text>

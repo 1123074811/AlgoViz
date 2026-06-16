@@ -26,7 +26,7 @@ import VariablesPanel from './primitives/VariablesPanel'
 import GraphAnalysisView from './primitives/GraphAnalysisView'
 import AlgorithmOverlays from './overlays/AlgorithmOverlays'
 import ColorLegend from './ColorLegend'
-import { SEMANTIC_COLORS, NEUTRALS } from './tokens'
+import { SEMANTIC_COLORS, NEUTRALS, TYPO } from './tokens'
 import { EDGE_FLOW_KEYFRAMES } from './primitives/sharedMotion'
 import type { SceneCell, SceneEntity, SceneNode, SceneState } from './types'
 import type { DPTableModel } from './overlays'
@@ -412,7 +412,7 @@ function renderArrayIndexAxis(targetScene: SceneState) {
             textAnchor="middle"
             fontSize="10"
             fill="#94A3B8"
-            fontFamily="monospace"
+            fontFamily={TYPO.serif}
           >
             {cell.col}
           </text>

@@ -1,5 +1,5 @@
 import type { SceneCell } from '../types'
-import { NEUTRALS } from '../tokens'
+import { NEUTRALS, TYPO } from '../tokens'
 
 interface BitsetViewProps {
   bits: SceneCell[]
@@ -47,7 +47,7 @@ export default function BitsetView({ bits, labelCell, hideTitle }: BitsetViewPro
       {!hideTitle && (
         <text
           x={minX - pad} y={frameY - pad - 12}
-          textAnchor="start" fontSize="12" fill={NEUTRALS.labelText} fontFamily="monospace" fontWeight={600}
+          textAnchor="start" fontSize="12" fill={NEUTRALS.labelText} fontFamily={TYPO.serif} fontWeight={600}
         >
           {title}
         </text>
@@ -58,7 +58,7 @@ export default function BitsetView({ bits, labelCell, hideTitle }: BitsetViewPro
         <text
           key={`bidx_${b.id}`}
           x={b.position.x} y={b.position.y + cellH / 2 + 16}
-          textAnchor="middle" fontSize="11" fill={NEUTRALS.mutedText} fontFamily="monospace"
+          textAnchor="middle" fontSize="11" fill={NEUTRALS.mutedText} fontFamily={TYPO.serif}
         >
           {b.col ?? indexOf(b)}
         </text>

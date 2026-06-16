@@ -60,3 +60,28 @@ describe('design tokens', () => {
     expect(EDGE_FLOW_KEYFRAMES).toContain('scene-dash-flow')
   })
 })
+
+describe('Phase 3 serif typography', () => {
+  it('label/index/title text uses TYPO.serif, not monospace', () => {
+    // These files must reference TYPO.serif for their chrome text.
+    const serifFiles = [
+      'primitives/CellView.tsx', 'primitives/NodeView.tsx',
+      'primitives/HeapView.tsx', 'primitives/HashTableView.tsx',
+      'primitives/StringView.tsx', 'primitives/SetView.tsx',
+      'primitives/ContainerView.tsx', 'primitives/BitsetView.tsx',
+      'primitives/RegionView.tsx', 'primitives/GraphAnalysisView.tsx',
+      'primitives/GeometryView.tsx', 'primitives/DistributionView.tsx',
+      'SceneCanvas.tsx',
+    ]
+    for (const f of serifFiles) {
+      const src = rawOf(f)
+      expect(src, `${f} 应引用 TYPO.serif`).toMatch(/TYPO\.serif/)
+    }
+  })
+
+  it('numeric value text stays monospace in CellView/NodeView', () => {
+    // The primary data-value <text> must remain tabular monospace.
+    expect(rawOf('primitives/CellView.tsx')).toMatch(/fontFamily="monospace"/)
+    expect(rawOf('primitives/NodeView.tsx')).toMatch(/fontFamily="monospace"/)
+  })
+})

@@ -1,5 +1,5 @@
 import type { SceneCell } from '../types'
-import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS, TYPO } from '../tokens'
 
 interface HashTableViewProps {
   buckets: SceneCell[]
@@ -62,7 +62,7 @@ export default function HashTableView({ buckets, entries, loadFactorCell, hideTi
       {!hideTitle && (
         <text
           x={minX - pad} y={frameY - pad - 26}
-          textAnchor="start" fontSize="12" fill={NEUTRALS.labelText} fontFamily="monospace" fontWeight={600}
+          textAnchor="start" fontSize="12" fill={NEUTRALS.labelText} fontFamily={TYPO.serif} fontWeight={600}
         >
           哈希表·链地址法
         </text>
@@ -73,7 +73,7 @@ export default function HashTableView({ buckets, entries, loadFactorCell, hideTi
         <text
           key={`idx_${b.id}`}
           x={b.position.x} y={b.position.y - bucketH / 2 - 8}
-          textAnchor="middle" fontSize="11" fill={NEUTRALS.mutedText} fontFamily="monospace"
+          textAnchor="middle" fontSize="11" fill={NEUTRALS.mutedText} fontFamily={TYPO.serif}
         >
           {b.col ?? bucketOfId(b.id)}
         </text>
@@ -109,7 +109,7 @@ export default function HashTableView({ buckets, entries, loadFactorCell, hideTi
       <g transform={`translate(${lfX}, ${lfY})`}>
         <rect x={-60} y={-bucketH / 2} width={120} height={bucketH} rx={8}
           fill={SEMANTIC_COLORS.idle.fill} stroke={SEMANTIC_COLORS.idle.stroke} strokeWidth={1.2} />
-        <text x={0} y={-3} textAnchor="middle" fontSize="10" fill={NEUTRALS.mutedText} fontFamily="monospace">
+        <text x={0} y={-3} textAnchor="middle" fontSize="10" fill={NEUTRALS.mutedText} fontFamily={TYPO.serif}>
           负载因子
         </text>
         <text x={0} y={14} textAnchor="middle" fontSize="14" fill={NEUTRALS.bodyText} fontFamily="monospace" fontWeight={600}>

@@ -1,6 +1,6 @@
 import type { SceneCell } from '../types'
 import { makeProjector } from '../compilers/geometryMap'
-import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS, TYPO } from '../tokens'
 
 const COLOR = (c?: string) =>
   c === 'success' ? SEMANTIC_COLORS.success.stroke
@@ -46,7 +46,7 @@ export default function GeometryView({ cells }: Props) {
           return (
             <g key={c.id}>
               <circle cx={p.x} cy={p.y} r={5} fill={color} />
-              {m.label != null && <text x={p.x + 8} y={p.y - 6} fontSize={12} fill={NEUTRALS.bodyText} fontFamily="monospace">{String(m.label)}</text>}
+              {m.label != null && <text x={p.x + 8} y={p.y - 6} fontSize={12} fill={NEUTRALS.bodyText} fontFamily={TYPO.serif}>{String(m.label)}</text>}
             </g>
           )
         }

@@ -1,7 +1,7 @@
 import type { SceneNode } from '../types'
 import { getAdaptiveCircleLayout } from '../engineUtils'
 import { measureNodeWidth, truncateToWidth } from '../textMetrics'
-import { SEMANTIC_COLORS, NEUTRALS, SHAPE } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS, SHAPE, TYPO } from '../tokens'
 
 // Legacy scene color names map onto semantic tokens (warning→compare, muted→idle).
 const COLOR_MAP: Record<string, { stroke: string; fill: string }> = {
@@ -103,7 +103,7 @@ function renderRect(
                   stroke={SEMANTIC_COLORS.idle.stroke} strokeWidth={SHAPE.strokeWidth.thin} />
               )}
               <text x={x + fieldWidth / 2} y={isData ? -2 : 0}
-                textAnchor="middle" fontSize={fontSize} fontFamily="monospace"
+                textAnchor="middle" fontSize={fontSize} fontFamily={isData ? 'monospace' : TYPO.serif}
                 fill={isData ? SEMANTIC_COLORS.idle.text : NEUTRALS.mutedText} fontWeight={isData ? 700 : 400}>
                 {text !== rawText && <title>{rawText}</title>}
                 {text}

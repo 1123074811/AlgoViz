@@ -1,5 +1,5 @@
 import type { SceneCell } from '../types'
-import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS, TYPO } from '../tokens'
 
 interface SetViewProps {
   cells: SceneCell[]
@@ -73,7 +73,7 @@ export default function SetView({ cells, hideTitle }: SetViewProps) {
       {!hideTitle && (
         <text
           x={left} y={top - 8}
-          textAnchor="start" fontSize="11" fill={NEUTRALS.labelText} fontFamily="monospace"
+          textAnchor="start" fontSize="11" fill={NEUTRALS.labelText} fontFamily={TYPO.serif}
         >
           集合·去重无序
         </text>

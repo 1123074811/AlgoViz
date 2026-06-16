@@ -1,5 +1,5 @@
 import type { SceneCell, SceneNode, SceneState } from '../types'
-import { NEUTRALS } from '../tokens'
+import { NEUTRALS, TYPO } from '../tokens'
 
 // 低饱和 Tableau-10 分组色，贴合 Observable 风的分类配色（用于连通分量/分组着色）。
 const GROUP_PALETTE = ['#4E79A7', '#59A14F', '#F28E2B', '#E15759', '#B07AA1', '#76B7B2', '#EDC948', '#9C755F']
@@ -31,7 +31,7 @@ export default function GraphAnalysisView({ marker, scene }: Props) {
               <circle cx={n.position.x} cy={n.position.y} r={r} fill="none" stroke={GROUP_PALETTE[g % GROUP_PALETTE.length]} strokeWidth={2.4} strokeOpacity={0.85} />
             )}
             {dl && (
-              <text x={n.position.x} y={n.position.y - r - 4} textAnchor="middle" fontSize={11} fontFamily="monospace" fill={NEUTRALS.bodyText}>
+              <text x={n.position.x} y={n.position.y - r - 4} textAnchor="middle" fontSize={11} fontFamily={TYPO.serif} fill={NEUTRALS.bodyText}>
                 {`${dl[0]}/${dl[1]}`}
               </text>
             )}

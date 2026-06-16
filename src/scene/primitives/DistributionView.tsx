@@ -1,5 +1,5 @@
 import type { SceneCell } from '../types'
-import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS, TYPO } from '../tokens'
 
 interface Props { cells: SceneCell[] }
 const MAX_H = 200
@@ -22,8 +22,8 @@ export default function DistributionView({ cells }: Props) {
         return (
           <g key={c.id}>
             <rect x={c.position.x - bw / 2} y={baseY - h} width={bw} height={h} rx={4} fill={fill} stroke={stroke} strokeWidth={1.4} />
-            <text x={c.position.x} y={baseY + 16} textAnchor="middle" fontSize={11} fontFamily="monospace" fill={NEUTRALS.labelText}>{String(w.label ?? c.value ?? '')}</text>
-            <text x={c.position.x} y={baseY - h - 6} textAnchor="middle" fontSize={11} fontFamily="monospace" fill={NEUTRALS.mutedText}>{String(w.weight ?? '')}</text>
+            <text x={c.position.x} y={baseY + 16} textAnchor="middle" fontSize={11} fontFamily={TYPO.serif} fill={NEUTRALS.labelText}>{String(w.label ?? c.value ?? '')}</text>
+            <text x={c.position.x} y={baseY - h - 6} textAnchor="middle" fontSize={11} fontFamily={TYPO.serif} fill={NEUTRALS.mutedText}>{String(w.weight ?? '')}</text>
           </g>
         )
       })}

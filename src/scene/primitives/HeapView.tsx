@@ -1,5 +1,5 @@
 import type { SceneCell } from '../types'
-import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS, TYPO } from '../tokens'
 
 interface HeapViewProps {
   nodes: SceneCell[]
@@ -52,7 +52,7 @@ export default function HeapView({ nodes, hideTitle }: HeapViewProps) {
       {!hideTitle && (
         <text
           x={Math.min(minX, mirrorStartX)} y={mirrorY - cellH / 2 - 28}
-          textAnchor="start" fontSize="12" fill={NEUTRALS.labelText} fontFamily="monospace" fontWeight={600}
+          textAnchor="start" fontSize="12" fill={NEUTRALS.labelText} fontFamily={TYPO.serif} fontWeight={600}
         >
           {title}
         </text>
@@ -61,7 +61,7 @@ export default function HeapView({ nodes, hideTitle }: HeapViewProps) {
       {/* Array mirror label */}
       <text
         x={mirrorStartX} y={mirrorY - cellH / 2 - 8}
-        textAnchor="start" fontSize="10" fill={NEUTRALS.mutedText} fontFamily="monospace"
+        textAnchor="start" fontSize="10" fill={NEUTRALS.mutedText} fontFamily={TYPO.serif}
       >
         底层数组（层序）
       </text>
@@ -86,7 +86,7 @@ export default function HeapView({ nodes, hideTitle }: HeapViewProps) {
             {/* index label below */}
             <text
               x={x + cellW / 2} y={mirrorY + cellH / 2 + 12}
-              textAnchor="middle" fontSize="9" fill={NEUTRALS.mutedText} fontFamily="monospace"
+              textAnchor="middle" fontSize="9" fill={NEUTRALS.mutedText} fontFamily={TYPO.serif}
             >
               {idx}
             </text>

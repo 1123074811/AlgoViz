@@ -1,6 +1,6 @@
 import type { SceneCell } from '../types'
 import { truncateToWidth } from '../textMetrics'
-import { SEMANTIC_COLORS, NEUTRALS, SHAPE, type SemanticColorName } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS, SHAPE, TYPO, type SemanticColorName } from '../tokens'
 import { CELL_KEYFRAMES } from './sharedMotion'
 
 // Legacy color names carried on the scene model map onto semantic tokens.
@@ -43,7 +43,7 @@ export default function CellView({ cell }: CellViewProps) {
     return (
       <g transform={`translate(${cell.position.x}, ${cell.position.y})`} opacity={opacity}>
         <title>{`${cell.id} · header`}</title>
-        <text x={0} y={4} textAnchor="middle" fontSize="12" fontFamily="monospace"
+        <text x={0} y={4} textAnchor="middle" fontSize="12" fontFamily={TYPO.serif}
           fill={NEUTRALS.labelText} fontWeight={500}>
           {value}
         </text>
@@ -85,7 +85,7 @@ export default function CellView({ cell }: CellViewProps) {
         </text>
         {cell.col !== undefined && showColLabel(cell.id) && (
           <text x={0} y={height / 2 + 14} textAnchor="middle" fontSize="10"
-            fill={NEUTRALS.mutedText} fontFamily="monospace">
+            fill={NEUTRALS.mutedText} fontFamily={TYPO.serif}>
             {cell.row !== undefined ? `${cell.row},${cell.col}` : cell.col}
           </text>
         )}
