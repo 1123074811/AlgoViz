@@ -1,6 +1,76 @@
 export type CodeLang = 'python' | 'javascript' | 'cpp' | 'java'
 
 export const CODE_TEMPLATES: Record<string, Partial<Record<CodeLang, string>>> = {
+  linked_list_reversal: {
+    python: `class Node:
+    def __init__(self, val):
+        self.val = val
+        self.next = None
+
+def reverse_list(head):
+    prev = None
+    cur = head
+    while cur:
+        nxt = cur.next   # save next
+        cur.next = prev  # reverse pointer
+        prev = cur       # advance prev
+        cur = nxt        # advance cur
+    return prev          # new head`,
+    javascript: `class Node {
+    constructor(val) {
+        this.val = val;
+        this.next = null;
+    }
+}
+
+function reverseList(head) {
+    let prev = null;
+    let cur = head;
+    while (cur) {
+        const nxt = cur.next; // save next
+        cur.next = prev;      // reverse pointer
+        prev = cur;           // advance prev
+        cur = nxt;            // advance cur
+    }
+    return prev;              // new head
+}`,
+    cpp: `struct Node {
+    int val;
+    Node* next;
+    Node(int v) : val(v), next(nullptr) {}
+};
+
+Node* reverseList(Node* head) {
+    Node* prev = nullptr;
+    Node* cur = head;
+    while (cur) {
+        Node* nxt = cur->next; // save next
+        cur->next = prev;      // reverse pointer
+        prev = cur;            // advance prev
+        cur = nxt;             // advance cur
+    }
+    return prev;               // new head
+}`,
+    java: `class Node {
+    int val;
+    Node next;
+    Node(int v) { val = v; }
+}
+
+public class LinkedListReversal {
+    static Node reverseList(Node head) {
+        Node prev = null;
+        Node cur = head;
+        while (cur != null) {
+            Node nxt = cur.next; // save next
+            cur.next = prev;     // reverse pointer
+            prev = cur;          // advance prev
+            cur = nxt;           // advance cur
+        }
+        return prev;             // new head
+    }
+}`,
+  },
   bubble_sort: {
     python: `def bubble_sort(arr):
     n = len(arr)

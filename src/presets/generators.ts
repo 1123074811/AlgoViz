@@ -868,6 +868,7 @@ import { generateSudoku } from './sudoku'
 import { generateManacher } from './manacher'
 import { generateSegmentTree } from './segmentTree'
 import { generateRedBlackTree } from './redBlackTree'
+import { generateLinkedListReverse } from './linkedListReverse'
 import { generateIntervalDP } from './intervalDP'
 import { generateStack } from './stack'
 import { generateQueue } from './queue'
@@ -1261,6 +1262,7 @@ const binaryTreeWrapper = (input: unknown) => generateBinaryTree(parseArr(input)
 const pathSumIIIWrapper = (input: unknown) => generatePathSumIII(input)
 const avlTreeWrapper = (input: unknown) => generateAVLTree(parseArr(input))
 const redBlackTreeWrapper = (_input: unknown) => generateRedBlackTree()
+const linkedListReverseWrapper = (input: unknown) => generateLinkedListReverse(parseArr(input))
 const trieWrapper = (input: unknown) => {
   if (Array.isArray(input) && input.every(v => typeof v === 'string')) return generateTrie(input as string[])
   return generateTrie()
@@ -1582,6 +1584,7 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   bst_search: bstSearchWrapper,
   avl_insert: avlTreeWrapper,
   red_black_tree: redBlackTreeWrapper,
+  linked_list_reversal: linkedListReverseWrapper,
   trie: trieWrapper, btree: btreeWrapper, bplus_tree: bplusTreeWrapper,
   btree_search: btreeSearchWrapper, btree_insert: btreeInsertWrapper,
   bplus_tree_search: bplusSearchWrapper, bplus_tree_range_query: bplusRangeWrapper,

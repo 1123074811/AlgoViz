@@ -54,6 +54,7 @@ export const ALGORITHM_DESCRIPTIONS: Record<AlgorithmLang, Record<string, string
     btree: 'B树：多路平衡搜索树，节点可容纳多个关键码，广泛应用于数据库索引。',
     bplus_tree: 'B+树：B树变体，数据只存储在叶子层，叶子通过链表连接，支持高效范围查询。',
     red_black_tree: '自平衡二叉搜索树，节点染红/黑，靠 5 条性质与旋转+变色保持近似平衡，最坏 O(log n)。',
+    linked_list_reversal: '三指针(prev/cur/next)迭代反转单链表，每步把当前节点的 next 指回前驱，O(n) 时间 O(1) 空间。',
   },
   en: {
     bubble_sort:
@@ -113,6 +114,8 @@ export const ALGORITHM_DESCRIPTIONS: Record<AlgorithmLang, Record<string, string
       'B+ Tree: B-Tree variant storing data only in leaf nodes connected via a linked list, enabling efficient range queries.',
     red_black_tree:
       'Self-balancing BST; nodes colored red/black, kept near-balanced via 5 invariants plus rotations/recoloring, O(log n) worst case.',
+    linked_list_reversal:
+      'Iterative three-pointer (prev/cur/next) reversal of a singly list; redirect each next pointer to its predecessor. O(n) time, O(1) space.',
   },
 }
 
@@ -159,6 +162,7 @@ export const ALGORITHM_DEFAULT_INPUTS: Record<string, AlgorithmDefaultInput> = {
   linked_list_insert: { value: '[1, 2, 3]', hint: '单链表初始数值数组' },
   linked_list_delete: { value: '[1, 2, 3]', hint: '单链表初始数值数组' },
   linked_list_search: { value: '[1, 2, 3]', hint: '单链表初始数值数组' },
+  linked_list_reversal: { value: '[1, 2, 3, 4, 5]', hint: '单链表节点值序列，观察指针逐个反转' },
   binary_tree_traverse: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉树层序数组' },
   bst_insert: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉搜索树初始数值数组' },
   bst_delete: { value: '[8, 3, 10, 1, 6, 14]', hint: '二叉搜索树初始数值数组' },

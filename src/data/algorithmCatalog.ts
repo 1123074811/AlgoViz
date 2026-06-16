@@ -210,6 +210,14 @@ export const DEFAULT_ALGORITHMS: AlgorithmType[] = [
     hasPreset: true,
   },
   {
+    id: 'linked_list_reversal',
+    name: '链表反转',
+    nameEn: 'Linked List Reversal',
+    category: 'data-structure',
+    difficulty: 'easy',
+    hasPreset: true,
+  },
+  {
     id: 'stack',
     name: '栈操作演示',
     nameEn: 'Stack Operations',
