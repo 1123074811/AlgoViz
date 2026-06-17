@@ -7,7 +7,7 @@ import { deriveSceneState } from './SceneEngine'
 import { useSceneTransition } from './useSceneTransition'
 import { MOTION } from './tokens'
 import AutomatonView from './primitives/AutomatonView'
-import CellView from './primitives/CellView'
+import CellRenderer from './graphics/renderers/CellRenderer'
 import ContainerView from './primitives/ContainerView'
 import { DPTableView } from './primitives/DPTableView'
 import EdgeView from './primitives/EdgeView'
@@ -280,7 +280,7 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
         <g className="pointer-events-auto">
           {edges.map((edge) => <EdgeView key={edge.id} edge={edge} scene={scene} />)}
           {renderArrayIndexAxis(targetScene)}
-          {entities.map((entity) => entity.type === 'cell' ? <CellView key={entity.id} cell={entity} /> : null)}
+          {entities.map((entity) => entity.type === 'cell' ? <CellRenderer key={entity.id} cell={entity} /> : null)}
           {(() => {
             const autoCells = entities.filter((e): e is SceneCell => e.type === 'cell' && e.id.startsWith('auto_'))
             return autoCells.length > 0 ? <AutomatonView cells={autoCells} /> : null
@@ -395,7 +395,7 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
 /**
  * 数组下标轴:从「目标场景」(未补间、位置固定)绘制每个数组格的下标标签。
  * 值互换动画里格子会滑动交叉,但下标代表的是固定槽位,必须钉在原处不跟着滑——
- * 因此独立于会滑动的 CellView,直接按目标位置绘制。
+ * 因此独立于会滑动的 CellRenderer,直接按目标位置绘制。
  */
 function renderArrayIndexAxis(targetScene: SceneState) {
   const cells = Object.values(targetScene.entities).filter(
