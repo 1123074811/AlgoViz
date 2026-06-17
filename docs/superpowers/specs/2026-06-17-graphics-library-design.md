@@ -77,7 +77,7 @@ src/scene/graphics/
 **不一次性推倒。** 按图元域分批,每域闭环:
 1. 在 `graphics/` 写该域的 spec + builder + renderer。
 2. 对应 compiler 改为薄派发(调 builder);对应 primitive 由 renderer 取代(SceneCanvas 改引 renderer)。
-3. **tsc 通过 + Playwright 截图验收该域代表算法**(比对 demo)。
+3. **tsc 通过 + 交用户人工验收该域**(用户在 app 里查看;不做截图)。
 4. 现有该域测试:能过则过;因结构调整失效的断言,记录待批量修订。
 5. 下一域。
 
@@ -92,12 +92,13 @@ src/scene/graphics/
 
 ## 6. 测试与验收
 
-- **先不写新单测**(用户决定),靠 `npx tsc --noEmit` + 每域 Playwright 截图(`with_server.py` + 缓存 chromium,见架构记忆)。
+- **先不写新单测**(用户决定),靠 `npx tsc --noEmit` 把关类型/编译。
+- **验收 = 用户人工验收**(用户明确要求,不做 Playwright 截图):每域完成后交用户在 app 里查看确认。
 - **现有 1930 测试保留当回归网**:重写中尽量保持绿;因 builder/renderer 结构调整而失效的断言,**集中在最后一批统一修订**(而非边写边改,避免来回)。
-- **完成判据**:26 种算法逐一截图比对 demo 通过;tsc 零错;现有测试修订后回归全绿。
+- **完成判据**:tsc 零错;现有测试修订后回归全绿;用户人工验收 26 种通过。
 
 ## 7. 风险与边界
 
-- **风险**:动几十个文件的大重构;无新测试期间回归靠人眼截图,覆盖面有限;现有测试会大面积临时变红。用"渐进逐域 + 截图验收 + 旧测试当最终网 + 多 agent 按域文件切分"压制。
+- **风险**:动几十个文件的大重构;无新测试期间回归靠人眼截图,覆盖面有限;现有测试会大面积临时变红。用"渐进逐域 + 用户人工验收 + 旧测试当最终网 + 多 agent 按域文件切分"压制。
 - **边界**:不动 IR(`AnimationScript`)契约、不动 `SceneEngine.deriveSceneState`/补间框架、不动 AI 解析/校验管线的输入契约(events 类型集不变,只是改由 builder 产出)。`graphics/` 是渲染+构建层的重写,不是引擎重写。
 - **AI 集成**:本次先让 preset 改用 builder + 出 catalog;AI 直接基于 catalog 生成留作 catalog 就绪后的下一步(不在本 spec 范围)。
