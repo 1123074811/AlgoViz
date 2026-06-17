@@ -1,4 +1,4 @@
-import { arrayCompiler } from './compilers/arrayCompiler'
+import { arrayCompiler } from './graphics/compile/arrayCompile'
 import { automatonCompiler } from './compilers/automatonCompiler'
 import { bitsetCompiler } from './compilers/bitsetCompiler'
 import { dequeCompiler } from './compilers/dequeCompiler'

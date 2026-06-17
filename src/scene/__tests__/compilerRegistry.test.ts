@@ -4,7 +4,7 @@ import { pointerCompiler } from '../compilers/pointerCompiler'
 import { linkedListCompiler } from '../compilers/linkedListCompiler'
 import { treeCompiler } from '../compilers/treeCompiler'
 import { unionFindCompiler } from '../compilers/unionFindCompiler'
-import { arrayCompiler } from '../compilers/arrayCompiler'
+import { arrayCompiler } from '../graphics/compile/arrayCompile'
 import { graphAnalysisCompiler } from '../compilers/graphAnalysisCompiler'
 
 describe('sceneEventCompilers 注册表', () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { applyRegionLayout, structureOf } from '../regionLayout'
 import { layoutTree } from '../layouts/treeLayout'
-import { arrayCompiler } from '../compilers/arrayCompiler'
+import { arrayCompiler } from '../graphics/compile/arrayCompile'
 import { measureNodeRenderWidth, truncateToWidth } from '../textMetrics'
 import { createEmptyScene } from '../types'
 import type { SceneState, SceneCell, SceneNode } from '../types'

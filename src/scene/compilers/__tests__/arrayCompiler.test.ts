@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arrayCompiler } from '../arrayCompiler'
+import { arrayCompiler } from '../../graphics/compile/arrayCompile'
 import { truncateToWidth } from '../../textMetrics'
 import type { CompileContext } from '../../SceneEngine'
 import type { SceneCell } from '../../types'
