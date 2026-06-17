@@ -1,4 +1,5 @@
 import type { AnimationScript } from '@/types/animation'
+import { graphBuilder } from '@/scene/graphics'
 
 export interface GraphInput {
   nodes: Array<{ id: string; label?: string }>
@@ -34,7 +35,7 @@ export function generateBFS(input: GraphInput): AnimationScript {
     description: { zh: 'BFS 初始化：将所有节点标记为未访问。选择起点开始遍历', en: 'BFS init: mark all nodes unvisited, select start node' },
     action: { type: 'highlight', targets: [], color: 'primary' },
     events: [
-      { type: 'graph.create', nodes, edges, directed: false },
+      graphBuilder.create(nodes, edges, false),
     ],
     stats: { comparisons: 0, swaps: 0, accesses: nodes.length },
     teachingState: { graph: { queue: [], output: [], nodeStates: [] } },
@@ -48,7 +49,7 @@ export function generateBFS(input: GraphInput): AnimationScript {
     description: { zh: `起点 ${getLabel(startId)} 入队，标记为已发现`, en: `Start node ${getLabel(startId)} enqueued, marked discovered` },
     action: { type: 'highlight', targets: [nodes.findIndex(n => n.id === startId)], color: 'primary' },
     events: [
-      { type: 'graph.enqueue', nodeId: startId },
+      graphBuilder.enqueue(startId),
     ],
     stats: { comparisons: 0, swaps: 0, accesses: 1 },
     teachingState: {
@@ -75,8 +76,8 @@ export function generateBFS(input: GraphInput): AnimationScript {
       description: { zh: `${getLabel(current)} 出队并访问。BFS 按入队顺序逐层处理`, en: `Dequeue and visit ${getLabel(current)}` },
       action: { type: 'mark', targets: [currentIdx], color: 'success' },
       events: [
-        { type: 'graph.dequeue', nodeId: current },
-        { type: 'graph.visit_node', nodeId: current },
+        graphBuilder.dequeue(current),
+        graphBuilder.visitNode(current),
       ],
       stats: { comparisons: sid, swaps: 0, accesses: output.length + queue.length },
       teachingState: {
@@ -103,7 +104,7 @@ export function generateBFS(input: GraphInput): AnimationScript {
           description: { zh: `检查边 ${getLabel(current)}→${getLabel(neighbor)}：${getLabel(neighbor)} 已访问，跳过`, en: `Check edge ${getLabel(current)}→${getLabel(neighbor)}: already visited, skip` },
           action: { type: 'compare', targets: [currentIdx, nIdx], color: 'muted' },
           events: [
-            { type: 'graph.visit_edge', source: current, target: neighbor },
+            graphBuilder.visitEdge(current, neighbor),
           ],
           stats: { comparisons: sid, swaps: 0, accesses: visited.size + queue.length },
           teachingState: {
@@ -126,7 +127,7 @@ export function generateBFS(input: GraphInput): AnimationScript {
           description: { zh: `检查边 ${getLabel(current)}→${getLabel(neighbor)}：${getLabel(neighbor)} 未被访问，入队`, en: `Check edge ${getLabel(current)}→${getLabel(neighbor)}: undiscovered, enqueue` },
           action: { type: 'compare', targets: [currentIdx, nIdx], color: 'warning' },
           events: [
-            { type: 'graph.visit_edge', source: current, target: neighbor },
+            graphBuilder.visitEdge(current, neighbor),
           ],
           stats: { comparisons: sid, swaps: 0, accesses: visited.size + queue.length },
           teachingState: {
@@ -147,7 +148,7 @@ export function generateBFS(input: GraphInput): AnimationScript {
           description: { zh: `标记 ${getLabel(neighbor)} 为已发现，加入队列`, en: `Mark ${getLabel(neighbor)} discovered, enqueued` },
           action: { type: 'highlight', targets: [nIdx], color: 'primary' },
           events: [
-            { type: 'graph.enqueue', nodeId: neighbor },
+            graphBuilder.enqueue(neighbor),
           ],
           stats: { comparisons: sid, swaps: 0, accesses: visited.size + queue.length },
           teachingState: {
@@ -170,7 +171,7 @@ export function generateBFS(input: GraphInput): AnimationScript {
     stepId: sid++, codeLine: 14,
     description: { zh: `BFS 完成！遍历顺序：${output.map(getLabel).join(' → ')}`, en: `BFS complete! Order: ${output.map(getLabel).join(' → ')}` },
     action: { type: 'mark', targets: output.map(id => nodes.findIndex(n => n.id === id)).filter(i => i >= 0), color: 'success' },
-    events: output.map(id => ({ type: 'graph.visit_node' as const, nodeId: id })),
+    events: output.map(id => graphBuilder.visitNode(id)),
     stats: { comparisons: sid, swaps: 0, accesses: visited.size },
     teachingState: {
       graph: {
