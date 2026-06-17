@@ -48,7 +48,7 @@ describe('design tokens', () => {
       expect(RBTREE[k].stroke).toMatch(/^#[0-9A-Fa-f]{6}$/)
       expect(RBTREE[k].text).toMatch(/^#[0-9A-Fa-f]{6}$/)
     }
-    expect(rawOf('primitives/NodeView.tsx')).toMatch(/RBTREE/)
+    expect(rawOf('renderers/NodeRenderer.tsx')).toMatch(/RBTREE/)
   })
 
   it('CellRenderer 不再内联定义 COLOR_MAP 硬编码色板', () => {
@@ -59,7 +59,7 @@ describe('design tokens', () => {
 
   it('scene 目录(除 tokens.ts/overlays types)硬编码 #色值收敛到阈值内', () => {
     const files = [
-      'primitives/NodeView.tsx', 'primitives/EdgeView.tsx', 'primitives/PointerView.tsx',
+      'renderers/NodeRenderer.tsx', 'renderers/EdgeRenderer.tsx', 'primitives/PointerView.tsx',
       'primitives/ContainerView.tsx', 'primitives/HashTableView.tsx', 'primitives/HeapView.tsx',
       'primitives/SetView.tsx', 'primitives/StringView.tsx', 'primitives/BitsetView.tsx',
       'primitives/VariablesPanel.tsx', 'primitives/RegionView.tsx', 'SceneCanvas.tsx',
@@ -85,7 +85,7 @@ describe('Phase 3 serif typography', () => {
   it('label/index/title text uses TYPO.serif, not monospace', () => {
     // These files must reference TYPO.serif for their chrome text.
     const serifFiles = [
-      'renderers/CellRenderer.tsx', 'primitives/NodeView.tsx',
+      'renderers/CellRenderer.tsx', 'renderers/NodeRenderer.tsx',
       'primitives/HeapView.tsx', 'primitives/HashTableView.tsx',
       'primitives/StringView.tsx', 'primitives/SetView.tsx',
       'primitives/ContainerView.tsx', 'primitives/BitsetView.tsx',
@@ -102,6 +102,6 @@ describe('Phase 3 serif typography', () => {
   it('numeric value text stays monospace in CellView/NodeView', () => {
     // The primary data-value <text> must remain tabular monospace.
     expect(rawOf('renderers/CellRenderer.tsx')).toMatch(/fontFamily="monospace"/)
-    expect(rawOf('primitives/NodeView.tsx')).toMatch(/fontFamily="monospace"/)
+    expect(rawOf('renderers/NodeRenderer.tsx')).toMatch(/fontFamily="monospace"/)
   })
 })

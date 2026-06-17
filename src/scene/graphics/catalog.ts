@@ -21,4 +21,11 @@ export const GRAPHICS_CATALOG: GraphicEntry[] = [
     events: ['array.create', 'array.compare', 'array.swap', 'array.move', 'array.set_value', 'array.mark_sorted', 'array.window', 'array.partition'],
     coversAlgorithms: ['bubble_sort', 'selection_sort', 'insertion_sort', 'merge_sort', 'quick_sort', 'heap_sort', 'shell_sort', 'counting_sort', 'radix_sort', 'bucket_sort', 'binary_search', 'sliding_window', 'monotonic_stack', 'segment_tree'],
   },
+  {
+    id: 'tree.node',
+    domain: 'tree',
+    eventPrefix: 'tree.',
+    events: ['tree.create', 'tree.visit', 'tree.compare', 'tree.insert', 'tree.delete', 'tree.rotate', 'tree.update_metadata', 'tree.recolor'],
+    coversAlgorithms: ['binary_tree_traverse', 'bst_insert', 'bst_delete', 'bst_search', 'avl_insert', 'avl_tree', 'red_black_tree', 'btree', 'huffman', 'trie'],
+  },
 ]

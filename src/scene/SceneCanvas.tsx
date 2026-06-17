@@ -10,14 +10,14 @@ import AutomatonView from './primitives/AutomatonView'
 import CellRenderer from './graphics/renderers/CellRenderer'
 import ContainerView from './primitives/ContainerView'
 import { DPTableView } from './primitives/DPTableView'
-import EdgeView from './primitives/EdgeView'
+import EdgeRenderer from './graphics/renderers/EdgeRenderer'
 import FocusLens from './primitives/FocusLens'
 import BitsetView from './primitives/BitsetView'
 import HashTableView from './primitives/HashTableView'
 import GeometryView from './primitives/GeometryView'
 import HeapView from './primitives/HeapView'
 import LabelView from './primitives/LabelView'
-import NodeView, { NodeStyles } from './primitives/NodeView'
+import NodeRenderer, { NodeStyles } from './graphics/renderers/NodeRenderer'
 import PointerView from './primitives/PointerView'
 import DistributionView from './primitives/DistributionView'
 import RegionView from './primitives/RegionView'
@@ -278,7 +278,7 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
           return geoCells.length > 0 ? <GeometryView cells={geoCells} /> : null
         })()}
         <g className="pointer-events-auto">
-          {edges.map((edge) => <EdgeView key={edge.id} edge={edge} scene={scene} />)}
+          {edges.map((edge) => <EdgeRenderer key={edge.id} edge={edge} scene={scene} />)}
           {renderArrayIndexAxis(targetScene)}
           {entities.map((entity) => entity.type === 'cell' ? <CellRenderer key={entity.id} cell={entity} /> : null)}
           {(() => {
@@ -286,7 +286,7 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
             return autoCells.length > 0 ? <AutomatonView cells={autoCells} /> : null
           })()}
           {renderArrayWindowOverlay(entities, 'boundary')}
-          {entities.map((entity) => entity.type === 'node' ? <NodeView key={entity.id} node={entity} /> : null)}
+          {entities.map((entity) => entity.type === 'node' ? <NodeRenderer key={entity.id} node={entity} /> : null)}
           {(() => {
             const probCells = entities.filter((e): e is SceneCell => e.type === 'cell' && e.id.startsWith('prob_'))
             return probCells.length > 0 ? <DistributionView cells={probCells} /> : null

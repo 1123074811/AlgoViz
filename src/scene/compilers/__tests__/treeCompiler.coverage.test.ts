@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { AnimationScript } from '@/types/animation'
 import type { AlgorithmEvent } from '../../eventTypes'
 import { applyCommands } from '../../SceneEngine'
-import { treeCompiler } from '../treeCompiler'
+import { treeCompiler } from '../../graphics/compile/treeCompile'
 import { createEmptyScene } from '../../types'
 import type { SceneNode, SceneState } from '../../types'
 
