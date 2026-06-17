@@ -2,6 +2,7 @@ import type { AnimationScript, AnimationStep, TeachingState } from '@/types/anim
 import { makeStep, rng, auxArr, sortTeaching, sortTeachingWithAux } from './utils'
 import { deriveSceneState } from '@/scene/SceneEngine'
 import type { AlgorithmEvent } from '@/scene'
+import { arrayBuilder } from '@/scene/graphics'
 
 /** Helper: create an events payload for a step */
 function evt(events: AlgorithmEvent[]) {
@@ -30,8 +31,8 @@ export function generateBubbleSort(arr: number[]): AnimationScript {
           ),
         ),
         ...evt(sid === 2
-          ? [{ type: 'math.init', vars: [{ name: 'i', value: 0 }, { name: 'j', value: 0 }, { name: '是否交换', value: '否' }] }, { type: 'array.create', values: [...arr] }, { type: 'math.set', name: 'i', value: i }, { type: 'math.set', name: 'j', value: j }]
-          : [{ type: 'array.compare', indices: [j, j + 1] }, { type: 'math.set', name: 'i', value: i }, { type: 'math.set', name: 'j', value: j }, ...(j === 0 ? [{ type: 'math.set', name: '是否交换', value: '否' } as const] : [])]),
+          ? [{ type: 'math.init', vars: [{ name: 'i', value: 0 }, { name: 'j', value: 0 }, { name: '是否交换', value: '否' }] }, arrayBuilder.create([...arr]), { type: 'math.set', name: 'i', value: i }, { type: 'math.set', name: 'j', value: j }]
+          : [arrayBuilder.compare(j, j + 1), { type: 'math.set', name: 'i', value: i }, { type: 'math.set', name: 'j', value: j }, ...(j === 0 ? [{ type: 'math.set', name: '是否交换', value: '否' } as const] : [])]),
       })
       if (data[j] > data[j + 1]) {
         steps.push({
@@ -41,7 +42,7 @@ export function generateBubbleSort(arr: number[]): AnimationScript {
             'swap', [j, j + 1], 'danger', comps, sw, acc,
             sortTeaching({ i, j, swapped: true }),
           ),
-          ...evt([{ type: 'array.swap', indices: [j, j + 1] }, { type: 'math.set', name: '是否交换', value: '是' }]),
+          ...evt([arrayBuilder.swap(j, j + 1), { type: 'math.set', name: '是否交换', value: '是' }]),
         })
         ;[data[j], data[j + 1]] = [data[j + 1], data[j]]; sw++; acc += 2; swapped = true
         { const noteZh = `交换后: [${data.join(', ')}]`
@@ -67,7 +68,7 @@ export function generateBubbleSort(arr: number[]): AnimationScript {
           rng('sorted', '已排序后缀', n - i - 1, n, 'sorted'),
         ),
       ),
-      ...evt([{ type: 'array.mark_sorted', indices: [n - 1 - i] }, { type: 'math.set', name: '是否交换', value: swapped ? '是' : '否' }]),
+      ...evt([arrayBuilder.markSorted(n - 1 - i), { type: 'math.set', name: '是否交换', value: swapped ? '是' : '否' }]),
     })
     if (!swapped && i === 0) {
       steps.push({
