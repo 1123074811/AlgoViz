@@ -28,4 +28,11 @@ export const GRAPHICS_CATALOG: GraphicEntry[] = [
     events: ['tree.create', 'tree.visit', 'tree.compare', 'tree.insert', 'tree.delete', 'tree.rotate', 'tree.update_metadata', 'tree.recolor'],
     coversAlgorithms: ['binary_tree_traverse', 'bst_insert', 'bst_delete', 'bst_search', 'avl_insert', 'avl_tree', 'red_black_tree', 'btree', 'huffman', 'trie'],
   },
+  {
+    id: 'graph.node',
+    domain: 'graph',
+    eventPrefix: 'graph.',
+    events: ['graph.create', 'graph.visit_node', 'graph.visit_edge', 'graph.relax_edge', 'graph.enqueue', 'graph.dequeue'],
+    coversAlgorithms: ['bfs_graph', 'dfs_graph', 'dijkstra', 'bellman_ford', 'a_star', 'floyd', 'prim', 'kruskal', 'topological_sort', 'tarjan_scc'],
+  },
 ]
