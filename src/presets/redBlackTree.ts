@@ -1,4 +1,5 @@
 import type { AnimationScript, AnimationStep } from '@/types/animation'
+import { treeBuilder } from '@/scene/graphics'
 
 export function generateRedBlackTree(): AnimationScript {
   // 初始红黑树(不含待插入的 6)。index 8 留空,6 在演示中插入为节点 1(index 3)的右孩子。
@@ -31,7 +32,7 @@ export function generateRedBlackTree(): AnimationScript {
     description: { zh: '红黑树初始结构 — 自平衡 BST,节点分红/黑(根 13 黑,8/17 红,叶层红…)', en: 'Red-Black Tree initial — self-balancing BST, nodes red/black (root 13 black, 8/17 red…)' },
     action: { type: 'highlight', targets: [], color: 'primary' },
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
-    events: [{ type: 'tree.create', variant: 'binary', rootId: '0', nodes, edges }],
+    events: [treeBuilder.create('0', nodes, edges, 'binary')],
   })
 
   steps.push({
@@ -39,7 +40,7 @@ export function generateRedBlackTree(): AnimationScript {
     description: { zh: '5 条性质：①节点红/黑 ②根黑 ③叶(NIL)黑 ④红节点子必黑 ⑤任一路径黑高相等', en: '5 properties: nodes red/black, root black, leaves black, red children black, equal black-height' },
     action: { type: 'highlight', targets: [0], color: 'warning' },
     stats: { comparisons: 0, swaps: 0, accesses: 1 },
-    events: [{ type: 'tree.compare', nodeId: '0', value: 13, result: 'equal' }],
+    events: [treeBuilder.compare('0', 13, 'equal')],
   })
 
   steps.push({
@@ -48,10 +49,10 @@ export function generateRedBlackTree(): AnimationScript {
     action: { type: 'insert', targets: [3], color: 'warning' },
     stats: { comparisons: 3, swaps: 0, accesses: 3 },
     events: [
-      { type: 'tree.compare', nodeId: '1', value: 6, result: 'less' },
-      { type: 'tree.compare', nodeId: '3', value: 6, result: 'greater' },
-      { type: 'tree.insert', parentId: '3', node: { id: '8', value: 6 }, side: 'right' },
-      { type: 'tree.recolor', nodeId: '8', rbColor: 'red' },
+      treeBuilder.compare('1', 6, 'less'),
+      treeBuilder.compare('3', 6, 'greater'),
+      treeBuilder.insert('3', { id: '8', value: 6 }, 'right'),
+      treeBuilder.recolor('8', 'red'),
     ],
   })
 
@@ -60,7 +61,7 @@ export function generateRedBlackTree(): AnimationScript {
     description: { zh: '父节点 1 为黑色 → 红节点 6 直接插入即满足全部性质(性质④红子黑成立),无需变色或旋转', en: 'Parent node 1 is black → red node 6 inserted directly satisfies all properties (red-children-black holds), no recolor/rotation needed' },
     action: { type: 'mark', targets: [3, 8], color: 'success' },
     stats: { comparisons: 3, swaps: 0, accesses: 5 },
-    events: [{ type: 'tree.visit', nodeId: '8' }],
+    events: [treeBuilder.visit('8')],
   })
 
   steps.push({
@@ -68,7 +69,7 @@ export function generateRedBlackTree(): AnimationScript {
     description: { zh: '查找 O(log n) | 插入/删除 O(log n) | 靠红黑 5 性质保证最坏也近似平衡', en: 'Search O(log n) | Insert/Delete O(log n) | 5 properties keep it balanced even in worst case' },
     action: { type: 'mark', targets: [], color: 'success' },
     stats: { comparisons: 3, swaps: 0, accesses: 5 },
-    events: [{ type: 'tree.visit', nodeId: '0' }],
+    events: [treeBuilder.visit('0')],
   })
 
   return { algorithm: 'red_black_tree', complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' }, presentation: { engine: 'scene', module: 'tree' }, initialState: { type: 'tree', data: nums }, result: 'balanced', steps }
