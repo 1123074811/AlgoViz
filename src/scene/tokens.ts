@@ -63,6 +63,12 @@ export const FOCUS = {
   radius: 30,
 } as const
 
+/** 红黑树节点专用红/黑配色(对齐 demo .rbnode rb-red/rb-black,白字)。 */
+export const RBTREE = {
+  red: { fill: '#E15759', stroke: '#BF3F3D', text: '#FFFFFF' },
+  black: { fill: '#3A3F47', stroke: '#2A2E35', text: '#FFFFFF' },
+} as const
+
 export const TYPO = {
   mono: 'ui-monospace, SFMono-Regular, Menlo, monospace',
   // 衬线给标签/注解/标题用（Observable 解释性图表气质）；数值仍用 mono(等宽对齐)。

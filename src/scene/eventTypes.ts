@@ -27,13 +27,14 @@ export type LinkedListAlgorithmEvent =
   | { type: 'linked_list.set_tail'; nodeId: string | null }
 
 export type TreeAlgorithmEvent =
-  | { type: 'tree.create'; variant: 'binary' | 'bst' | 'avl' | 'btree' | 'trie'; rootId: string; nodes: Array<{ id: string; value: number | string }>; edges: Array<{ parentId: string; childId: string; port?: string }> }
+  | { type: 'tree.create'; variant: 'binary' | 'bst' | 'avl' | 'btree' | 'trie'; rootId: string; nodes: Array<{ id: string; value: number | string; rbColor?: 'red' | 'black' }>; edges: Array<{ parentId: string; childId: string; port?: string }> }
   | { type: 'tree.visit'; nodeId: string }
   | { type: 'tree.compare'; nodeId: string; value: number | string; result?: 'less' | 'greater' | 'equal' }
   | { type: 'tree.insert'; parentId: string; node: { id: string; value: number | string }; side?: 'left' | 'right' | string }
   | { type: 'tree.delete'; nodeId: string }
   | { type: 'tree.rotate'; rotation: 'left' | 'right' | 'left-right' | 'right-left'; pivotId: string }
   | { type: 'tree.update_metadata'; nodeId: string; height?: number; balanceFactor?: number; metadata?: Record<string, unknown> }
+  | { type: 'tree.recolor'; nodeId: string; rbColor: 'red' | 'black' }
 
 export type ArrayAlgorithmEvent =
   | { type: 'array.create'; values: Array<number | string> }

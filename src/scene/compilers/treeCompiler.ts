@@ -29,6 +29,8 @@ function compileTreeEvent(event: TreeAlgorithmEvent, context: CompileContext): S
       return compileRotate(event, context)
     case 'tree.update_metadata':
       return compileUpdateMetadata(event, context)
+    case 'tree.recolor':
+      return [{ type: 'set_state', entityId: event.nodeId, state: { rbColor: event.rbColor }, merge: true }]
   }
 }
 
@@ -39,6 +41,8 @@ function compileCreate(event: Extract<TreeAlgorithmEvent, { type: 'tree.create' 
       ? DataUnit.btreeNode({ id: node.id, keys: parseBTreeKeys(node.value) })
       : createTreeNode(node.id, node.value, event.variant)
     commands.push({ type: 'create_node', node: sceneNode, animation: 'scale' })
+    // 红黑树:节点携带 rbColor 时,着色为红/黑(NodeView 消费 state.rbColor)。
+    if (node.rbColor) commands.push({ type: 'set_state', entityId: node.id, state: { rbColor: node.rbColor }, merge: true })
   })
   event.edges.forEach((edge) => {
     const port = edge.port ?? 'child'

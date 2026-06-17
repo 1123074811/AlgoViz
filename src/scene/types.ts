@@ -56,6 +56,8 @@ export interface SceneEntityState {
   disabled?: boolean
   badge?: string
   note?: string
+  /** 红黑树节点着色(red/black)：NodeView 渲染为红/黑填充白字,叠加在状态色之上。 */
+  rbColor?: 'red' | 'black'
   windowPosition?: 'start' | 'middle' | 'end' | 'single'
 }
 

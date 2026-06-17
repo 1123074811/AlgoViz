@@ -6,9 +6,15 @@ export function generateRedBlackTree(): AnimationScript {
   let sid = 1
   const nums = tree.map(v => v === '' ? 0 : Number(v))
 
+  // 自洽红黑着色:根黑、红节点子全黑、黑节点子红/黑(满足红黑性质)。
+  const RB: Record<number, 'red' | 'black'> = {
+    13: 'black', 8: 'red', 17: 'red',
+    1: 'black', 11: 'black', 15: 'black', 25: 'black',
+    6: 'red', 22: 'red', 27: 'red',
+  }
   // Construct active nodes and edges dynamically based on standard binary tree array layout
   const nodes = nums
-    .map((v, i) => ({ id: String(i), value: v }))
+    .map((v, i) => ({ id: String(i), value: v, rbColor: (RB[v] ?? 'black') as 'red' | 'black' }))
     .filter(n => n.value !== 0)
 
   const edges: { parentId: string; childId: string; port: 'left' | 'right' }[] = []

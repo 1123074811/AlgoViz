@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { SEMANTIC_COLORS, NEUTRALS, FOCUS, SHAPE, TYPO, MOTION, type SemanticColorName } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS, FOCUS, RBTREE, SHAPE, TYPO, MOTION, type SemanticColorName } from '../tokens'
 import { CELL_KEYFRAMES, EDGE_FLOW_KEYFRAMES, BUMP_KEYFRAMES, LENS_TRANSITION } from '../primitives/sharedMotion'
 
 // 以 raw 形式加载 scene 源码用于「无硬编码色值」守卫。
@@ -40,6 +40,15 @@ describe('design tokens', () => {
     expect(NEUTRALS.edgeStroke).toMatch(/^#[0-9A-Fa-f]{6}$/)
     expect(NEUTRALS.emptyFill).toMatch(/^#[0-9A-Fa-f]{6}$/)
     expect(NEUTRALS.emptyStroke).toMatch(/^#[0-9A-Fa-f]{6}$/)
+  })
+
+  it('红黑树 RBTREE 红/黑配色 token 合法,且 NodeView 引用它(不裸写)', () => {
+    for (const k of ['red', 'black'] as const) {
+      expect(RBTREE[k].fill).toMatch(/^#[0-9A-Fa-f]{6}$/)
+      expect(RBTREE[k].stroke).toMatch(/^#[0-9A-Fa-f]{6}$/)
+      expect(RBTREE[k].text).toMatch(/^#[0-9A-Fa-f]{6}$/)
+    }
+    expect(rawOf('primitives/NodeView.tsx')).toMatch(/RBTREE/)
   })
 
   it('CellView 不再内联定义 COLOR_MAP 硬编码色板', () => {

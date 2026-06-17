@@ -1,7 +1,7 @@
 import type { SceneNode } from '../types'
 import { getAdaptiveCircleLayout } from '../engineUtils'
 import { measureNodeWidth, truncateToWidth } from '../textMetrics'
-import { SEMANTIC_COLORS, NEUTRALS, SHAPE, TYPO } from '../tokens'
+import { SEMANTIC_COLORS, NEUTRALS, SHAPE, TYPO, RBTREE } from '../tokens'
 
 // Legacy scene color names map onto semantic tokens (warning→compare, muted→idle).
 const COLOR_MAP: Record<string, { stroke: string; fill: string }> = {
@@ -42,6 +42,8 @@ function renderCircle(
 ) {
   const value = node.fields[0]?.value?.toString() ?? ''
   const { r, fontSize } = getAdaptiveCircleLayout(value, d)
+  // 红黑树节点:rbColor 覆盖填充/描边为红/黑、文字转白(对齐 demo .rbnode)；状态光环仍叠加。
+  const rb = node.state?.rbColor ? RBTREE[node.state.rbColor] : null
   return (
     <g transform={`translate(${node.position.x}, ${node.position.y})`} opacity={opacity}>
       <title>{`${node.id} · ${node.variant}${node.state?.role ? ` · ${node.state.role}` : ''}`}</title>
@@ -49,8 +51,8 @@ function renderCircle(
         {isActive && (
           <circle cx={0} cy={0} r={r + 4} fill={palette.stroke} opacity="0.08" className="node-active-ring" />
         )}
-        <circle cx={0} cy={0} r={r} fill={palette.fill} stroke={palette.stroke} strokeWidth={SHAPE.strokeWidth.base} />
-        <text x={0} y={Math.round(fontSize * 0.3)} textAnchor="middle" fontSize={fontSize} fontFamily="monospace" fill={SEMANTIC_COLORS.idle.text} fontWeight="bold">{value}</text>
+        <circle cx={0} cy={0} r={r} fill={rb?.fill ?? palette.fill} stroke={rb?.stroke ?? palette.stroke} strokeWidth={SHAPE.strokeWidth.base} />
+        <text x={0} y={Math.round(fontSize * 0.3)} textAnchor="middle" fontSize={fontSize} fontFamily="monospace" fill={rb?.text ?? SEMANTIC_COLORS.idle.text} fontWeight="bold">{value}</text>
         {node.fields.length > 1 && node.fields.slice(1).map((field, i) => (
           <text key={field.id} x={0} y={r + 14 + i * 12} textAnchor="middle" fontSize="10" fill={NEUTRALS.mutedText}>
             {field.label}:{field.value ?? ''}
