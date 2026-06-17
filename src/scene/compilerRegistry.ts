@@ -18,7 +18,7 @@ import { setCompiler } from './compilers/setCompiler'
 import { skipListCompiler } from './compilers/skipListCompiler'
 import { stackCompiler } from './compilers/stackCompiler'
 import { stringCompiler } from './compilers/stringCompiler'
-import { treeCompiler } from './compilers/treeCompiler'
+import { treeCompiler } from './graphics/compile/treeCompile'
 import { unionFindCompiler } from './compilers/unionFindCompiler'
 
 /**

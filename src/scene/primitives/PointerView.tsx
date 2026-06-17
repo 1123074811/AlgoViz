@@ -1,5 +1,5 @@
 import type { ScenePointer, SceneState } from '../types'
-import { resolveAnchor } from './EdgeView'
+import { resolveAnchor } from '../graphics/renderers/EdgeRenderer'
 import { SEMANTIC_COLORS, NEUTRALS } from '../tokens'
 
 interface PointerViewProps {

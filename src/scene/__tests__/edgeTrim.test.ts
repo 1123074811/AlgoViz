@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { trimAnchor } from '../primitives/EdgeView'
+import { trimAnchor } from '../graphics/renderers/EdgeRenderer'
 import { createEmptyScene } from '../types'
 import type { SceneState, SceneNode } from '../types'
 
