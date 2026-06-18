@@ -59,10 +59,10 @@ describe('design tokens', () => {
 
   it('scene 目录(除 tokens.ts/overlays types)硬编码 #色值收敛到阈值内', () => {
     const files = [
-      'renderers/NodeRenderer.tsx', 'renderers/EdgeRenderer.tsx', 'primitives/PointerView.tsx',
-      'primitives/ContainerView.tsx', 'primitives/HashTableView.tsx', 'primitives/HeapView.tsx',
-      'primitives/SetView.tsx', 'primitives/StringView.tsx', 'primitives/BitsetView.tsx',
-      'primitives/VariablesPanel.tsx', 'primitives/RegionView.tsx', 'SceneCanvas.tsx',
+      'renderers/NodeRenderer.tsx', 'renderers/EdgeRenderer.tsx', 'renderers/PointerView.tsx',
+      'renderers/ContainerView.tsx', 'renderers/HashTableView.tsx', 'renderers/HeapView.tsx',
+      'renderers/SetView.tsx', 'renderers/StringView.tsx', 'renderers/BitsetView.tsx',
+      'renderers/VariablesPanel.tsx', 'renderers/RegionView.tsx', 'SceneCanvas.tsx',
       'graphics/renderers/FocusLens.tsx',
     ]
     let total = 0
@@ -86,11 +86,11 @@ describe('Phase 3 serif typography', () => {
     // These files must reference TYPO.serif for their chrome text.
     const serifFiles = [
       'renderers/CellRenderer.tsx', 'renderers/NodeRenderer.tsx',
-      'primitives/HeapView.tsx', 'primitives/HashTableView.tsx',
-      'primitives/StringView.tsx', 'primitives/SetView.tsx',
-      'primitives/ContainerView.tsx', 'primitives/BitsetView.tsx',
-      'primitives/RegionView.tsx', 'primitives/GraphAnalysisView.tsx',
-      'primitives/GeometryView.tsx', 'primitives/DistributionView.tsx',
+      'renderers/HeapView.tsx', 'renderers/HashTableView.tsx',
+      'renderers/StringView.tsx', 'renderers/SetView.tsx',
+      'renderers/ContainerView.tsx', 'renderers/BitsetView.tsx',
+      'renderers/RegionView.tsx', 'renderers/GraphAnalysisView.tsx',
+      'renderers/GeometryView.tsx', 'renderers/DistributionView.tsx',
       'SceneCanvas.tsx',
     ]
     for (const f of serifFiles) {

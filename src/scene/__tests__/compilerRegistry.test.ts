@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { sceneEventCompilers } from '../compilerRegistry'
-import { pointerCompiler } from '../compilers/pointerCompiler'
-import { linkedListCompiler } from '../compilers/linkedListCompiler'
+import { pointerCompiler } from '../graphics/compile/pointerCompile'
+import { linkedListCompiler } from '../graphics/compile/linkedListCompile'
 import { treeCompiler } from '../graphics/compile/treeCompile'
-import { unionFindCompiler } from '../compilers/unionFindCompiler'
+import { unionFindCompiler } from '../graphics/compile/unionFindCompile'
 import { arrayCompiler } from '../graphics/compile/arrayCompile'
-import { graphAnalysisCompiler } from '../compilers/graphAnalysisCompiler'
+import { graphAnalysisCompiler } from '../graphics/compile/graphAnalysisCompile'
 
 describe('sceneEventCompilers 注册表', () => {
   it('包含全部 22 个编译器', () => {
