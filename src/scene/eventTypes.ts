@@ -8,6 +8,8 @@ export type CommonAlgorithmEvent =
   | { type: 'scene.clear_highlight'; entityIds?: string[] }
   | { type: 'scene.link'; from: string; to: string; label?: string; color?: ActionColor }
   | { type: 'scene.wait'; duration?: number }
+  | { type: 'scene.seq_push'; value: number | string }
+  | { type: 'scene.seq_clear' }
 
 export type PointerAlgorithmEvent =
   | { type: 'pointer.create'; pointerId: string; label?: string; targetId?: string; portId?: string }

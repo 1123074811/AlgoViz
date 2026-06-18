@@ -182,7 +182,7 @@ function parentEdge(child: number, parent: number): SceneEdge {
     toEntity: nodeId(parent),
     toPort: 'center',
     color: 'primary',
-    curved: false,
+    curved: true, // 弧线指父(对齐 demo 并查集的 arcPath 拱起弧)
     thickness: 1.5,
     pulse: true,
   })

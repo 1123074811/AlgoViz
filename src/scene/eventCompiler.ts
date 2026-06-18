@@ -32,6 +32,25 @@ export function compileEvent(event: AlgorithmEvent, context: CompileContext): Sc
       }),
     }]
   }
+  if (event.type === 'scene.seq_push') {
+    // 输出序列条:遍历类算法把访问到的值依次追加到画布底部的绿色 chip 行(对齐 demo 的 seqchip)。
+    const n = Object.keys(context.scene.entities).filter((id) => id.startsWith('seq_')).length
+    return [{
+      type: 'create_cell',
+      cell: {
+        id: `seq_${n}`, type: 'cell',
+        position: { x: 180 + n * 40, y: 470 }, size: { width: 34, height: 30 },
+        value: event.value,
+        state: { role: 'sorted', color: 'success' },
+      },
+      animation: 'scale',
+    }]
+  }
+  if (event.type === 'scene.seq_clear') {
+    return Object.keys(context.scene.entities)
+      .filter((id) => id.startsWith('seq_'))
+      .map((entityId) => ({ type: 'remove_entity' as const, entityId }))
+  }
   if (event.type === 'scene.clear_highlight') {
     delete context.scene.groups.__matrix_dependencies
     const ids = event.entityIds ?? Object.keys(context.scene.entities)

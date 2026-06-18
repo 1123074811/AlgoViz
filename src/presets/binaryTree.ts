@@ -31,7 +31,7 @@ export function generateBinaryTree(arr?: number[]): AnimationScript {
     'highlight', [0], 'primary', 0, 0, 0,
     { tree: { nodeStates: [{ id: '0', role: 'root', color: 'primary' as ActionColor }] } },
   ))
-  steps[0].events = [{ type: 'tree.create', variant: 'binary', rootId: '0', nodes, edges }]
+  steps[0].events = [{ type: 'tree.create', variant: 'binary', rootId: '0', nodes, edges }, { type: 'scene.seq_clear' }]
 
   // Inorder traversal
   const inorderPath = [3, 1, 9, 4, 10, 0, 11, 6, 12, 2, 13, 7, 14]
@@ -42,7 +42,7 @@ export function generateBinaryTree(arr?: number[]): AnimationScript {
       'mark', [nodeIdx], 'warning', 0, 0, 1,
       { tree: { traversalPath: inorderPath.slice(0, 5).map(String), nodeStates: [{ id: String(nodeIdx), role: 'current', color: 'warning' as ActionColor }] } },
     ))
-    steps[steps.length - 1].events = [{ type: 'tree.visit', nodeId: String(nodeIdx) }]
+    steps[steps.length - 1].events = [{ type: 'tree.visit', nodeId: String(nodeIdx) }, { type: 'scene.seq_push', value: tree[nodeIdx] }]
   }
   steps.push(makeStep(sid++, 3,
     `中序遍历完成：[${inorderPath.map(i => tree[i]).join(', ')}]`,
