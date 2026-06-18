@@ -17,7 +17,7 @@ import type {
   DPTableModel,
   DPTablePatch,
   DPTracebackEvent,
-} from '../overlays/dpTypes';
+} from '../../overlays/dpTypes';
 
 export const DP_TABLE_COMMAND_TYPE = 'dp-table.model';
 export const DEFAULT_DP_TABLE_ID = 'dp';

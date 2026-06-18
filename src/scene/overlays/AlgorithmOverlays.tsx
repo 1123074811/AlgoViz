@@ -1,5 +1,5 @@
-import { CallStackView } from '../primitives/CallStackView'
-import { GridView } from '../primitives/GridView'
+import { CallStackView } from '../graphics/renderers/CallStackView'
+import { GridView } from '../graphics/renderers/GridView'
 import type { AlgorithmOverlayState } from './overlayCompiler'
 
 interface AlgorithmOverlaysProps {

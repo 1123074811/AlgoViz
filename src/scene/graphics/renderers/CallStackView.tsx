@@ -5,7 +5,7 @@ import type {
   CallStackFrame,
   CallStackModel,
   CallStackValue,
-} from "../overlays/callStackTypes";
+} from "../../overlays/callStackTypes";
 
 export interface CallStackViewProps {
   model: CallStackModel;

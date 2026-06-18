@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { skipListCompiler } from '../skipListCompiler'
-import type { CompileContext } from '../../SceneEngine'
+import { skipListCompiler } from '../skipListCompile'
+import type { CompileContext } from '../../../SceneEngine'
 
 const ctx = (): CompileContext => ({ scene: { entities: {}, edges: {} } } as unknown as CompileContext)
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { compileDPEvent, compileDPEvents, DP_TABLE_COMMAND_TYPE } from '../dpCompiler';
+import { compileDPEvent, compileDPEvents, DP_TABLE_COMMAND_TYPE } from '../../graphics/compile/dpCompile';
 import type { DPTableCollection } from '../../overlays/dpTypes';
 
 describe('dpCompiler', () => {

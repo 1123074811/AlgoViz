@@ -6,7 +6,7 @@ import type {
   CallStackModel,
   CallStackOverlayPatchCommand,
   CallStackSceneCommand,
-} from "../overlays/callStackTypes";
+} from "../../overlays/callStackTypes";
 
 const DEFAULT_STACK_ID = "callstack";
 const DEFAULT_STACK_TITLE = "Call Stack";

@@ -6,7 +6,7 @@ import type {
   DPHighlightKind,
   DPTableModel,
   DPTableViewProps,
-} from '../overlays/dpTypes';
+} from '../../overlays/dpTypes';
 
 const highlightClassNames: Record<DPHighlightKind, string> = {
   current: 'border-sky-500 bg-sky-50 text-sky-950 shadow-[inset_0_0_0_1px_rgba(14,165,233,0.55)]',

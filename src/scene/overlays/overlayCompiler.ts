@@ -1,9 +1,9 @@
 import {
   compileCallStackEvent,
   reduceCallStackEvent,
-} from '../compilers/callStackCompiler'
-import { compileDPEvent } from '../compilers/dpCompiler'
-import { compileGridEvent, reduceGridEvent } from '../compilers/gridCompiler'
+} from '../graphics/compile/callStackCompile'
+import { compileDPEvent } from '../graphics/compile/dpCompile'
+import { compileGridEvent, reduceGridEvent } from '../graphics/compile/gridCompile'
 import type { AlgorithmOverlayEvent, AlgorithmOverlaySceneCommand } from './index'
 import type { CallStackEvent, CallStackModel } from './callStackTypes'
 import type { DPEvent, DPTableCollection } from './dpTypes'

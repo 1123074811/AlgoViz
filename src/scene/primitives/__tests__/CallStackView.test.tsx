@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
-import CallStackView from '../CallStackView'
+import CallStackView from '../../graphics/renderers/CallStackView'
 import type {
   CallStackFrame,
   CallStackModel,

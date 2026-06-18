@@ -1,8 +1,8 @@
-import type { SceneCommand } from '../commandTypes'
-import type { SkipListAlgorithmEvent } from '../eventTypes'
-import type { CompileContext, EventCompiler } from '../SceneEngine'
-import type { SceneCell } from '../types'
-import { AuxiliaryUnit } from '../primitives/DataUnits'
+import type { SceneCommand } from '../../commandTypes'
+import type { SkipListAlgorithmEvent } from '../../eventTypes'
+import type { CompileContext, EventCompiler } from '../../SceneEngine'
+import type { SceneCell } from '../../types'
+import { AuxiliaryUnit } from '../../primitives/DataUnits'
 
 const COL_W = 76
 const ROW_H = 60

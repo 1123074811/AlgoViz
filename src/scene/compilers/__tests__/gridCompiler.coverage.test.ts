@@ -3,7 +3,7 @@ import {
   reduceGridEvent,
   compileGridEvent,
   compileGridEvents,
-} from '../gridCompiler'
+} from '../../graphics/compile/gridCompile'
 import type { GridCollection } from '../../overlays/gridTypes'
 
 function createCollection(gridId?: string): GridCollection {

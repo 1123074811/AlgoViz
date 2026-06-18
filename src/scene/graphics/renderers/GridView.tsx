@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import type { GridArrowModel, GridCellModel, GridModel } from '../overlays/gridTypes'
+import type { GridArrowModel, GridCellModel, GridModel } from '../../overlays/gridTypes'
 
 interface GridViewProps {
   model: GridModel

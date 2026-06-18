@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { reduceGridEvent } from '../gridCompiler'
+import { reduceGridEvent } from '../../graphics/compile/gridCompile'
 import type { GridCollection } from '../../overlays/gridTypes'
 
 describe('gridCompiler', () => {

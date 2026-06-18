@@ -53,4 +53,8 @@ export const GRAPHICS_CATALOG: GraphicEntry[] = [
   { id: 'prob.dist', domain: 'prob', eventPrefix: 'prob.', events: ['prob.dist', 'prob.sample', 'prob.reservoir', 'prob.note', 'prob.clear'], coversAlgorithms: ['reservoir_sampling'] },
   { id: 'graph_analysis.overlay', domain: 'graphAnalysis', eventPrefix: 'graph_analysis.', events: ['graph_analysis.update', 'graph_analysis.clear'], coversAlgorithms: ['tarjan_scc'] },
   { id: 'matrix.cell', domain: 'matrix', eventPrefix: 'matrix.', events: ['matrix.create', 'matrix.visit_cell', 'matrix.update_cell', 'matrix.mark_path', 'matrix.mark_conflict', 'matrix.transition'], coversAlgorithms: ['floyd', 'n_queens', 'edit_distance', 'lcs', 'matrix_chain'] },
+  { id: 'skip_list.cell', domain: 'skipList', eventPrefix: 'skip_list.', events: ['skip_list.create', 'skip_list.search'], coversAlgorithms: ['skip_list'] },
+  { id: 'grid.cell', domain: 'grid', eventPrefix: 'grid.', events: ['grid.create', 'grid.set_cell', 'grid.visit', 'grid.frontier', 'grid.path', 'grid.wall', 'grid.weight', 'grid.arrow'], coversAlgorithms: ['grid_pathfinding', 'grid_dp'] },
+  { id: 'dp.table', domain: 'dp', eventPrefix: 'dp.', events: ['dp.create', 'dp.set', 'dp.highlight', 'dp.dependency', 'dp.formula', 'dp.traceback', 'dp.roll'], coversAlgorithms: ['edit_distance', 'lcs', 'lis', 'knapsack_01', 'unbounded_knapsack', 'interval_dp', 'matrix_chain'] },
+  { id: 'callstack.frame', domain: 'callStack', eventPrefix: 'callstack.', events: ['callstack.create', 'callstack.push', 'callstack.update', 'callstack.return', 'callstack.pop', 'callstack.highlight'], coversAlgorithms: ['n_queens', 'backtracking', 'sudoku', 'path_sum_iii'] },
 ]

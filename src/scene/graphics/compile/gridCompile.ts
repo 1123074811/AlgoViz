@@ -7,7 +7,7 @@ import type {
   GridEvent,
   GridModel,
   GridSceneCommand,
-} from '../overlays/gridTypes'
+} from '../../overlays/gridTypes'
 
 const DEFAULT_GRID_ID = 'main'
 

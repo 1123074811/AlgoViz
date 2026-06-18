@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   compileCallStackEvents,
   reduceCallStackEvent,
-} from "../callStackCompiler";
+} from "../../graphics/compile/callStackCompile";
 import type { CallStackEvent } from "../../overlays/callStackTypes";
 
 describe("callStackCompiler", () => {
