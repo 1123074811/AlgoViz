@@ -2347,6 +2347,344 @@ public class QueueDemo {
     }
 }`,
   },
+  set: {
+    python: `class HashSet:
+    def __init__(self):
+        self.data = set()
+
+    def add(self, value):
+        self.data.add(value)          # 重复元素自动忽略
+
+    def contains(self, value):
+        return value in self.data      # 平均 O(1)
+
+    def remove(self, value):
+        self.data.discard(value)       # 不存在也不报错
+
+    def size(self):
+        return len(self.data)`,
+    javascript: `class HashSet {
+    constructor() {
+        this.data = new Set();
+    }
+
+    add(value) {
+        this.data.add(value);          // 重复元素自动忽略
+    }
+
+    contains(value) {
+        return this.data.has(value);   // 平均 O(1)
+    }
+
+    remove(value) {
+        this.data.delete(value);
+    }
+
+    get size() {
+        return this.data.size;
+    }
+}`,
+    cpp: `#include <unordered_set>
+using namespace std;
+
+class HashSet {
+private:
+    unordered_set<int> data;
+public:
+    void add(int value) {
+        data.insert(value);            // 重复元素自动忽略
+    }
+
+    bool contains(int value) {
+        return data.count(value) > 0;  // 平均 O(1)
+    }
+
+    void remove(int value) {
+        data.erase(value);
+    }
+
+    int size() {
+        return data.size();
+    }
+};`,
+    java: `import java.util.HashSet;
+
+public class MySet {
+    private HashSet<Integer> data = new HashSet<>();
+
+    public void add(int value) {
+        data.add(value);               // 重复元素自动忽略
+    }
+
+    public boolean contains(int value) {
+        return data.contains(value);   // 平均 O(1)
+    }
+
+    public void remove(int value) {
+        data.remove(value);
+    }
+
+    public int size() {
+        return data.size();
+    }
+}`,
+  },
+  map: {
+    python: `class HashMap:
+    def __init__(self):
+        self.data = {}
+
+    def put(self, key, value):
+        self.data[key] = value          # 键唯一,重复键覆盖
+
+    def get(self, key):
+        return self.data.get(key)       # 不存在返回 None
+
+    def remove(self, key):
+        self.data.pop(key, None)
+
+    def contains(self, key):
+        return key in self.data`,
+    javascript: `class HashMap {
+    constructor() {
+        this.data = new Map();
+    }
+
+    put(key, value) {
+        this.data.set(key, value);      // 键唯一,重复键覆盖
+    }
+
+    get(key) {
+        return this.data.get(key);      // 不存在返回 undefined
+    }
+
+    remove(key) {
+        this.data.delete(key);
+    }
+
+    contains(key) {
+        return this.data.has(key);
+    }
+}`,
+    cpp: `#include <unordered_map>
+#include <string>
+using namespace std;
+
+class HashMap {
+private:
+    unordered_map<string, int> data;
+public:
+    void put(const string& key, int value) {
+        data[key] = value;              // 键唯一,重复键覆盖
+    }
+
+    int get(const string& key) {
+        auto it = data.find(key);
+        return it != data.end() ? it->second : -1;
+    }
+
+    void remove(const string& key) {
+        data.erase(key);
+    }
+
+    bool contains(const string& key) {
+        return data.count(key) > 0;
+    }
+};`,
+    java: `import java.util.HashMap;
+
+public class MyMap {
+    private HashMap<String, Integer> data = new HashMap<>();
+
+    public void put(String key, int value) {
+        data.put(key, value);           // 键唯一,重复键覆盖
+    }
+
+    public Integer get(String key) {
+        return data.get(key);           // 不存在返回 null
+    }
+
+    public void remove(String key) {
+        data.remove(key);
+    }
+
+    public boolean contains(String key) {
+        return data.containsKey(key);
+    }
+}`,
+  },
+  deque: {
+    python: `from collections import deque
+
+class Deque:
+    def __init__(self):
+        self.items = deque()
+
+    def push_front(self, value):
+        self.items.appendleft(value)    # 前端入
+
+    def push_back(self, value):
+        self.items.append(value)        # 后端入
+
+    def pop_front(self):
+        return self.items.popleft() if self.items else None
+
+    def pop_back(self):
+        return self.items.pop() if self.items else None`,
+    javascript: `class Deque {
+    constructor() {
+        this.items = [];
+    }
+
+    pushFront(value) {
+        this.items.unshift(value);      // 前端入
+    }
+
+    pushBack(value) {
+        this.items.push(value);         // 后端入
+    }
+
+    popFront() {
+        return this.items.length ? this.items.shift() : null;
+    }
+
+    popBack() {
+        return this.items.length ? this.items.pop() : null;
+    }
+}`,
+    cpp: `#include <deque>
+#include <stdexcept>
+using namespace std;
+
+class Deque {
+private:
+    deque<int> items;
+public:
+    void pushFront(int value) {
+        items.push_front(value);        // 前端入
+    }
+
+    void pushBack(int value) {
+        items.push_back(value);         // 后端入
+    }
+
+    int popFront() {
+        if (items.empty()) throw runtime_error("empty");
+        int v = items.front();
+        items.pop_front();
+        return v;
+    }
+
+    int popBack() {
+        if (items.empty()) throw runtime_error("empty");
+        int v = items.back();
+        items.pop_back();
+        return v;
+    }
+};`,
+    java: `import java.util.ArrayDeque;
+
+public class MyDeque {
+    private ArrayDeque<Integer> items = new ArrayDeque<>();
+
+    public void pushFront(int value) {
+        items.addFirst(value);          // 前端入
+    }
+
+    public void pushBack(int value) {
+        items.addLast(value);           // 后端入
+    }
+
+    public Integer popFront() {
+        return items.pollFirst();
+    }
+
+    public Integer popBack() {
+        return items.pollLast();
+    }
+}`,
+  },
+  bitset: {
+    python: `class Bitset:
+    def __init__(self, bits=8):
+        self.mask = 0                   # 用一个整数当位集
+        self.bits = bits
+
+    def set(self, i):
+        self.mask |= (1 << i)           # 把第 i 位置 1
+
+    def clear(self, i):
+        self.mask &= ~(1 << i)          # 把第 i 位置 0
+
+    def test(self, i):
+        return (self.mask >> i) & 1     # 检视第 i 位
+
+    def __str__(self):
+        return format(self.mask, f'0{self.bits}b')`,
+    javascript: `class Bitset {
+    constructor(bits = 8) {
+        this.mask = 0;                  // 用一个整数当位集
+        this.bits = bits;
+    }
+
+    set(i) {
+        this.mask |= (1 << i);          // 把第 i 位置 1
+    }
+
+    clear(i) {
+        this.mask &= ~(1 << i);         // 把第 i 位置 0
+    }
+
+    test(i) {
+        return (this.mask >> i) & 1;    // 检视第 i 位
+    }
+
+    toString() {
+        return this.mask.toString(2).padStart(this.bits, '0');
+    }
+}`,
+    cpp: `#include <cstdint>
+
+class Bitset {
+private:
+    uint32_t mask = 0;                  // 用一个整数当位集
+public:
+    void set(int i) {
+        mask |= (1u << i);              // 把第 i 位置 1
+    }
+
+    void clear(int i) {
+        mask &= ~(1u << i);             // 把第 i 位置 0
+    }
+
+    bool test(int i) {
+        return (mask >> i) & 1u;        // 检视第 i 位
+    }
+
+    uint32_t value() {
+        return mask;
+    }
+};`,
+    java: `public class Bitset {
+    private int mask = 0;               // 用一个整数当位集
+
+    public void set(int i) {
+        mask |= (1 << i);               // 把第 i 位置 1
+    }
+
+    public void clear(int i) {
+        mask &= ~(1 << i);              // 把第 i 位置 0
+    }
+
+    public boolean test(int i) {
+        return ((mask >> i) & 1) == 1;  // 检视第 i 位
+    }
+
+    public int value() {
+        return mask;
+    }
+}`,
+  },
   binary_tree: {
     python: `class TreeNode:
     def __init__(self, val=0, left=None, right=None):

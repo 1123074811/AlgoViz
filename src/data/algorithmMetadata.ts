@@ -59,6 +59,10 @@ export const ALGORITHM_DESCRIPTIONS: Record<AlgorithmLang, Record<string, string
     grid_dp: '网格最小路径和：只能向右/下移动，dp[i][j]=min(上,左)+代价，再回溯最优路径。',
     huffman: '贪心构造最优前缀码：反复取两个最小频率节点合并为父节点，直到只剩一棵树；左 0 右 1 即为编码。',
     skip_list: '有序链表+多层稀疏索引：高层"跳过"大段元素，期望 O(log n) 查找，是平衡树的概率化替代。',
+    set: '集合(Set)：无序、不重复的元素容器，支持 add/contains/remove，基于哈希平均 O(1)。',
+    map: '映射(Map/字典)：键值对集合，键唯一，哈希分桶+链地址法解决冲突，平均 O(1) 存取。',
+    deque: '双端队列(Deque)：两端均可 O(1) 入队/出队的线性容器，可当栈也可当队列使用。',
+    bitset: '位集/位运算(Bitset)：用整数的每一位表示标志或集合元素，靠 |、&、<< 等位运算 O(1) 增删查。',
   },
   en: {
     bubble_sort:
@@ -128,6 +132,10 @@ export const ALGORITHM_DESCRIPTIONS: Record<AlgorithmLang, Record<string, string
       'Greedy optimal prefix coding: repeatedly merge the two lowest-frequency nodes into a parent until one tree remains; left=0 right=1 yields each code.',
     skip_list:
       'Sorted linked list with multiple sparse index levels; upper levels skip large spans for expected O(log n) search — a probabilistic balanced-tree alternative.',
+    set: 'Set: unordered container of unique elements supporting add/contains/remove, average O(1) via hashing.',
+    map: 'Map / Dictionary: collection of key-value pairs with unique keys, hashing + separate chaining for collisions, average O(1) access.',
+    deque: 'Deque: double-ended queue allowing O(1) push/pop at both ends; works as either a stack or a queue.',
+    bitset: 'Bitset / Bit Manipulation: each bit of an integer represents a flag or set member; add/remove/test in O(1) using |, &, << operators.',
   },
 }
 
@@ -188,6 +196,10 @@ export const ALGORITHM_DEFAULT_INPUTS: Record<string, AlgorithmDefaultInput> = {
   stack: { value: '[1, 2, 3]', hint: '栈初始入栈元素列表' },
   queue: { value: '[1, 2, 3]', hint: '队列初始入队元素列表' },
   heap_ds: { value: '[4, 10, 3, 5, 1, 2]', hint: '堆初始数组' },
+  set: { value: '[1, 2, 3]', hint: '集合初始元素列表(自动去重)' },
+  map: { value: '(内置键值对演示)', hint: '演示 put/get/remove 的内置示例,无需输入' },
+  deque: { value: '[2, 3]', hint: '双端队列初始元素列表' },
+  bitset: { value: '[1, 3, 4, 6]', hint: '要置 1 的位下标(范围 0~7)' },
   trie: { value: '["cat", "car", "dog"]', hint: '字典树单词列表' },
   hash_table: { value: '{"key1": "value1", "key2": "value2"}', hint: '初始键值对' },
   union_find: { value: '[[0, 1], [1, 2], [3, 4]]', hint: '并查集连通边列表' },

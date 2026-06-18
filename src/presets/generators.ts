@@ -876,6 +876,10 @@ import { generateSkipList } from './skipList'
 import { generateIntervalDP } from './intervalDP'
 import { generateStack } from './stack'
 import { generateQueue } from './queue'
+import { generateSet } from './setDS'
+import { generateMap } from './mapDS'
+import { generateDeque } from './dequeDS'
+import { generateBitset } from './bitsetDS'
 import { generateHeapOperations } from './heap'
 import { generateUnionFind } from './unionFind'
 import { generateBinaryTree } from './binaryTree'
@@ -1244,6 +1248,10 @@ const intervalDPWrapper = (input: unknown) => generateIntervalDP(parseArr(input)
 const stackWrapper = (input: unknown) => generateStack(parseArr(input))
 
 const queueWrapper = (input: unknown) => generateQueue(parseArr(input))
+const setWrapper = (input: unknown) => generateSet(parseArr(input))
+const mapWrapper = (_input: unknown) => generateMap()
+const dequeWrapper = (input: unknown) => generateDeque(parseArr(input))
+const bitsetWrapper = (input: unknown) => generateBitset(parseArr(input))
 const heapWrapper = (input: unknown) => generateHeapOperations(parseArr(input).slice(0, 6))
 const reservoirWrapper = (input: unknown) => generateReservoir(parseArr(input))
 const unionFindWrapper = (input: unknown) => {
@@ -1596,6 +1604,7 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   topological_sort: topoWrapper, floyd: floydWrapper, a_star: aStarWrapper,
   tarjan_scc: tarjanSccWrapper,
   queue: queueWrapper, heap_ds: heapWrapper, union_find: unionFindWrapper,
+  set: setWrapper, map: mapWrapper, deque: dequeWrapper, bitset: bitsetWrapper,
   bellman_ford: bellmanFordWrapper,
   linked_list_insert: linkedListInsertWrapper,
   linked_list_delete: linkedListDeleteWrapper,
