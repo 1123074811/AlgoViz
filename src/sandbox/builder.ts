@@ -445,24 +445,30 @@ export class AnimationBuilder {
   // ── tree ──
   treeCreate(variant: 'binary' | 'bst' | 'avl', rootId: string, nodes: Array<{ id: string; value: number | string }>, edges: Array<{ parentId: string; childId: string }>): this {
     const normalized = normalizeTreeCreateArgs(rootId, nodes, edges)
-    this.treeRoot = normalized.rootId
-    this.treeNodes = normalized.nodes.map(n => ({ ...n }))
+    // 净化为纯原始字段:AI 可能传入带循环引用的节点对象(parent/children 互引),原样入 script 会让保存历史崩溃。
+    const safeNodes = normalized.nodes.map(n => ({ id: String(n.id), value: toPrimitiveValue(n.value) }))
+    const safeEdges = normalized.edges.map(e => ({ parentId: String(e.parentId), childId: String(e.childId) }))
+    this.treeRoot = String(normalized.rootId)
+    this.treeNodes = safeNodes.map(n => ({ ...n }))
     this.treeChildren = {}
-    for (const n of normalized.nodes) this.treeChildren[n.id] = this.treeChildren[n.id] ?? []
-    for (const e of normalized.edges) {
+    for (const n of safeNodes) this.treeChildren[n.id] = this.treeChildren[n.id] ?? []
+    for (const e of safeEdges) {
       this.treeChildren[e.parentId] = this.treeChildren[e.parentId] ?? []
       this.treeChildren[e.parentId].push(e.childId)
     }
-    return this.add([{ type: 'tree.create', variant, rootId: normalized.rootId, nodes: normalized.nodes, edges: normalized.edges }], this.act('highlight', [], 'primary'))
+    return this.add([{ type: 'tree.create', variant, rootId: this.treeRoot, nodes: safeNodes, edges: safeEdges }], this.act('highlight', [], 'primary'))
   }
   treeVisit(id: string): this {
     return this.add([{ type: 'tree.visit', nodeId: id }], this.act('highlight', [], 'primary'))
   }
   treeInsert(parentId: string, node: { id: string; value: number | string }, side?: 'left' | 'right'): this {
-    this.treeNodes.push({ ...node })
-    this.treeChildren[parentId] = this.treeChildren[parentId] ?? []
-    this.treeChildren[parentId].push(node.id)
-    return this.add([{ type: 'tree.insert', parentId, node, side }], this.act('insert', [], 'success'))
+    // 净化:只取 id/value 原始字段,避免 AI 传入循环引用的节点对象/把对象当 parentId 进入 script。
+    const pid = String(parentId)
+    const safe = { id: String(node?.id), value: toPrimitiveValue(node?.value) }
+    this.treeNodes.push({ ...safe })
+    this.treeChildren[pid] = this.treeChildren[pid] ?? []
+    this.treeChildren[pid].push(safe.id)
+    return this.add([{ type: 'tree.insert', parentId: pid, node: safe, side }], this.act('insert', [], 'success'))
   }
   treeCompare(nodeId: string, value: number | string): this {
     return this.add([{ type: 'tree.compare', nodeId, value }], this.act('compare', [], 'warning'))
@@ -984,6 +990,13 @@ function formatVariableDelta(previous: number | string | undefined, next: number
   }
 
   return `->${String(next)}`
+}
+
+/** 把任意值收敛为原始 number|string,杜绝 AI 传入的循环引用对象进入 script(否则保存历史 JSON.stringify 崩溃)。 */
+function toPrimitiveValue(v: unknown): number | string {
+  if (typeof v === 'number' || typeof v === 'string') return v
+  if (v == null) return ''
+  try { return String(v) } catch { return '' }
 }
 
 function normalizeTreeCreateArgs(

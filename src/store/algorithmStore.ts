@@ -42,7 +42,24 @@ function loadAIHistory(): AIHistoryEntry[] {
 }
 
 function saveAIHistory(history: AIHistoryEntry[]): void {
-  localStorage.setItem(AI_HISTORY_KEY, JSON.stringify(history))
+  try {
+    localStorage.setItem(AI_HISTORY_KEY, safeStringify(history))
+  } catch {
+    // 序列化/存储失败(配额满或残留循环引用)不应让应用崩溃,静默放弃本次持久化。
+  }
+}
+
+/** JSON.stringify 的去循环版:遇到已见过的对象引用替换为 null,
+ *  防止 AI 生成的异常 script 含循环引用时崩溃("Converting circular structure to JSON")。 */
+function safeStringify(value: unknown): string {
+  const seen = new WeakSet<object>()
+  return JSON.stringify(value, (_key, val) => {
+    if (typeof val === 'object' && val !== null) {
+      if (seen.has(val)) return null
+      seen.add(val)
+    }
+    return val
+  })
 }
 
 export interface AlgorithmState {
