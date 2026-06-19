@@ -40,6 +40,9 @@ const REGION_TITLE: Record<string, string> = {
 function positionedEntities(scene: SceneState): Array<SceneCell | SceneNode | SceneLabel> {
   const out: Array<SceneCell | SceneNode | SceneLabel> = []
   for (const e of Object.values(scene.entities)) {
+    // 变量(mathvar_)由左上固定 VariablesPanel(HTML 覆盖层)渲染,不参与 SVG 区域布局/画框;
+    // 否则画布里会留下一个空的「变量」虚线框(其 cell 已被 CellRenderer 跳过)。
+    if (e.id.startsWith('mathvar_')) continue
     if (e.type === 'cell' || e.type === 'node') out.push(e)
   }
   for (const l of Object.values(scene.labels)) out.push(l)
