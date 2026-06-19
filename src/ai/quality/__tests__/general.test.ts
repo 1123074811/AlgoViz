@@ -255,17 +255,29 @@ describe('grid-uniform', () => {
   })
 })
 
-// ─── recursion-no-callstack ───────────────────────────────────────────────
+// ─── recursion-no-recursion-view ──────────────────────────────────────────
 
-describe('recursion-no-callstack', () => {
-  it('命中：recursion 类但无 callstack', () => {
+describe('recursion-no-recursion-view', () => {
+  it('命中：recursion 类但既无递归树也无调用栈', () => {
     const script = makeScript([makeStep({ events: healthyArrayEvents() })])
     const report = runQualityGate(script, 'recursion')
-    expect(report.issues.map(i => i.code)).toContain('recursion-no-callstack')
+    expect(report.issues.map(i => i.code)).toContain('recursion-no-recursion-view')
     expect(report.passed).toBe(false)
   })
 
-  it('不命中：recursion 类且有 callstack', () => {
+  it('不命中：recursion 类且有递归树（首选范式）', () => {
+    const script = makeScript([
+      makeStep({
+        events: [
+          { type: 'tree.create', variant: 'binary', rootId: 'st_0', nodes: [{ id: 'st_0', value: '根' }], edges: [] },
+          { type: 'tree.insert', parentId: 'st_0', node: { id: 'st_1', value: '选' } },
+        ],
+      }),
+    ])
+    expect(codesOf(script, 'recursion')).not.toContain('recursion-no-recursion-view')
+  })
+
+  it('不命中：recursion 类且有调用栈（备选范式仍接受）', () => {
     const script = makeScript([
       makeStep({
         events: [
@@ -276,12 +288,12 @@ describe('recursion-no-callstack', () => {
         ],
       }),
     ])
-    expect(codesOf(script, 'recursion')).not.toContain('recursion-no-callstack')
+    expect(codesOf(script, 'recursion')).not.toContain('recursion-no-recursion-view')
   })
 
   it('不命中：非 recursion 类（appliesTo 过滤）', () => {
     const script = makeScript([makeStep({ events: healthyArrayEvents() })])
-    expect(codesOf(script, 'linear')).not.toContain('recursion-no-callstack')
+    expect(codesOf(script, 'linear')).not.toContain('recursion-no-recursion-view')
   })
 })
 

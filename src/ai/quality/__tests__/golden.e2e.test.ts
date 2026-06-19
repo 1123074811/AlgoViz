@@ -12,7 +12,7 @@ import { CATEGORY_PROFILES, type AlgorithmCategory } from '@/ai/categories'
 
 const SAMPLE_INPUTS: Record<AlgorithmCategory, unknown> = {
   linear: [5, 2, 9, 1, 5, 6],
-  recursion: { grid: [[1, 1, 0, 0], [1, 0, 0, 1], [0, 0, 1, 1], [0, 0, 0, 1]] },
+  recursion: { n: 5 },
   grid: {
     grid: [[0, 0, 0, 0], [1, 1, 0, 1], [0, 0, 0, 0], [0, 1, 1, 0]],
     start: [0, 0],
@@ -73,8 +73,8 @@ describe('WS6 金样例端到端回归（质量门 + 不变量）', () => {
       }
       // 代码行覆盖率达标
       expect(ctx.codeLineCoverage).toBeGreaterThanOrEqual(0.4)
-      // 类别专属不变量
-      if (category === 'recursion') expect(ctx.structuresCreated.has('callstack')).toBe(true)
+      // 类别专属不变量:recursion 金样例改用递归树范式(tree 结构),callStack 保留为备选
+      if (category === 'recursion') expect(ctx.structuresCreated.has('tree')).toBe(true)
     })
   }
 })

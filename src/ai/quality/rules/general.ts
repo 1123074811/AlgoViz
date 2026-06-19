@@ -144,20 +144,22 @@ export const gridUniformRule: QualityRule = {
 }
 
 /**
- * recursion-no-callstack(error，仅 recursion 类)：
- * 递归算法但 structuresCreated 不含 'callstack'。
+ * recursion-no-recursion-view(error，仅 recursion 类)：
+ * 递归算法必须用「递归树」或「调用栈」之一可视化递归过程。
+ * 首选递归树(tree 结构):节点=子问题、边=递归调用,能看清搜索空间形状与复用;
+ * callStack 保留为备选(确需展示栈深度时)。两者缺一即报错。
  */
 export const recursionNoCallStackRule: QualityRule = {
-  id: 'recursion-no-callstack',
+  id: 'recursion-no-recursion-view',
   appliesTo: ['recursion'],
   check(ctx) {
-    if (ctx.structuresCreated.has('callstack')) return []
+    if (ctx.structuresCreated.has('tree') || ctx.structuresCreated.has('callstack')) return []
     return [
       {
-        code: 'recursion-no-callstack',
+        code: 'recursion-no-recursion-view',
         severity: 'error',
-        message: '递归类算法未驱动调用栈（缺少 callstack 事件）。',
-        hint: '递归算法必须用调用栈可视化递归过程：进入递归时发 callstack.create / callstack.push（压入当前帧与参数），返回时发 callstack.pop，使调用栈深度与递归深度一致。',
+        message: '递归类算法未体现递归过程（既无递归树也无调用栈）。',
+        hint: '优先用递归树:第一步 b.searchRoot(初始状态)，每层递归 b.searchTry(父id, 选择标签) 让调用树生长，并用 searchOk/searchFail/searchBack 标解/剪枝/回溯。若确需展示栈深度则改用 callstack.create / callPush / callPop。',
       },
     ]
   },

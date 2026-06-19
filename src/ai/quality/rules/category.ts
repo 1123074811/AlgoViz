@@ -102,10 +102,10 @@ export const CATEGORY_RULES: Record<AlgorithmCategory, QualityRule[]> = {
   recursion: [
     rule(
       'recursion',
-      'recursion.requires-callstack',
-      '递归算法必须用调用栈体现递归（至少一次 callstack.push）',
-      '进入每层递归 b.callPush(...)，返回/回溯 b.callPop()/callReturn(...)，使栈高随递归深度增减。',
-      ctx => countTypes(ctx, ['callstack.push']) > 0,
+      'recursion.requires-recursion-view',
+      '递归算法必须用递归树或调用栈体现递归（至少一次 tree.insert 或 callstack.push）',
+      '优先用递归树:第一步 b.searchRoot(初始状态)，每层递归 b.searchTry(父id, 选择标签) 让调用树生长，并用 searchOk/searchFail/searchBack 标解/剪枝/回溯。若确需展示栈深度则改用 b.callPush/callPop。',
+      ctx => countTypes(ctx, ['callstack.push', 'tree.insert', 'tree.create']) > 0,
     ),
     searchTreeRule,
   ],

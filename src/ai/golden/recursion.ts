@@ -1,47 +1,50 @@
 /**
- * 金样例 · recursion（递归 / 回溯）—— 网格 DFS 求岛屿数量
- * sample input: {"grid":[[1,1,0,0],[1,0,0,1],[0,0,1,1],[0,0,0,1]]}
- * 结构：grid + callstack；用 callPush/callPop 体现递归调用栈深度。
- * 操作：grid.visit / grid.set / callstack.push / callstack.pop。
+ * 金样例 · recursion（递归 / 记忆化）—— 斐波那契记忆化搜索的「递归调用树」
+ * sample input: {"n":5}
+ * 结构：递归树(tree.* via searchRoot/searchTry) + scene.highlight 状态色。
+ * 重点：记忆化命中(warning 橙)时不再展开其子树,体现「复用而非重算」,天然控制步数。
+ * 操作：searchRoot / searchTry / searchOk / scene.highlight(命中)。
  */
-export const GOLDEN: string = `// @algorithm number_of_islands_dfs
-// @type matrix
-// @sample {"grid":[[1,1,0,0],[1,0,0,1],[0,0,1,1],[0,0,0,1]]}
-// @time O(R·C)
-// @space O(R·C)
-const raw = (input && input.grid) || input || []
-const grid = raw.map(row => row.slice())
-const R = grid.length
-const C = R ? grid[0].length : 0
-b.line(1).desc('初始化网格，1=陆地 0=水').gridCreate(grid)
-b.line(2).desc('创建递归调用栈').callStackCreate('DFS 调用栈')
-let count = 0
-let depth = 0
-function dfs(r, c) {
-  if (r < 0 || c < 0 || r >= R || c >= C || grid[r][c] !== 1) {
-    return
+export const GOLDEN: string = `// @algorithm fibonacci_memo
+// @type array
+// @sample {"n":5}
+// @time O(n)
+// @space O(n)
+const n = (input && typeof input.n === 'number') ? input.n : 5
+const memo = {}
+
+// 递归树根：要计算的子问题 fib(n)
+b.line(1).desc('记忆化斐波那契:用递归树展示子问题 fib(k)。命中缓存的子树不再展开').searchRoot('fib(' + n + ')')
+// 把根 id 记到一个映射里：每个 k 第一次展开时对应的树节点 id（用于命中时高亮复用）。
+const nodeOf = { }
+nodeOf[n] = 'st_0'
+
+let result
+function fib(k, nodeId) {
+  if (k < 2) {
+    b.line(4).desc('基例 fib(' + k + ') = ' + k + '，到达叶节点').searchOk(nodeId)
+    memo[k] = k
+    return k
   }
-  const fid = 'f_' + r + '_' + c
-  depth++
-  b.line(8).desc('进入 dfs(' + r + ',' + c + ')，压入调用帧').callPush('dfs', { r: r, c: c }, { depth: depth }, fid)
-  grid[r][c] = 2
-  b.line(9).desc('标记 (' + r + ',' + c + ') 已访问').gridSet(r, c, 2, 'visited')
-  b.gridVisit(r, c)
-  dfs(r + 1, c)
-  dfs(r - 1, c)
-  dfs(r, c + 1)
-  dfs(r, c - 1)
-  b.line(14).desc('dfs(' + r + ',' + c + ') 四向探索完毕，弹出调用帧').callPop(fid)
-  depth--
-}
-for (let r = 0; r < R; r++) {
-  for (let c = 0; c < C; c++) {
-    if (grid[r][c] === 1) {
-      count++
-      b.line(20).desc('发现新岛屿 #' + count + '，从 (' + r + ',' + c + ') 开始 DFS').gridSet(r, c, 1, 'start')
-      dfs(r, c)
-    }
+  if (memo[k] !== undefined) {
+    // 记忆化命中：复用已算结果，不展开子树（橙色高亮）
+    b.line(6).desc('记忆化命中 fib(' + k + ') = ' + memo[k] + '，复用缓存、不再展开子树')
+      .emit({ type: 'scene.highlight', entityId: nodeId, color: 'warning', role: 'current' })
+    return memo[k]
   }
+  // 左子调用 fib(k-1)
+  const leftId = b.searchTry(nodeId, 'fib(' + (k - 1) + ')')
+  b.line(8).desc('展开 fib(' + k + ') 的左分支 fib(' + (k - 1) + ')')
+  const a = fib(k - 1, leftId)
+  // 右子调用 fib(k-2)
+  const rightId = b.searchTry(nodeId, 'fib(' + (k - 2) + ')')
+  b.line(9).desc('展开 fib(' + k + ') 的右分支 fib(' + (k - 2) + ')')
+  const c = fib(k - 2, rightId)
+  memo[k] = a + c
+  b.line(10).desc('fib(' + k + ') = fib(' + (k - 1) + ') + fib(' + (k - 2) + ') = ' + memo[k] + '，标记该子问题已解').searchOk(nodeId)
+  return memo[k]
 }
-b.line(24).desc('扫描完成，共发现 ' + count + ' 座岛屿').note('岛屿数量 = ' + count)
+
+result = fib(n, 'st_0')
+b.line(12).desc('计算完成:fib(' + n + ') = ' + result + '。记忆化让每个子问题只算一次').result(result)
 `

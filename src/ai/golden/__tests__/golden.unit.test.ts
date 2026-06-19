@@ -10,7 +10,7 @@ import type { AlgorithmEvent } from '@/scene/eventTypes'
 // 每个类别的金样例 sample input（与生成器 @sample 注释保持一致；供 WS6 复用）。
 const SAMPLE_INPUTS: Record<AlgorithmCategory, unknown> = {
   linear: [5, 2, 9, 1, 5, 6],
-  recursion: { grid: [[1, 1, 0, 0], [1, 0, 0, 1], [0, 0, 1, 1], [0, 0, 0, 1]] },
+  recursion: { n: 5 },
   grid: {
     grid: [[0, 0, 0, 0], [1, 1, 0, 1], [0, 0, 0, 0], [0, 1, 1, 0]],
     start: [0, 0],
@@ -148,14 +148,21 @@ describe('CATEGORY_RULES · 类别专属质量规则', () => {
   })
 
   // recursion
-  it('[recursion] 命中：有 callstack.push', () => {
+  it('[recursion] 命中：有递归树 tree.insert（首选范式）', () => {
+    const s = script([
+      [{ type: 'tree.create', variant: 'binary', rootId: 'st_0', nodes: [{ id: 'st_0', value: 'root' }], edges: [] } as unknown as AlgorithmEvent],
+      [{ type: 'tree.insert', parentId: 'st_0', node: { id: 'st_1', value: 'pick' } } as unknown as AlgorithmEvent],
+    ])
+    expect(passes('recursion', s)).toBe(true)
+  })
+  it('[recursion] 命中：有 callstack.push（备选范式仍接受）', () => {
     const s = script([
       [{ type: 'callstack.create', id: 'c', title: 'c' } as unknown as AlgorithmEvent],
       [{ type: 'callstack.push', frame: { functionName: 'f' } } as unknown as AlgorithmEvent],
     ])
     expect(passes('recursion', s)).toBe(true)
   })
-  it('[recursion] 不命中：无调用栈', () => {
+  it('[recursion] 不命中：既无递归树也无调用栈', () => {
     const s = script([[{ type: 'grid.visit', row: 0, col: 0 } as unknown as AlgorithmEvent]])
     expect(passes('recursion', s)).toBe(false)
   })
