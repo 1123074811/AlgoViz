@@ -478,6 +478,14 @@ export const DEFAULT_ALGORITHMS: AlgorithmType[] = [
     hasPreset: true,
   },
   {
+    id: 'subsets',
+    name: '子集/组合(递归树)',
+    nameEn: 'Subsets (Recursion Tree)',
+    category: 'search-backtrack',
+    difficulty: 'medium',
+    hasPreset: true,
+  },
+  {
     id: 'n_queens',
     name: 'N 皇后',
     nameEn: 'N-Queens',

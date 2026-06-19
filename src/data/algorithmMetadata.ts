@@ -43,6 +43,7 @@ export const ALGORITHM_DESCRIPTIONS: Record<AlgorithmLang, Record<string, string
     interval_dp: '区间DP：通过分割区间来求解最优子结构。',
     binary_search: '在有序数组中每次取中间值比较，将搜索范围缩小一半。',
     backtracking: '回溯算法：尝试所有可能的选择，遇到不合法情况立即回退。',
+    subsets: '子集枚举：对每个元素决定「选 / 不选」，用递归树展示所有 2^n 个子集。',
     n_queens: '在 N×N 棋盘上放置 N 个皇后，使它们互不攻击。',
     sudoku: '用数字 1-9 填充 9×9 网格，每行每列每宫不重复。',
     kmp: 'KMP 字符串匹配：利用前缀函数（LPS）避免重复比较。',
@@ -108,6 +109,7 @@ export const ALGORITHM_DESCRIPTIONS: Record<AlgorithmLang, Record<string, string
     matrix_chain:
       'Matrix Chain Multiplication: finds optimal parenthesization to minimize operations.',
     interval_dp: 'Interval DP: solves optimal substructure by splitting intervals.',
+    subsets: 'Subset enumeration: decide pick/skip per element, showing all 2^n subsets as a recursion tree.',
     n_queens: 'Places N queens on an N×N board so no two attack each other.',
     sudoku: 'Fills a 9×9 grid with digits 1-9 following constraints.',
     kmp: 'KMP: avoids redundant character comparisons using prefix function (LPS).',
@@ -177,6 +179,7 @@ export const ALGORITHM_DEFAULT_INPUTS: Record<string, AlgorithmDefaultInput> = {
     hint: '9×9 数独棋盘，0 表示空格',
   },
   backtracking: { value: '[1, 2, 3]', hint: '整数数组，全排列/子集输入' },
+  subsets: { value: '[1, 2, 3]', hint: '数组，演示选/不选递归树枚举所有子集' },
   segment_tree: { value: '[1, 3, 5, 7, 9, 11]', hint: '整数数组，支持区间查询' },
   fenwick_tree: { value: '[3, 2, -1, 6, 5, 4, -3, 3]', hint: '整数数组，可含负数' },
   linked_list_insert: { value: '[1, 2, 3]', hint: '单链表初始数值数组' },

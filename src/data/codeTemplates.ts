@@ -3668,6 +3668,75 @@ public class Backtracking {
     }
 }`,
   },
+  subsets: {
+    python: `def subsets(nums):
+    result = []
+    def dfs(i, path):
+        if i == len(nums):          # leaf: one complete subset
+            result.append(path[:])
+            return
+        dfs(i + 1, path)            # skip nums[i]  (left branch)
+        path.append(nums[i])        # pick nums[i]  (right branch)
+        dfs(i + 1, path)
+        path.pop()                  # undo choice
+    dfs(0, [])
+    return result`,
+    javascript: `function subsets(nums) {
+    const result = [];
+    function dfs(i, path) {
+        if (i === nums.length) {     // leaf: one complete subset
+            result.push([...path]);
+            return;
+        }
+        dfs(i + 1, path);            // skip nums[i]  (left branch)
+        path.push(nums[i]);          // pick nums[i]  (right branch)
+        dfs(i + 1, path);
+        path.pop();                  // undo choice
+    }
+    dfs(0, []);
+    return result;
+}`,
+    cpp: `#include <vector>
+using namespace std;
+
+void dfs(vector<int>& nums, int i, vector<int>& path, vector<vector<int>>& result) {
+    if (i == (int)nums.size()) {     // leaf: one complete subset
+        result.push_back(path);
+        return;
+    }
+    dfs(nums, i + 1, path, result);  // skip nums[i]  (left branch)
+    path.push_back(nums[i]);         // pick nums[i]  (right branch)
+    dfs(nums, i + 1, path, result);
+    path.pop_back();                 // undo choice
+}
+
+vector<vector<int>> subsets(vector<int>& nums) {
+    vector<vector<int>> result;
+    vector<int> path;
+    dfs(nums, 0, path, result);
+    return result;
+}`,
+    java: `import java.util.*;
+
+public class Subsets {
+    static void dfs(int[] nums, int i, List<Integer> path, List<List<Integer>> result) {
+        if (i == nums.length) {          // leaf: one complete subset
+            result.add(new ArrayList<>(path));
+            return;
+        }
+        dfs(nums, i + 1, path, result);  // skip nums[i]  (left branch)
+        path.add(nums[i]);               // pick nums[i]  (right branch)
+        dfs(nums, i + 1, path, result);
+        path.remove(path.size() - 1);    // undo choice
+    }
+
+    public static List<List<Integer>> subsets(int[] nums) {
+        List<List<Integer>> result = new ArrayList<>();
+        dfs(nums, 0, new ArrayList<>(), result);
+        return result;
+    }
+}`,
+  },
   n_queens: {
     python: `def solve_n_queens(n):
     board = [['.'] * n for _ in range(n)]; result = []

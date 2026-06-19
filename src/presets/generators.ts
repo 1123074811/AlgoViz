@@ -858,6 +858,7 @@ import { generateMonotonicStack } from './monotonicStack'
 import { generateKnapsack } from './knapsack'
 import { generateLCS } from './lcs'
 import { generateNQueens } from './nQueens'
+import { generateSubsetsTree } from './subsetsTree'
 import { generateLIS } from './lis'
 import { generateEditDistance } from './editDistance'
 import { generateKMP } from './kmp'
@@ -1626,6 +1627,7 @@ const GENERATORS: Record<string, (input: unknown) => AnimationScript> = {
   bplus_tree_search: bplusSearchWrapper, bplus_tree_range_query: bplusRangeWrapper,
   hash_table: hashTableWrapper,
   backtracking: backtrackingWrapper,
+  subsets: (i) => generateSubsetsTree(parseArr(i)),
   radix_sort: numGen(generateRadixSort), bucket_sort: numGen(generateBucketSort),
   leetcode_hot100: leetcodeWrapper, gcd_euclidean: gcdWrapper, acm_templates: acmWrapper,
   convex_hull: convexHullWrapper,
