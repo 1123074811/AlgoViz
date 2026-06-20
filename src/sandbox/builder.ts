@@ -308,6 +308,7 @@ export class AnimationBuilder {
   private pendingVarHighlights = new Set<string>()
   private truncated = false
   private searchSeq = 0
+  private searchStack: string[] = []
   // tracks which structure families (event prefix before '.') the script used,
   // to auto-enable composite layout when 2+ distinct structures appear.
   private usedFamilies = new Set<string>()
@@ -891,6 +892,7 @@ export class AnimationBuilder {
   /** 创建搜索树根。回溯算法第一步调用，label 描述初始状态（如 '空棋盘'）。根 id 固定 'st_0'。 */
   searchRoot(label: string | number): this {
     this.searchSeq = 0
+    this.searchStack = ['st_0']
     return this.treeCreate('binary', 'st_0', [{ id: 'st_0', value: label }], [])
   }
   /** 做选择：在 parentId 下挂一个新分支节点，返回其 id（后续 searchFail/searchOk/searchBack 引用）。 */
@@ -919,6 +921,30 @@ export class AnimationBuilder {
       [{ type: 'scene.highlight', entityId: id, role: 'current', color: 'muted' }],
       this.act('highlight', [], 'muted'),
     )
+  }
+  /** 进入一层递归:自动以当前栈顶为父挂一个新节点、入栈、返回其 id。AI 在递归函数开头调用,无需手传 parentId → 必然成树。 */
+  searchEnter(label: string | number): string {
+    const parent = this.searchStack[this.searchStack.length - 1] ?? 'st_0'
+    const id = `st_${++this.searchSeq}`
+    this.treeInsert(parent, { id, value: label })
+    this.searchStack.push(id)
+    this.add([{ type: 'scene.highlight', entityId: id, role: 'current', color: 'primary' }], this.act('highlight', [], 'primary'))
+    return id
+  }
+  /** 离开一层递归:出栈;ok=true 标该子问题已解(success 绿),否则标回溯(muted 灰)。 */
+  searchLeave(ok?: boolean): this {
+    const id = this.searchStack.pop()
+    if (!id) return this
+    return ok
+      ? this.add([{ type: 'scene.highlight', entityId: id, role: 'safe', color: 'success' }], this.act('highlight', [], 'success'))
+      : this.add([{ type: 'scene.highlight', entityId: id, role: 'current', color: 'muted' }], this.act('highlight', [], 'muted'))
+  }
+  /** 记忆化命中:当前栈顶下挂一个命中节点并标 warning 橙(不展开其子树,体现复用)。 */
+  searchMemoHit(label: string | number): this {
+    const parent = this.searchStack[this.searchStack.length - 1] ?? 'st_0'
+    const id = `st_${++this.searchSeq}`
+    this.treeInsert(parent, { id, value: label })
+    return this.add([{ type: 'scene.highlight', entityId: id, role: 'current', color: 'warning' }], this.act('highlight', [], 'warning'))
   }
 
   // ── note / escape ──
