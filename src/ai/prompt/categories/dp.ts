@@ -16,6 +16,16 @@ export const PROMPT: string = `### DP 状态表（dynamic programming，@type �
 4. \`b.dpSet(tableId, row, col, value, formula)\` 写入结果。
 最后用 dpTraceback 回放最优路径、dpHighlight 'answer' 标答案格。配合 b.desc 说明“为什么用这个方程”。
 
+### 记忆化搜索（dfs + memo 数组）→ 必须用 DP 状态表，而非递归树
+**判别**：函数体里出现 \`memo\`/\`记忆化\`/\`dp[...]=...\` 缓存数组、命中即返回（如数位 DP、记忆化区间 DP、fib memo）——这类“带 memo 的 dfs”精华是 **memo 表的填充与复用**，不是递归过程。递归树会指数爆炸（数位 DP：每个 pos 试 0-9 × 16 位 ≈ 10^16 节点，展开一层就横排），**禁止用递归树/调用栈**，一律用 DP 状态表展示 memo 表：
+- \`b.dpCreate(tableId, rows, cols, ...)\` 把 memo 数组建成表：**行=最关键的一维状态、列=另一关键维**（如数位 DP 用 \`pos × 已填数字\`、记忆化区间 DP 用 \`i × j\`）。
+- \`b.dpSet(tableId, row, col, value, formula?)\` 逐格填入算出的子问题结果，formula 写该子问题的转移式。
+- \`b.dpHighlight(...,'current')\` 标当前正在计算的格、\`'dependency'\` 标它依赖的已填格、\`'answer'\` 标最终答案格。
+- \`b.dpDependency(tableId, sources, target, label?)\` 画依赖箭头（当前子问题由哪些已填子问题转移而来）。
+- **记忆化命中 = 复用已填格**：再次需要某子问题时，不重算，直接 \`dpHighlight([{row,col}], 'dependency')\` 高亮那个已填格表示“命中缓存、直接复用”，并在 b.desc 里说明“记忆化命中，复用而非重算”。
+- **多维 memo[a][b][c] 投影到 2D**：固定或合并一维——例如行=pos、列=把 \`(prev,curr)\` 等编码成一个索引，或挑两个最有代表性的维度；务必在 b.desc 里说明投影方式（“行=pos，列=已构造数字的余数”之类）。
+要点：填表是**有界的**（状态数有限，不指数爆炸），命中即复用，天然适合数位 DP / 记忆化区间 DP / 记忆化背包等“宽记忆化”场景。把动画讲成“一张表怎么被逐格填满、哪些格被复用”，而不是“递归怎么一层层下去”。
+
 ### 矩阵 / DP 网格转移箭头（@type 用 matrix）
 2D 动态规划也可用矩阵 + 状态转移箭头表达。矩阵用 \`b.matrixCreate(rows, cols, values?)\` 创建，再用 \`b.matrixVisit\` / \`b.matrixUpdate\` 填表，转移关系用：
 - \`b.matrixCreate(rows, cols, values?)\` 第一步必调；values 为二维数组（可省略=全 0）

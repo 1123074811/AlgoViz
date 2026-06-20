@@ -1,50 +1,48 @@
 /**
- * 金样例 · recursion（递归 / 记忆化）—— 斐波那契记忆化搜索的「递归调用树」
+ * 金样例 · recursion（纯回溯，无 memo）—— 子集枚举的「选 / 不选」递归树
  * sample input: {"n":5}
- * 结构：递归树(tree.* via searchRoot/searchEnter/searchLeave/searchMemoHit) + scene.highlight 状态色。
- * 重点：父子靠 builder 内部调用栈自动建立（不手传 parentId）；记忆化命中(warning 橙)时不再展开其子树，
- *      体现「复用而非重算」，天然控制步数。
- * 操作：searchRoot / searchEnter / searchLeave / searchMemoHit。
+ * 结构：递归树(tree.* via searchRoot/searchEnter/searchLeave) + scene.highlight 状态色。
+ * 重点：纯回溯（没有 memo 数组，不是记忆化）——精华是搜索空间的形状，故用递归树。
+ *      每层对一个元素做「选/不选」二叉分支；走到底（叶）即得到一个子集，searchLeave(true) 标解。
+ *      父子靠 builder 内部调用栈自动建立（不手传 parentId）。元素数取 min(n,3) 控制树规模。
  */
-export const GOLDEN: string = `// @algorithm fibonacci_memo
+export const GOLDEN: string = `// @algorithm subsets
 // @type array
 // @sample {"n":5}
-// @time O(n)
+// @time O(2^n · n)
 // @space O(n)
-const n = (input && typeof input.n === 'number') ? input.n : 5
-const memo = {}
+const rawN = (input && typeof input.n === 'number') ? input.n : 3
+// 子集枚举无记忆化（无 memo），用递归树展示「选/不选」搜索空间；元素数限 3 以内保持树清晰。
+const k = Math.max(1, Math.min(rawN, 3))
+const items = Array.from({ length: k }, (_, i) => i + 1)
 
-// 递归树根：要计算的子问题 fib(n)。searchRoot 同时初始化内部调用栈，栈顶即当前父节点。
-b.line(1).desc('记忆化斐波那契:用递归树展示子问题 fib(k)。命中缓存的子树不再展开').searchRoot('fib(' + n + ')')
+b.line(1).desc('子集枚举（纯回溯，无 memo）:对每个元素「选 / 不选」，用递归树展示搜索空间').searchRoot('[ ]')
 
-let result
-function fib(k) {
-  if (k < 2) {
-    // 基例：到达叶节点（success 绿）。进入即 searchLeave，配对根那一层无需 enter。
-    b.line(4).desc('基例 fib(' + k + ') = ' + k + '，到达叶节点')
-    memo[k] = k
-    return k
+const subsets = []
+const cur = []
+
+function dfs(i) {
+  if (i === items.length) {
+    // 叶节点:一条选择路径走到底,得到一个完整子集(success 绿)。
+    b.line(6).desc('到达叶节点,得到子集 {' + cur.join(',') + '}').searchLeave(true)
+    subsets.push(cur.slice())
+    return
   }
-  if (memo[k] !== undefined) {
-    // 记忆化命中：当前栈顶下挂一个命中节点（橙色），不展开其子树。
-    b.line(6).desc('记忆化命中 fib(' + k + ') = ' + memo[k] + '，复用缓存、不再展开子树').searchMemoHit('fib(' + k + ')=' + memo[k])
-    return memo[k]
-  }
-  // 左子调用 fib(k-1)：进入一层递归，自动以栈顶为父挂节点并入栈。
-  b.searchEnter('fib(' + (k - 1) + ')')
-  b.line(8).desc('展开 fib(' + k + ') 的左分支 fib(' + (k - 1) + ')')
-  const a = fib(k - 1)
-  b.searchLeave(true) // 左分支解出，返回前出栈并标已解
-  // 右子调用 fib(k-2)
-  b.searchEnter('fib(' + (k - 2) + ')')
-  b.line(9).desc('展开 fib(' + k + ') 的右分支 fib(' + (k - 2) + ')')
-  const c = fib(k - 2)
+  const x = items[i]
+  // 分支一:不选 items[i]。进入一层递归,自动以栈顶为父挂节点并入栈。
+  b.searchEnter('跳过 ' + x)
+  b.line(11).desc('不选 ' + x + '，递归处理后续元素')
+  dfs(i + 1)
+  b.searchLeave(true) // 该分支子树已枚举完,返回前出栈
+  // 分支二:选 items[i]。
+  b.searchEnter('选 ' + x)
+  b.line(14).desc('选择 ' + x + '，加入当前子集后递归')
+  cur.push(x)
+  dfs(i + 1)
+  cur.pop()
   b.searchLeave(true)
-  memo[k] = a + c
-  b.line(10).desc('fib(' + k + ') = fib(' + (k - 1) + ') + fib(' + (k - 2) + ') = ' + memo[k] + '，标记该子问题已解')
-  return memo[k]
 }
 
-result = fib(n)
-b.line(12).desc('计算完成:fib(' + n + ') = ' + result + '。记忆化让每个子问题只算一次').result(result)
+dfs(0)
+b.line(18).desc('枚举完成:共 ' + subsets.length + ' 个子集。纯回溯的精华是搜索空间的形状(递归树)').result(subsets.length)
 `

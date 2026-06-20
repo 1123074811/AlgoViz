@@ -27,7 +27,7 @@ const GRID_ALGOS = /islands?|flood|maze|grid|matrix.?path|num_islands/i
 const RECURSION_ALGOS = /dfs|backtrack|permut|combin|subset|divide|recursion|n_queens|sudoku/i
 const GRAPH_ALGOS = /bfs|dfs_graph|dijkstra|prim|kruskal|topolog|bellman|floyd|a_?star|union_find/i
 const TREE_ALGOS = /tree|bst|avl|trie|heap|btree|b_?plus/i
-const DP_ALGOS = /\bdp\b|knapsack|lcs|lis|edit_distance|matrix_chain|interval_dp/i
+const DP_ALGOS = /\bdp\b|knapsack|lcs|lis|edit_distance|matrix_chain|interval_dp|memo|记忆化|memoiz/i
 const STRUCT_ALGOS = /stack|queue|deque|hash|\bset\b|bitset|priority/i
 
 /** 确定性分类器：优先 declaredCategory(@category)，否则按 algorithm/type/code 推断。 */
