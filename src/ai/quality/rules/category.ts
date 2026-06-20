@@ -30,6 +30,9 @@ function countTypes(ctx: QualityContext, wanted: string[]): number {
 
 const BACKTRACK_PATTERN = /backtrack|回溯|n_?queens?|sudoku|数独|permut|combin|subset|全排列|组合|子集/i
 
+/** 数位 / 数字类 DP：状态空间高维，改用「逐位数字构造」视图（array 数位格子）而非超宽状态表。 */
+const DIGIT_DP_PATTERN = /数位|digit[_-]?dp|逐位|to_?string\s*\(|count.*digit|数字\s*dp/i
+
 /** 回溯类动画如果只画调用栈、不画搜索树，用户看不到搜索空间与剪枝位置。 */
 export const searchTreeRule: QualityRule = {
   id: 'recursion.missing-search-tree',
@@ -94,9 +97,19 @@ export const CATEGORY_RULES: Record<AlgorithmCategory, QualityRule[]> = {
     rule(
       'dp',
       'dp.requires-dp-table',
-      'DP 算法必须创建 dp 表并通过 dp.set 填充状态',
-      '用 b.dpCreate(id, rows, cols) 建表，逐格 b.dpSet(...) 填值并配 dpDependency 指出转移来源。',
-      ctx => hasStructure(ctx, 'dp') && countTypes(ctx, ['dp.set']) > 0,
+      'DP 算法必须创建 dp 表并通过 dp.set 填充状态（数位/数字类 DP 可改用 array 逐位构造视图）',
+      '典型 DP 用 b.dpCreate(id, rows, cols) 建表、逐格 b.dpSet(...) 填值并配 dpDependency 指出转移来源；数位/数字类 DP 改用 b.arrayCreate 数位格子 + b.setValue/compare/markSorted 演示逐位构造。',
+      ctx => {
+        // 标准 DP：状态表 + 逐格填值。
+        if (hasStructure(ctx, 'dp') && countTypes(ctx, ['dp.set']) > 0) return true
+        // 数位/数字类 DP：用逐位构造视图（array 数位格子）替代超宽状态表，接受 array 构造操作。
+        if (
+          DIGIT_DP_PATTERN.test(`${ctx.script.algorithm ?? ''}\n${ctx.sourceCode ?? ''}`) &&
+          hasStructure(ctx, 'array') &&
+          countTypes(ctx, ['array.set_value', 'array.compare', 'array.mark_sorted']) > 0
+        ) return true
+        return false
+      },
     ),
   ],
   recursion: [

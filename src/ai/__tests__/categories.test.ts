@@ -13,6 +13,9 @@ describe('classifyAlgorithm', () => {
     [{ algorithm: 'subsets', type: 'array' }, 'recursion'],
     // 记忆化搜索（有 memo 表，如数位 DP / fib memo）归 dp（DP 状态表），优先于 recursion 判断
     [{ algorithm: 'digit_dp', type: 'array', code: 'const memo = []' }, 'dp'],
+    // 数位 DP 即便没识别到 memo 数组，也靠 digit_dp/数位 关键词归 dp（拿到逐位构造提示段）
+    [{ algorithm: 'digit_dp', type: 'array' }, 'dp'],
+    [{ algorithm: '数位dp计数', type: 'array' }, 'dp'],
     [{ algorithm: 'fibonacci_memo', type: 'array' }, 'dp'],
     [{ algorithm: 'count_numbers', code: 'let memo = new Array(16)' }, 'dp'],
     [{ algorithm: '记忆化搜索', type: 'array' }, 'dp'],

@@ -146,6 +146,24 @@ describe('CATEGORY_RULES · 类别专属质量规则', () => {
     ])
     expect(passes('dp', s)).toBe(false)
   })
+  it('[dp] 命中：数位 DP 用 array 逐位构造视图（无 dp 表也通过）', () => {
+    const s: AnimationScript = {
+      ...script([
+        [{ type: 'array.create', values: [0, 0, 0] } as unknown as AlgorithmEvent],
+        [{ type: 'array.set_value', index: 0, value: 1 } as unknown as AlgorithmEvent],
+        [{ type: 'array.mark_sorted', indices: [0, 1, 2] } as unknown as AlgorithmEvent],
+      ]),
+      algorithm: 'digit_dp',
+    }
+    expect(passes('dp', s)).toBe(true)
+  })
+  it('[dp] 不命中：数位 DP 只 create array、无逐位构造操作', () => {
+    const s: AnimationScript = {
+      ...script([[{ type: 'array.create', values: [0] } as unknown as AlgorithmEvent]]),
+      algorithm: 'digit_dp',
+    }
+    expect(passes('dp', s)).toBe(false)
+  })
 
   // recursion
   it('[recursion] 命中：有递归树 tree.insert（首选范式）', () => {
