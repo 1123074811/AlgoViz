@@ -6,6 +6,11 @@ import {
   type AlgorithmCategory,
   type Difficulty,
 } from '@/data/algorithms'
+import {
+  createLegacyGeneratorArtifact,
+  isGeneratorArtifact,
+  type GeneratorArtifact,
+} from '@/generator'
 
 export type { AlgorithmType, AlgorithmCategory, Difficulty }
 
@@ -24,7 +29,10 @@ export interface AIHistoryEntry {
   status: AIHistoryStatus
   script?: AnimationScript
   error?: string
+  artifact?: GeneratorArtifact
+  /** @deprecated Phase 1 之前的历史格式，仅用于本地兼容迁移。 */
   generatorBody?: string
+  /** @deprecated Phase 1 之前的历史格式，仅用于本地兼容迁移。 */
   generatorType?: 'array' | 'graph' | 'tree' | 'linked_list' | 'union_find'
 }
 
@@ -35,10 +43,50 @@ function loadAIHistory(): AIHistoryEntry[] {
   try {
     const raw = localStorage.getItem(AI_HISTORY_KEY)
     if (!raw) return []
-    return JSON.parse(raw) as AIHistoryEntry[]
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .map(normalizeHistoryEntry)
+      .filter((entry): entry is AIHistoryEntry => entry !== null)
   } catch {
     return []
   }
+}
+
+function normalizeHistoryEntry(value: unknown): AIHistoryEntry | null {
+  if (!value || typeof value !== 'object') return null
+  const record = value as Record<string, unknown>
+  if (
+    typeof record.id !== 'string'
+    || typeof record.code !== 'string'
+    || typeof record.language !== 'string'
+  ) {
+    return null
+  }
+
+  const entry = { ...record } as unknown as AIHistoryEntry
+  if (isGeneratorArtifact(record.artifact)) return entry
+
+  if (typeof record.generatorBody === 'string' && isLegacyGeneratorType(record.generatorType)) {
+    entry.artifact = createLegacyGeneratorArtifact({
+      sourceCode: entry.code,
+      language: entry.language,
+      algorithm: entry.script?.algorithm ?? entry.algorithmId ?? 'custom',
+      rendererType: record.generatorType,
+      generatorSource: record.generatorBody,
+    })
+  } else {
+    delete entry.artifact
+  }
+  return entry
+}
+
+function isLegacyGeneratorType(value: unknown): value is NonNullable<AIHistoryEntry['generatorType']> {
+  return value === 'array'
+    || value === 'graph'
+    || value === 'tree'
+    || value === 'linked_list'
+    || value === 'union_find'
 }
 
 function saveAIHistory(history: AIHistoryEntry[]): void {

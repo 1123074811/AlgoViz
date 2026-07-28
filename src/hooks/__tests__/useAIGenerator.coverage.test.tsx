@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import type { AnimationScript } from '@/types/animation'
+import { createGeneratorArtifact } from '@/generator'
 
 // ── Mock every external dependency so no network/worker is hit ──────────────
 const analyzeCodeGenerator = vi.fn()
@@ -23,8 +24,8 @@ vi.mock('@/presets', () => ({
   generatePreset: (...a: unknown[]) => generatePreset(...a),
 }))
 vi.mock('@/ai/categories', () => ({
-  classifyAlgorithm: () => 'sorting',
-  CATEGORY_PROFILES: { sorting: { rules: [] } },
+  classifyAlgorithm: () => 'linear',
+  CATEGORY_PROFILES: { linear: { rules: [] } },
 }))
 vi.mock('@/ai/quality', () => ({
   runQualityGate: () => ({ passed: true, issues: [] }),
@@ -45,6 +46,18 @@ function makeScript(algorithm = 'mock'): AnimationScript {
     complexity: { time: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' }, space: 'O(1)' },
     steps: [],
   }
+}
+
+function makeArtifact(generatorSource = 'BODY') {
+  return createGeneratorArtifact({
+    sourceCode: 'function f(){}',
+    language: 'javascript',
+    category: 'linear',
+    algorithm: 'custom',
+    rendererType: 'array',
+    generatorSource,
+    inputSamples: [[1, 2, 3]],
+  })
 }
 
 function makeOpts(overrides: Partial<UseAIGeneratorOptions> = {}): {
@@ -96,9 +109,10 @@ describe('useAIGenerator — initial state and reset/setLive', () => {
     expect(result.current.liveAlgoId).toBe('bubble-sort')
     expect(result.current.generator).toBeNull()
 
-    act(() => result.current.setLive({ generator: { body: 'x', type: 'array' } }))
+    const artifact = makeArtifact('x')
+    act(() => result.current.setLive({ generator: { artifact } }))
     expect(result.current.liveAlgoId).toBeNull()
-    expect(result.current.generator).toEqual({ body: 'x', type: 'array' })
+    expect(result.current.generator).toEqual({ artifact })
 
     act(() => result.current.setLive(null))
     expect(result.current.liveAlgoId).toBeNull()
@@ -195,12 +209,18 @@ describe('useAIGenerator — analyze: AI generator (Phase 2)', () => {
     })
 
     expect(res!.ok).toBe(true)
-    expect(res!.generatorBody).toBe('BODY')
-    expect(res!.generatorType).toBe('array')
+    expect(res!.artifact).toMatchObject({
+      artifactVersion: 1,
+      generatorSource: 'BODY',
+      rendererType: 'array',
+      validation: { status: 'passed', checkedInputs: 1 },
+    })
     expect(result.current.generator).toMatchObject({
-      body: 'BODY',
-      type: 'array',
-      verify: { language: 'javascript', userCode: 'function f(){}' },
+      artifact: {
+        generatorSource: 'BODY',
+        rendererType: 'array',
+      },
+      verify: { userCode: 'function f(){}' },
     })
     expect(applyScript).toHaveBeenCalledWith(script)
     expect(setStatus).toHaveBeenCalledWith('success')
@@ -311,5 +331,41 @@ describe('useAIGenerator — live regen on input change', () => {
     expect(generatePreset).toHaveBeenCalledWith('bubble-sort', expect.anything())
     expect(applyScript).toHaveBeenCalledWith(regen)
     expect(setStatus).toHaveBeenLastCalledWith('success')
+  })
+
+  it('runs one artifact locally for five inputs without another LLM request', async () => {
+    vi.useFakeTimers()
+    const parseInput = vi.fn((raw: string) => ({ valid: true, value: JSON.parse(raw) }))
+    const { opts, applyScript } = makeOpts({
+      inputData: '[1]',
+      parseInput,
+    })
+    const artifact = makeArtifact()
+    runGeneratorSandboxed.mockResolvedValue({ ok: true, script: makeScript('local') })
+
+    const { result, rerender } = renderHook(
+      (props: UseAIGeneratorOptions) => useAIGenerator(props),
+      { initialProps: opts },
+    )
+
+    act(() => result.current.setLive({ generator: { artifact } }))
+    runGeneratorSandboxed.mockClear()
+    analyzeCodeGenerator.mockClear()
+    applyScript.mockClear()
+
+    const inputs = ['[]', '[1]', '[3,2,1]', '[2,2,2]', '[9,1,5,7]']
+    for (const inputData of inputs) {
+      rerender({ ...opts, inputData })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(400)
+      })
+    }
+
+    expect(runGeneratorSandboxed).toHaveBeenCalledTimes(5)
+    expect(runGeneratorSandboxed.mock.calls.map((call) => call[1])).toEqual(
+      inputs.map((input) => JSON.parse(input)),
+    )
+    expect(analyzeCodeGenerator).not.toHaveBeenCalled()
+    expect(applyScript).toHaveBeenCalledTimes(5)
   })
 })

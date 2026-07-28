@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createAlgorithmStore, type AIHistoryEntry, type AIHistoryStatus } from '../algorithmStore'
 import type { AnimationScript } from '@/types/animation'
+import { createGeneratorArtifact } from '@/generator'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -101,6 +102,35 @@ describe('algorithmStore — AI 历史', () => {
     store.getState().addAIHistory(makeEntry('restore'))
     const store2 = createAlgorithmStore()
     expect(store2.getState().aiHistory[0].id).toBe('restore')
+  })
+
+  it('持久化 GeneratorArtifact，并把旧 generatorBody 历史迁移为 Artifact', () => {
+    const artifact = createGeneratorArtifact({
+      sourceCode: 'def sort(values): return sorted(values)',
+      language: 'python',
+      category: 'linear',
+      algorithm: 'sort',
+      rendererType: 'array',
+      generatorSource: 'b.arrayCreate(input)',
+      inputSamples: [[3, 2, 1]],
+    })
+    store.getState().addAIHistory({ ...makeEntry('artifact'), artifact })
+
+    const persisted = JSON.parse(localStorageMock.getItem('algoviz-ai-history') ?? '[]')
+    expect(persisted[0].artifact.cacheKey).toBe(artifact.cacheKey)
+
+    localStorageMock.setItem('algoviz-ai-history', JSON.stringify([{
+      ...makeEntry('legacy'),
+      generatorBody: 'b.arrayCreate(input)',
+      generatorType: 'array',
+    }]))
+    const migrated = createAlgorithmStore().getState().aiHistory[0]
+    expect(migrated.artifact).toMatchObject({
+      artifactVersion: 1,
+      generatorSource: 'b.arrayCreate(input)',
+      rendererType: 'array',
+      inputContract: { source: 'legacy' },
+    })
   })
 })
 

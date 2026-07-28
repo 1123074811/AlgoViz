@@ -388,9 +388,7 @@ export default function Visualizer() {
         inputData: result.usedInput ?? inputData,
         status: 'success',
         script: result.script,
-        ...(result.generatorBody
-          ? { generatorBody: result.generatorBody, generatorType: result.generatorType }
-          : {}),
+        ...(result.artifact ? { artifact: result.artifact } : {}),
       }
       addAIHistory(entry)
     } catch (e) {

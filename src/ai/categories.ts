@@ -1,15 +1,9 @@
 import type { QualityRule } from './quality/types'
+import type { AlgorithmCategory } from '@/generator'
 import { CATEGORY_PROMPTS } from './prompt/categories'
 import { CATEGORY_RULES } from './quality/rules/category'
 
-export type AlgorithmCategory =
-  | 'linear' // 排序/查找/双指针/滑动窗口（array、string）
-  | 'recursion' // DFS/回溯/分治/树递归 —— 优先用递归树(tree.insert 生长 + scene.highlight 标路径/剪枝/命中/解);仅在确需展示栈深度时用 callStack
-  | 'grid' // 迷宫/岛屿/棋盘/网格寻路
-  | 'graph' // BFS/DFS 图/最短路/MST/拓扑
-  | 'tree' // BST/AVL/堆/Trie/B 树
-  | 'dp' // 2D 动态规划
-  | 'structure' // 栈/队列/哈希/集合/位集 等数据结构操作
+export type { AlgorithmCategory } from '@/generator'
 
 export const ALL_CATEGORIES: AlgorithmCategory[] = [
   'linear', 'recursion', 'grid', 'graph', 'tree', 'dp', 'structure',

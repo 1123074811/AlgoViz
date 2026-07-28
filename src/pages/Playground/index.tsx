@@ -246,7 +246,7 @@ export default function Playground() {
         updateAIHistory(historyId, {
           status: 'error',
           error: result.error || '分析失败',
-          ...(result.generatorBody ? { generatorBody: result.generatorBody, generatorType: result.generatorType } : {}),
+          ...(result.artifact ? { artifact: result.artifact } : {}),
         })
         return
       }
@@ -257,7 +257,7 @@ export default function Playground() {
         // Persist the input the animation was actually generated from so a later
         // restore shows matching box + animation (not the pre-analysis stale input).
         ...(result.usedInput !== undefined ? { inputData: result.usedInput } : {}),
-        ...(result.generatorBody ? { generatorBody: result.generatorBody, generatorType: result.generatorType } : {}),
+        ...(result.artifact ? { artifact: result.artifact } : {}),
       })
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') {
@@ -325,8 +325,8 @@ export default function Playground() {
       const recognized = recognizeAlgorithm(entry.script.algorithm)
       if (recognized) {
         setLiveGenerator({ algoId: recognized })
-      } else if (entry.generatorBody && entry.generatorType) {
-        setLiveGenerator({ generator: { body: entry.generatorBody, type: entry.generatorType } })
+      } else if (entry.artifact) {
+        setLiveGenerator({ generator: { artifact: entry.artifact, verify: { userCode: entry.code } } })
       } else {
         setLiveGenerator(null)
       }
@@ -335,8 +335,8 @@ export default function Playground() {
     } else {
       // Non-success entries: surface the error (don't silently blank the page).
       setLiveGenerator(
-        entry.generatorBody && entry.generatorType
-          ? { generator: { body: entry.generatorBody, type: entry.generatorType } }
+        entry.artifact
+          ? { generator: { artifact: entry.artifact, verify: { userCode: entry.code } } }
           : null,
       )
       setAnimationScript(null)

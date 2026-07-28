@@ -12,12 +12,16 @@ import { runUserJsSandboxed } from '@/sandbox/runUserCode'
 import { runUserPySandboxed } from '@/sandbox/runUserPython'
 import type { AnimationScript, InitialState } from '@/types/animation'
 import type { AIStatus } from '@/store/algorithmStore'
+import {
+  createGeneratorArtifact,
+  validateInputContract,
+  type GeneratorArtifact,
+} from '@/generator'
 
 export type GeneratorType = 'array' | 'graph' | 'tree' | 'linked_list' | 'union_find'
-type LiveGenerator = {
-  body: string
-  type: GeneratorType
-  verify?: { language: string; userCode: string }
+export type LiveGenerator = {
+  artifact: GeneratorArtifact
+  verify?: { userCode: string }
 }
 
 /**
@@ -141,9 +145,8 @@ export interface AnalyzeResult {
   ok: boolean
   /** Generated/recognized animation (present on success when generation succeeded). */
   script?: AnimationScript
-  /** Phase 2 only: the AI-written generator source. */
-  generatorBody?: string
-  generatorType?: GeneratorType
+  /** Phase 1: reusable, input-independent generator artifact. */
+  artifact?: GeneratorArtifact
   error?: string
   /** Raw text to surface in "查看原始响应" — AI raw response or generator source. */
   rawResponse?: string
@@ -302,13 +305,34 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
 
       // Phase 2: AI generator — execute it in the sandbox.
       const genType: GeneratorType = gen.type === 'matrix' ? 'array' : gen.type
-      const verify = { language: params.language, userCode: params.code }
-      setLiveAlgoId(null)
-      setGenerator({ body: gen.body, type: genType, verify })
-
       const parsed = parseInputRef.current(effectiveInput)
+      const sampleValues: unknown[] = parsed.valid ? [parsed.value] : []
+      if (sampleInput && sampleInput !== effectiveInput) {
+        const parsedSample = parseInputRef.current(sampleInput)
+        if (parsedSample.valid) sampleValues.push(parsedSample.value)
+      }
+      const category = classifyAlgorithm({ algorithm: gen.algorithm, type: gen.type, code: params.code })
+      let activeArtifact = createGeneratorArtifact({
+        sourceCode: params.code,
+        language: params.language,
+        category,
+        algorithm: gen.algorithm,
+        rendererType: genType,
+        generatorSource: gen.body,
+        inputSamples: sampleValues,
+        expectedResult: gen.expectedResult,
+        timeComplexity: gen.timeComplexity,
+        spaceComplexity: gen.spaceComplexity,
+      })
+      const verify = { userCode: params.code }
+      setLiveAlgoId(null)
+      setGenerator({ artifact: activeArtifact, verify })
+
       let sandboxResult = parsed.valid
-        ? await runGeneratorSandboxed(gen.body, parsed.value, { algorithm: gen.algorithm, type: genType })
+        ? await runGeneratorSandboxed(activeArtifact.generatorSource, parsed.value, {
+            algorithm: activeArtifact.algorithm,
+            type: activeArtifact.rendererType,
+          })
         : { ok: false as const, error: '输入数据无效' }
 
       // If the generator crashed (often a stale/wrong-shaped leftover input),
@@ -316,21 +340,21 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
       if (!sandboxResult.ok && sampleInput && sampleInput !== effectiveInput) {
         const sp = parseInputRef.current(sampleInput)
         if (sp.valid) {
-          const retry = await runGeneratorSandboxed(gen.body, sp.value, { algorithm: gen.algorithm, type: genType })
+          const retry = await runGeneratorSandboxed(activeArtifact.generatorSource, sp.value, {
+            algorithm: activeArtifact.algorithm,
+            type: activeArtifact.rendererType,
+          })
           if (retry.ok) { sandboxResult = retry; sampleFill(sampleInput); usedInput = sampleInput }
         }
       }
 
-      let activeBody = gen.body
-
       // 沙箱运行期报错(异常/崩溃):把真实错误回发 AI 修复一次。
       // 常见原因是对 input 形状的错误假设(如访问不存在的字段),让 AI 据实修正。
       if (!sandboxResult.ok) {
-        const category = classifyAlgorithm({ algorithm: gen.algorithm, type: gen.type, code: params.code })
         const p = parseInputRef.current(usedInput)
         if (p.valid) {
           const repaired = await repairGenerator({
-            body: gen.body, sourceCode: params.code, language: params.language, category,
+            body: activeArtifact.generatorSource, sourceCode: params.code, language: params.language, category,
             issues: [{
               code: 'runtime-error', severity: 'error',
               message: '生成器在沙箱中执行报错: ' + (sandboxResult.error || '未知错误'),
@@ -339,11 +363,14 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
             inputData: usedInput, signal: params.signal,
           })
           if (repaired) {
-            const retry = await runGeneratorSandboxed(repaired.body, p.value, { algorithm: gen.algorithm, type: genType })
+            const retry = await runGeneratorSandboxed(repaired.body, p.value, {
+              algorithm: activeArtifact.algorithm,
+              type: activeArtifact.rendererType,
+            })
             if (retry.ok && retry.script) {
               sandboxResult = retry
-              activeBody = repaired.body
-              setGenerator({ body: repaired.body, type: genType, verify })
+              activeArtifact = { ...activeArtifact, generatorSource: repaired.body }
+              setGenerator({ artifact: activeArtifact, verify })
             }
           }
         }
@@ -352,25 +379,27 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
       // 确定性质量门:检查生成动画的语义质量(空结构/全 0 网格/递归无栈/无操作等)。
       // 仅当存在 error 时,带具体问题清单回发 AI 修复一次,并且只有修复结果不劣化才采用。
       if (sandboxResult.ok && sandboxResult.script) {
-        const category = classifyAlgorithm({ algorithm: gen.algorithm, type: gen.type, code: params.code })
         const gate = runQualityGate(sandboxResult.script, category, CATEGORY_PROFILES[category].rules, params.code)
         if (!gate.passed) {
           const errs = gate.issues.filter(i => i.severity === 'error')
           const repaired = await repairGenerator({
-            body: gen.body, sourceCode: params.code, language: params.language, category, issues: errs,
+            body: activeArtifact.generatorSource, sourceCode: params.code, language: params.language, category, issues: errs,
             inputData: usedInput, signal: params.signal,
           })
           if (repaired) {
             const p = parseInputRef.current(usedInput)
             if (p.valid) {
-              const retry = await runGeneratorSandboxed(repaired.body, p.value, { algorithm: gen.algorithm, type: genType })
+              const retry = await runGeneratorSandboxed(repaired.body, p.value, {
+                algorithm: activeArtifact.algorithm,
+                type: activeArtifact.rendererType,
+              })
               if (retry.ok && retry.script) {
                 const errs2 = runQualityGate(retry.script, category, CATEGORY_PROFILES[category].rules, params.code)
                   .issues.filter(i => i.severity === 'error')
                 if (errs2.length < errs.length) {
                   sandboxResult = retry
-                  activeBody = repaired.body
-                  setGenerator({ body: repaired.body, type: genType, verify })
+                  activeArtifact = { ...activeArtifact, generatorSource: repaired.body }
+                  setGenerator({ artifact: activeArtifact, verify })
                 }
               }
             }
@@ -383,7 +412,7 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
       if (sandboxResult.ok && sandboxResult.script) {
         const p = parseInputRef.current(usedInput)
         const verifyArgs = {
-          expectRaw: gen.expectedResult,
+          expectRaw: activeArtifact.expectedResult,
           language: params.language,
           userCode: params.code,
           input: p.valid ? p.value : undefined,
@@ -391,9 +420,8 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
         }
         const outcome = await verifyAndTag(sandboxResult.script, verifyArgs)
         if (outcome.status === 'fail' && p.valid) {
-          const category = classifyAlgorithm({ algorithm: gen.algorithm, type: gen.type, code: params.code })
           const repaired = await repairGenerator({
-            body: activeBody, sourceCode: params.code, language: params.language, category,
+            body: activeArtifact.generatorSource, sourceCode: params.code, language: params.language, category,
             issues: [{
               code: 'result-mismatch', severity: 'error',
               message: `动画最终结果 ${formatVerifyValue(outcome.actual)} 与原代码在该输入上的预期结果 ${formatVerifyValue(outcome.expected)} 不一致`,
@@ -402,13 +430,16 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
             inputData: usedInput, signal: params.signal,
           })
           if (repaired) {
-            const retry = await runGeneratorSandboxed(repaired.body, p.value, { algorithm: gen.algorithm, type: genType })
+            const retry = await runGeneratorSandboxed(repaired.body, p.value, {
+              algorithm: activeArtifact.algorithm,
+              type: activeArtifact.rendererType,
+            })
             if (retry.ok && retry.script) {
               const retryOutcome = await verifyAndTag(retry.script, verifyArgs)
               if (retryOutcome.status !== 'fail') {
                 sandboxResult = retry
-                activeBody = repaired.body
-                setGenerator({ body: repaired.body, type: genType, verify })
+                activeArtifact = { ...activeArtifact, generatorSource: repaired.body }
+                setGenerator({ artifact: activeArtifact, verify })
               }
             }
           }
@@ -424,9 +455,21 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
             space: gen.spaceComplexity || 'O(?)',
           }
         }
+        const verificationFailed = sandboxResult.script.verification?.status === 'fail'
+        activeArtifact = {
+          ...activeArtifact,
+          validation: {
+            status: verificationFailed ? 'failed' : 'passed',
+            checkedInputs: 1,
+            issues: verificationFailed
+              ? [{ code: 'result-mismatch', message: sandboxResult.script.verification?.message || '动画结果验证失败' }]
+              : [],
+          },
+        }
+        setGenerator({ artifact: activeArtifact, verify })
         applyScriptRef.current(sandboxResult.script)
         setStatusRef.current('success')
-        return { ok: true, script: sandboxResult.script, generatorBody: activeBody, generatorType: genType, usedInput }
+        return { ok: true, script: sandboxResult.script, artifact: activeArtifact, usedInput }
       }
 
       // 沙箱失败：用兜底场景保证渲染永不空白，并以 kind 区分超时/崩溃。
@@ -435,8 +478,22 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
       const initial = parsed.valid ? toFallbackInitialState(parsed.value) : { type: 'array' as const, data: [] }
       applyScriptRef.current(buildFallbackScene(initial, { kind, message: error }))
       // Surface the generator source so diagnostics can show the AI code.
-      setStatusRef.current('error', error, gen.body)
-      return { ok: false, error, generatorBody: gen.body, generatorType: genType, rawResponse: gen.body }
+      activeArtifact = {
+        ...activeArtifact,
+        validation: {
+          status: 'failed',
+          checkedInputs: parsed.valid ? 1 : 0,
+          issues: [{ code: 'runtime-error', message: error }],
+        },
+      }
+      setGenerator({ artifact: activeArtifact, verify })
+      setStatusRef.current('error', error, activeArtifact.generatorSource)
+      return {
+        ok: false,
+        error,
+        artifact: activeArtifact,
+        rawResponse: activeArtifact.generatorSource,
+      }
     },
     [],
   )
@@ -459,14 +516,31 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
       const handle = setTimeout(async () => {
         const parsed = parseInputRef.current(inputData)
         if (!parsed.valid) return
-        const result = await runGeneratorSandboxed(generator.body, parsed.value, { algorithm: 'custom', type: generator.type })
+        const validated = validateInputContract(generator.artifact.inputContract, parsed.value)
+        if (!validated.ok) {
+          applyScriptRef.current(buildFallbackScene(toFallbackInitialState(parsed.value), {
+            kind: 'runtime',
+            message: validated.error,
+          }))
+          setStatusRef.current('error', validated.error)
+          return
+        }
+        const result = await runGeneratorSandboxed(
+          generator.artifact.generatorSource,
+          validated.value,
+          {
+            algorithm: generator.artifact.algorithm,
+            type: generator.artifact.rendererType,
+          },
+        )
         if (cancelled) return
         if (result.ok && result.script) {
           if (generator.verify) {
             await verifyAndTag(result.script, {
-              language: generator.verify.language,
+              expectRaw: generator.artifact.expectedResult,
+              language: generator.artifact.language,
               userCode: generator.verify.userCode,
-              input: parsed.value,
+              input: validated.value,
               sourceCode: generator.verify.userCode,
             })
           }

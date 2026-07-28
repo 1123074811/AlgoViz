@@ -1,4 +1,5 @@
 import type { AlgorithmCategory } from '../categories'
+import { BUILDER_PROTOCOL_VERSION, PROMPT_PROTOCOL_VERSION } from '@/generator'
 import { CORE_PROMPT } from './core'
 import { CATEGORY_PROMPTS } from './categories'
 
@@ -14,7 +15,7 @@ export type { AlgorithmCategory } from '../categories'
  *   AI 能看到所有数据结构 builder 方法）。
  */
 export function buildGeneratorSystemPrompt(language: string, category?: AlgorithmCategory): string {
-  const core = CORE_PROMPT(language)
+  const core = `协议版本：builder=${BUILDER_PROTOCOL_VERSION}，prompt=${PROMPT_PROTOCOL_VERSION}。\n${CORE_PROMPT(language)}`
   if (category) {
     return core + '\n' + CATEGORY_PROMPTS[category]
   }
