@@ -1,4 +1,4 @@
-import type { SceneState, SceneEntity, SceneCell } from './types'
+import type { SceneState, SceneEntity, SceneCell, SceneEdge } from './types'
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 
@@ -115,6 +115,26 @@ export function interpolateScene(prev: SceneState, next: SceneState, t: number):
     }
   }
 
-  // 其余子图（edges/pointers/labels/groups/overlays/notes）整体取 next
-  return { ...next, entities }
+  const edges: Record<string, SceneEdge> = {}
+  for (const [id, nextEdge] of Object.entries(next.edges)) {
+    const previousRoute = prev.edges[id]?.route
+    const nextRoute = nextEdge.route
+    edges[id] = previousRoute && nextRoute && previousRoute.length === nextRoute.length
+      ? {
+          ...nextEdge,
+          route: nextRoute.map((point, index) => ({
+            x: lerp(previousRoute[index].x, point.x, t),
+            y: lerp(previousRoute[index].y, point.y, t),
+          })),
+          labelPosition: prev.edges[id]?.labelPosition && nextEdge.labelPosition
+            ? {
+                x: lerp(prev.edges[id].labelPosition!.x, nextEdge.labelPosition.x, t),
+                y: lerp(prev.edges[id].labelPosition!.y, nextEdge.labelPosition.y, t),
+              }
+            : nextEdge.labelPosition,
+        }
+      : nextEdge
+  }
+
+  return { ...next, entities, edges }
 }

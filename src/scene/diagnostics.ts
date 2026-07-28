@@ -8,7 +8,7 @@ export interface SceneDiagnostic {
   message: string
 }
 
-const IMPLEMENTED_EVENT_PREFIXES = ['scene.', 'linked_list.', 'tree.', 'array.', 'matrix.', 'n_queens.', 'graph.', 'graph_analysis.', 'queue.', 'stack.', 'string.', 'set.', 'map.', 'deque.', 'hashtable.', 'math.', 'heap.', 'bitset.', 'union_find.', 'geometry.', 'automaton.', 'prob.']
+const IMPLEMENTED_EVENT_PREFIXES = ['scene.', 'linked_list.', 'tree.', 'array.', 'matrix.', 'n_queens.', 'graph.', 'graph_analysis.', 'queue.', 'stack.', 'string.', 'set.', 'map.', 'deque.', 'hashtable.', 'math.', 'heap.', 'bitset.', 'skip_list.', 'union_find.', 'geometry.', 'automaton.', 'prob.']
 
 const REQUIRED_FIELDS: Record<string, string[]> = {
   'linked_list.create': ['variant', 'nodes'],
@@ -29,6 +29,12 @@ const REQUIRED_FIELDS: Record<string, string[]> = {
   'array.compare': ['indices'],
   'array.swap': ['indices'],
   'array.window': ['indices'],
+  'skip_list.create': ['values', 'heights'],
+  'skip_list.compare': ['node', 'level', 'target'],
+  'skip_list.move_right': ['from', 'to', 'level'],
+  'skip_list.drop_down': ['node', 'fromLevel', 'toLevel'],
+  'skip_list.found': ['node', 'level', 'target'],
+  'skip_list.miss': ['node', 'level', 'target'],
   'union_find.create': ['size', 'parent'],
   'union_find.find': ['node', 'root', 'path', 'parent'],
   'union_find.link': ['childRoot', 'parentRoot', 'parent'],

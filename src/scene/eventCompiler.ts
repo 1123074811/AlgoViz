@@ -35,11 +35,18 @@ export function compileEvent(event: AlgorithmEvent, context: CompileContext): Sc
   if (event.type === 'scene.seq_push') {
     // 输出序列条:遍历类算法把访问到的值依次追加到画布底部的绿色 chip 行(对齐 demo 的 seqchip)。
     const n = Object.keys(context.scene.entities).filter((id) => id.startsWith('seq_')).length
+    const structureBottom = Object.values(context.scene.entities)
+      .filter(entity => !entity.id.startsWith('seq_') && 'position' in entity && entity.position)
+      .reduce((bottom, entity) => {
+        if (!('position' in entity) || !entity.position) return bottom
+        const height = 'size' in entity ? entity.size?.height ?? 44 : 44
+        return Math.max(bottom, entity.position.y + height / 2)
+      }, 420)
     return [{
       type: 'create_cell',
       cell: {
         id: `seq_${n}`, type: 'cell',
-        position: { x: 180 + n * 40, y: 470 }, size: { width: 34, height: 30 },
+        position: { x: 180 + n * 40, y: structureBottom + 50 }, size: { width: 34, height: 30 },
         value: event.value,
         state: { role: 'sorted', color: 'success' },
       },

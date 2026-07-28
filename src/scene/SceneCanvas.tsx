@@ -30,8 +30,10 @@ import ColorLegend from './ColorLegend'
 import ZoomControls from './graphics/renderers/ZoomControls'
 import { SEMANTIC_COLORS, NEUTRALS, TYPO } from './tokens'
 import { EDGE_FLOW_KEYFRAMES } from './primitives/sharedMotion'
-import type { SceneCell, SceneEntity, SceneNode, SceneState } from './types'
+import type { SceneCell, SceneEdge, SceneEntity, SceneNode, SceneState } from './types'
 import type { DPTableModel } from './overlays'
+import { measureTextWidth } from './textMetrics'
+import { useElkLayout } from './layouts/useElkLayout'
 
 interface SceneCanvasProps {
   script: AnimationScript | null
@@ -118,10 +120,11 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
   const { i18n } = useTranslation()
   const lang = i18n.language as 'zh' | 'en'
 
-  const targetScene = useMemo(
+  const derivedScene = useMemo(
     () => deriveSceneState(script, currentStep),
     [script, currentStep],
   )
+  const targetScene = useElkLayout(derivedScene, script)
   // 逻辑步骤 key：补间只在「脚本或步骤」变化时重启，避免 deriveSceneState 每帧新引用
   // 导致动画反复重启而抖动。
   const transitionKey = `${script.algorithm}|${script.steps.length}|${currentStep}`
@@ -171,7 +174,7 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
   }
 
   // 2. Compute viewBox dimensions (centered on content with 1.6 aspect ratio)
-  const { xStart, yStart, width, height } = computeViewBoxDimensions([...entities, ...dpPanels], labels)
+  const { xStart, yStart, width, height } = computeViewBoxDimensions([...entities, ...dpPanels], labels, edges)
 
   // Apply zoom to width/height
   const viewBoxWidth = width / zoom
@@ -236,6 +239,7 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
 
   return (
     <div
+      data-testid="scene-canvas"
       ref={containerRef}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -592,7 +596,8 @@ function boundsFor(entities: Array<SceneEntity & { position: { x: number; y: num
 
 function computeViewBoxDimensions(
   entities: Array<SceneEntity | DPPanelEntity>,
-  labels: SceneEntity[]
+  labels: SceneEntity[],
+  edges: SceneEdge[],
 ): { xStart: number; yStart: number; width: number; height: number } {
   const positioned = [...entities, ...labels].filter(
     (e): e is SceneEntity & { position: { x: number; y: number } } =>
@@ -615,6 +620,22 @@ function computeViewBoxDimensions(
     if (e.position.y - hh < minY) minY = e.position.y - hh
     if (e.position.x + hw > maxX) maxX = e.position.x + hw
     if (e.position.y + hh > maxY) maxY = e.position.y + hh
+  }
+
+  for (const edge of edges) {
+    for (const point of edge.route ?? []) {
+      minX = Math.min(minX, point.x)
+      minY = Math.min(minY, point.y)
+      maxX = Math.max(maxX, point.x)
+      maxY = Math.max(maxY, point.y)
+    }
+    if (edge.label && edge.labelPosition) {
+      const halfWidth = (measureTextWidth(edge.label, 12) + 8) / 2
+      minX = Math.min(minX, edge.labelPosition.x - halfWidth)
+      maxX = Math.max(maxX, edge.labelPosition.x + halfWidth)
+      minY = Math.min(minY, edge.labelPosition.y - 10)
+      maxY = Math.max(maxY, edge.labelPosition.y + 10)
+    }
   }
 
   const centerX = (minX + maxX) / 2

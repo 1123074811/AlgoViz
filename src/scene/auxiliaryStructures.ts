@@ -276,7 +276,7 @@ function renderAuxiliaryArrays(scene: SceneState, teachingState: TeachingState |
           id: `aux_label_${arr.id}`,
           type: 'label',
           text: arr.label,
-          position: { x: startX + totalWidth / 2, y: startY - LABEL_H },
+          position: { x: startX + totalWidth / 2, y: startY - CELL_H / 2 - LABEL_H / 2 - 6 },
         },
       },
     }

@@ -154,6 +154,10 @@ export interface SceneEdge {
   variant?: string
   state?: SceneEntityState
   style?: EdgeStyle
+  /** Layout-owned route, including trimmed endpoints and optional bend/control points. */
+  route?: Point[]
+  /** Collision-aware label anchor selected from route-segment candidates. */
+  labelPosition?: Point
   meta?: Record<string, unknown>
 }
 

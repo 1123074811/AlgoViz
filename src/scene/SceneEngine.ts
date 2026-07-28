@@ -10,6 +10,7 @@ import { layoutTree } from './layouts/treeLayout'
 import { applyRegionLayout } from './regionLayout'
 import { createAlgorithmOverlayState } from './overlays/overlayCompiler'
 import { renderAuxiliaryStructures } from './auxiliaryStructures'
+import { finalizeSceneGeometry } from './geometry'
 
 // ── Snapshot cache for incremental replay ──
 
@@ -152,7 +153,7 @@ export function deriveSceneState(script: AnimationScript, currentStep: number): 
     scene = applyRegionLayout(scene)
   }
 
-  return scene
+  return finalizeSceneGeometry(scene)
 }
 
 export function applyCommands(scene: SceneState, commands: SceneCommand[]): SceneState {
@@ -205,8 +206,11 @@ function applyCommand(scene: SceneState, command: SceneCommand): SceneState {
     case 'remove_entity':
       return removeEntity(scene, command.entityId)
     case 'move': {
-      const entity = scene.entities[command.entityId]
+      const entity = scene.entities[command.entityId] ?? scene.labels[command.entityId]
       if (!entity || !('position' in entity)) return scene
+      if (entity.type === 'label') {
+        return { ...scene, labels: { ...scene.labels, [command.entityId]: { ...entity, position: command.to } } }
+      }
       return { ...scene, entities: { ...scene.entities, [command.entityId]: { ...entity, position: command.to } as SceneEntity } }
     }
     case 'connect':

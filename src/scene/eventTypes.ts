@@ -134,7 +134,11 @@ export type BitsetAlgorithmEvent =
 
 export type SkipListAlgorithmEvent =
   | { type: 'skip_list.create'; values: number[]; heights: number[] }
-  | { type: 'skip_list.search'; target: number; path: Array<[node: number, level: number]>; found: boolean }
+  | { type: 'skip_list.compare'; node: number; level: number; target: number }
+  | { type: 'skip_list.move_right'; from: number; to: number; level: number }
+  | { type: 'skip_list.drop_down'; node: number; fromLevel: number; toLevel: number }
+  | { type: 'skip_list.found'; node: number; level: number; target: number }
+  | { type: 'skip_list.miss'; node: number; level: number; target: number }
 
 export type UnionFindAlgorithmEvent =
   | { type: 'union_find.create'; size: number; parent: number[]; rank?: number[] }

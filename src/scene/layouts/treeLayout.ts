@@ -175,6 +175,23 @@ export function layoutTree(scene: SceneState): Record<string, Point> {
     }
   }
 
+  // Single-child leans can pull unrelated branches back toward each other.
+  // Pack each rendered row once more using actual widths so cousins never overlap.
+  const rows = new Map<number, string[]>()
+  for (const [id, position] of Object.entries(positions)) {
+    rows.set(position.y, [...(rows.get(position.y) ?? []), id])
+  }
+  for (const ids of rows.values()) {
+    ids.sort((a, b) => positions[a].x - positions[b].x || a.localeCompare(b))
+    let right = -Infinity
+    for (const id of ids) {
+      const width = nodeWidth(nodeById.get(id)!)
+      const center = Math.max(positions[id].x, right + H_GAP + width / 2)
+      positions[id] = { ...positions[id], x: center }
+      right = center + width / 2
+    }
+  }
+
   // Center the tree so the root sits at x=500.
   const shift = 500 - positions[rootId].x
   for (const id of Object.keys(positions)) {
