@@ -28,19 +28,18 @@ AlgoViz 的核心思路是把算法执行过程统一表达为结构化 `Animati
 | 路由 | React Router v6 |
 | 状态管理 | Zustand |
 | 样式 | Tailwind CSS、CSS Variables、Scene 设计令牌 (`tokens.ts`) |
-| 动画与交互 | SVG Scene Engine、补间渲染层 (`interpolate.ts` + `useSceneTransition`)、Framer Motion |
+| 动画与交互 | SVG Scene Engine、补间渲染层 (`interpolate.ts` + `useSceneTransition`) |
 | 代码编辑 | Monaco Editor |
 | 国际化 | i18next、react-i18next |
-| 图标 | lucide-react，部分 Heroicons 依赖保留 |
-| 图/布局辅助 | d3 |
-| 测试 | Vitest、jsdom、@testing-library/react、coverage-v8 |
+| 图标 | lucide-react |
+| 测试 | Vitest、jsdom、Testing Library、Playwright、coverage-v8 |
 
 ## 快速开始
 
 ### 环境要求
 
-- Node.js 18+
-- npm 9+
+- Node.js 20.19+，或 22.12+
+- npm 10+
 
 ### 安装依赖
 
@@ -101,6 +100,7 @@ npm run proxy
 | `npm run test:watch` | 启动 Vitest 监听模式 |
 | `npm run test:ui` | 启动 Vitest UI |
 | `npm run coverage` | 生成测试覆盖率，当前覆盖重点为 `src/scene/**` 和 `src/ai/**` |
+| `npm run test:e2e` | 启动 Vite 并用 Playwright Chromium 验证核心用户流程 |
 | `npm run lint` | 对 `src` 执行 ESLint |
 | `npm run format` | 使用 Prettier 格式化 `src` |
 
@@ -124,7 +124,7 @@ AlgoViz/
 │   └── proxy.cjs                 # 生产代理和静态文件服务
 ├── src/
 │   ├── ai/                       # AI 客户端、Prompt、解析、Schema、修复、生成器解析、失败兜底场景
-│   ├── components/               # 通用组件、布局、编辑器、播放控制、旧版 Canvas 渲染器
+│   ├── components/               # 通用组件、布局、编辑器与播放控制
 │   ├── data/                     # 算法定义补充数据
 │   ├── hooks/                    # 动画播放引擎与 AI 生成器 Hook
 │   ├── i18n/                     # i18next 初始化与中英语言包
@@ -246,7 +246,7 @@ export interface AnimationScript {
 | `initialState` | 初始数据结构，支持 array、graph、tree、matrix、linked_list |
 | `presentation` | 场景引擎配置，如 `engine: 'scene'`、`layout: 'composite'` |
 | `steps` | 动画步骤列表 |
-| `steps[].action` | 旧版渲染器兼容动作 |
+| `steps[].action` | 播放、代码高亮与输出推导所需的通用动作 |
 | `steps[].events` | Scene Engine 使用的算法语义事件 |
 | `steps[].teachingState` | 变量、范围、图/树状态、注释等教学状态 |
 | `steps[].stats` | 累计比较、交换、访问次数 |
@@ -277,7 +277,7 @@ export interface AnimationScript {
 
 ## Scene Engine
 
-Scene Engine 是当前主要渲染路径。旧版 `src/components/Canvas/VisualizationCanvas.tsx` 和独立渲染器仍保留，用于兼容旧脚本。
+Scene Engine 是当前唯一画布渲染路径。历史脚本中的 `action` 和 `teachingState` 仍用于播放状态、代码行高亮与输出推导；场景对象统一由 `SceneCanvas` 渲染。
 
 ### 数据流
 
@@ -506,7 +506,7 @@ npm run coverage
 - AI 生成器使用 Web Worker 和超时隔离，但仍应视为不可信模型输出，只适合本地/受控环境。
 - AI 对复杂代码的执行理解依赖模型能力，生成步骤可能不完整或语义不精确。
 - `RendererType` 的核心类型仍以 array、graph、tree、matrix、linked_list 为主，set、map、heap、bitset、math 等结构通过 Scene 事件和复合布局扩展。
-- 旧版 Canvas 渲染器仍保留，部分历史脚本可能不会使用最新 Scene 事件能力。
+- 仅含 `action`、缺少 Scene 事件的历史脚本，视觉表达会弱于完整事件脚本。
 
 ## 相关文档
 

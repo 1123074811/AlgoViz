@@ -5,7 +5,7 @@
  * tests survive a merge onto a slightly-newer main:
  *  - `@monaco-editor/react`  → a <textarea> stub (Monaco cannot render in jsdom).
  *  - `@/scene/SceneCanvas`   → trivial stub. This is the stable renderer that
- *    sits *underneath* VisualizationCanvas, so mocking it neutralizes the canvas
+ *    sits underneath SceneCanvas, so mocking it neutralizes the canvas
  *    regardless of which wrapper the page imports.
  *  - `@/hooks/useAIGenerator`, `@/hooks/useAnimationEngine` → minimal stubs.
  *  - `@/ai` (getApiConfig / parseInputData) → controls the analyze-button gate.

@@ -33,3 +33,9 @@ npm-debug.log*
 
 # Demo assets
 demo/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

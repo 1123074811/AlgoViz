@@ -2,10 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { runGeneratorSandboxed } from '@/sandbox/runGenerator'
 
 /**
- * 覆盖 runGenerator.ts 的 inline 回退分支：当全局 `Worker` 不存在时，
- * runGeneratorSandboxed 应同步委托给 executeGenerator 并 resolve 其结果。
- * jsdom 下 Worker 通常未定义，但为稳健起见我们显式 stub 为 undefined，
- * 并在 afterEach 恢复。
+ * 测试环境允许 inline 执行纯逻辑；生产模式显式关闭后必须 fail-closed。
  */
 describe('runGeneratorSandboxed — Worker 缺失时走 inline 回退', () => {
   const originalWorker = (globalThis as { Worker?: unknown }).Worker
@@ -62,5 +59,19 @@ b.result(total)`,
     const p = runGeneratorSandboxed('b.arrayCreate(input)', [1], { algorithm: 'x', type: 'array' })
     expect(p).toBeInstanceOf(Promise)
     await expect(p).resolves.toMatchObject({ ok: true })
+  })
+
+  it('生产模式 Worker 缺失时拒绝执行，不回退主线程', async () => {
+    ;(globalThis as { Worker?: unknown }).Worker = undefined
+    const r = await runGeneratorSandboxed(
+      'globalThis.__unsafeGeneratorRan = true',
+      [],
+      { algorithm: 'x', type: 'array' },
+      5000,
+      false,
+    )
+    expect(r).toMatchObject({ ok: false, kind: 'runtime' })
+    expect(r.error).toContain('已拒绝执行生成器')
+    expect((globalThis as { __unsafeGeneratorRan?: boolean }).__unsafeGeneratorRan).toBeUndefined()
   })
 })

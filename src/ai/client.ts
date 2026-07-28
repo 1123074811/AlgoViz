@@ -353,6 +353,9 @@ async function requestViaProxy(
     if (!response.ok) {
       const errBody = await response.json().catch(() => null)
       const errMsg = errBody?.error?.message || `代理返回 ${response.status}`
+      if (errBody?.error?.code === 'proxy_target_forbidden') {
+        return buildProxyPolicyError(errMsg)
+      }
       return buildHttpErrorResult(response.status, errMsg)
     }
 
@@ -378,6 +381,29 @@ async function requestViaProxy(
         rawResponse: message,
       },
     }
+  }
+}
+
+function buildProxyPolicyError(message: string): RequestResult {
+  return {
+    success: false,
+    content: message,
+    error: message,
+    errorReport: {
+      stage: 'request',
+      title: '代理目标未获允许',
+      message,
+      issues: [{
+        path: 'baseUrl',
+        code: 'proxy_target_forbidden',
+        message,
+        severity: 'error',
+        recoverable: false,
+      }],
+      suggestions: ['在代理服务的 PROXY_ALLOWED_BASE_URLS 中加入该 Base URL 后重启服务。'],
+      canRetry: false,
+      rawResponse: message,
+    },
   }
 }
 

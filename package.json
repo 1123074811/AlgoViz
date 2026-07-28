@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "description": "AI-driven algorithm visualization learning platform",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0",
+    "npm": ">=10"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -14,6 +18,8 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "lint": "eslint src server vite.config.ts vitest.config.ts eslint.config.js",
     "format": "prettier --write src"
   },
@@ -26,7 +32,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@heroicons/react": "^2.2.0",
     "@monaco-editor/react": "^4.7.0",
     "i18next": "^26.2.0",
     "lucide-react": "^1.16.0",
@@ -38,6 +43,7 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.0",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^25.9.2",
     "@types/react": "^18.3.30",

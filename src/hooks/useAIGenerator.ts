@@ -279,16 +279,25 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
 
       if (recognized) {
         // Phase 1: built-in generator — generate locally from the effective input.
-        setLiveAlgoId(recognized)
-        setGenerator(null)
         const parsed = parseInputRef.current(effectiveInput)
         let script: AnimationScript | null = null
         if (parsed.valid) {
           try { script = generatePreset(recognized, parsed.value) ?? null } catch { script = null }
         }
-        if (script) applyScriptRef.current(script)
+        if (!script) {
+          const error = `内置算法 ${recognized} 无法根据当前输入生成动画`
+          const initial = toFallbackInitialState(parsed.valid ? parsed.value : undefined)
+          setLiveAlgoId(null)
+          setGenerator(null)
+          applyScriptRef.current(buildFallbackScene(initial, { kind: 'runtime', message: error }))
+          setStatusRef.current('error', error)
+          return { ok: false, error, usedInput }
+        }
+        setLiveAlgoId(recognized)
+        setGenerator(null)
+        applyScriptRef.current(script)
         setStatusRef.current('success')
-        return { ok: true, script: script ?? undefined, usedInput }
+        return { ok: true, script, usedInput }
       }
 
       // Phase 2: AI generator — execute it in the sandbox.

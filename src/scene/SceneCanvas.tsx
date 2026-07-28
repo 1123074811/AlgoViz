@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ErrorBoundary } from 'react-error-boundary'
 import { ErrorFallback } from '@/components/ErrorBoundary'
@@ -27,6 +27,7 @@ import VariablesPanel from './graphics/renderers/VariablesPanel'
 import GraphAnalysisView from './graphics/renderers/GraphAnalysisView'
 import AlgorithmOverlays from './overlays/AlgorithmOverlays'
 import ColorLegend from './ColorLegend'
+import ZoomControls from './graphics/renderers/ZoomControls'
 import { SEMANTIC_COLORS, NEUTRALS, TYPO } from './tokens'
 import { EDGE_FLOW_KEYFRAMES } from './primitives/sharedMotion'
 import type { SceneCell, SceneEntity, SceneNode, SceneState } from './types'
@@ -114,10 +115,13 @@ export default function SceneCanvas({ script, currentStep, currentStepData, spee
 }
 
 function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isFullscreen, onToggleFullscreen }: SceneCanvasInnerProps) {
-  const { i18n, t } = useTranslation()
+  const { i18n } = useTranslation()
   const lang = i18n.language as 'zh' | 'en'
 
-  const targetScene = deriveSceneState(script, currentStep)
+  const targetScene = useMemo(
+    () => deriveSceneState(script, currentStep),
+    [script, currentStep],
+  )
   // 逻辑步骤 key：补间只在「脚本或步骤」变化时重启，避免 deriveSceneState 每帧新引用
   // 导致动画反复重启而抖动。
   const transitionKey = `${script.algorithm}|${script.steps.length}|${currentStep}`
@@ -318,57 +322,13 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
       <VariablesPanel vars={mathVarCells} />
 
       {/* Floating Zoom / Pan Controls */}
-      <div 
-        onMouseDown={(e) => e.stopPropagation()} 
-        className="absolute top-4 right-4 flex items-center gap-1 rounded-xl border border-slate-200/80 bg-white/90 p-1 shadow-sm backdrop-blur-md z-10 select-none"
-      >
-        <button
-          onClick={handleZoomIn}
-          title="Zoom In"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 active:scale-95 transition-all"
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
-          </svg>
-        </button>
-        <button
-          onClick={handleZoomOut}
-          title="Zoom Out"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 active:scale-95 transition-all"
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" />
-          </svg>
-        </button>
-        <div className="h-4 w-px bg-slate-200 mx-0.5" />
-        <button
-          onClick={handleReset}
-          title="Reset View"
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 active:scale-95 transition-all"
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-          </svg>
-        </button>
-        {onToggleFullscreen && (
-          <>
-            <div className="h-4 w-px bg-slate-200 mx-0.5" />
-            <button
-              onClick={onToggleFullscreen}
-              title={isFullscreen ? t('scene.fullscreen.exit') : t('scene.fullscreen.enter')}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 active:scale-95 transition-all"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-                {isFullscreen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0v4m0-4h4m6 5l5-5m0 0v4m0-4h-4m-6 6l-5 5m0 0v-4m0 4h4m6-5l5 5m0 0v-4m0 4h-4" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                )}
-              </svg>
-            </button>
-          </>
-        )}
-      </div>
+      <ZoomControls
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onReset={handleReset}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={onToggleFullscreen}
+      />
 
       {isEmpty && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

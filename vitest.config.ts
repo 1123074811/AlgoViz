@@ -9,7 +9,7 @@ export default defineConfig({
     execArgv: [`--localstorage-file=${localStorageFile}`],
     globals: true,
     // 排除 git worktree 目录，避免主仓库测试扫描进并行 agent 的工作区
-    exclude: [...configDefaults.exclude, '.claude/**'],
+    exclude: [...configDefaults.exclude, '.claude/**', 'e2e/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'json', 'json-summary'],

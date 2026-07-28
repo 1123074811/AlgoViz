@@ -133,12 +133,13 @@ export default function Settings() {
         <div className="space-y-6">
           {/* API Key */}
           <div className="bg-white rounded-xl border border-border p-5">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label htmlFor="api-key" className="block text-sm font-semibold text-slate-700 mb-2">
               {t('settings.apiKey')}
             </label>
             <div className="relative">
               <input
                 type={showKey ? 'text' : 'password'}
+                id="api-key"
                 value={apiKey}
                 onChange={(e) => {
                   setApiKey(e.target.value)
@@ -171,11 +172,12 @@ export default function Settings() {
 
           {/* Base URL */}
           <div className="bg-white rounded-xl border border-border p-5">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label htmlFor="base-url" className="block text-sm font-semibold text-slate-700 mb-2">
               {t('settings.baseUrl')}
             </label>
             <input
               type="text"
+              id="base-url"
               value={baseUrl}
               onChange={(e) => {
                 setBaseUrl(e.target.value)
@@ -216,11 +218,12 @@ export default function Settings() {
 
           {/* Model */}
           <div className="bg-white rounded-xl border border-border p-5">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label htmlFor="model" className="block text-sm font-semibold text-slate-700 mb-2">
               {t('settings.model')}
             </label>
             <input
               type="text"
+              id="model"
               value={model}
               onChange={(e) => {
                 setModel(e.target.value)

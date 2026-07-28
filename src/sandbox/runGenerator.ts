@@ -2,22 +2,28 @@ import type { GeneratorResult, GeneratorMeta } from './executeGenerator'
 import { executeGenerator } from './executeGenerator'
 
 /** Run an AI-generated generator in an isolated Web Worker with a hard timeout.
- *  Falls back to inline execution if Workers are unavailable (e.g. test env). */
+ *  Inline execution is test-only; production fails closed if Worker creation fails. */
 export function runGeneratorSandboxed(
   source: string,
   input: unknown,
   meta: GeneratorMeta,
   timeoutMs = 5000,
+  allowUnsafeInline = import.meta.env.MODE === 'test',
 ): Promise<GeneratorResult> {
+  const unavailable = () => ({
+    ok: false as const,
+    error: '当前环境无法创建安全的 Web Worker，已拒绝执行生成器',
+    kind: 'runtime' as const,
+  })
   if (typeof Worker === 'undefined') {
-    return Promise.resolve(executeGenerator(source, input, meta))
+    return Promise.resolve(allowUnsafeInline ? executeGenerator(source, input, meta) : unavailable())
   }
   return new Promise((resolve) => {
     let worker: Worker
     try {
       worker = new Worker(new URL('./generatorWorker.ts', import.meta.url), { type: 'module' })
     } catch {
-      resolve(executeGenerator(source, input, meta))
+      resolve(allowUnsafeInline ? executeGenerator(source, input, meta) : unavailable())
       return
     }
     const timer = setTimeout(() => {

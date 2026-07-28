@@ -124,7 +124,12 @@ export function apiProxyMiddleware(options: ApiProxyMiddlewareOptions = {}) {
         }
 
         if (!baseUrl) {
-          sendJson(res, 403, { error: { message: '代理目标不在允许列表中' } })
+          sendJson(res, 403, {
+            error: {
+              code: 'proxy_target_forbidden',
+              message: '代理目标不在允许列表中',
+            },
+          })
           req.resume()
           return
         }
@@ -178,12 +183,10 @@ export function apiProxyMiddleware(options: ApiProxyMiddlewareOptions = {}) {
   }
 }
 
-/** 把重型第三方依赖拆到独立 chunk，改善首屏并行加载与缓存命中。导出以便单测。 */
+/** 把已安装的重型依赖拆到独立 chunk，改善首屏并行加载与缓存命中。 */
 export function manualChunks(id: string): string | undefined {
   if (!id.includes('node_modules')) return undefined
   if (/[\\/]node_modules[\\/](@monaco-editor[\\/]react|monaco-editor)[\\/]/.test(id)) return 'vendor-monaco'
-  if (/[\\/]node_modules[\\/]d3(-[a-z]+)?[\\/]/.test(id)) return 'vendor-d3'
-  if (/[\\/]node_modules[\\/]framer-motion[\\/]/.test(id)) return 'vendor-motion'
   if (/[\\/]node_modules[\\/](react|react-dom|react-router-dom|scheduler)[\\/]/.test(id)) return 'vendor-react'
   return undefined
 }
@@ -197,7 +200,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    open: true,
+    open: !process.env.CI,
   },
   build: {
     rollupOptions: {

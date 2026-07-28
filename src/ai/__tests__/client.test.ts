@@ -47,6 +47,10 @@ function errorResponse(status: number, message = 'boom') {
   return new Response(JSON.stringify({ error: { message } }), { status, headers: { 'Content-Type': 'application/json' } })
 }
 
+function codedErrorResponse(status: number, code: string, message: string) {
+  return new Response(JSON.stringify({ error: { code, message } }), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
 const params = { code: 'def f(): pass', language: 'python', inputData: '[1,2,3]' }
 
 let fetchSpy: ReturnType<typeof vi.spyOn>
@@ -190,6 +194,16 @@ describe('analyzeCode HTTP errors', () => {
     const result = await analyzeCode(params)
     expect(result.errorReport?.issues[0].code).toBe('http_429')
     expect(result.errorReport?.canRetry).toBe(true)
+  })
+
+  it('代理白名单拒绝 → 提示配置允许列表，不误报 API Key', async () => {
+    fetchSpy.mockResolvedValue(codedErrorResponse(403, 'proxy_target_forbidden', '代理目标不在允许列表中'))
+    const result = await analyzeCode(params)
+    expect(result.success).toBe(false)
+    expect(result.errorReport?.title).toBe('代理目标未获允许')
+    expect(result.errorReport?.issues[0].code).toBe('proxy_target_forbidden')
+    expect(result.errorReport?.suggestions[0]).toContain('PROXY_ALLOWED_BASE_URLS')
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
   })
 
   it('500 → API 请求失败，stage=request，可重试', async () => {

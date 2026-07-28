@@ -144,6 +144,32 @@ describe('useAIGenerator — analyze: recognized built-in (Phase 1)', () => {
     expect(applyScript).toHaveBeenCalledWith(script)
     expect(setStatus).toHaveBeenCalledWith('success')
   })
+
+  it('returns an error and fallback scene when a recognized preset cannot generate', async () => {
+    const { opts, applyScript, setStatus } = makeOpts()
+    analyzeCodeGenerator.mockResolvedValue({
+      success: true,
+      generator: { algorithm: 'bubble sort', type: 'array', body: 'gen' },
+    })
+    recognizeAlgorithm.mockReturnValue('bubble-sort')
+    generatePreset.mockReturnValue(undefined)
+
+    const { result } = renderHook(() => useAIGenerator(opts))
+    let res: Awaited<ReturnType<typeof result.current.analyze>>
+    await act(async () => {
+      res = await result.current.analyze(
+        { code: 'def bubble(): pass', language: 'python', inputData: 'nums = [1,2,3]' },
+        true,
+        vi.fn(),
+      )
+    })
+
+    expect(res!.ok).toBe(false)
+    expect(res!.error).toContain('无法根据当前输入生成动画')
+    expect(result.current.liveAlgoId).toBeNull()
+    expect(applyScript).toHaveBeenCalledWith(makeScript('fallback'))
+    expect(setStatus).toHaveBeenCalledWith('error', expect.stringContaining('无法根据当前输入生成动画'))
+  })
 })
 
 describe('useAIGenerator — analyze: AI generator (Phase 2)', () => {

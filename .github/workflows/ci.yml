@@ -38,6 +38,12 @@ jobs:
       - name: Test with coverage
         run: npm run coverage
 
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: npm run test:e2e
+
       - name: Report coverage
         if: github.event_name == 'pull_request'
         uses: davelosert/vitest-coverage-report-action@v2

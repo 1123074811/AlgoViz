@@ -37,4 +37,15 @@ describe('runUserJsSandboxed (inline fallback in jsdom)', () => {
     expect(result.ok).toBe(false)
     expect(result.error).toContain('nope')
   })
+  it('fails closed outside tests when Worker is unavailable', async () => {
+    const result = await runUserJsSandboxed(
+      'function unsafe() { globalThis.__unsafeUserCodeRan = true }',
+      [],
+      3000,
+      false,
+    )
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('已拒绝执行用户代码')
+    expect((globalThis as { __unsafeUserCodeRan?: boolean }).__unsafeUserCodeRan).toBeUndefined()
+  })
 })

@@ -179,7 +179,12 @@ function handleProxy(req, res, options = {}) {
   }
 
   if (!baseUrl) {
-    sendJson(res, 403, { error: { message: '代理目标不在允许列表中' } })
+    sendJson(res, 403, {
+      error: {
+        code: 'proxy_target_forbidden',
+        message: '代理目标不在允许列表中',
+      },
+    })
     req.resume()
     return
   }

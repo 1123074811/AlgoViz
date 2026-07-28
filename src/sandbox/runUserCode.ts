@@ -46,20 +46,26 @@ function executeInline(source: string): UserCodeResult {
   }
 }
 
-/** 在 Worker 沙箱中真实执行用户 JS 函数（超时 3s）；无 Worker 环境内联执行。 */
-export function runUserJsSandboxed(userCode: string, input: unknown, timeoutMs = 3000): Promise<UserCodeResult> {
+/** 在 Worker 中执行用户 JS（超时 3s）；仅测试环境允许无 Worker 时内联执行。 */
+export function runUserJsSandboxed(
+  userCode: string,
+  input: unknown,
+  timeoutMs = 3000,
+  allowUnsafeInline = import.meta.env.MODE === 'test',
+): Promise<UserCodeResult> {
   const source = buildJsCallSource(userCode, input)
   if (!source) return Promise.resolve({ ok: false, error: '未找到可调用的入口函数' })
 
+  const unavailable = { ok: false as const, error: '当前环境无法创建安全的 Web Worker，已拒绝执行用户代码' }
   if (typeof Worker === 'undefined') {
-    return Promise.resolve(executeInline(source))
+    return Promise.resolve(allowUnsafeInline ? executeInline(source) : unavailable)
   }
   return new Promise((resolve) => {
     let worker: Worker
     try {
       worker = new Worker(new URL('./userCodeWorker.ts', import.meta.url), { type: 'module' })
     } catch {
-      resolve(executeInline(source))
+      resolve(allowUnsafeInline ? executeInline(source) : unavailable)
       return
     }
     const timer = setTimeout(() => {
