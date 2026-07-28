@@ -17,8 +17,8 @@ describe('skipListCompiler', () => {
     const arrows = cmds.filter(c => c.type === 'connect')
     expect(arrows.length).toBeGreaterThan(0)
   })
-  it('search highlights the path cells', () => {
-    const cmds = skipListCompiler.compile({ type: 'skip_list.search', target: 2, path: [[1, 1], [1, 0]], found: true } as never, ctx())
+  it('highlights one semantic search movement per event', () => {
+    const cmds = skipListCompiler.compile({ type: 'skip_list.move_right', from: -1, to: 1, level: 1 } as never, ctx())
     expect(cmds.some(c => c.type === 'set_state')).toBe(true)
   })
 })
