@@ -37,7 +37,8 @@ AlgoViz 的核心不是保存某个输入对应的一段动画，而是把一份
 | 目录 | 当前职责 | 允许依赖 | 不应依赖 |
 |---|---|---|---|
 | `src/pages`、`src/components` | 页面编排与交互 | hooks、store、公开领域 API | Worker 内部实现 |
-| `src/hooks` | 页面共享编排；当前包含 AI 生成主流程 | ai、sandbox、presets、store | Scene 渲染细节 |
+| `src/hooks` | 页面共享编排：取消、防抖、React 状态和 UI 回调映射 | generator 应用服务、presets、store | Worker、Prompt、修复与验证内部 |
+| `src/generator` | Artifact/InputContract、编译编排、统一运行/验证和边界验收 | ai、sandbox、presets、核心类型 | React、Store、Scene Renderer |
 | `src/ai` | LLM 请求、Prompt、响应解析、修复、分类和质量规则 | AnimationScript/事件契约 | React 页面 |
 | `src/sandbox` | Builder、Generator 执行、用户代码执行、Worker 与超时 | AnimationScript/事件契约 | React、Store、网络 |
 | `src/presets` | 可信的本地可复用算法生成器 | Builder、AnimationScript | LLM 客户端 |
@@ -48,26 +49,25 @@ AlgoViz 的核心不是保存某个输入对应的一段动画，而是把一份
 
 ### 2.2 当前首次分析数据流
 
-入口在 `src/hooks/useAIGenerator.ts`。
+入口在 `src/hooks/useAIGenerator.ts`，非 React 主流程位于 `src/generator/compile.ts`。
 
 ```mermaid
 flowchart TD
-    A["代码 + 语言 + 当前输入"] --> B["analyzeCodeGenerator"]
-    B --> C["LLM 生成 JavaScript Generator"]
-    C --> D["parseGeneratorResponse"]
+    A["代码 + 语言 + 当前输入"] --> B["Hook: compileArtifact"]
+    B --> C["analyzeCodeGenerator"]
+    C --> D["LLM Generator + parseGeneratorResponse"]
     D --> E{"recognizeAlgorithm"}
     E -->|"识别为内置算法"| F["generatePreset(input)"]
-    E -->|"自定义算法"| G["runGeneratorSandboxed"]
-    G --> H["Worker: executeGenerator + AnimationBuilder"]
-    H --> I["AnimationScript"]
-    I --> J["runQualityGate"]
-    J --> K["verifyAndTag"]
-    K --> L["真实执行 JS/Python，@expect 仅兜底"]
-    L --> M["applyScript + 保存历史"]
-    J -->|"错误"| N["repairGenerator，最多一次"]
-    G -->|"运行错误"| N
-    L -->|"结果不一致"| N
-    N --> G
+    E -->|"自定义算法"| G["创建 GeneratorArtifact"]
+    G --> H["runArtifact"]
+    H --> I["InputContract 校验"]
+    I --> J["Worker: executeGenerator + AnimationBuilder"]
+    J --> K["AnimationScript + verifyArtifact"]
+    K --> L["runQualityGate / 结果检查"]
+    L -->|"需要修复"| H
+    L -->|"通过或保留诊断"| M["validateArtifactAcrossInputs"]
+    M --> N["边界差分报告 + confidence"]
+    N --> O["Hook: 状态映射 + applyScript"]
 ```
 
 关键事实：
@@ -80,27 +80,26 @@ flowchart TD
 
 ### 2.3 当前输入变化数据流
 
-当前项目已经实现“换输入不调用 LLM”。`useAIGenerator` 保存 `liveAlgoId` 或 Generator body，输入变化经过 400ms 防抖后本地重跑：
+当前项目已经实现“换输入不调用 LLM”。`useAIGenerator` 保存 `liveAlgoId` 或
+`GeneratorArtifact`，输入变化经过 400ms 防抖后本地重跑：
 
 ```mermaid
 flowchart LR
     A["输入值变化"] --> B["parseInput"]
     B --> C{"当前来源"}
     C -->|"内置算法"| D["generatePreset"]
-    C -->|"AI Generator"| E["runGeneratorSandboxed"]
-    E --> F["可选：执行原代码验证结果"]
+    C -->|"AI Generator"| E["runArtifact"]
+    E --> F["InputContract + Worker + verifyArtifact"]
     D --> G["AnimationScript"]
     F --> G
     G --> H["applyScript"]
 ```
 
-此路径的现有限制：
+当前边界：
 
-- Generator 主要存在 React Hook 状态和历史记录中，没有独立、带版本的领域模型。
-- 首次验收主要针对一个输入，尚无系统化多输入差分测试。
-- 输入契约未持久化，合法输入范围依赖 Prompt 和运行时报错。
-- 质量门检查“是否有结构和操作”，还不能完整验证 DP 决策和回溯撤销。
-- Generator 生成、修复、执行、验证和 UI 状态集中在一个 Hook 中，职责过重。
+- InputContract 只表达已观察到的顶层类型、数组元素类型和对象字段类型；复杂嵌套约束仍未引入 JSON Schema。
+- “无解/平局”等领域语义无法从输入形状可靠推断，调用方需向多输入验收服务提供显式用例。
+- Python 真值依赖 Python Worker/Pyodide 可用性；不可用时报告降级，不把 `@expect` 当作高可信差分。
 
 ### 2.4 Scene 数据流
 
@@ -176,12 +175,15 @@ interface InputContract {
   version: 1
   acceptedKinds: Array<'array' | 'object' | 'number' | 'string' | 'boolean' | 'null'>
   requiredObjectKeys: string[]
+  arrayItemKind?: InputValueKind
+  objectPropertyKinds?: Record<string, InputValueKind>
   source: 'inferred' | 'legacy'
 }
 ```
 
-当前只校验顶层输入类型；对象字段只有在至少两个独立样例中都出现时才标记为必需，
-避免从单个 `@sample` 误判可选字段。复杂嵌套约束留到契约稳定后再用 Ajv 表达。
+运行时强制校验顶层类型和必需字段；元素/字段类型用于生成边界输入。对象字段只有在至少
+两个独立样例中都出现时才标记为必需，避免从单个 `@sample` 误判可选字段。复杂嵌套约束
+留到契约稳定后再评估 Ajv。
 
 缓存键：
 
@@ -315,25 +317,28 @@ LLM transport          sandbox workers
 其中 Scene、Sandbox 和 AI 的关键禁止依赖已通过 `eslint.config.js` 的
 `no-restricted-imports` 固化；新增跨层导入会在 `npm run lint` 中直接失败。
 
-## 5. 目标目录
+## 5. 目录落位
 
-不一次性迁移。每个阶段在职责真正拆分时移动对应文件。
+Phase 4 完成后的实际职责结构如下。保持现有短文件，不为目录外观拆出单实现接口或空目录：
 
 ```text
 src/
 ├─ ai/                         # 仅 LLM 编译期
-│  ├─ client/
 │  ├─ prompt/
-│  ├─ parser/
-│  └─ repair/
+│  ├─ quality/
+│  ├─ client.ts
+│  ├─ generatorParser.ts
+│  └─ repairGenerator.ts
 ├─ generator/                  # 可复用 Generator 领域
-│  ├─ contracts/
-│  ├─ builder/
-│  ├─ validation/
-│  ├─ runtime/
+│  ├─ contracts.ts             # Artifact、InputContract、边界输入
+│  ├─ compile.ts               # 非 React 编译/修复应用服务
+│  ├─ runtime.ts               # runArtifact、差分验证、confidence
 │  └─ index.ts
-├─ sandbox/                    # Worker 边界与用户代码执行
-│  └─ workers/
+├─ sandbox/                    # Builder、Worker 边界与用户代码执行
+│  ├─ builder.ts
+│  ├─ executeGenerator.ts
+│  ├─ generatorWorker.ts
+│  └─ runGenerator.ts
 ├─ presets/                    # 可信本地 Generator
 ├─ scene/
 │  ├─ graphics/
@@ -345,15 +350,16 @@ src/
 │  ├─ overlays/
 │  ├─ primitives/
 │  └─ engine files
-├─ features/
-│  └─ animation-generation/    # 薄 UI 编排与 Hook
+├─ hooks/
+│  └─ useAIGenerator.ts        # 薄 React 编排
 ├─ pages/
 ├─ components/
 ├─ data/
 └─ store/
 ```
 
-`generator` 的抽取应先发生，之后再把 `useAIGenerator` 中的非 React 逻辑移入应用服务。避免先创建空目录和单实现接口。
+如果 `contracts.ts`、`compile.ts` 或 `runtime.ts` 将来因独立职责继续增长，再按真实边界拆目录；
+当前三文件结构已覆盖编译、运行和契约，不增加转发层。
 
 ## 6. 开源方案评估
 
@@ -404,29 +410,40 @@ Hook 五次换输入且 LLM mock 为零、历史持久化和旧格式迁移。
 
 ### Phase 2：抽取生成应用服务
 
-- 从 `useAIGenerator` 抽出非 React 的 compile/run/verify 服务。
-- Hook 只负责取消、debounce、状态映射和 UI 回调。
-- 初始生成与输入重跑共享同一个 `runArtifact`，避免两套校验逻辑漂移。
+- [x] 从 `useAIGenerator` 抽出非 React 的 compile/run/verify 服务。
+- [x] Hook 只负责取消、debounce、状态映射和 UI 回调。
+- [x] 初始生成、修复重跑、边界验收与输入重跑共享同一个 `runArtifact`。
 
 验收：首次与换输入使用同一执行/验证路径；Hook 测试不需要理解 Worker 内部。
 
+实现位置：`src/generator/compile.ts`、`src/generator/runtime.ts`、
+`src/hooks/useAIGenerator.ts`。Hook 测试只 mock 应用服务；编译服务单测断言首次执行进入
+`runArtifact`。
+
 ### Phase 3：高层语义 API 与不变量
 
-- 加入 `dpDecide` 和最小回溯决策 API。
-- 验证 DP 下标、依赖先后、候选运算和值一致性。
-- 验证搜索栈平衡、父子关系、commit/undo 状态恢复。
-- 删除 Prompt 中允许 `break/限制规模` 的规则。
+- [x] 加入 `dpDecide` 和 `backtrackTry/Commit/Undo/Solution`。
+- [x] 验证 DP 下标、依赖先后、候选运算和值一致性。
+- [x] 验证搜索栈平衡、父子关系、commit/undo 状态恢复。
+- [x] 删除 Prompt 中允许为动画 `break/限制规模` 的规则。
 
 验收：构造错误的 DP 值、错误依赖、漏撤销都被确定性拒绝。
 
+实现位置：`src/sandbox/builder.ts`、`src/ai/prompt/core.ts` 及 DP/recursion 类别 Prompt；
+`builderSemantics.test.ts` 覆盖正确展开和所有拒绝路径。
+
 ### Phase 4：多输入验收与步骤压缩
 
-- 按 InputContract 生成小型边界测试集。
-- JS/Python 与真实代码做差分；其他语言标记验证等级。
-- Builder/Recorder 控制事件预算，算法计算不受影响。
-- 保存验证报告与可信度。
+- [x] 按 InputContract 生成小型边界测试集，并允许调用方补充领域用例。
+- [x] JS/Python 与真实代码做差分；其他语言标记为 `unverified`。
+- [x] Builder 控制可配置事件预算，算法计算不受影响。
+- [x] 在 Artifact 保存逐用例验证报告与 `high/medium/low/unverified` 可信度。
 
 验收：空、最小、重复、无解、平局等输入通过；大输入结果不因动画预算改变。
+
+实现位置：`src/generator/contracts.ts`、`src/generator/runtime.ts`、
+`src/sandbox/builder.ts`、`src/sandbox/executeGenerator.ts`。运行时测试覆盖 JS 真值通过/失败、
+其他语言未验证、五类显式边界输入，以及不同事件预算下结果一致。
 
 ## 8. 架构决策记录
 
