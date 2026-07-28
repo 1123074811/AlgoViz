@@ -1,0 +1,31 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/sandbox/*Worker.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx,css}",
+    "server/**/*.cjs",
+    "e2e/**/*.ts",
+    "*.config.{ts,js}"
+  ],
+  "include": [
+    "files",
+    "dependencies",
+    "unlisted",
+    "unresolved"
+  ],
+  "ignore": [
+    "src/presets/arrayDS.ts",
+    "src/presets/binarySearch.ts",
+    "src/presets/bst.ts",
+    "src/presets/bubbleSort.ts",
+    "src/presets/doublyLinkedList.ts",
+    "src/presets/insertionSort.ts",
+    "src/presets/linkedList.ts",
+    "src/presets/mergeSort.ts",
+    "src/presets/quickSort.ts",
+    "src/presets/selectionSort.ts",
+    "src/store/index.ts"
+  ]
+}
