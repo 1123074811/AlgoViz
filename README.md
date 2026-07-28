@@ -101,6 +101,7 @@ npm run proxy
 | `npm run test:ui` | 启动 Vitest UI |
 | `npm run coverage` | 生成测试覆盖率，当前覆盖重点为 `src/scene/**` 和 `src/ai/**` |
 | `npm run test:e2e` | 启动 Vite 并用 Playwright Chromium 验证核心用户流程 |
+| `npm run knip` | 检查新增未使用文件、依赖、未声明依赖和无法解析的导入 |
 | `npm run lint` | 对 `src` 执行 ESLint |
 | `npm run format` | 使用 Prettier 格式化 `src` |
 
@@ -126,6 +127,7 @@ AlgoViz/
 │   ├── ai/                       # AI 客户端、Prompt、解析、Schema、修复、生成器解析、失败兜底场景
 │   ├── components/               # 通用组件、布局、编辑器与播放控制
 │   ├── data/                     # 算法定义补充数据
+│   ├── generator/                # 版本化 GeneratorArtifact、InputContract 与协议工具
 │   ├── hooks/                    # 动画播放引擎与 AI 生成器 Hook
 │   ├── i18n/                     # i18next 初始化与中英语言包
 │   ├── icons/                    # 图标封装
@@ -226,6 +228,9 @@ b.desc('比较相邻元素').compare(0, 1)
 ## AnimationScript
 
 核心类型位于 `src/types/animation.ts`。所有内置生成器、AI JSON 和 AI 生成器最终都会归一到该协议。
+
+完整的当前数据流、目标 Generator 架构、依赖规则、目录规划和开源方案评估见
+[`docs/architecture/README.md`](docs/architecture/README.md)。该文档是架构决策的单一事实源。
 
 ```ts
 export interface AnimationScript {
@@ -338,7 +343,8 @@ Scene 的每一步是一个完整的 `SceneState` 快照。`src/scene/useSceneTr
 
 ### 场景图元
 
-主要图元位于 `src/scene/primitives/`：
+主要 Renderer 位于 `src/scene/graphics/renderers/`，通用数据单元与动效原语位于
+`src/scene/primitives/`：
 
 - `CellView`：数组、矩阵、字符串单元格
 - `NodeView`：树、图、链表节点
@@ -445,7 +451,8 @@ AI 历史记录会保存代码、语言、输入数据、状态、生成脚本�
 
 - `src/ai/__tests__/`：响应解析、Schema 校验、修复、生成器解析、请求中止、失败兜底场景（`fallbackScene`）、脏输入稳定性语料台（`stability.corpus`）
 - `src/scene/__tests__/`：Scene Engine、区域布局、文本度量、复合迁移、数组种子状态、补间（`interpolate` 含值互换交叉与终态等价）、补间 Hook（`useSceneTransition` 含防抖动）、设计令牌（`tokens`）、边裁剪（`edgeTrim`）
-- `src/scene/compilers/__tests__/`：bitset、hash table、heap、math、set、string 等编译器
+- `src/scene/graphics/compile/__tests__/`：bitset、hash table、heap、math、set、string 等事件编译器
+- `src/scene/graphics/renderers/__tests__/`：DP 表、调用栈、网格和各图元 Renderer
 - `src/sandbox/__tests__/`：AnimationBuilder、生成器执行、复合 builder、沙箱失败归类
 - `src/presets/__tests__/`：算法识别、部分复合预设、堆操作端到端（`heapOperations`）
 - `src/hooks/__tests__/`：动画引擎、AI 生成失败归类（`useAIGenerator.fallback`）
