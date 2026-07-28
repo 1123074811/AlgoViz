@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { verifyAndTag } from '../useAIGenerator'
+import { verifyArtifact as verifyAndTag } from '@/generator/runtime'
 import type { AnimationScript } from '@/types/animation'
 
 function scriptWithResult(result: AnimationScript['result']): AnimationScript {

@@ -33,7 +33,7 @@ describe('AnimationBuilder — array', () => {
     for (let i = 0; i < 1000; i++) b.compare(0, 0)
     const script = b.build()
     expect(script.steps).toHaveLength(600)
-    expect(script.steps[599].description.zh).toContain('后续重复搜索/回溯步骤已省略')
+    expect(script.steps[599].description.zh).toContain('已省略 401 个后续教学事件')
   })
 
   it('没有任何步骤时 build 抛错', () => {

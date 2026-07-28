@@ -4,6 +4,7 @@ import { AnimationBuilder } from './builder'
 export interface GeneratorMeta {
   algorithm: string
   type: RendererType
+  eventBudget?: number
 }
 
 /** Structured failure classification, used by callers to pick a fallback state. */
@@ -50,7 +51,7 @@ function executeGeneratorAttempt(
   meta: GeneratorMeta,
   recoveredGlobals: Set<string>,
 ): GeneratorResult {
-  const b = new AnimationBuilder(meta.algorithm, meta.type)
+  const b = new AnimationBuilder(meta.algorithm, meta.type, { maxSteps: meta.eventBudget })
   const prefix = [...recoveredGlobals]
     .map(name => `let ${name} = 0;`)
     .join('\n')

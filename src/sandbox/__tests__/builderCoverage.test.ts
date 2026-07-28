@@ -410,6 +410,7 @@ describe('defaultDescFor（无 desc 时按事件家族推导中文描述）', ()
   it('dp 家族', () => {
     const b = new AnimationBuilder('x', 'array')
     b.dpCreate('dp', 2, 2) // 0
+    b.dpSet('dp', 0, 0, 0)
     b.dpSet('dp', 1, 1, 4) // 1 有值
     b.dpHighlight('dp', [{ row: 0, col: 0 }]) // 2
     b.dpDependency('dp', [{ row: 0, col: 0 }], { row: 1, col: 1 }) // 3
@@ -417,11 +418,11 @@ describe('defaultDescFor（无 desc 时按事件家族推导中文描述）', ()
     b.dpTraceback('dp', [{ row: 0, col: 0 }]) // 5
     const s = b.build().steps
     expect(s[0].description.zh).toBe('初始化 DP 表')
-    expect(s[1].description.zh).toBe('更新 DP 状态 (1,1) = 4')
-    expect(s[2].description.zh).toBe('高亮 DP 状态')
-    expect(s[3].description.zh).toBe('标记 DP 状态依赖')
-    expect(s[4].description.zh).toBe('展示 DP 转移公式')
-    expect(s[5].description.zh).toBe('回溯 DP 答案路径')
+    expect(s[2].description.zh).toBe('更新 DP 状态 (1,1) = 4')
+    expect(s[3].description.zh).toBe('高亮 DP 状态')
+    expect(s[4].description.zh).toBe('标记 DP 状态依赖')
+    expect(s[5].description.zh).toBe('展示 DP 转移公式')
+    expect(s[6].description.zh).toBe('回溯 DP 答案路径')
   })
 
   it('dp.set 无值时省略「= 值」', () => {
@@ -534,7 +535,7 @@ describe('MAX_STEPS = 600 软封顶', () => {
     expect(script.steps).toHaveLength(600)
     const last = script.steps[599]
     expect(last.description.zh).toContain('600')
-    expect(last.description.zh).toContain('后续重复搜索/回溯步骤已省略')
+    expect(last.description.zh).toContain('已省略 1402 个后续教学事件')
     expect(last.events?.[0]).toMatchObject({ type: 'scene.note' })
     // 截断前已累计 599 个真实步骤（含 1 个 create），其中 598 次 compare
     expect(last.stats?.comparisons).toBe(598)

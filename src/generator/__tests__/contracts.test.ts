@@ -4,6 +4,7 @@ import {
   PROMPT_PROTOCOL_VERSION,
   createGeneratorArtifact,
   createGeneratorCacheKey,
+  generateBoundaryInputs,
   inferInputContract,
   validateInputContract,
 } from '@/generator'
@@ -61,5 +62,24 @@ describe('GeneratorArtifact contracts', () => {
       ok: false,
       error: '输入类型应为 array，实际为 string',
     })
+  })
+
+  it('infers nested kinds and generates deterministic array/object boundaries', () => {
+    const arrays = inferInputContract([[1, 2, 3]])
+    expect(arrays.arrayItemKind).toBe('number')
+    expect(generateBoundaryInputs(arrays)).toEqual([
+      { id: 'empty', input: [] },
+      { id: 'minimal', input: [0] },
+      { id: 'duplicate', input: [0, 0] },
+    ])
+
+    const object = inferInputContract([
+      { nums: [1], target: 1 },
+      { nums: [2], target: 2 },
+    ])
+    expect(object.objectPropertyKinds).toEqual({ nums: 'array', target: 'number' })
+    expect(generateBoundaryInputs(object)).toEqual([
+      { id: 'empty-object', input: { nums: [], target: 0 } },
+    ])
   })
 })

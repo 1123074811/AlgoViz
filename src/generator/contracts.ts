@@ -2,8 +2,8 @@ import type { RendererType } from '@/types/animation'
 
 export const GENERATOR_ARTIFACT_VERSION = 1 as const
 export const INPUT_CONTRACT_VERSION = 1 as const
-export const BUILDER_PROTOCOL_VERSION = '1.0.0'
-export const PROMPT_PROTOCOL_VERSION = '1.0.0'
+export const BUILDER_PROTOCOL_VERSION = '1.1.0'
+export const PROMPT_PROTOCOL_VERSION = '1.1.0'
 
 export type AlgorithmCategory =
   | 'linear'
@@ -20,6 +20,8 @@ export interface InputContract {
   version: typeof INPUT_CONTRACT_VERSION
   acceptedKinds: InputValueKind[]
   requiredObjectKeys: string[]
+  arrayItemKind?: InputValueKind
+  objectPropertyKinds?: Record<string, InputValueKind>
   source: 'inferred' | 'legacy'
 }
 
@@ -32,6 +34,12 @@ export interface GeneratorValidationReport {
   status: 'pending' | 'passed' | 'failed'
   checkedInputs: number
   issues: GeneratorValidationIssue[]
+  confidence?: 'high' | 'medium' | 'low' | 'unverified'
+  cases?: Array<{
+    id: string
+    status: 'passed' | 'failed' | 'skipped'
+    message?: string
+  }>
 }
 
 export interface GeneratorArtifact {
@@ -149,13 +157,74 @@ export function inferInputContract(samples: unknown[]): InputContract {
   const requiredObjectKeys = objects.length < 2
     ? []
     : Object.keys(objects[0]).filter((key) => objects.every((object) => key in object)).sort()
+  const arrayItems = samples
+    .filter(Array.isArray)
+    .flat()
+  const arrayItemKinds = [...new Set(arrayItems.map(inputKind))]
+  const objectPropertyKinds = Object.fromEntries(
+    [...new Set(objects.flatMap(object => Object.keys(object)))]
+      .sort()
+      .map((key) => {
+        const values = objects.filter(object => key in object).map(object => object[key])
+        const kinds = [...new Set(values.map(inputKind))]
+        return kinds.length === 1 ? [key, kinds[0]] : null
+      })
+      .filter((entry): entry is [string, InputValueKind] => entry !== null),
+  )
 
   return {
     version: INPUT_CONTRACT_VERSION,
     acceptedKinds,
     requiredObjectKeys,
+    ...(arrayItemKinds.length === 1 && { arrayItemKind: arrayItemKinds[0] }),
+    ...(Object.keys(objectPropertyKinds).length > 0 && { objectPropertyKinds }),
     source: 'inferred',
   }
+}
+
+export interface BoundaryInput {
+  id: string
+  input: unknown
+}
+
+/** Small deterministic smoke set. Domain-specific no-solution/tie cases may be
+ * supplied by callers because they cannot be inferred safely from shape alone. */
+export function generateBoundaryInputs(contract: InputContract): BoundaryInput[] {
+  const cases: BoundaryInput[] = []
+  for (const kind of contract.acceptedKinds) {
+    if (kind === 'array') {
+      const item = seedValue(contract.arrayItemKind ?? 'number')
+      cases.push(
+        { id: 'empty', input: [] },
+        { id: 'minimal', input: [item] },
+        { id: 'duplicate', input: [item, item] },
+      )
+    } else if (kind === 'object') {
+      const propertyKinds = contract.objectPropertyKinds ?? {}
+      const keys = Object.keys(propertyKinds)
+      const required = Object.fromEntries(
+        contract.requiredObjectKeys.map(key => [key, seedValue(propertyKinds[key] ?? 'number')]),
+      )
+      const representative = Object.fromEntries(
+        keys.map(key => [key, seedValue(propertyKinds[key])]),
+      )
+      cases.push(
+        { id: 'empty-object', input: required },
+        { id: 'minimal-object', input: { ...required, ...representative } },
+      )
+    } else if (kind === 'number') {
+      cases.push({ id: 'zero', input: 0 }, { id: 'minimal', input: 1 }, { id: 'negative', input: -1 })
+    } else if (kind === 'string') {
+      cases.push({ id: 'empty', input: '' }, { id: 'minimal', input: 'a' }, { id: 'duplicate', input: 'aa' })
+    } else if (kind === 'boolean') {
+      cases.push({ id: 'false', input: false }, { id: 'true', input: true })
+    } else {
+      cases.push({ id: 'null', input: null })
+    }
+  }
+  return cases.filter((item, index) =>
+    cases.findIndex(candidate => stableValue(candidate.input) === stableValue(item.input)) === index,
+  )
 }
 
 export function validateInputContract(
@@ -214,4 +283,19 @@ function inputKind(value: unknown): InputValueKind {
   if (typeof value === 'number') return 'number'
   if (typeof value === 'boolean') return 'boolean'
   return 'string'
+}
+
+function seedValue(kind: InputValueKind): unknown {
+  if (kind === 'array') return []
+  if (kind === 'object') return {}
+  if (kind === 'number') return 0
+  if (kind === 'string') return ''
+  if (kind === 'boolean') return false
+  return null
+}
+
+function stableValue(value: unknown): string {
+  return JSON.stringify(value, Object.keys(value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {}).sort())
 }

@@ -3,35 +3,24 @@ import { act, renderHook } from '@testing-library/react'
 import type { AnimationScript } from '@/types/animation'
 import { createGeneratorArtifact } from '@/generator'
 
-// ── Mock every external dependency so no network/worker is hit ──────────────
-const analyzeCodeGenerator = vi.fn()
-const runGeneratorSandboxed = vi.fn()
-const recognizeAlgorithm = vi.fn()
+// The Hook only coordinates the application service and UI callbacks.
+const compileArtifact = vi.fn()
+const runArtifact = vi.fn()
 const generatePreset = vi.fn()
 const buildFallbackScene = vi.fn()
-const repairGenerator = vi.fn()
 
-vi.mock('@/ai', () => ({
-  analyzeCodeGenerator: (...a: unknown[]) => analyzeCodeGenerator(...a),
+vi.mock('@/generator/compile', () => ({
+  compileArtifact: (...args: unknown[]) => compileArtifact(...args),
+  classifyFailure: () => 'runtime',
+  inferSampleInputFromCode: () => undefined,
+  toFallbackInitialState: () => ({ type: 'array', data: [] }),
 }))
-vi.mock('@/sandbox/runGenerator', () => ({
-  runGeneratorSandboxed: (...a: unknown[]) => runGeneratorSandboxed(...a),
-}))
-vi.mock('@/presets/recognize', () => ({
-  recognizeAlgorithm: (...a: unknown[]) => recognizeAlgorithm(...a),
+vi.mock('@/generator/runtime', () => ({
+  runArtifact: (...args: unknown[]) => runArtifact(...args),
+  verifyArtifact: vi.fn(),
 }))
 vi.mock('@/presets', () => ({
   generatePreset: (...a: unknown[]) => generatePreset(...a),
-}))
-vi.mock('@/ai/categories', () => ({
-  classifyAlgorithm: () => 'linear',
-  CATEGORY_PROFILES: { linear: { rules: [] } },
-}))
-vi.mock('@/ai/quality', () => ({
-  runQualityGate: () => ({ passed: true, issues: [] }),
-}))
-vi.mock('@/ai/repairGenerator', () => ({
-  repairGenerator: (...a: unknown[]) => repairGenerator(...a),
 }))
 vi.mock('@/ai/fallbackScene', () => ({
   buildFallbackScene: (...a: unknown[]) => buildFallbackScene(...a),
@@ -80,12 +69,10 @@ function makeOpts(overrides: Partial<UseAIGeneratorOptions> = {}): {
 }
 
 beforeEach(() => {
-  analyzeCodeGenerator.mockReset()
-  runGeneratorSandboxed.mockReset()
-  recognizeAlgorithm.mockReset()
+  compileArtifact.mockReset()
+  runArtifact.mockReset()
   generatePreset.mockReset()
   buildFallbackScene.mockReset()
-  repairGenerator.mockReset()
   buildFallbackScene.mockReturnValue(makeScript('fallback'))
 })
 
@@ -133,12 +120,12 @@ describe('useAIGenerator — analyze: recognized built-in (Phase 1)', () => {
   it('sets liveAlgoId, generates a preset, and applies the script', async () => {
     const { opts, applyScript, setStatus } = makeOpts()
     const script = makeScript('bubble')
-    analyzeCodeGenerator.mockResolvedValue({
-      success: true,
-      generator: { algorithm: 'bubble sort', type: 'array', body: 'gen' },
+    compileArtifact.mockResolvedValue({
+      ok: true,
+      script,
+      liveAlgoId: 'bubble-sort',
+      usedInput: 'nums = [1,2,3]',
     })
-    recognizeAlgorithm.mockReturnValue('bubble-sort')
-    generatePreset.mockReturnValue(script)
 
     const { result } = renderHook(() => useAIGenerator(opts))
 
@@ -161,12 +148,12 @@ describe('useAIGenerator — analyze: recognized built-in (Phase 1)', () => {
 
   it('returns an error and fallback scene when a recognized preset cannot generate', async () => {
     const { opts, applyScript, setStatus } = makeOpts()
-    analyzeCodeGenerator.mockResolvedValue({
-      success: true,
-      generator: { algorithm: 'bubble sort', type: 'array', body: 'gen' },
+    compileArtifact.mockResolvedValue({
+      ok: false,
+      error: '内置算法 bubble-sort 无法根据当前输入生成动画',
+      fallbackScript: makeScript('fallback'),
+      usedInput: 'nums = [1,2,3]',
     })
-    recognizeAlgorithm.mockReturnValue('bubble-sort')
-    generatePreset.mockReturnValue(undefined)
 
     const { result } = renderHook(() => useAIGenerator(opts))
     let res: Awaited<ReturnType<typeof result.current.analyze>>
@@ -182,7 +169,7 @@ describe('useAIGenerator — analyze: recognized built-in (Phase 1)', () => {
     expect(res!.error).toContain('无法根据当前输入生成动画')
     expect(result.current.liveAlgoId).toBeNull()
     expect(applyScript).toHaveBeenCalledWith(makeScript('fallback'))
-    expect(setStatus).toHaveBeenCalledWith('error', expect.stringContaining('无法根据当前输入生成动画'))
+    expect(setStatus).toHaveBeenCalledWith('error', expect.stringContaining('无法根据当前输入生成动画'), undefined)
   })
 })
 
@@ -190,12 +177,16 @@ describe('useAIGenerator — analyze: AI generator (Phase 2)', () => {
   it('runs the sandbox and applies the produced script', async () => {
     const { opts, applyScript, setStatus } = makeOpts()
     const script = makeScript('custom')
-    analyzeCodeGenerator.mockResolvedValue({
-      success: true,
-      generator: { algorithm: 'some-unknown-algo', type: 'array', body: 'BODY' },
+    const artifact = {
+      ...makeArtifact('BODY'),
+      validation: { status: 'passed' as const, checkedInputs: 1, issues: [] },
+    }
+    compileArtifact.mockResolvedValue({
+      ok: true,
+      script,
+      artifact,
+      generator: { artifact, verify: { userCode: 'function f(){}' } },
     })
-    recognizeAlgorithm.mockReturnValue(null) // not a built-in → Phase 2
-    runGeneratorSandboxed.mockResolvedValue({ ok: true, script })
 
     const { result } = renderHook(() => useAIGenerator(opts))
 
@@ -228,13 +219,15 @@ describe('useAIGenerator — analyze: AI generator (Phase 2)', () => {
 
   it('falls back to a fallback scene when the sandbox fails (no repair)', async () => {
     const { opts, applyScript, setStatus } = makeOpts()
-    analyzeCodeGenerator.mockResolvedValue({
-      success: true,
-      generator: { algorithm: 'unknown', type: 'array', body: 'BAD' },
+    const artifact = makeArtifact('BAD')
+    compileArtifact.mockResolvedValue({
+      ok: false,
+      error: 'boom',
+      artifact,
+      generator: { artifact },
+      rawResponse: 'BAD',
+      fallbackScript: makeScript('fallback'),
     })
-    recognizeAlgorithm.mockReturnValue(null)
-    runGeneratorSandboxed.mockResolvedValue({ ok: false, error: 'boom', kind: 'runtime' })
-    repairGenerator.mockResolvedValue(null) // repair gives up
 
     const { result } = renderHook(() => useAIGenerator(opts))
 
@@ -249,7 +242,6 @@ describe('useAIGenerator — analyze: AI generator (Phase 2)', () => {
 
     expect(res!.ok).toBe(false)
     expect(res!.error).toBe('boom')
-    expect(buildFallbackScene).toHaveBeenCalled()
     expect(applyScript).toHaveBeenCalledWith(makeScript('fallback'))
     expect(setStatus).toHaveBeenCalledWith('error', 'boom', 'BAD')
   })
@@ -258,11 +250,12 @@ describe('useAIGenerator — analyze: AI generator (Phase 2)', () => {
 describe('useAIGenerator — analyze: top-level AI failure', () => {
   it('applies a fallback scene and reports the error', async () => {
     const { opts, setStatus } = makeOpts()
-    analyzeCodeGenerator.mockResolvedValue({
-      success: false,
+    compileArtifact.mockResolvedValue({
+      ok: false,
       error: '分析失败',
       errorReport: { stage: 'network' },
       rawResponse: 'raw',
+      fallbackScript: makeScript('fallback'),
     })
 
     const { result } = renderHook(() => useAIGenerator(opts))
@@ -279,14 +272,13 @@ describe('useAIGenerator — analyze: top-level AI failure', () => {
     expect(res!.ok).toBe(false)
     expect(res!.error).toBe('分析失败')
     expect(res!.rawResponse).toBe('raw')
-    expect(buildFallbackScene).toHaveBeenCalled()
     expect(setStatus).toHaveBeenCalledWith('error', '分析失败', 'raw')
     expect(result.current.liveAlgoId).toBeNull()
   })
 
   it('returns early without applying when the signal is aborted', async () => {
     const { opts, applyScript } = makeOpts()
-    analyzeCodeGenerator.mockResolvedValue({ success: true, generator: { algorithm: 'a', type: 'array', body: 'b' } })
+    compileArtifact.mockResolvedValue({ ok: false, error: 'AbortError' })
     const ctrl = new AbortController()
     ctrl.abort()
 
@@ -341,7 +333,7 @@ describe('useAIGenerator — live regen on input change', () => {
       parseInput,
     })
     const artifact = makeArtifact()
-    runGeneratorSandboxed.mockResolvedValue({ ok: true, script: makeScript('local') })
+    runArtifact.mockResolvedValue({ ok: true, script: makeScript('local') })
 
     const { result, rerender } = renderHook(
       (props: UseAIGeneratorOptions) => useAIGenerator(props),
@@ -349,8 +341,8 @@ describe('useAIGenerator — live regen on input change', () => {
     )
 
     act(() => result.current.setLive({ generator: { artifact } }))
-    runGeneratorSandboxed.mockClear()
-    analyzeCodeGenerator.mockClear()
+    runArtifact.mockClear()
+    compileArtifact.mockClear()
     applyScript.mockClear()
 
     const inputs = ['[]', '[1]', '[3,2,1]', '[2,2,2]', '[9,1,5,7]']
@@ -361,11 +353,11 @@ describe('useAIGenerator — live regen on input change', () => {
       })
     }
 
-    expect(runGeneratorSandboxed).toHaveBeenCalledTimes(5)
-    expect(runGeneratorSandboxed.mock.calls.map((call) => call[1])).toEqual(
+    expect(runArtifact).toHaveBeenCalledTimes(5)
+    expect(runArtifact.mock.calls.map((call) => call[1])).toEqual(
       inputs.map((input) => JSON.parse(input)),
     )
-    expect(analyzeCodeGenerator).not.toHaveBeenCalled()
+    expect(compileArtifact).not.toHaveBeenCalled()
     expect(applyScript).toHaveBeenCalledTimes(5)
   })
 })

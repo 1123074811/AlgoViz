@@ -9,6 +9,7 @@ export const PROMPT: string = `### DP 状态表（dynamic programming，@type �
 - \`b.dpDependency(tableId, sources, target, label?)\` 画依赖箭头：target 由 sources（多个前驱格）转移而来
 - \`b.dpFormula(tableId, target, text)\` 在某格旁标注转移方程文本
 - \`b.dpTraceback(tableId, path)\` 回溯标记最优解路径（path=[{row,col},...]）
+- 优先用 \`b.dpDecide({ tableId, target, candidates, operator, chosen, value })\` 表达一次完整决策；每个 candidate 提供 \`sources\`、\`operator?\`、\`offset?\`、\`value\`、\`label?\`。Builder 会校验下标、依赖已赋值、候选算术、min/max 选择和值一致性，并展开为高亮/依赖/公式/写值事件。
 要点：DP 动画必须围绕“状态转移方程”展开，而不是只填表。每个关键状态按固定顺序输出：
 1. \`b.dpHighlight(tableId, [{row,col}], 'current')\` 标当前格；
 2. \`b.dpDependency(tableId, sources, {row,col}, label?)\` 标出方程右侧依赖的前驱格；
@@ -22,7 +23,7 @@ export const PROMPT: string = `### DP 状态表（dynamic programming，@type �
 - 从高位到低位逐位：\`b.setValue(pos, digit)\` 填当前位（会高亮该格）、\`b.compare(pos, pos)\` 单独高亮当前位、\`b.note('第 '+pos+' 位可填 0~上限d')\` 说明受限范围；
 - \`b.varSet('已枚举', cnt)\`、\`b.varSet('当前统计', val)\` 在左上面板累计；凑出一个完整数字时 \`b.markSorted([下标...])\` 标该数字所有位为完成、计数 +1；
 - **记忆化命中**：\`b.note('状态 (pos,prev,curr) 命中缓存，复用=...，跳过该子枝')\` 表示不再展开。
-- **步数控制（关键，绝不枚举全部数字）**：只演示**几条代表性路径**（上限路径 + 首个 memo 命中 + 1~2 条普通），其余用 \`b.note('其余 N 个数字同理逐位枚举、memo 复用')\` 一句带过；末尾 \`b.desc\` 总结（共枚举 ≈N、命中 M 次、结果=X）。
+- 必须按原算法完整枚举/记忆化并得到真实结果；Builder 会按事件预算自动省略后续教学事件，禁止为动画而少算路径。末尾 \`b.result(realResult)\`。
 要点：把动画讲成"一个数字被逐位试出来、算过的状态直接跳过"，直观对应数位 DP 语义；不要铺状态表。
 
 ### 记忆化搜索（dfs + memo 数组）→ 必须用 DP 状态表，而非递归树

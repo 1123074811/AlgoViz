@@ -12,11 +12,15 @@ describe('buildGeneratorSystemPrompt（core + 类别装配）', () => {
     const prompt = buildGeneratorSystemPrompt('java', 'recursion')
     expect(prompt).toContain('callStackCreate')
     expect(prompt).toContain('callPush')
+    expect(prompt).toContain('backtrackUndo')
+    expect(prompt).not.toContain('只展开前 2~4 层代表性分支')
   })
 
   it('dp 类别包含状态表 builder 方法', () => {
     const prompt = buildGeneratorSystemPrompt('java', 'dp')
     expect(prompt).toContain('dpCreate')
+    expect(prompt).toContain('dpDecide')
+    expect(prompt).not.toContain('绝不枚举全部数字')
   })
 
   it('无 category 时仍包含核心输出格式片段', () => {
@@ -46,5 +50,12 @@ describe('buildGeneratorSystemPrompt（core + 类别装配）', () => {
   it('CORE_PROMPT documents b.phase', () => {
     const prompt = CORE_PROMPT('Python')
     expect(prompt).toContain('b.phase')
+  })
+
+  it('requires complete computation and delegates only event omission to Builder', () => {
+    const prompt = CORE_PROMPT('JavaScript')
+    expect(prompt).toContain('必须对完整 input 执行原算法')
+    expect(prompt).toContain('必须继续完整计算')
+    expect(prompt).not.toContain('可在循环里 break/限制规模')
   })
 })

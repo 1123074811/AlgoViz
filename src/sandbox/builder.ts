@@ -2,9 +2,11 @@ import type { AnimationScript, AnimationStep, RendererType, ActionColor } from '
 import type { AlgorithmEvent } from '@/scene/eventTypes'
 import type { CallStackBindings, CallStackFrameStatus, CallStackValue } from '@/scene/overlays'
 
-const MAX_STEPS = 600
+const DEFAULT_MAX_STEPS = 600
 
 type Action = AnimationStep['action']
+type DpValue = string | number | boolean | null
+type DpCoord = { row: number; col: number }
 
 /** Tolerate common AI mistakes: passing the whole input object (e.g. {nums:[...],
  *  target}) or a non-array to a create method. Extracts the intended array instead
@@ -19,6 +21,17 @@ function coerceArray(values: unknown): (number | string)[] {
   }
   if (typeof values === 'number' || typeof values === 'string') return [values]
   return []
+}
+
+function stableSnapshot(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableSnapshot).join(',')}]`
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => `${JSON.stringify(key)}:${stableSnapshot(item)}`)
+      .join(',')}}`
+  }
+  return JSON.stringify(value) ?? String(value)
 }
 
 /** Per-event contribution to cumulative stats (比较 / 交换 / 访问). */
@@ -307,15 +320,26 @@ export class AnimationBuilder {
   private varValues = new Map<string, number | string>()
   private pendingVarHighlights = new Set<string>()
   private truncated = false
+  private omittedSteps = 0
+  private truncationStep?: AnimationStep
+  private maxSteps: number
   private searchSeq = 0
   private searchStack: string[] = []
+  private searchNodes = new Set<string>()
+  private decisions: Array<{ id: string; choice: string | number; before: string }> = []
+  private dpTables = new Map<string, {
+    rows: number
+    cols: number
+    values: Map<string, DpValue>
+  }>()
   // tracks which structure families (event prefix before '.') the script used,
   // to auto-enable composite layout when 2+ distinct structures appear.
   private usedFamilies = new Set<string>()
 
-  constructor(algorithm: string, type: RendererType) {
+  constructor(algorithm: string, type: RendererType, options: { maxSteps?: number } = {}) {
     this.algorithm = algorithm || 'custom'
     this.type = type
+    this.maxSteps = Math.max(2, Math.floor(options.maxSteps ?? DEFAULT_MAX_STEPS))
   }
 
   desc(zh: string, en?: string): this { this.pendingDesc = zh; this.pendingDescEn = en ?? ''; return this }
@@ -329,22 +353,25 @@ export class AnimationBuilder {
 
   private add(events: AlgorithmEvent[], action: Action): this {
     if (this.truncated) {
+      this.omittedSteps++
       this.pendingDesc = ''
       this.pendingDescEn = ''
       this.pendingPhase = null
       this.pendingVarHighlights.clear()
       return this
     }
-    if (this.steps.length >= MAX_STEPS - 1) {
-      const zh = `动画步骤已达到 ${MAX_STEPS} 步上限，后续重复搜索/回溯步骤已省略，最终结果仍会继续计算。`
-      this.steps.push({
+    if (this.steps.length >= this.maxSteps - 1) {
+      this.omittedSteps = 1
+      const zh = this.truncationDescription()
+      this.truncationStep = {
         stepId: this.sid++,
         codeLine: this.pendingLine,
-        description: { zh, en: `Animation reached the ${MAX_STEPS}-step cap; further repetitive search/backtracking steps are omitted. The final result is still computed.` },
+        description: { zh, en: this.truncationDescriptionEn() },
         action: this.act('annotate', [], 'muted'),
         stats: { comparisons: this.comparisons, swaps: this.swaps, accesses: this.accesses },
         events: [{ type: 'scene.note', text: zh }],
-      })
+      }
+      this.steps.push(this.truncationStep)
       this.pendingDesc = ''
       this.pendingDescEn = ''
       this.pendingPhase = null
@@ -380,6 +407,14 @@ export class AnimationBuilder {
     this.pendingDescEn = ''
     this.pendingPhase = null
     return this
+  }
+
+  private truncationDescription(): string {
+    return `动画步骤已达到 ${this.maxSteps} 步预算，已省略 ${this.omittedSteps} 个后续教学事件；算法计算和最终结果不受影响。`
+  }
+
+  private truncationDescriptionEn(): string {
+    return `Animation reached the ${this.maxSteps}-step budget and omitted ${this.omittedSteps} later teaching events; computation and the final result are unaffected.`
   }
 
   private consumePendingVarHighlights(): AlgorithmEvent[] {
@@ -817,6 +852,18 @@ export class AnimationBuilder {
     cols: number,
     options?: { title?: string; rowLabels?: string[]; colLabels?: string[]; values?: Array<Array<string | number | boolean | null>>; defaultValue?: string | number | boolean | null },
   ): this {
+    if (!tableId || this.dpTables.has(tableId)) throw new Error(`DP 表 ${tableId || '(空)'} 已存在或名称无效`)
+    if (!Number.isInteger(rows) || !Number.isInteger(cols) || rows <= 0 || cols <= 0) {
+      throw new Error(`DP 表 ${tableId} 的行列必须是正整数`)
+    }
+    const values = new Map<string, DpValue>()
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const value = options?.values?.[row]?.[col] ?? options?.defaultValue
+        if (value !== undefined) values.set(this.dpKey(row, col), value)
+      }
+    }
+    this.dpTables.set(tableId, { rows, cols, values })
     return this.add(
       [{
         type: 'dp.create',
@@ -833,12 +880,15 @@ export class AnimationBuilder {
     )
   }
   dpSet(tableId: string, row: number, col: number, value: string | number | boolean | null, formula?: string): this {
+    const table = this.dpCell(tableId, { row, col })
+    table.values.set(this.dpKey(row, col), value)
     return this.add(
       [{ type: 'dp.set', id: tableId, row, col, value, formula }],
       this.act('highlight', [], 'primary'),
     )
   }
   dpHighlight(tableId: string, cells: Array<{ row: number; col: number }>, kind: 'current' | 'dependency' | 'candidate' | 'answer' = 'current'): this {
+    cells.forEach(cell => this.dpCell(tableId, cell))
     return this.add(
       [{ type: 'dp.highlight', id: tableId, cells, kind }],
       this.act('highlight', [], kind === 'answer' ? 'success' : 'warning'),
@@ -850,22 +900,127 @@ export class AnimationBuilder {
     target: { row: number; col: number },
     label?: string,
   ): this {
+    const table = this.dpCell(tableId, target)
+    for (const source of sources) {
+      this.dpCell(tableId, source)
+      if (!table.values.has(this.dpKey(source.row, source.col))) {
+        throw new Error(`DP 依赖 (${source.row},${source.col}) 尚未赋值`)
+      }
+    }
     return this.add(
       [{ type: 'dp.dependency', id: tableId, sources, target, label }],
       this.act('edge', [], 'primary'),
     )
   }
   dpFormula(tableId: string, target: { row: number; col: number }, text: string): this {
+    this.dpCell(tableId, target)
     return this.add(
       [{ type: 'dp.formula', id: tableId, target, text }],
       this.act('annotate', [], 'primary'),
     )
   }
   dpTraceback(tableId: string, path: Array<{ row: number; col: number }>): this {
+    path.forEach(cell => this.dpCell(tableId, cell))
     return this.add(
       [{ type: 'dp.traceback', id: tableId, path }],
       this.act('mark', [], 'success'),
     )
+  }
+
+  dpDecide(decision: {
+    tableId: string
+    target: DpCoord
+    candidates: Array<{
+      sources: DpCoord[]
+      operator?: 'sum' | 'min' | 'max' | 'or'
+      offset?: number
+      value: number | boolean
+      label?: string
+    }>
+    operator: 'min' | 'max' | 'sum' | 'or'
+    chosen: number
+    value: number | boolean
+  }): this {
+    if (decision.candidates.length === 0) throw new Error('DP 决策至少需要一个候选值')
+    const table = this.dpCell(decision.tableId, decision.target)
+    const values = decision.candidates.map((candidate, index) => {
+      const sources = candidate.sources.map(source => {
+        this.dpCell(decision.tableId, source)
+        const value = table.values.get(this.dpKey(source.row, source.col))
+        if (value === undefined) throw new Error(`DP 候选 ${index} 依赖 (${source.row},${source.col}) 尚未赋值`)
+        return value
+      })
+      const calculated = this.calculateDpCandidate(sources, candidate.operator ?? 'sum', candidate.offset ?? 0)
+      if (!this.dpValuesEqual(calculated, candidate.value)) {
+        throw new Error(`DP 候选 ${index} 的声明值 ${String(candidate.value)} 与依赖计算值 ${String(calculated)} 不一致`)
+      }
+      return candidate.value
+    })
+    const calculated = this.calculateDpDecision(values, decision.operator)
+    if (!this.dpValuesEqual(calculated, decision.value)) {
+      throw new Error(`DP 决策值 ${String(decision.value)} 与 ${decision.operator} 计算值 ${String(calculated)} 不一致`)
+    }
+    if (!Number.isInteger(decision.chosen) || decision.chosen < 0 || decision.chosen >= values.length) {
+      throw new Error('DP 决策 chosen 超出候选范围')
+    }
+    if ((decision.operator === 'min' || decision.operator === 'max') &&
+      !this.dpValuesEqual(values[decision.chosen], decision.value)) {
+      throw new Error(`DP 决策 chosen 未指向 ${decision.operator} 候选`)
+    }
+
+    const dependencies = decision.candidates.flatMap(candidate => candidate.sources)
+    this.dpHighlight(decision.tableId, [decision.target], 'current')
+    this.dpDependency(decision.tableId, dependencies, decision.target, decision.operator)
+    this.dpFormula(
+      decision.tableId,
+      decision.target,
+      decision.candidates.map(candidate => candidate.label ?? String(candidate.value)).join(` ${decision.operator} `),
+    )
+    return this.dpSet(decision.tableId, decision.target.row, decision.target.col, decision.value)
+  }
+
+  private dpCell(tableId: string, coord: DpCoord) {
+    const table = this.dpTables.get(tableId)
+    if (!table) throw new Error(`DP 表 ${tableId} 尚未创建`)
+    if (!Number.isInteger(coord.row) || !Number.isInteger(coord.col) ||
+      coord.row < 0 || coord.col < 0 || coord.row >= table.rows || coord.col >= table.cols) {
+      throw new Error(`DP 坐标 (${coord.row},${coord.col}) 超出 ${table.rows}×${table.cols} 边界`)
+    }
+    return table
+  }
+
+  private dpKey(row: number, col: number): string { return `${row}:${col}` }
+
+  private calculateDpCandidate(values: DpValue[], operator: 'sum' | 'min' | 'max' | 'or', offset: number): number | boolean {
+    if (operator === 'or') {
+      if (offset !== 0 || values.some(value => typeof value !== 'boolean')) throw new Error('DP or 候选只能使用布尔依赖且不能带 offset')
+      return values.some(Boolean)
+    }
+    if (values.some(value => typeof value !== 'number')) throw new Error(`DP ${operator} 候选只能使用数值依赖`)
+    const numbers = values as number[]
+    const base = operator === 'sum'
+      ? numbers.reduce((sum, value) => sum + value, 0)
+      : operator === 'min'
+        ? Math.min(...numbers)
+        : Math.max(...numbers)
+    return base + offset
+  }
+
+  private calculateDpDecision(values: Array<number | boolean>, operator: 'min' | 'max' | 'sum' | 'or'): number | boolean {
+    if (operator === 'or') {
+      if (values.some(value => typeof value !== 'boolean')) throw new Error('DP or 决策只能使用布尔候选')
+      return values.some(Boolean)
+    }
+    if (values.some(value => typeof value !== 'number')) throw new Error(`DP ${operator} 决策只能使用数值候选`)
+    const numbers = values as number[]
+    if (operator === 'sum') return numbers.reduce((sum, value) => sum + value, 0)
+    return operator === 'min' ? Math.min(...numbers) : Math.max(...numbers)
+  }
+
+  private dpValuesEqual(left: number | boolean, right: number | boolean): boolean {
+    return typeof left === 'number' && typeof right === 'number'
+      ? Math.abs(left - right) < 1e-9
+      : left === right
   }
 
   // ── geometry（坐标平面：点 / 线段 / 多边形 / 扫描线，@type 用 array） ──
@@ -893,16 +1048,21 @@ export class AnimationBuilder {
   searchRoot(label: string | number): this {
     this.searchSeq = 0
     this.searchStack = ['st_0']
+    this.searchNodes = new Set(['st_0'])
+    this.decisions = []
     return this.treeCreate('binary', 'st_0', [{ id: 'st_0', value: label }], [])
   }
   /** 做选择：在 parentId 下挂一个新分支节点，返回其 id（后续 searchFail/searchOk/searchBack 引用）。 */
   searchTry(parentId: string, label: string | number): string {
+    this.assertSearchNode(parentId)
     const id = `st_${++this.searchSeq}`
+    this.searchNodes.add(id)
     this.treeInsert(parentId, { id, value: label })
     return id
   }
   /** 标记冲突/剪枝：该分支不可行。 */
   searchFail(id: string): this {
+    this.assertSearchNode(id)
     return this.add(
       [{ type: 'scene.highlight', entityId: id, role: 'current', color: 'danger' }],
       this.act('highlight', [], 'danger'),
@@ -910,6 +1070,7 @@ export class AnimationBuilder {
   }
   /** 标记成功：该分支到达解。 */
   searchOk(id: string): this {
+    this.assertSearchNode(id)
     return this.add(
       [{ type: 'scene.highlight', entityId: id, role: 'safe', color: 'success' }],
       this.act('highlight', [], 'success'),
@@ -917,6 +1078,7 @@ export class AnimationBuilder {
   }
   /** 撤销选择（回溯离开该分支）。 */
   searchBack(id: string): this {
+    this.assertSearchNode(id)
     return this.add(
       [{ type: 'scene.highlight', entityId: id, role: 'current', color: 'muted' }],
       this.act('highlight', [], 'muted'),
@@ -924,8 +1086,10 @@ export class AnimationBuilder {
   }
   /** 进入一层递归:自动以当前栈顶为父挂一个新节点、入栈、返回其 id。AI 在递归函数开头调用,无需手传 parentId → 必然成树。 */
   searchEnter(label: string | number): string {
-    const parent = this.searchStack[this.searchStack.length - 1] ?? 'st_0'
+    const parent = this.searchStack[this.searchStack.length - 1]
+    if (!parent) throw new Error('调用 searchEnter 前必须先调用 searchRoot')
     const id = `st_${++this.searchSeq}`
+    this.searchNodes.add(id)
     this.treeInsert(parent, { id, value: label })
     this.searchStack.push(id)
     this.add([{ type: 'scene.highlight', entityId: id, role: 'current', color: 'primary' }], this.act('highlight', [], 'primary'))
@@ -933,18 +1097,63 @@ export class AnimationBuilder {
   }
   /** 离开一层递归:出栈;ok=true 标该子问题已解(success 绿),否则标回溯(muted 灰)。 */
   searchLeave(ok?: boolean): this {
-    const id = this.searchStack.pop()
-    if (!id) return this
+    if (this.searchStack.length <= 1) throw new Error('searchLeave 与 searchEnter 不平衡')
+    const id = this.searchStack.pop()!
     return ok
       ? this.add([{ type: 'scene.highlight', entityId: id, role: 'safe', color: 'success' }], this.act('highlight', [], 'success'))
       : this.add([{ type: 'scene.highlight', entityId: id, role: 'current', color: 'muted' }], this.act('highlight', [], 'muted'))
   }
   /** 记忆化命中:当前栈顶下挂一个命中节点并标 warning 橙(不展开其子树,体现复用)。 */
   searchMemoHit(label: string | number): this {
-    const parent = this.searchStack[this.searchStack.length - 1] ?? 'st_0'
+    const parent = this.searchStack[this.searchStack.length - 1]
+    if (!parent) throw new Error('调用 searchMemoHit 前必须先调用 searchRoot')
     const id = `st_${++this.searchSeq}`
+    this.searchNodes.add(id)
     this.treeInsert(parent, { id, value: label })
     return this.add([{ type: 'scene.highlight', entityId: id, role: 'current', color: 'warning' }], this.act('highlight', [], 'warning'))
+  }
+
+  backtrackTry(args: { choice: string | number; state: unknown }): this {
+    const parent = this.decisions[this.decisions.length - 1]?.id ?? this.searchStack[this.searchStack.length - 1]
+    if (!parent) throw new Error('调用 backtrackTry 前必须先调用 searchRoot')
+    const id = this.searchTry(parent, args.choice)
+    this.decisions.push({ id, choice: args.choice, before: stableSnapshot(args.state) })
+    return this
+  }
+
+  backtrackCommit(args: { choice?: string | number } = {}): this {
+    const decision = this.decisions[this.decisions.length - 1]
+    if (!decision) throw new Error('backtrackCommit 没有对应的 backtrackTry')
+    if (args.choice !== undefined && args.choice !== decision.choice) {
+      throw new Error(`backtrackCommit 选择不匹配：应为 ${String(decision.choice)}`)
+    }
+    this.decisions.pop()
+    return this.searchOk(decision.id)
+  }
+
+  backtrackUndo(args: { state: unknown; choice?: string | number; reason?: string }): this {
+    const decision = this.decisions[this.decisions.length - 1]
+    if (!decision) throw new Error('backtrackUndo 没有对应的 backtrackTry')
+    if (args.choice !== undefined && args.choice !== decision.choice) {
+      throw new Error(`backtrackUndo 选择不匹配：应为 ${String(decision.choice)}`)
+    }
+    if (stableSnapshot(args.state) !== decision.before) {
+      throw new Error(`回溯撤销后状态未恢复：${String(decision.choice)}`)
+    }
+    this.decisions.pop()
+    if (args.reason) this.desc(args.reason)
+    return this.searchBack(decision.id)
+  }
+
+  backtrackSolution(args: { path: unknown }): this {
+    const current = this.decisions[this.decisions.length - 1]?.id ?? this.searchStack[this.searchStack.length - 1]
+    if (!current) throw new Error('调用 backtrackSolution 前必须先调用 searchRoot')
+    this.searchOk(current)
+    return this.note(`找到解：${stableSnapshot(args.path)}`)
+  }
+
+  private assertSearchNode(id: string): void {
+    if (!this.searchNodes.has(id)) throw new Error(`搜索节点 ${id} 不存在`)
   }
 
   // ── note / escape ──
@@ -962,8 +1171,15 @@ export class AnimationBuilder {
   }
 
   build(): AnimationScript {
+    if (this.searchStack.length > 1) throw new Error(`搜索栈未平衡：仍有 ${this.searchStack.length - 1} 层未 searchLeave`)
+    if (this.decisions.length > 0) throw new Error(`回溯决策未闭合：仍有 ${this.decisions.length} 个选择未 commit/undo`)
     if (this.steps.length === 0) {
       throw new Error('生成器没有产生任何步骤')
+    }
+    if (this.truncationStep) {
+      const zh = this.truncationDescription()
+      this.truncationStep.description = { zh, en: this.truncationDescriptionEn() }
+      this.truncationStep.events = [{ type: 'scene.note', text: zh }]
     }
     const initialState = this.buildInitialState()
     // 多结构（去掉 'scene' 后 ≥2 个不同 family）时自动开启 composite 区域布局。

@@ -1,213 +1,61 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { analyzeCodeGenerator } from '@/ai'
-import { runGeneratorSandboxed } from '@/sandbox/runGenerator'
-import { recognizeAlgorithm } from '@/presets/recognize'
-import { generatePreset } from '@/presets'
-import { classifyAlgorithm, CATEGORY_PROFILES } from '@/ai/categories'
-import { runQualityGate } from '@/ai/quality'
-import { repairGenerator } from '@/ai/repairGenerator'
-import { buildFallbackScene, type FallbackKind } from '@/ai/fallbackScene'
-import { verifyAgainstExpect, verifyAgainstGroundTruth, sanitizeLineMapping, formatVerifyValue, type VerifyOutcome } from '@/ai/verify'
-import { runUserJsSandboxed } from '@/sandbox/runUserCode'
-import { runUserPySandboxed } from '@/sandbox/runUserPython'
-import type { AnimationScript, InitialState } from '@/types/animation'
-import type { AIStatus } from '@/store/algorithmStore'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { buildFallbackScene } from '@/ai/fallbackScene'
 import {
-  createGeneratorArtifact,
-  validateInputContract,
-  type GeneratorArtifact,
-} from '@/generator'
+  classifyFailure,
+  compileArtifact,
+  inferSampleInputFromCode,
+  toFallbackInitialState,
+  type CompileArtifactParams,
+  type LiveGenerator,
+} from '@/generator/compile'
+import { runArtifact, verifyArtifact } from '@/generator/runtime'
+import { generatePreset } from '@/presets'
+import type { AIStatus } from '@/store/algorithmStore'
+import type { AnimationScript } from '@/types/animation'
+import type { GeneratorArtifact } from '@/generator'
 
+export { classifyFailure, inferSampleInputFromCode }
+export { verifyArtifact as verifyAndTag }
+export type { LiveGenerator }
 export type GeneratorType = 'array' | 'graph' | 'tree' | 'linked_list' | 'union_find'
-export type LiveGenerator = {
-  artifact: GeneratorArtifact
-  verify?: { userCode: string }
-}
 
-/**
- * 把一次失败映射到三类可读兜底态：
- *  - runtime: 沙箱执行崩溃/超时（来自 GeneratorResult.kind）。
- *  - unavailable: 模型/网络/认证/限流不可用。
- *  - parse: 解析/schema/提取失败（默认兜底）。
- */
-export function classifyFailure(err: { stage?: string; kind?: string }): FallbackKind {
-  if (err.kind === 'runtime') return 'runtime'
-  const s = err.stage ?? ''
-  if (s.includes('network') || s.includes('auth') || s.includes('rate') || s.includes('config') || s.includes('request')) return 'unavailable'
-  if (s.includes('json') || s.includes('schema') || s.includes('parse') || s.includes('extract')) return 'parse'
-  return 'parse'
-}
-
-export interface VerifyAndTagArgs {
-  expectRaw?: string
-  language: string
-  userCode: string
-  input: unknown
-  sourceCode: string
-}
-
-export async function verifyAndTag(script: AnimationScript, args: VerifyAndTagArgs): Promise<VerifyOutcome> {
-  let outcome: VerifyOutcome | null = null
-  // 该语言本可真实执行(JS/Python),用于区分"语言不支持真值"与"真值降级"。
-  const lang = args.language.toLowerCase()
-  const realExecCapable = lang === 'javascript' || lang === 'python'
-
-  if (lang === 'javascript') {
-    const truth = await runUserJsSandboxed(args.userCode, args.input)
-    if (truth.ok) {
-      outcome = verifyAgainstGroundTruth(script, truth.value)
-    }
-  }
-  if (!outcome && lang === 'python') {
-    const truth = await runUserPySandboxed(args.userCode, args.input)
-    if (truth.ok) {
-      outcome = { ...verifyAgainstGroundTruth(script, truth.value), source: 'py-exec' }
-    }
-  }
-  if (!outcome || outcome.status === 'skipped') {
-    const byExpect = verifyAgainstExpect(script, args.expectRaw)
-    if (!outcome || byExpect.status !== 'skipped') outcome = byExpect
-  }
-
-  // 本可真值却最终落到 @expect 自证 → 标记降级,UI 据此提示"真实执行不可用"。
-  if (realExecCapable && outcome.source === 'expect' && outcome.status !== 'skipped') {
-    outcome = { ...outcome, degraded: true }
-  }
-
-  script.verification = {
-    status: outcome.status,
-    ...(outcome.source && { source: outcome.source }),
-    ...(outcome.expected !== undefined && { expected: formatVerifyValue(outcome.expected) }),
-    ...(outcome.actual !== undefined && { actual: formatVerifyValue(outcome.actual) }),
-    ...(outcome.message && { message: outcome.message }),
-    ...(outcome.degraded && { degraded: true }),
-  }
-  sanitizeLineMapping(script, args.sourceCode)
-  return outcome
-}
-
-const PARAM_SAMPLE_BY_NAME: Array<[RegExp, string]> = [
-  [/(intervals?|ranges?|segments?)/i, 'intervals = [[1,3],[2,5],[3,6]]'],
-  [/(target|targetSum|sum|k)\b/i, 'nums = [2, 7, 11, 15]; target = 9'],
-  [/(nums?|arr|array|values|heights|temperatures|prices|stones|piles)/i, 'nums = [5, 3, 8, 1, 9, 2]'],
-  [/(grid|board|matrix)/i, 'grid = [[1,0,1],[0,1,0],[1,0,1]]'],
-  [/(text|word1|word2|pattern|s)\b/i, 's = "babad"'],
-  [/(root|tree)/i, 'root = [8,3,10,1,6,null,14]'],
-  [/(edges?|graph|nodes?)/i, 'n = 5; edges = [[0,1],[1,2],[2,3],[3,4]]'],
-]
-
-/** Infer a small LeetCode-style sample when the model forgets @sample.
- *  This keeps empty-input analysis from executing generators against null. */
-export function inferSampleInputFromCode(code: string, algorithmName?: string): string | undefined {
-  const candidates = [algorithmName ?? '', code]
-  const paramList = extractFirstParameterList(code)
-  if (paramList) candidates.unshift(paramList)
-
-  const joined = candidates.join('\n')
-  for (const [pattern, sample] of PARAM_SAMPLE_BY_NAME) {
-    if (pattern.test(joined)) return sample
-  }
-  return undefined
-}
-
-function extractFirstParameterList(code: string): string | undefined {
-  const patterns = [
-    /\bdef\s+\w+\s*\(([^)]*)\)/,
-    /\b(?:public|private|protected)?\s*(?:static\s+)?[\w<>\[\], ?]+\s+\w+\s*\(([^)]*)\)\s*[{;]/,
-    /\bfunction\s+\w+\s*\(([^)]*)\)/,
-  ]
-  for (const pattern of patterns) {
-    const match = pattern.exec(code)
-    if (match?.[1]) return match[1]
-  }
-  return undefined
-}
-
-/** 从已解析输入构造一个尽量有内容的兜底 initialState（数组优先）。 */
-function toFallbackInitialState(value: unknown): InitialState {
-  if (Array.isArray(value)) {
-    const data = value.map(v => (typeof v === 'number' ? v : Number(v))).filter(v => !Number.isNaN(v))
-    return { type: 'array', data }
-  }
-  if (value && typeof value === 'object') {
-    const arr = (value as Record<string, unknown>).data ?? (value as Record<string, unknown>).array
-    if (Array.isArray(arr)) {
-      const data = arr.map(v => (typeof v === 'number' ? v : Number(v))).filter(v => !Number.isNaN(v))
-      return { type: 'array', data }
-    }
-  }
-  return { type: 'array', data: [] }
-}
-
-/** Result of one AI analysis pass. The caller is responsible for translating
- *  this into history entries (Playground vs Visualizer store history differently). */
 export interface AnalyzeResult {
   ok: boolean
-  /** Generated/recognized animation (present on success when generation succeeded). */
   script?: AnimationScript
-  /** Phase 1: reusable, input-independent generator artifact. */
   artifact?: GeneratorArtifact
   error?: string
-  /** Raw text to surface in "查看原始响应" — AI raw response or generator source. */
   rawResponse?: string
-  /** AI structured error report (compilation/schema), if any. */
   errorReport?: import('@/ai').AIErrorReport
-  /** The raw input string the returned script was actually generated from.
-   *  Callers persist this to history so the input box never diverges from the animation. */
   usedInput?: string
 }
 
-interface AnalyzeParams {
-  code: string
-  language: string
-  inputData: string
-  algorithmName?: string
-  signal?: AbortSignal
-}
-
 export interface UseAIGeneratorOptions {
-  /** Current raw input box text (drives the live-regen effect). */
   inputData: string
-  /** Page-specific input parser. Playground → parseInputData; Visualizer → parsedInput logic. */
   parseInput: (raw: string) => { valid: boolean; value: unknown }
-  /** Apply a freshly generated script. Playground → setAnimationScript; Visualizer → setAnimationScript + loadScript. */
   applyScript: (script: AnimationScript) => void
-  /** store.setAIStatus */
   setStatus: (status: AIStatus, error?: string, rawResponse?: string) => void
 }
 
 export interface UseAIGeneratorReturn {
-  /** Recognized built-in algorithm id (Phase 1 live mode), or null. */
   liveAlgoId: string | null
-  /** AI-generated generator (Phase 2 live mode), or null. */
   generator: LiveGenerator | null
-  /** Run one AI analysis pass: recognize → Phase 1 (preset) / Phase 2 (sandbox + @sample retry + complexity).
-   *  Sets liveAlgoId/generator and (on success) applies the script. Returns a result for the caller's history.
-   *  @param currentInputValid whether the current input box already holds valid input (skip @sample auto-fill).
-   *  @param sampleFill called to auto-fill the AI sample input when the box is empty/invalid. */
   analyze: (
-    params: AnalyzeParams,
+    params: CompileArtifactParams,
     currentInputValid: boolean,
     sampleFill: (sample: string) => void,
   ) => Promise<AnalyzeResult>
-  /** Clear live mode (no live regen until the next analyze). */
   reset: () => void
-  /** Restore live mode directly (e.g. from a saved history entry). Pass null to clear. */
   setLive: (live: { algoId: string } | { generator: LiveGenerator } | null) => void
 }
 
-export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorReturn {
-  const { inputData, parseInput, applyScript, setStatus } = opts
-
+export function useAIGenerator(options: UseAIGeneratorOptions): UseAIGeneratorReturn {
+  const { inputData, parseInput, applyScript, setStatus } = options
   const [liveAlgoId, setLiveAlgoId] = useState<string | null>(null)
   const [generator, setGenerator] = useState<LiveGenerator | null>(null)
-
-  // Keep the latest page-injected callbacks in refs so the live-regen effect
-  // doesn't re-fire (and re-debounce) just because a parent re-render produced
-  // new closure identities.
   const parseInputRef = useRef(parseInput)
   const applyScriptRef = useRef(applyScript)
   const setStatusRef = useRef(setStatus)
+
   useEffect(() => {
     parseInputRef.current = parseInput
     applyScriptRef.current = applyScript
@@ -219,287 +67,62 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
     setGenerator(null)
   }, [])
 
-  const setLive = useCallback(
-    (live: { algoId: string } | { generator: LiveGenerator } | null) => {
-      if (live === null) {
-        setLiveAlgoId(null)
-        setGenerator(null)
-      } else if ('algoId' in live) {
-        setLiveAlgoId(live.algoId)
-        setGenerator(null)
-      } else {
-        setLiveAlgoId(null)
-        setGenerator(live.generator)
-      }
-    },
-    [],
-  )
-
-  const analyze = useCallback(
-    async (
-      params: AnalyzeParams,
-      currentInputValid: boolean,
-      sampleFill: (sample: string) => void,
-    ): Promise<AnalyzeResult> => {
-      // Clear previous live mode so a stale result doesn't linger if this fails.
+  const setLive = useCallback((live: { algoId: string } | { generator: LiveGenerator } | null) => {
+    if (!live) {
       setLiveAlgoId(null)
       setGenerator(null)
-
-      const result = await analyzeCodeGenerator(
-        { code: params.code, language: params.language, inputData: params.inputData, algorithmName: params.algorithmName },
-        { signal: params.signal },
-      )
-
-      if (params.signal?.aborted) return { ok: false, error: 'AbortError' }
-
-      if (!result.success || !result.generator) {
-        const error = result.error || '分析失败'
-        const kind = classifyFailure({ stage: result.errorReport?.stage })
-        const parsedInput = parseInputRef.current(params.inputData)
-        const initial = toFallbackInitialState(parsedInput.valid ? parsedInput.value : undefined)
-        applyScriptRef.current(buildFallbackScene(initial, { kind, message: error }))
-        setStatusRef.current('error', error, result.rawResponse)
-        return { ok: false, error, rawResponse: result.rawResponse, errorReport: result.errorReport }
-      }
-
-      const gen = result.generator
-
-      // The AI infers the expected input format and supplies a sample. Auto-fill
-      // it only when the current input box is empty/invalid (respect user input).
-      const inferredSample = !currentInputValid && !gen.sampleInput
-        ? inferSampleInputFromCode(params.code, params.algorithmName)
-        : undefined
-      const sampleInput = gen.sampleInput ?? inferredSample
-      const effectiveInput = currentInputValid ? params.inputData : (sampleInput ?? params.inputData)
-      // Track the input the script is actually generated from, so the box and
-      // history always mirror the animation (see the @sample retry below).
-      let usedInput = effectiveInput
-      if (!currentInputValid && sampleInput) {
-        sampleFill(sampleInput)
-      }
-
-      const recognized = recognizeAlgorithm(gen.algorithm)
-
-      if (recognized) {
-        // Phase 1: built-in generator — generate locally from the effective input.
-        const parsed = parseInputRef.current(effectiveInput)
-        let script: AnimationScript | null = null
-        if (parsed.valid) {
-          try { script = generatePreset(recognized, parsed.value) ?? null } catch { script = null }
-        }
-        if (!script) {
-          const error = `内置算法 ${recognized} 无法根据当前输入生成动画`
-          const initial = toFallbackInitialState(parsed.valid ? parsed.value : undefined)
-          setLiveAlgoId(null)
-          setGenerator(null)
-          applyScriptRef.current(buildFallbackScene(initial, { kind: 'runtime', message: error }))
-          setStatusRef.current('error', error)
-          return { ok: false, error, usedInput }
-        }
-        setLiveAlgoId(recognized)
-        setGenerator(null)
-        applyScriptRef.current(script)
-        setStatusRef.current('success')
-        return { ok: true, script, usedInput }
-      }
-
-      // Phase 2: AI generator — execute it in the sandbox.
-      const genType: GeneratorType = gen.type === 'matrix' ? 'array' : gen.type
-      const parsed = parseInputRef.current(effectiveInput)
-      const sampleValues: unknown[] = parsed.valid ? [parsed.value] : []
-      if (sampleInput && sampleInput !== effectiveInput) {
-        const parsedSample = parseInputRef.current(sampleInput)
-        if (parsedSample.valid) sampleValues.push(parsedSample.value)
-      }
-      const category = classifyAlgorithm({ algorithm: gen.algorithm, type: gen.type, code: params.code })
-      let activeArtifact = createGeneratorArtifact({
-        sourceCode: params.code,
-        language: params.language,
-        category,
-        algorithm: gen.algorithm,
-        rendererType: genType,
-        generatorSource: gen.body,
-        inputSamples: sampleValues,
-        expectedResult: gen.expectedResult,
-        timeComplexity: gen.timeComplexity,
-        spaceComplexity: gen.spaceComplexity,
-      })
-      const verify = { userCode: params.code }
+    } else if ('algoId' in live) {
+      setLiveAlgoId(live.algoId)
+      setGenerator(null)
+    } else {
       setLiveAlgoId(null)
-      setGenerator({ artifact: activeArtifact, verify })
+      setGenerator(live.generator)
+    }
+  }, [])
 
-      let sandboxResult = parsed.valid
-        ? await runGeneratorSandboxed(activeArtifact.generatorSource, parsed.value, {
-            algorithm: activeArtifact.algorithm,
-            type: activeArtifact.rendererType,
-          })
-        : { ok: false as const, error: '输入数据无效' }
+  const analyze = useCallback(async (
+    params: CompileArtifactParams,
+    currentInputValid: boolean,
+    sampleFill: (sample: string) => void,
+  ): Promise<AnalyzeResult> => {
+    setLiveAlgoId(null)
+    setGenerator(null)
+    const result = await compileArtifact(params, {
+      currentInputValid,
+      parseInput: raw => parseInputRef.current(raw),
+    })
+    if (result.error === 'AbortError') return { ok: false, error: 'AbortError' }
 
-      // If the generator crashed (often a stale/wrong-shaped leftover input),
-      // retry with the AI's own sample input, which matches the expected format.
-      if (!sandboxResult.ok && sampleInput && sampleInput !== effectiveInput) {
-        const sp = parseInputRef.current(sampleInput)
-        if (sp.valid) {
-          const retry = await runGeneratorSandboxed(activeArtifact.generatorSource, sp.value, {
-            algorithm: activeArtifact.algorithm,
-            type: activeArtifact.rendererType,
-          })
-          if (retry.ok) { sandboxResult = retry; sampleFill(sampleInput); usedInput = sampleInput }
-        }
-      }
-
-      // 沙箱运行期报错(异常/崩溃):把真实错误回发 AI 修复一次。
-      // 常见原因是对 input 形状的错误假设(如访问不存在的字段),让 AI 据实修正。
-      if (!sandboxResult.ok) {
-        const p = parseInputRef.current(usedInput)
-        if (p.valid) {
-          const repaired = await repairGenerator({
-            body: activeArtifact.generatorSource, sourceCode: params.code, language: params.language, category,
-            issues: [{
-              code: 'runtime-error', severity: 'error',
-              message: '生成器在沙箱中执行报错: ' + (sandboxResult.error || '未知错误'),
-              hint: '按运行时报错修正:不要假设 input 上存在不存在的字段;先对 input 的真实形状做健壮解析(数组与对象都要兼容、带空值回退),再驱动 b。',
-            }],
-            inputData: usedInput, signal: params.signal,
-          })
-          if (repaired) {
-            const retry = await runGeneratorSandboxed(repaired.body, p.value, {
-              algorithm: activeArtifact.algorithm,
-              type: activeArtifact.rendererType,
-            })
-            if (retry.ok && retry.script) {
-              sandboxResult = retry
-              activeArtifact = { ...activeArtifact, generatorSource: repaired.body }
-              setGenerator({ artifact: activeArtifact, verify })
-            }
-          }
-        }
-      }
-
-      // 确定性质量门:检查生成动画的语义质量(空结构/全 0 网格/递归无栈/无操作等)。
-      // 仅当存在 error 时,带具体问题清单回发 AI 修复一次,并且只有修复结果不劣化才采用。
-      if (sandboxResult.ok && sandboxResult.script) {
-        const gate = runQualityGate(sandboxResult.script, category, CATEGORY_PROFILES[category].rules, params.code)
-        if (!gate.passed) {
-          const errs = gate.issues.filter(i => i.severity === 'error')
-          const repaired = await repairGenerator({
-            body: activeArtifact.generatorSource, sourceCode: params.code, language: params.language, category, issues: errs,
-            inputData: usedInput, signal: params.signal,
-          })
-          if (repaired) {
-            const p = parseInputRef.current(usedInput)
-            if (p.valid) {
-              const retry = await runGeneratorSandboxed(repaired.body, p.value, {
-                algorithm: activeArtifact.algorithm,
-                type: activeArtifact.rendererType,
-              })
-              if (retry.ok && retry.script) {
-                const errs2 = runQualityGate(retry.script, category, CATEGORY_PROFILES[category].rules, params.code)
-                  .issues.filter(i => i.severity === 'error')
-                if (errs2.length < errs.length) {
-                  sandboxResult = retry
-                  activeArtifact = { ...activeArtifact, generatorSource: repaired.body }
-                  setGenerator({ artifact: activeArtifact, verify })
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // 语义一致性校验:动画输出 vs 原代码预期(JS 真值执行优先,@expect 兜底)。
-      // 失败 → 带具体差异回发 AI 修复一次;仍失败不回退,打 fail 标记交给 UI 警示。
-      if (sandboxResult.ok && sandboxResult.script) {
-        const p = parseInputRef.current(usedInput)
-        const verifyArgs = {
-          expectRaw: activeArtifact.expectedResult,
-          language: params.language,
-          userCode: params.code,
-          input: p.valid ? p.value : undefined,
-          sourceCode: params.code,
-        }
-        const outcome = await verifyAndTag(sandboxResult.script, verifyArgs)
-        if (outcome.status === 'fail' && p.valid) {
-          const repaired = await repairGenerator({
-            body: activeArtifact.generatorSource, sourceCode: params.code, language: params.language, category,
-            issues: [{
-              code: 'result-mismatch', severity: 'error',
-              message: `动画最终结果 ${formatVerifyValue(outcome.actual)} 与原代码在该输入上的预期结果 ${formatVerifyValue(outcome.expected)} 不一致`,
-              hint: '逐行重读原代码,严格按原代码语义重写生成器逻辑(注意循环边界、条件分支与返回值),确保 b.result(...) 与原代码返回值一致;不要为了凑结果硬编码。',
-            }],
-            inputData: usedInput, signal: params.signal,
-          })
-          if (repaired) {
-            const retry = await runGeneratorSandboxed(repaired.body, p.value, {
-              algorithm: activeArtifact.algorithm,
-              type: activeArtifact.rendererType,
-            })
-            if (retry.ok && retry.script) {
-              const retryOutcome = await verifyAndTag(retry.script, verifyArgs)
-              if (retryOutcome.status !== 'fail') {
-                sandboxResult = retry
-                activeArtifact = { ...activeArtifact, generatorSource: repaired.body }
-                setGenerator({ artifact: activeArtifact, verify })
-              }
-            }
-          }
-        }
-      }
-
-      if (sandboxResult.ok && sandboxResult.script) {
-        // Fill in AI-provided complexity (the builder defaults to O(?)).
-        if (gen.timeComplexity || gen.spaceComplexity) {
-          const tc = gen.timeComplexity || 'O(?)'
-          sandboxResult.script.complexity = {
-            time: { best: tc, average: tc, worst: tc },
-            space: gen.spaceComplexity || 'O(?)',
-          }
-        }
-        const verificationFailed = sandboxResult.script.verification?.status === 'fail'
-        activeArtifact = {
-          ...activeArtifact,
-          validation: {
-            status: verificationFailed ? 'failed' : 'passed',
-            checkedInputs: 1,
-            issues: verificationFailed
-              ? [{ code: 'result-mismatch', message: sandboxResult.script.verification?.message || '动画结果验证失败' }]
-              : [],
-          },
-        }
-        setGenerator({ artifact: activeArtifact, verify })
-        applyScriptRef.current(sandboxResult.script)
-        setStatusRef.current('success')
-        return { ok: true, script: sandboxResult.script, artifact: activeArtifact, usedInput }
-      }
-
-      // 沙箱失败：用兜底场景保证渲染永不空白，并以 kind 区分超时/崩溃。
-      const error = sandboxResult.error || '生成器执行失败'
-      const kind = classifyFailure({ kind: sandboxResult.kind })
-      const initial = parsed.valid ? toFallbackInitialState(parsed.value) : { type: 'array' as const, data: [] }
-      applyScriptRef.current(buildFallbackScene(initial, { kind, message: error }))
-      // Surface the generator source so diagnostics can show the AI code.
-      activeArtifact = {
-        ...activeArtifact,
-        validation: {
-          status: 'failed',
-          checkedInputs: parsed.valid ? 1 : 0,
-          issues: [{ code: 'runtime-error', message: error }],
-        },
-      }
-      setGenerator({ artifact: activeArtifact, verify })
-      setStatusRef.current('error', error, activeArtifact.generatorSource)
+    if (result.sampleInput &&
+      (!currentInputValid || (result.usedInput === result.sampleInput && params.inputData !== result.sampleInput))) {
+      sampleFill(result.sampleInput)
+    }
+    if (!result.ok || !result.script) {
+      if (result.generator) setGenerator(result.generator)
+      if (result.fallbackScript) applyScriptRef.current(result.fallbackScript)
+      setStatusRef.current('error', result.error || '分析失败', result.rawResponse)
       return {
         ok: false,
-        error,
-        artifact: activeArtifact,
-        rawResponse: activeArtifact.generatorSource,
+        error: result.error,
+        artifact: result.artifact,
+        rawResponse: result.rawResponse,
+        errorReport: result.errorReport,
+        usedInput: result.usedInput,
       }
-    },
-    [],
-  )
+    }
 
-  // 输入变化 → 本地重生成（Phase 1 内置生成器 或 Phase 2 AI 生成器），不调 AI。
-  // 仅在做过 AI 分析（liveAlgoId/generator 非空）后才触发——预设选择流程不受影响。
+    setLiveAlgoId(result.liveAlgoId ?? null)
+    setGenerator(result.generator ?? null)
+    applyScriptRef.current(result.script)
+    setStatusRef.current('success')
+    return {
+      ok: true,
+      script: result.script,
+      artifact: result.artifact,
+      usedInput: result.usedInput,
+    }
+  }, [])
+
   useEffect(() => {
     if (liveAlgoId) {
       const handle = setTimeout(() => {
@@ -507,53 +130,39 @@ export function useAIGenerator(opts: UseAIGeneratorOptions): UseAIGeneratorRetur
         if (!parsed.valid) return
         let script: AnimationScript | null = null
         try { script = generatePreset(liveAlgoId, parsed.value) ?? null } catch { script = null }
-        if (script) { applyScriptRef.current(script); setStatusRef.current('success') }
+        if (script) {
+          applyScriptRef.current(script)
+          setStatusRef.current('success')
+        }
       }, 400)
       return () => clearTimeout(handle)
     }
+
     if (generator) {
       let cancelled = false
       const handle = setTimeout(async () => {
         const parsed = parseInputRef.current(inputData)
         if (!parsed.valid) return
-        const validated = validateInputContract(generator.artifact.inputContract, parsed.value)
-        if (!validated.ok) {
-          applyScriptRef.current(buildFallbackScene(toFallbackInitialState(parsed.value), {
-            kind: 'runtime',
-            message: validated.error,
-          }))
-          setStatusRef.current('error', validated.error)
-          return
-        }
-        const result = await runGeneratorSandboxed(
-          generator.artifact.generatorSource,
-          validated.value,
-          {
-            algorithm: generator.artifact.algorithm,
-            type: generator.artifact.rendererType,
-          },
-        )
+        const result = await runArtifact(generator.artifact, parsed.value, {
+          sourceCode: generator.verify?.userCode,
+        })
         if (cancelled) return
         if (result.ok && result.script) {
-          if (generator.verify) {
-            await verifyAndTag(result.script, {
-              expectRaw: generator.artifact.expectedResult,
-              language: generator.artifact.language,
-              userCode: generator.verify.userCode,
-              input: validated.value,
-              sourceCode: generator.verify.userCode,
-            })
-          }
-          applyScriptRef.current(result.script); setStatusRef.current('success')
-        } else {
-          // 输入变化后重生成失败：兜底场景，避免空白或残留旧动画。
-          const error = result.error || '生成器执行失败'
-          const kind = classifyFailure({ kind: result.kind })
-          applyScriptRef.current(buildFallbackScene(toFallbackInitialState(parsed.value), { kind, message: error }))
-          setStatusRef.current('error', error)
+          applyScriptRef.current(result.script)
+          setStatusRef.current('success')
+          return
         }
+        const error = result.error || '生成器执行失败'
+        applyScriptRef.current(buildFallbackScene(
+          toFallbackInitialState(parsed.value),
+          { kind: classifyFailure({ kind: result.kind }), message: error },
+        ))
+        setStatusRef.current('error', error)
       }, 400)
-      return () => { cancelled = true; clearTimeout(handle) }
+      return () => {
+        cancelled = true
+        clearTimeout(handle)
+      }
     }
   }, [inputData, liveAlgoId, generator])
 
