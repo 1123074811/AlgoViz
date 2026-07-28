@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { compileDPEvent, compileDPEvents, DP_TABLE_COMMAND_TYPE } from '../../graphics/compile/dpCompile';
-import type { DPTableCollection } from '../../overlays/dpTypes';
+import { compileDPEvent, compileDPEvents, DP_TABLE_COMMAND_TYPE } from '../dpCompile';
+import type { DPTableCollection } from '@/scene/overlays/dpTypes';
 
 describe('dpCompiler', () => {
   it('creates a DP table model from dimensions, labels, and initial values', () => {

@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   compileCallStackEvents,
   reduceCallStackEvent,
-} from "../../graphics/compile/callStackCompile";
-import type { CallStackEvent } from "../../overlays/callStackTypes";
+} from "../callStackCompile";
+import type { CallStackEvent } from "@/scene/overlays/callStackTypes";
 
 describe("callStackCompiler", () => {
   it("pushes a frame and marks it active", () => {

@@ -47,5 +47,38 @@ export default [
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     },
   },
+  {
+    files: ['src/scene/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          group: ['@/ai/**', '@/pages/**', '@/sandbox/**', '@/store/**'],
+          message: 'Scene 不能反向依赖页面、AI、Sandbox 或 Store。',
+        }],
+      }],
+    },
+  },
+  {
+    files: ['src/sandbox/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          group: ['@/ai/**', '@/components/**', '@/hooks/**', '@/pages/**', '@/store/**'],
+          message: 'Sandbox 必须保持无 UI、Store 和网络编排依赖。',
+        }],
+      }],
+    },
+  },
+  {
+    files: ['src/ai/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          group: ['@/components/**', '@/hooks/**', '@/pages/**', '@/scene/graphics/renderers/**', '@/store/**'],
+          message: 'AI 编译层只能依赖契约，不能依赖页面、Store 或具体 Renderer。',
+        }],
+      }],
+    },
+  },
   prettierConfig,
 ]

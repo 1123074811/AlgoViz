@@ -15,7 +15,7 @@ it('dispatches every viewport action', () => {
   fireEvent.click(screen.getByTitle('Zoom In'))
   fireEvent.click(screen.getByTitle('Zoom Out'))
   fireEvent.click(screen.getByTitle('Reset View'))
-  fireEvent.click(screen.getByTitle('全屏'))
+  fireEvent.click(screen.getByTitle(/全屏|Fullscreen/))
 
   expect(actions.onZoomIn).toHaveBeenCalledOnce()
   expect(actions.onZoomOut).toHaveBeenCalledOnce()

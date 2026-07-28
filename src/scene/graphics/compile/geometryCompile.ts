@@ -3,7 +3,7 @@ import type { GeometryAlgorithmEvent } from '../../eventTypes'
 import type { CompileContext, EventCompiler } from '../../SceneEngine'
 import type { ActionColor } from '@/types/animation'
 import type { SceneCell } from '../../types'
-import { PLANE } from '../../compilers/geometryMap'
+import { PLANE } from '../shared/geometryMap'
 
 export const geometryCompiler: EventCompiler = {
   supports: (event): event is GeometryAlgorithmEvent => event.type.startsWith('geometry.'),

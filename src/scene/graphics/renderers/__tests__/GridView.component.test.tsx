@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
-import { GridView } from '../../graphics/renderers/GridView'
-import type { GridCellModel, GridModel } from '../../overlays/gridTypes'
+import { GridView } from '../GridView'
+import type { GridCellModel, GridModel } from '@/scene/overlays/gridTypes'
 
 function cellMap(cells: GridCellModel[]): Record<string, GridCellModel> {
   const out: Record<string, GridCellModel> = {}

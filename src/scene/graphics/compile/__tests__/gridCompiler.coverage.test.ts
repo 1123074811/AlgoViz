@@ -3,8 +3,8 @@ import {
   reduceGridEvent,
   compileGridEvent,
   compileGridEvents,
-} from '../../graphics/compile/gridCompile'
-import type { GridCollection } from '../../overlays/gridTypes'
+} from '../gridCompile'
+import type { GridCollection } from '@/scene/overlays/gridTypes'
 
 function createCollection(gridId?: string): GridCollection {
   return reduceGridEvent(

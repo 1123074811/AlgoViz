@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import type { AnimationScript } from '@/types/animation'
-import type { AlgorithmEvent } from '../../eventTypes'
-import { applyCommands } from '../../SceneEngine'
-import { linkedListCompiler } from '../../graphics/compile/linkedListCompile'
-import { createEmptyScene } from '../../types'
-import type { SceneNode, SceneState } from '../../types'
+import type { AlgorithmEvent } from '@/scene/eventTypes'
+import { applyCommands } from '@/scene/SceneEngine'
+import { linkedListCompiler } from '../linkedListCompile'
+import { createEmptyScene } from '@/scene/types'
+import type { SceneNode, SceneState } from '@/scene/types'
 
 const dummyScript = {
   algorithm: 'linked_list',

@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import type { AnimationScript } from '@/types/animation'
-import type { AlgorithmEvent } from '../../eventTypes'
-import { applyCommands } from '../../SceneEngine'
-import { dequeCompiler } from '../../graphics/compile/dequeCompile'
-import { dequeCellId } from '../../graphics/compile/dequeCompile'
-import { createEmptyScene } from '../../types'
-import type { SceneCell, SceneState } from '../../types'
+import type { AlgorithmEvent } from '@/scene/eventTypes'
+import { applyCommands } from '@/scene/SceneEngine'
+import { dequeCompiler } from '../dequeCompile'
+import { dequeCellId } from '../dequeCompile'
+import { createEmptyScene } from '@/scene/types'
+import type { SceneCell, SceneState } from '@/scene/types'
 
 const dummyScript = {
   algorithm: 'deque',

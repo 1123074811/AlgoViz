@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { reduceGridEvent } from '../../graphics/compile/gridCompile'
-import type { GridCollection } from '../../overlays/gridTypes'
+import { reduceGridEvent } from '../gridCompile'
+import type { GridCollection } from '@/scene/overlays/gridTypes'
 
 describe('gridCompiler', () => {
   const create = (collection: GridCollection = {}) =>

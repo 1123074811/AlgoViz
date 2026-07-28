@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { DPTableView } from '../../graphics/renderers/DPTableView'
-import type { DPTableModel } from '../../overlays/dpTypes'
+import { DPTableView } from '../DPTableView'
+import type { DPTableModel } from '@/scene/overlays/dpTypes'
 
 function model(): DPTableModel {
   return {

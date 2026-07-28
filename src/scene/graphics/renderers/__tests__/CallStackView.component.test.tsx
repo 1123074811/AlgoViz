@@ -1,11 +1,11 @@
 import { render } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
-import CallStackView from '../../graphics/renderers/CallStackView'
+import CallStackView from '../CallStackView'
 import type {
   CallStackFrame,
   CallStackModel,
   CallStackFrameStatus,
-} from '../../overlays/callStackTypes'
+} from '@/scene/overlays/callStackTypes'
 
 let seq = 0
 function frame(partial: Partial<CallStackFrame> & { status: CallStackFrameStatus }): CallStackFrame {

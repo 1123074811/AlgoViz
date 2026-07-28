@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { applyCommands } from '../../SceneEngine'
-import { compileEvent } from '../../eventCompiler'
-import { createEmptyScene } from '../../types'
+import { applyCommands } from '@/scene/SceneEngine'
+import { compileEvent } from '@/scene/eventCompiler'
+import { createEmptyScene } from '@/scene/types'
 import type { AnimationScript } from '@/types/animation'
-import type { AlgorithmEvent } from '../../eventTypes'
-import type { SceneState, SceneCell } from '../../types'
+import type { AlgorithmEvent } from '@/scene/eventTypes'
+import type { SceneState, SceneCell } from '@/scene/types'
 
 const dummy = { algorithm: 'gan', complexity: { time: { best: '-', average: '-', worst: '-' }, space: '-' }, initialState: { type: 'graph', data: [], nodes: [], edges: [] }, steps: [] } as unknown as AnimationScript
 const step = (s: SceneState, e: AlgorithmEvent) => applyCommands(s, compileEvent(e, { scene: s, stepIndex: 0, script: dummy }))

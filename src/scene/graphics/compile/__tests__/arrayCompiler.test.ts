@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { arrayCompiler } from '../../graphics/compile/arrayCompile'
-import { truncateToWidth } from '../../textMetrics'
-import type { CompileContext } from '../../SceneEngine'
-import type { SceneCell } from '../../types'
+import { arrayCompiler } from '../arrayCompile'
+import { truncateToWidth } from '@/scene/textMetrics'
+import type { CompileContext } from '@/scene/SceneEngine'
+import type { SceneCell } from '@/scene/types'
 
 // array.create does not read the context, so a minimal stub suffices.
 const ctx = {} as CompileContext

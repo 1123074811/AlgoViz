@@ -1,5 +1,5 @@
 import type { SceneCell } from '../../types'
-import { makeProjector } from '../../compilers/geometryMap'
+import { makeProjector } from '../shared/geometryMap'
 import { SEMANTIC_COLORS, NEUTRALS, TYPO } from '../../tokens'
 
 const COLOR = (c?: string) =>
