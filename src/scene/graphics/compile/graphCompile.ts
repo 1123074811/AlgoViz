@@ -14,7 +14,7 @@ function compileGraphEvent(event: GraphAlgorithmEvent, _context: CompileContext)
     case 'graph.create':
       return [
         ...event.nodes.map((node) => ({ type: 'create_node' as const, node: createGraphNode(node.id, node.label ?? node.id) })),
-        ...event.edges.map((edge) => ({ type: 'connect' as const, edge: createEdge(edge.id ?? edgeId(edge.source, edge.target), edge.source, 'center', edge.target, 'center', undefined, false) })),
+        ...event.edges.map((edge) => ({ type: 'connect' as const, edge: createEdge(edge.id ?? edgeId(edge.source, edge.target), edge.source, 'center', edge.target, 'center', undefined, false, event.directed ?? false) })),
         { type: 'relayout', layout: 'graph' },
       ]
     case 'graph.visit_node':

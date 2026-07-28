@@ -9,6 +9,7 @@ const BOTTOM_Y = 360
 const CELL_GAP = 44
 const MIN_WIDTH = 52
 const MAX_WIDTH = 180
+const PHANTOM_X = 840
 
 export const stackCompiler: EventCompiler = {
   supports: (event): event is StackAlgorithmEvent => event.type.startsWith('stack.'),
@@ -52,7 +53,7 @@ function compileStackEvent(event: StackAlgorithmEvent, context: CompileContext):
         ...cleanupCommands,
         { type: 'create_cell', cell: stackCell(id, event.value, count, BOTTOM_Y - count * CELL_GAP, 'success', event.label) },
         { type: 'set_state', entityId: id, state: { role: 'inserted', color: 'success', pulse: true }, merge: true },
-        { type: 'create_cell', cell: stackCell(phantomId, event.value, -1, BOTTOM_Y - count * CELL_GAP - 60, 'success', event.label, CX + 180) },
+        { type: 'create_cell', cell: stackCell(phantomId, event.value, -1, BOTTOM_Y - count * CELL_GAP - 60, 'success', event.label, PHANTOM_X) },
         { type: 'connect', edge: AuxiliaryUnit.arrow({
           id: arrowId, fromEntity: phantomId, toEntity: id,
           curved: true, dashed: true, thickness: 1.2, color: 'success', pulse: true,
@@ -72,7 +73,7 @@ function compileStackEvent(event: StackAlgorithmEvent, context: CompileContext):
       return [
         ...cleanupCommands,
         { type: 'set_state', entityId: topId, state: { role: 'deleted', color: 'danger', opacity: 0.4, pulse: true }, merge: true },
-        { type: 'create_cell', cell: stackCell(phantomId, topVal, -1, BOTTOM_Y - topIdx * CELL_GAP - 60, 'danger', undefined, CX + 180) },
+        { type: 'create_cell', cell: stackCell(phantomId, topVal, -1, BOTTOM_Y - topIdx * CELL_GAP - 60, 'danger', undefined, PHANTOM_X) },
         { type: 'connect', edge: AuxiliaryUnit.arrow({
           id: arrowId, fromEntity: topId, toEntity: phantomId,
           curved: true, dashed: true, thickness: 1.2, color: 'danger', pulse: true,

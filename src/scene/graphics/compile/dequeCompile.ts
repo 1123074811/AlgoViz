@@ -76,7 +76,6 @@ function compileDequeEvent(event: DequeAlgorithmEvent, context: CompileContext):
       const frontId = ids[0]
       const frontEnt = context.scene.entities[frontId]
       const frontVal = frontEnt?.type === 'cell' ? String(frontEnt.value ?? '?') : '?'
-      const phantomId = `phantom_pf_${frontId}`
       const frontPos = (frontEnt && 'position' in frontEnt ? (frontEnt as { position: { x: number; y: number } }).position : null) ?? { x: CX, y: BASE_Y }
       const shiftCommands: SceneCommand[] = ids.slice(1).map((eid, i) => ({
         type: 'move' as const, entityId: eid, to: { x: CX - (ids.length - 1) * CELL_GAP / 2 + i * CELL_GAP, y: BASE_Y }, duration: 300, easing: 'ease' as const,
@@ -85,7 +84,7 @@ function compileDequeEvent(event: DequeAlgorithmEvent, context: CompileContext):
         ...cleanupCommands,
         ...shiftCommands,
         { type: 'set_state', entityId: frontId, state: { role: 'deleted', color: 'danger', opacity: 0.3, pulse: true }, merge: true },
-        { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: frontVal, index: -1, x: frontPos.x, y: frontPos.y - 70, color: 'danger' }) },
+        { type: 'move', entityId: frontId, to: { x: frontPos.x, y: frontPos.y - 70 }, duration: 300, easing: 'ease' },
         { type: 'add_note', text: `pop_front() → ${frontVal}` },
       ]
     }
@@ -95,7 +94,6 @@ function compileDequeEvent(event: DequeAlgorithmEvent, context: CompileContext):
       const backId = ids[ids.length - 1]
       const backEnt = context.scene.entities[backId]
       const backVal = backEnt?.type === 'cell' ? String(backEnt.value ?? '?') : '?'
-      const phantomId = `phantom_pb_${backId}`
       const backPos = (backEnt && 'position' in backEnt ? (backEnt as { position: { x: number; y: number } }).position : null) ?? { x: CX, y: BASE_Y }
       const newStartX = CX - (ids.length - 1) * CELL_GAP / 2
       const shiftCommands: SceneCommand[] = ids.slice(0, -1).map((eid, i) => ({
@@ -105,7 +103,7 @@ function compileDequeEvent(event: DequeAlgorithmEvent, context: CompileContext):
         ...cleanupCommands,
         ...shiftCommands,
         { type: 'set_state', entityId: backId, state: { role: 'deleted', color: 'danger', opacity: 0.3, pulse: true }, merge: true },
-        { type: 'create_cell', cell: DataUnit.arrayCell({ id: phantomId, value: backVal, index: -1, x: backPos.x, y: backPos.y - 70, color: 'danger' }) },
+        { type: 'move', entityId: backId, to: { x: backPos.x, y: backPos.y - 70 }, duration: 300, easing: 'ease' },
         { type: 'add_note', text: `pop_back() → ${backVal}` },
       ]
     }

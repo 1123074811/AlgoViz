@@ -26,18 +26,20 @@ export const unionFindCompiler: EventCompiler = {
 
 function compileUnionFindEvent(event: UnionFindAlgorithmEvent, context: CompileContext): SceneCommand[] {
   switch (event.type) {
-    case 'union_find.create':
+    case 'union_find.create': {
+      const rows = forestRows(layoutForest(event.parent))
       return [
         ...createAllNodes(event.parent),
-        ...createArrayCells('parent', event.parent),
-        ...(event.rank ? createArrayCells('rank', event.rank) : []),
-        ...createLabels(Boolean(event.rank)),
+        ...createArrayCells('parent', event.parent, rows.parentY),
+        ...(event.rank ? createArrayCells('rank', event.rank, rows.rankY) : []),
+        ...createLabels(Boolean(event.rank), rows),
         ...syncParentEdges(event.parent),
       ]
+    }
     case 'union_find.find':
       return [
         ...clearTransient(context),
-        ...layoutNodeMoves(event.parent),
+        ...layoutNodeMoves(event.parent, Boolean(event.rank)),
         ...event.path.map((node, index) => highlightNode(node, index === event.path.length - 1 ? 'success' : 'warning')),
         ...event.path.map((node) => highlightCell('parent', node, 'warning')),
         highlightNode(event.root, 'success'),
@@ -46,7 +48,7 @@ function compileUnionFindEvent(event: UnionFindAlgorithmEvent, context: CompileC
       return [
         ...clearTransient(context),
         ...syncArrays(event.parent, event.rank, [event.childRoot, event.parentRoot]),
-        ...layoutNodeMoves(event.parent),
+        ...layoutNodeMoves(event.parent, Boolean(event.rank)),
         ...syncParentEdges(event.parent),
         highlightNode(event.childRoot, 'warning'),
         highlightNode(event.parentRoot, 'success'),
@@ -57,7 +59,7 @@ function compileUnionFindEvent(event: UnionFindAlgorithmEvent, context: CompileC
       return [
         ...clearTransient(context),
         ...syncArrays(event.parent, event.rank, [event.node]),
-        ...layoutNodeMoves(event.parent),
+        ...layoutNodeMoves(event.parent, Boolean(event.rank)),
         ...syncParentEdges(event.parent),
         highlightNode(event.node, 'primary'),
         highlightNode(event.to, 'success'),
@@ -70,14 +72,14 @@ function compileUnionFindEvent(event: UnionFindAlgorithmEvent, context: CompileC
         highlightNode(event.y, 'warning'),
         highlightNode(event.root, 'success'),
         ...syncArrays(event.parent, event.rank, [event.x, event.y, event.root]),
-        ...layoutNodeMoves(event.parent),
+        ...layoutNodeMoves(event.parent, Boolean(event.rank)),
         ...syncParentEdges(event.parent),
       ]
     case 'union_find.done':
       return [
         ...clearTransient(context),
         ...syncArrays(event.parent, event.rank, event.parent.map((_v, index) => index)),
-        ...layoutNodeMoves(event.parent),
+        ...layoutNodeMoves(event.parent, Boolean(event.rank)),
         ...syncParentEdges(event.parent),
         ...event.parent.map((_v, index) => highlightNode(index, 'success')),
       ]
@@ -112,7 +114,7 @@ function createUnionFindNode(index: number, x: number, y: number): SceneNode {
   }
 }
 
-function createArrayCells(kind: 'parent' | 'rank', values: number[]): SceneCommand[] {
+function createArrayCells(kind: 'parent' | 'rank', values: number[], y: number): SceneCommand[] {
   return values.map((value, index) => ({
     type: 'create_cell' as const,
     cell: DataUnit.arrayCell({
@@ -120,19 +122,19 @@ function createArrayCells(kind: 'parent' | 'rank', values: number[]): SceneComma
       value,
       index,
       x: arrayX(index, values.length),
-      y: kind === 'parent' ? PARENT_Y : RANK_Y,
+      y,
       width: 46,
     }),
     animation: 'scale' as const,
   }))
 }
 
-function createLabels(hasRank: boolean): SceneCommand[] {
+function createLabels(hasRank: boolean, rows: { parentY: number; rankY: number }): SceneCommand[] {
   const labels: SceneLabel[] = [
     { id: 'uf_label_nodes', type: 'label', text: 'Disjoint-set forest', position: { x: CENTER_X, y: NODE_Y - 58 }, state: { color: 'muted' } },
-    { id: 'uf_label_parent', type: 'label', text: 'parent', position: { x: CENTER_X, y: PARENT_Y - 44 }, state: { color: 'primary' } },
+    { id: 'uf_label_parent', type: 'label', text: 'parent', position: { x: CENTER_X, y: rows.parentY - 44 }, state: { color: 'primary' } },
   ]
-  if (hasRank) labels.push({ id: 'uf_label_rank', type: 'label', text: 'rank', position: { x: CENTER_X, y: RANK_Y - 44 }, state: { color: 'muted' } })
+  if (hasRank) labels.push({ id: 'uf_label_rank', type: 'label', text: 'rank', position: { x: CENTER_X, y: (rows.parentY + rows.rankY) / 2 }, state: { color: 'muted' } })
   return labels.map((label) => ({ type: 'create_label' as const, label }))
 }
 
@@ -163,15 +165,30 @@ function syncParentEdges(parent: number[]): SceneCommand[] {
   return [...disconnects, ...connects]
 }
 
-function layoutNodeMoves(parent: number[]): SceneCommand[] {
+function layoutNodeMoves(parent: number[], hasRank: boolean): SceneCommand[] {
   const positions = layoutForest(parent)
-  return parent.map((_value, index) => ({
+  const rows = forestRows(positions)
+  return [
+    ...parent.map((_value, index) => ({
     type: 'move' as const,
     entityId: nodeId(index),
     to: positions[index] ?? { x: arrayX(index, parent.length), y: NODE_Y },
     duration: 360,
     easing: 'spring' as const,
-  }))
+    })),
+    ...parent.map((_value, index) => ({
+      type: 'move' as const,
+      entityId: cellId('parent', index),
+      to: { x: arrayX(index, parent.length), y: rows.parentY },
+    })),
+    ...(hasRank ? parent.map((_value, index) => ({
+      type: 'move' as const,
+      entityId: cellId('rank', index),
+      to: { x: arrayX(index, parent.length), y: rows.rankY },
+    })) : []),
+    { type: 'move', entityId: 'uf_label_parent', to: { x: CENTER_X, y: rows.parentY - 44 } },
+    ...(hasRank ? [{ type: 'move' as const, entityId: 'uf_label_rank', to: { x: CENTER_X, y: (rows.parentY + rows.rankY) / 2 } }] : []),
+  ]
 }
 
 function parentEdge(child: number, parent: number): SceneEdge {
@@ -269,6 +286,12 @@ function layoutForest(parent: number[]) {
     if (!positions[index]) positions[index] = { x: arrayX(index, size), y: NODE_Y + NODE_LEVEL_GAP }
   }
   return positions
+}
+
+function forestRows(positions: Record<number, { x: number; y: number }>) {
+  const forestBottom = Math.max(NODE_Y, ...Object.values(positions).map(position => position.y + 26))
+  const parentY = Math.max(PARENT_Y, forestBottom + 72)
+  return { parentY, rankY: parentY + (RANK_Y - PARENT_Y) }
 }
 
 function arrayX(index: number, size: number) {

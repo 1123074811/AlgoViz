@@ -1,7 +1,9 @@
 import React from 'react'
-import type { Point, SceneEdge, SceneState } from '../../types'
-import { getAdaptiveCircleLayout } from '../../engineUtils'
+import type { SceneEdge, SceneState } from '../../types'
+import { computeCurvedRoute, resolveAnchor, trimAnchor } from '../../geometry'
 import { SEMANTIC_COLORS, NEUTRALS, SHAPE } from '../../tokens'
+
+export { resolveAnchor, trimAnchor } from '../../geometry'
 
 const COLOR_MAP = {
   primary: SEMANTIC_COLORS.primary.stroke,
@@ -47,11 +49,17 @@ export default function EdgeRenderer({ edge, scene }: EdgeRendererProps) {
     return renderHopArc(edge, scene, color, thickness, dashArray, markerEnd)
   }
 
-  let path = ''
-  if (edge.style?.curved) {
-    path = computeCurvedPath(from, to, edge)
-  } else {
-    path = `M ${from.x} ${from.y} L ${to.x} ${to.y}`
+  const route = edge.route?.length
+    ? edge.route
+    : edge.style?.curved
+      ? computeCurvedRoute(from, to, edge)
+      : [from, to]
+  const path = edge.style?.curved && route.length === 3
+    ? `M ${route[0].x} ${route[0].y} Q ${route[1].x} ${route[1].y} ${route[2].x} ${route[2].y}`
+    : route.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')
+  const labelPosition = edge.labelPosition ?? {
+    x: (from.x + to.x) / 2,
+    y: (from.y + to.y) / 2 - 8,
   }
 
   return (
@@ -62,7 +70,7 @@ export default function EdgeRenderer({ edge, scene }: EdgeRendererProps) {
         strokeOpacity={edge.style?.dashed ? 0.7 : 1}
         markerEnd={markerEnd}
         className={edge.state?.pulse ? 'scene-edge-flow' : undefined} />
-      {edge.label && <text x={(from.x + to.x) / 2} y={(from.y + to.y) / 2 - 8} textAnchor="middle" className="fill-slate-500 text-xs">{edge.label}</text>}
+      {edge.label && <text x={labelPosition.x} y={labelPosition.y} textAnchor="middle" className="fill-slate-500 text-xs">{edge.label}</text>}
     </g>
   )
 }
@@ -81,41 +89,6 @@ function selectMarker(edge: SceneEdge): string | undefined {
     if (colorKey === 'primary') return 'url(#sceneTrajectoryPrimary)'
   }
   return 'url(#sceneArrow)'
-}
-
-/**
- * Compute an elegant academic curved path between two points.
- * Uses quadratic Bézier with context-aware control point placement.
- */
-function computeCurvedPath(from: Point, to: Point, edge: SceneEdge): string {
-  const dx = to.x - from.x
-  const dy = to.y - from.y
-  const dist = Math.sqrt(dx * dx + dy * dy)
-
-  if (Math.abs(dy) < 30 && Math.abs(dx) < 30) {
-    // Very close points: small bottom dip
-    return `M ${from.x} ${from.y} Q ${(from.x + to.x) / 2} ${Math.max(from.y, to.y) + 30} ${to.x} ${to.y}`
-  }
-
-  if (Math.abs(dy) < 30) {
-    // Horizontal separation: elegant bottom arc (e.g., adjacent list nodes, swap arrows)
-    const dipDepth = Math.max(35, dist * 0.25)
-    return `M ${from.x} ${from.y} Q ${(from.x + to.x) / 2} ${Math.max(from.y, to.y) + dipDepth} ${to.x} ${to.y}`
-  }
-
-  if (Math.abs(dx) < 30) {
-    // Vertical separation: elegant side arc (e.g., stack push/pop)
-    const sideDir = edge.from.portId === 'right' || edge.to.portId === 'right' ? 1 : -1
-    const bulge = Math.max(40, Math.abs(dy) * 0.3)
-    const controlX = (from.x + to.x) / 2 + sideDir * bulge
-    return `M ${from.x} ${from.y} Q ${controlX} ${(from.y + to.y) / 2} ${to.x} ${to.y}`
-  }
-
-  // Diagonal: natural outward side-arch
-  const bulgeX = dx > 0 ? -Math.abs(dy) * 0.3 : Math.abs(dy) * 0.3
-  const controlX = (from.x + to.x) / 2 + bulgeX
-  const controlY = (from.y + to.y) / 2
-  return `M ${from.x} ${from.y} Q ${controlX} ${controlY} ${to.x} ${to.y}`
 }
 
 /**
@@ -202,85 +175,4 @@ function renderSelfLoop(edge: SceneEdge, scene: SceneState, color: string): Reac
         className={edge.state?.pulse ? 'scene-edge-flow' : undefined} />
     </g>
   )
-}
-
-export function trimAnchor(scene: SceneState, entityId: string, from: Point, to: Point): Point {
-  const entity = scene.entities[entityId]
-  if (!entity || !('size' in entity) || !entity.size) return from
-  const gap = 5
-
-  const isCircle = entity.type === 'node' && (
-    entity.variant.startsWith('tree.') ||
-    entity.variant.startsWith('graph.') ||
-    entity.variant.startsWith('union_find.')
-  )
-
-  // 圆形结点：端口锚点已落在结点边界上。必须从「中心」沿朝向对方的方向算到圆周，
-  // 否则把端口点当中心再裁掉一个半径，会重复裁剪、把父子连线砍成悬在中间的短线。
-  if (isCircle && 'position' in entity && entity.position) {
-    const center = entity.position
-    let r = entity.size.width / 2
-    if ('fields' in entity && entity.fields?.[0]?.value != null) {
-      r = getAdaptiveCircleLayout(entity.fields[0].value.toString(), entity.size.width).r
-    }
-    const dx = to.x - center.x
-    const dy = to.y - center.y
-    const dist = Math.sqrt(dx * dx + dy * dy)
-    if (dist === 0) return from
-    const k = (r + gap) / dist
-    return { x: center.x + dx * k, y: center.y + dy * k }
-  }
-
-  // 矩形结点/单元格：从「中心」沿朝向对方的方向裁到矩形边界 + gap。
-  // 与圆形分支同理——不能把 from 当中心:带 side 端口的结点(如链表节点)其
-  // resolveAnchor 返回的已是边缘锚点,若再按半宽/半高裁剪会二次裁剪、把端点拽进
-  // 结点内部,导致箭头头部被结点矩形遮挡。无端口的 cell 其锚点本就是中心,结果不变。
-  const center = ('position' in entity && entity.position) ? entity.position : from
-  const dx = to.x - center.x
-  const dy = to.y - center.y
-  const dist = Math.sqrt(dx * dx + dy * dy)
-  if (dist === 0) return from
-  const halfW = entity.size.width / 2
-  const halfH = entity.size.height / 2
-  const scale = Math.min(halfW / Math.max(Math.abs(dx), 0.001), halfH / Math.max(Math.abs(dy), 0.001))
-  const boundaryX = center.x + dx * scale
-  const boundaryY = center.y + dy * scale
-  return {
-    x: boundaryX + (dx / dist) * gap,
-    y: boundaryY + (dy / dist) * gap,
-  }
-}
-
-export function resolveAnchor(scene: SceneState, entityId: string, portId?: string): Point | null {
-  const entity = scene.entities[entityId]
-  if (!entity || !('position' in entity)) return null
-  const position = entity.position
-  if (!position) return null
-  const width = 'size' in entity ? entity.size?.width ?? 80 : 80
-  const height = 'size' in entity ? entity.size?.height ?? 50 : 50
-  const port = entity.type === 'node' ? entity.ports.find((item) => item.id === portId) : undefined
-
-  if (!port) return position
-  const offset = port.offset ?? { x: 0, y: 0 }
-
-  switch (port.side) {
-    case 'left':
-      return { x: position.x - width / 2 + offset.x, y: position.y + offset.y }
-    case 'right':
-      return { x: position.x + width / 2 + offset.x, y: position.y + offset.y }
-    case 'top':
-      return { x: position.x + offset.x, y: position.y - height / 2 + offset.y }
-    case 'bottom':
-      return { x: position.x + offset.x, y: position.y + height / 2 + offset.y }
-    case 'top-left':
-      return { x: position.x - width / 2 + offset.x, y: position.y - height / 2 + offset.y }
-    case 'top-right':
-      return { x: position.x + width / 2 + offset.x, y: position.y - height / 2 + offset.y }
-    case 'bottom-left':
-      return { x: position.x - width / 2 + offset.x, y: position.y + height / 2 + offset.y }
-    case 'bottom-right':
-      return { x: position.x + width / 2 + offset.x, y: position.y + height / 2 + offset.y }
-    default:
-      return position
-  }
 }

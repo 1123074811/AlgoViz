@@ -129,10 +129,10 @@ function compileSetEvent(event: SetAlgorithmEvent, context: CompileContext): Sce
       const targetPos = target.position ?? { x: CX, y: BASE_Y }
       return [
         ...cleanupCommands,
-        // fade the target out (next step's cleanup removes it), re-pack the rest
+        // Move the removed member into a dedicated exit lane while the row repacks.
         { type: 'set_state', entityId: target.id, state: { role: 'deleted', color: 'danger', opacity: 0.3, pulse: true }, merge: true },
+        { type: 'move', entityId: target.id, to: { x: targetPos.x, y: targetPos.y - 70 }, duration: 300, easing: 'ease' },
         ...repack(remaining, remaining.length),
-        { type: 'create_cell', cell: DataUnit.setCell({ id: `phantom_remove_${target.id}`, value: event.value, index: -1, x: targetPos.x, y: targetPos.y - 70, color: 'danger' }) },
         { type: 'add_note', text: `remove(${event.value})` },
       ]
     }
