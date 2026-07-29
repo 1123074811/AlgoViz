@@ -140,6 +140,9 @@ function createProxyServer(options = {}) {
   const defaultBaseUrl = options.defaultBaseUrl || DEFAULT_ALLOWED_BASE_URLS[0]
 
   return http.createServer((req, res) => {
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp')
+
     // CORS — 允许前端任意来源
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS, GET')

@@ -41,7 +41,11 @@ function close(server: http.Server): Promise<void> {
   })
 }
 
-function request(port: number, options: http.RequestOptions, body = ''): Promise<{ status: number; body: string }> {
+function request(
+  port: number,
+  options: http.RequestOptions,
+  body = '',
+): Promise<{ status: number; body: string; headers: http.IncomingHttpHeaders }> {
   return new Promise((resolve, reject) => {
     const req = http.request({ host: '127.0.0.1', port, ...options }, (res) => {
       const chunks: Buffer[] = []
@@ -50,6 +54,7 @@ function request(port: number, options: http.RequestOptions, body = ''): Promise
         resolve({
           status: res.statusCode ?? 0,
           body: Buffer.concat(chunks).toString('utf8'),
+          headers: res.headers,
         })
       })
     })
@@ -190,6 +195,20 @@ describe('createProxyServer', () => {
 })
 
 describe('static file serving', () => {
+  it('serves cross-origin isolation headers required by SharedArrayBuffer', async () => {
+    const distDir = await fs.mkdtemp(path.join(os.tmpdir(), 'algoviz-proxy-'))
+    tempDirs.push(distDir)
+    await fs.writeFile(path.join(distDir, 'index.html'), '<main>AlgoViz</main>')
+    const server = createProxyServer({ distDir })
+    const port = await listen(server)
+
+    const result = await request(port, { method: 'GET', path: '/' })
+
+    expect(result.status).toBe(200)
+    expect(result.headers['cross-origin-opener-policy']).toBe('same-origin')
+    expect(result.headers['cross-origin-embedder-policy']).toBe('require-corp')
+  })
+
   it('resolves SPA routes inside the dist directory', () => {
     const distDir = path.join(os.tmpdir(), 'algoviz-dist')
 

@@ -90,8 +90,10 @@ flowchart LR
     B -->|"ready + Run"| E["Commit 会话"]
     E --> F{"代码来源"}
     F -->|"可信内置模板"| G["generatePreset"]
-    F -->|"修改后的 JS/Python"| H["用户代码 Worker 真值"]
-    F -->|"C++/Java"| I["static-only 诊断"]
+    F -->|"进程式 JS/Python/C++ main"| P["Language Worker + Runtime Trace"]
+    F -->|"修改后的 solve JS/Python"| H["用户代码 Worker 真值"]
+    F -->|"Java / 非 main C++"| I["static-only 诊断"]
+    P --> M
     H -->|"无 API"| J["只显示 stdout，旧动画保持冻结"]
     H -->|"有 API"| K["compileArtifact → GeneratorArtifact"]
     K --> L["runArtifact + InputContract + Worker"]
@@ -103,7 +105,7 @@ flowchart LR
 公共边界：
 
 - `src/workbench/inputCompiler.ts` 统一输入结构扫描、类型/领域校验和 `E_INPUT_*` 源位置诊断；未闭合输入是 `incomplete`，不是错误也不会触发默认值回退。
-- `src/workbench/runtimeContract.ts` 统一语言能力（JS/Python 为 Worker，C++/Java 为 static-only）、Map/Set/Infinity/BigInt 等 JSON-safe 输出和终端格式化。
+- `src/workbench/runtimeContract.ts` 统一语言能力（JS/Python/C++ 为 Worker，Java 为 static-only）、Map/Set/Infinity/BigInt 等 JSON-safe 输出和终端格式化。
 - `src/components/Editor/WorkbenchTerminal.tsx` 只负责 IDE 式 stdin/arg/diagnostics/runtime/stdout 展示，不解析算法。
 - `src/data/codeTemplates.ts` 的全部内置 Python/JavaScript 模板使用 `solve(inputData)` ABI；`src/sandbox/runUserCode.ts` 与 `runUserPython.ts` 优先调用 `solve`，并在 Worker 不可用时失败关闭。
 - `AnimationScript.result` 是递归 JSON 值；二维矩阵、路径、棋盘、子集和编码表保持结构，不再压成说明字符串。
@@ -129,8 +131,9 @@ sequenceDiagram
     S-->>A: pause and preserve current Scene
     UI->>S: stdin-response
     S->>W: stdin bytes
-    W-->>S: result + trace-event
-    S-->>A: resume/apply trace
+    W-->>S: trace-event
+    S-->>A: validate/compile/apply latest step
+    W-->>S: result
     W-->>S: exit
 ```
 
@@ -146,19 +149,50 @@ running → finished | error | cancelled
 
 - `stdout`/`stderr` 只承载人类可读文本，`result` 承载结构化最终值，`trace-event` 承载动画事实，`diagnostics` 承载编译错误；禁止从 stdout 文本反推动画。
 - 到达输入边界时暂停动画并保留当前 Scene；等待用户输入不计入 CPU 执行超时，提交后同一 Worker 继续，Reset、代码切换或算法切换会终止会话。
-- 当前首条纵切支持 JavaScript `main()`、异步 `readLine()`、流式输出、结构化结果和 trace 收集；旧 `solve(inputData)` ABI 继续服务内置模板和已有生成器。
-- C++/Java 不使用 Docker、宿主机编译器、远程执行或有限正则转译器。目标分别是随项目本地分发并在 Worker 中运行的 Clang/LLVM WASM + WASI，以及 javac + 浏览器 JVM；依赖选型和资源许可验收完成前继续明确报告 static-only。
+- JavaScript `main()`、Python 进程式代码与 C++ `int main()` 共用会话协议；旧 `solve(inputData)` ABI 继续服务内置模板和已有生成器。
+- C++ 使用随项目分发的 `@yowasp/clang` 21 与 `@runno/wasi`，在模块 Worker 中完成真实 C++20 → WASI 编译和执行。约 102 MB 工具链只在首次运行 C++ 时懒加载，同一 Worker 复用已加载资源；取消、超时或崩溃会终止 Worker，不回退主线程。
+- C++ `std::cin` 接入 SharedArrayBuffer stdin；`std::cout/std::cerr` 保持文本通道，`emit_result(JSON字符串)` 与 `emit_trace(JSON字符串)` 通过 WASM 宿主导入发送结构化数据，禁止解析 stdout。Clang stderr 原样进入终端，真实编译器是 `main()` 程序的语义门禁。
+- Java 仍不使用 Docker、宿主机编译器、远程执行或有限正则转译器；完成随项目本地分发的 javac + 浏览器 JVM 选型和验收前继续明确报告 static-only。
 - 生成器 Artifact 与输入契约继续持久化；同一份程序和生成器对新输入在浏览器本地重跑，不再次请求 LLM。
+
+#### Runtime Trace v1
+
+JavaScript `emitTrace(value)`、Python `emit_trace(value)` 与 C++ `emit_trace(JSON字符串)` 使用同一版本化契约。一次会话先发送且只能发送一次 `init`，后续每个 `step` 都是独立的教学步骤：
+
+```javascript
+emitTrace({
+  version: 1,
+  kind: 'init',
+  initialState: { type: 'array', data: [3, 1] },
+})
+
+emitTrace({
+  version: 1,
+  kind: 'step',
+  description: '交换逆序元素',
+  events: [{ type: 'array.swap', indices: [0, 1] }],
+  stats: { swaps: 1 },
+})
+```
+
+`src/workbench/runtimeTraceCompiler.ts` 是 trace 到动画的唯一编译入口：
+
+1. `init` 建立 `AnimationScript`；`step` 复用 `src/scene/eventTypes.ts` 的事件目录，通过 `compileEvent + applyCommands` 验证并推进 Scene。
+2. 每个合法步骤立即追加到脚本，`useAnimationEngine.loadLiveScript` 将播放头推进到最新场景但不自动播放；到 stdin 边界只暂停，不清空 Scene，提交输入后同一会话继续追加。
+3. 非法 trace 产生带序号的 `E_TRACE_*` 编译诊断，原脚本与 Scene 保持不变。stdout、stderr、result 和 trace 不互相解析或代替。
+4. 每步必须包含 1–100 个合法事件，一次会话最多 5000 步；stats 只能是单调不减的非负有限数。数组 compare/swap/mark-sorted 可推导默认 action，其他事件默认使用空目标 highlight。
+5. `initialState.type` 必须是现有 Renderer 类型，`data` 必须是有限数值数组；复杂结构可用空数组初始化，再由首个 `*.create` 事件建立真实 Scene。
+
+因此 Runtime Trace 是程序执行的确定性输出，不是 LLM 生成的逐输入动画。同一份代码更换输入时只在浏览器 Worker 中重跑，即可产生与新输入一致的步骤。
 
 分阶段演进：
 
 1. 公共协议与 JavaScript async `readLine()` 纵切。
-2. Python `input()` 迁入同一会话协议。
-3. 配置 COOP/COEP，以 SharedArrayBuffer + Atomics 建立共享 stdin 字节管道。
-4. 接入本地 Clang/LLVM WASM + WASI。
-5. 接入本地 javac + 浏览器 JVM。
-6. 75 个模板从 `solve(inputData)` 迁移到可产生 trace 的进程式 ABI。
-7. 全部语言完成后，旧 `solve` ABI 仅保留兼容用途。
+2. 配置 COOP/COEP，以 SharedArrayBuffer + Atomics 建立共享 stdin 字节管道，并将 Python `input()` 迁入同一会话协议。
+3. 接入本地 Clang/LLVM WASM + WASI。
+4. 接入本地 javac + 浏览器 JVM。
+5. 75 个模板从 `solve(inputData)` 迁移到可产生 trace 的进程式 ABI。
+6. 全部语言完成后，旧 `solve` ABI 仅保留兼容用途。
 
 ### 2.5 Scene 数据流
 
@@ -408,12 +442,19 @@ src/
 │  ├─ builder.ts
 │  ├─ executeGenerator.ts
 │  ├─ generatorWorker.ts
+│  ├─ interactiveCppWorker.ts
 │  ├─ interactiveJavaScriptWorker.ts
+│  ├─ interactivePythonWorker.ts
+│  ├─ runInteractiveCpp.ts
 │  ├─ runInteractiveJavaScript.ts
+│  ├─ runInteractivePython.ts
+│  ├─ runInteractiveSession.ts
+│  ├─ sharedStdin.ts
 │  └─ runGenerator.ts
 ├─ workbench/                  # IDE 编译会话的纯领域服务
 │  ├─ executionProtocol.ts     # 进程状态机与 stdin/stdout/trace 协议
 │  ├─ inputCompiler.ts         # 输入状态机与 E_INPUT_* 诊断
+│  ├─ runtimeTraceCompiler.ts  # Runtime Trace v1 校验、事件编译与 Scene 推进
 │  └─ runtimeContract.ts       # 语言能力、JSON-safe 输出与 stdout 格式
 ├─ presets/                    # 可信本地 Generator
 ├─ scene/
@@ -439,7 +480,7 @@ src/
 
 ## 6. 开源方案评估
 
-调研日期为 2026-07-28。结论是借鉴架构，不直接替换现有核心。
+调研更新至 2026-07-29。结论是图形框架只借鉴架构；语言运行时按真实执行能力选择性接入。
 
 | 项目 | 可借鉴点 | 不直接采用的原因 | 决策 |
 |---|---|---|---|
@@ -451,6 +492,9 @@ src/
 | [Ajv](https://github.com/ajv-validator/ajv) | 浏览器可用的 JSON Schema 编译验证器，适合持久化 `InputContract` | 当前尚未稳定输入契约格式；立即加入会固化未成熟 Schema | InputContract 定稿后优先候选 |
 | [Knip](https://knip.dev) | 从入口图检查未使用文件、依赖和未声明依赖 | 导出级报告对公共 API 和测试辅助函数会有噪声 | Phase 1 已作为开发依赖接入；当前门禁只检查高置信度的文件和依赖问题 |
 | [Eclipse ELK / elkjs](https://github.com/kieler/elkjs) | 分层布局、正交边路由和浏览器 Worker 支持 | 全量替换会形成第二套布局/渲染协议，且数组、DP、栈等结构并不受益 | 已以 `elkjs@^0.12.0` 覆盖所有兼容拓扑；懒加载 Worker，失败回退确定性 Scene |
+| [YoWASP Clang](https://github.com/YoWASP/clang) | 真实 LLVM/Clang/LLD 21 与 C++ sysroot 均可作为本地 WebAssembly 资源分发；Apache-2.0/ISC/LLVM exception | 工具链资源约 102 MB，仓库已归档，不适合首屏或频繁创建 Worker | 已懒加载到独立缓存 Worker；锁定 `21.1.4-3`，以真实编译/执行 E2E 和许可证 notice 作为升级门禁 |
+| [Runno WASI](https://github.com/taybenlor/runno) | 浏览器 WASI preview1、stdin/stdout 回调与空文件系统沙箱；MIT | 完整 `@runno/runtime` 默认从 `runno.dev` 拉取旧 Clang 8 工具链，不符合本地分发要求 | 只采用小型 `@runno/wasi@0.10.0`，不采用 Runtime、编辑器或远程语言资源 |
+| `@omni-wasm/cpp` | API 简单，包说明声称浏览器 C++23 | 实际 README 明确使用 JSCPP 有限解释器，不支持完整 STL、分配与完整语言语义 | 拒绝；不把有限转译/解释器标成真实 C++ 执行 |
 
 采用原则：
 
@@ -555,15 +599,21 @@ Hook 五次换输入且 LLM mock 为零、历史持久化和旧格式迁移。
 
 - [x] 定义统一执行事件、请求协议和 `idle → compiling → running → waiting-input` 状态机。
 - [x] JavaScript `main()` 在独立 Worker 中支持异步 `readLine()`、流式 stdout/stderr、结构化 result、trace 收集、取消与分段 CPU 超时。
+- [x] 开发、预览与生产服务器配置 COOP/COEP；Python `input()` 通过 SharedArrayBuffer + Atomics 在 Pyodide Worker 中严格阻塞，并复用已加载运行时。
 - [x] IDE 终端仅在程序请求输入时激活单行 `stdin>`，并将 stdout、stderr、result 分开显示。
-- [ ] 将 trace 事件编译并增量提交给动画引擎。
-- [ ] Python 迁移到严格交互协议，并完成共享 stdin 字节管道与 COOP/COEP。
-- [ ] 完成 C++ Clang/WASI 与 Java javac/JVM 的本地资源、Worker 运行、缓存、许可和端到端验收。
+- [x] Runtime Trace v1 校验事件并通过 Scene Engine 增量编译；合法步骤立即推进到最新场景，stdin 暂停保留 Scene，非法步骤只写入 `E_TRACE_*` 诊断。
+- [x] C++ `main()` 使用本地 YoWASP Clang 21 + Runno WASI 在缓存 Worker 中真实编译运行；覆盖严格 stdin、stdout/stderr、result、trace、Clang 错误、超时、资源打包与许可 notice。
+- [ ] 完成 Java javac/JVM 的本地资源、Worker 运行、缓存、许可和端到端验收。
 - [ ] 逐步迁移 75 个模板；迁移完成前保留 `solve(inputData)` 兼容层。
 
-实现位置：`src/workbench/executionProtocol.ts`、
-`src/sandbox/interactiveJavaScriptWorker.ts`、`src/sandbox/runInteractiveJavaScript.ts`、
-`src/components/Editor/WorkbenchTerminal.tsx`、`src/pages/Visualizer/index.tsx`。
+实现位置：`src/workbench/executionProtocol.ts`、`src/workbench/runtimeTraceCompiler.ts`、
+`src/sandbox/runInteractiveSession.ts`、`src/sandbox/interactiveJavaScriptWorker.ts`、
+`src/sandbox/runInteractiveJavaScript.ts`、`src/sandbox/interactivePythonWorker.ts`、
+`src/sandbox/runInteractivePython.ts`、`src/sandbox/interactiveCppWorker.ts`、
+`src/sandbox/runInteractiveCpp.ts`、`src/sandbox/sharedStdin.ts`、
+`vite.config.ts`、`server/proxy.cjs`、
+`src/components/Editor/WorkbenchTerminal.tsx`、`src/hooks/useAnimationEngine.ts`、
+`src/pages/Visualizer/index.tsx`。
 
 ## 8. 架构决策记录
 
