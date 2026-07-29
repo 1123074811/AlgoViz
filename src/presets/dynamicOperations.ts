@@ -13,6 +13,7 @@ export function generateDynamicLinkedListOp(
   const steps: AnimationStep[] = []
   let sid = 1
   const variant = 'singly'
+  let result: AnimationScript['result']
 
   const nodes = arr.map((val, idx) => ({ id: `n${idx}`, value: val }))
   const headId = nodes[0]?.id || ''
@@ -30,6 +31,7 @@ export function generateDynamicLinkedListOp(
 
     // Let's insert after the middle node
     const insertAfterIdx = Math.max(0, Math.floor((arr.length - 1) / 2))
+    result = [...arr.slice(0, insertAfterIdx + 1), param, ...arr.slice(insertAfterIdx + 1)]
     const prevNodeId = `n${insertAfterIdx}`
     const prevVal = arr[insertAfterIdx]
     const newNodeId = `n_new`
@@ -61,6 +63,8 @@ export function generateDynamicLinkedListOp(
     })
 
   } else if (opId === 'delete') {
+    const deleteIdx = arr.indexOf(param)
+    result = deleteIdx < 0 ? [...arr] : [...arr.slice(0, deleteIdx), ...arr.slice(deleteIdx + 1)]
     steps.push({
       ...makeStep(sid++, 0,
         `初始链表: ${arr.join(' → ')}，准备删除数值为 ${param} 的节点`,
@@ -70,7 +74,6 @@ export function generateDynamicLinkedListOp(
       events: [{ type: 'linked_list.create', variant, nodes, headId }]
     })
 
-    const deleteIdx = arr.indexOf(param)
     if (deleteIdx !== -1) {
       const deleteNodeId = `n${deleteIdx}`
       const prevNodeId = deleteIdx > 0 ? `n${deleteIdx - 1}` : ''
@@ -128,6 +131,7 @@ export function generateDynamicLinkedListOp(
     }
 
   } else {
+    result = arr.includes(param) ? param : null
     // Search
     steps.push({
       ...makeStep(sid++, 0,
@@ -192,6 +196,7 @@ export function generateDynamicLinkedListOp(
     complexity: { time: { best: 'O(1)', average: 'O(n)', worst: 'O(n)' }, space: 'O(1)' },
     presentation: { engine: 'scene', module: 'linked_list', variant },
     initialState: { type: 'linked_list', data: arr },
+    result,
     steps
   }
 }
@@ -638,8 +643,10 @@ export function generateDynamicBTreeOp(
   const { nodes, edges } = btreeToAnim(nodeMap)
   const steps: AnimationStep[] = []
   let sid = 1
+  let result: AnimationScript['result']
 
   if (opId === 'search') {
+    result = arr.includes(param) ? param : -1
     steps.push({
       ...makeStep(sid++, 0,
         `B树初始状态 (t=${T})，检索 key=${param}`,
@@ -686,6 +693,7 @@ export function generateDynamicBTreeOp(
       curr = nodeMap.get(curr.children[i])!
     }
   } else {
+    result = [...new Set([...arr, param])].sort((a, b) => a - b)
     // insert: build tree without param, then show insertion walk
     const baseArr = arr.filter(k => k !== param)
     const pre = buildBTree(baseArr.length > 0 ? baseArr : [10, 20, 30, 3, 7, 13, 17, 23, 27, 33, 37])
@@ -745,6 +753,7 @@ export function generateDynamicBTreeOp(
     complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'tree', variant: 'btree' },
     initialState: { type: 'tree', data: arr },
+    result,
     steps,
   }
 }
@@ -815,6 +824,7 @@ export function generateDynamicBPlusTreeOp(
   const { nodes, edges } = bpToAnim(map)
   const steps: AnimationStep[] = []
   let sid = 1
+  let result: AnimationScript['result']
 
   if (opId === 'search') {
     const key = typeof param === 'number' ? param : parseInt(String(param)) || map.get(root.id)!.keys[0] || 30
@@ -844,6 +854,7 @@ export function generateDynamicBPlusTreeOp(
 
     if (curr && curr.leaf) {
       const found = curr.keys.includes(key)
+      result = found ? key : -1
       steps.push({
         ...makeStep(sid++, found ? 10 : 16,
           found ? `叶子 [${curr.keys}] 中找到 ${key}！命中` : `叶子 [${curr.keys}] 中未找到 ${key}`,
@@ -860,6 +871,9 @@ export function generateDynamicBPlusTreeOp(
     const rangeStr = typeof param === 'string' ? param : '20, 50'
     const parts = rangeStr.split(',').map(s => parseInt(s.trim()))
     const low = parts[0], high = parts[1]
+    result = [...new Set(arr.filter(key => Number.isFinite(key)))]
+      .sort((a, b) => a - b)
+      .filter(key => key >= low && key <= high)
     steps.push({
       ...makeStep(sid++, 0,
         `B+树初始状态，范围查询 [${low}, ${high}]`,
@@ -915,6 +929,7 @@ export function generateDynamicBPlusTreeOp(
     complexity: { time: { best: 'O(log n)', average: 'O(log n + k)', worst: 'O(log n + k)' }, space: 'O(k)' },
     presentation: { engine: 'scene', module: 'tree', variant: 'btree' },
     initialState: { type: 'tree', data: arr },
+    result,
     steps,
   }
 }

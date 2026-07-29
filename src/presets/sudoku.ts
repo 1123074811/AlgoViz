@@ -119,6 +119,7 @@ export function generateSudoku(input?: unknown): AnimationScript {
     complexity: { time: { best: 'O(1)', average: 'O(9^m)', worst: 'O(9^m)' }, space: 'O(m)' },
     presentation: { engine: 'scene', module: 'matrix', variant: 'sudoku' },
     initialState: { type: 'matrix', data: flatInit, matrix: initialBoard },
+    result: solvedOk ? solved : false,
     steps: steps as AnimationScript['steps'],
   }
 }

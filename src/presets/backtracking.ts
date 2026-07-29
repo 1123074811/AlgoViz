@@ -4,6 +4,24 @@ export function generateBacktracking(arr?: number[]): AnimationScript {
   const steps: AnimationStep[] = []
   let sid = 1
   const result = arr && arr.length > 0 ? arr : [1, 2, 3]
+  const permutations: number[][] = []
+  const used = new Array(result.length).fill(false)
+  const path: number[] = []
+  const enumerate = () => {
+    if (path.length === result.length) {
+      permutations.push([...path])
+      return
+    }
+    for (let index = 0; index < result.length; index++) {
+      if (used[index]) continue
+      used[index] = true
+      path.push(result[index])
+      enumerate()
+      path.pop()
+      used[index] = false
+    }
+  }
+  enumerate()
 
   steps.push({ stepId: sid++, codeLine: 0, description: { zh: '回溯算法 — 尝试所有选择，遇到不合法的立即回退', en: 'Backtracking — try all choices, backtrack when invalid' }, action: { type: 'highlight', targets: [], color: 'primary' }, events: [{ type: 'array.create', values: result }], stats: { comparisons: 0, swaps: 0, accesses: 0 } })
 
@@ -15,5 +33,5 @@ export function generateBacktracking(arr?: number[]): AnimationScript {
 
   steps.push({ stepId: sid++, codeLine: 7, description: { zh: '找到可行解，记录结果', en: 'Found valid solution, record result' }, action: { type: 'mark', targets: [0, 1], color: 'success' }, events: [{ type: 'array.mark_sorted', indices: [0, 1] }], stats: { comparisons: 0, swaps: 0, accesses: 2 } })
 
-  return { algorithm: 'backtracking', complexity: { time: { best: 'O(k^n)', average: 'O(k^n)', worst: 'O(k^n)' }, space: 'O(n)' }, presentation: { engine: 'scene', module: 'array', variant: 'backtracking' }, initialState: { type: 'array', data: result }, steps: steps as AnimationScript['steps'] }
+  return { algorithm: 'backtracking', complexity: { time: { best: 'O(n!)', average: 'O(n!)', worst: 'O(n!)' }, space: 'O(n)' }, presentation: { engine: 'scene', module: 'array', variant: 'backtracking' }, initialState: { type: 'array', data: result }, result: permutations, steps: steps as AnimationScript['steps'] }
 }

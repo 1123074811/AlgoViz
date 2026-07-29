@@ -142,6 +142,7 @@ export function generateDijkstra(input: GraphInput): AnimationScript {
     complexity: { time: { best: 'O((V+E) log V)', average: 'O((V+E) log V)', worst: 'O((V+E) log V)' }, space: 'O(V)' },
     presentation: { engine: 'scene', module: 'graph', layout: 'composite' },
     initialState: { type: 'graph', data: [], nodes, edges },
+    result: nodes.map(node => `${getLabel(node.id)}:${fmtDist(dist[node.id])}`),
     steps,
   }
 }

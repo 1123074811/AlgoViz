@@ -144,6 +144,7 @@ export function generateLeetCode(input?: unknown): AnimationScript {
     complexity: { time: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'array' },
     initialState: { type: 'array', data: nums },
+    result: found ?? [],
     steps: steps as AnimationScript['steps'],
   }
 }

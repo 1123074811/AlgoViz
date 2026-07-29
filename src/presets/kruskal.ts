@@ -111,6 +111,7 @@ export function generateKruskal(input: GraphInput): AnimationScript {
     complexity: { time: { best: 'O(E log E)', average: 'O(E log E)', worst: 'O(E log E)' }, space: 'O(V)' },
     presentation: { engine: 'scene', module: 'graph' },
     initialState: { type: 'graph', data: [], nodes, edges: edges.map(e => ({ source: e.source, target: e.target, weight: e.weight })) },
+    result: mstEdges.map(edge => `${getLabel(edge.source)}-${getLabel(edge.target)}(${edge.weight})`),
     steps,
   }
 }

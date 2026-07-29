@@ -65,6 +65,7 @@ export function generateSegmentTree(arr: number[]): AnimationScript {
     complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'array', variant: 'segment_tree' },
     initialState: { type: 'array', data },
+    result: sum,
     steps: steps as AnimationScript['steps'],
   }
 }

@@ -51,6 +51,7 @@ export function generateTarjanScc(input?: GraphInput): AnimationScript {
   const onStack = new Set<string>()
   const stack: string[] = []
   const comp: Record<string, number> = {}
+  const components: string[][] = []
   let compId = 0
 
   const dfs = (u: string) => {
@@ -92,6 +93,7 @@ export function generateTarjanScc(input?: GraphInput): AnimationScript {
         comp[w] = compId
         members.push(w)
       } while (w !== u)
+      components.push(members.map(label))
       push(`low[${label(u)}]==disc[${label(u)}]：弹出强连通分量 #${compId} {${members.map(label).join(', ')}}`,
         `SCC #${compId}: {${members.map(label).join(', ')}}`, [
           { type: 'graph_analysis.update', stack: stack.map(label), components: { ...comp } },
@@ -111,6 +113,7 @@ export function generateTarjanScc(input?: GraphInput): AnimationScript {
     complexity: { time: { best: 'O(V+E)', average: 'O(V+E)', worst: 'O(V+E)' }, space: 'O(V)' },
     presentation: { engine: 'scene', module: 'graph', variant: 'vertex', layout: 'composite' },
     initialState: { type: 'graph', data: [], nodes, edges: graph.edges },
+    result: components,
     steps,
   }
 }

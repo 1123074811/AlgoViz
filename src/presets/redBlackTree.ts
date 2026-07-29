@@ -1,76 +1,142 @@
 import type { AnimationScript, AnimationStep } from '@/types/animation'
-import { treeBuilder } from '@/scene/graphics'
 
-export function generateRedBlackTree(): AnimationScript {
-  // 初始红黑树(不含待插入的 6)。index 8 留空,6 在演示中插入为节点 1(index 3)的右孩子。
-  const tree = [13, 8, 17, 1, 11, 15, 25, '', '', '', '', '', '', 22, 27]
+type Color = 'red' | 'black'
+
+interface RBNode {
+  id: string
+  value: number
+  color: Color
+  left: RBNode | null
+  right: RBNode | null
+}
+
+export function generateRedBlackTree(input?: number[]): AnimationScript {
+  const values = input?.filter(Number.isFinite) ?? [13, 8, 17, 1, 11, 15, 25, 6, 22, 27]
   const steps: AnimationStep[] = []
-  let sid = 1
-  const nums = tree.map(v => v === '' ? 0 : Number(v))
+  let root: RBNode | null = null
+  let nextId = 0
+  let stepId = 1
 
-  // 自洽红黑着色:根黑、红节点子全黑、黑节点子红/黑(满足红黑性质)。
-  const RB: Record<number, 'red' | 'black'> = {
-    13: 'black', 8: 'red', 17: 'red',
-    1: 'black', 11: 'black', 15: 'black', 25: 'black',
-    6: 'red', 22: 'red', 27: 'red',
+  const isRed = (node: RBNode | null) => node?.color === 'red'
+  const rotateLeft = (node: RBNode, operations: string[]): RBNode => {
+    const next = node.right!
+    node.right = next.left
+    next.left = node
+    next.color = node.color
+    node.color = 'red'
+    operations.push(`左旋 ${node.value}`)
+    return next
   }
-  const nodes = nums
-    .map((v, i) => ({ id: String(i), value: v, rbColor: (RB[v] ?? 'black') as 'red' | 'black' }))
-    .filter(n => n.value !== 0)
+  const rotateRight = (node: RBNode, operations: string[]): RBNode => {
+    const next = node.left!
+    node.left = next.right
+    next.right = node
+    next.color = node.color
+    node.color = 'red'
+    operations.push(`右旋 ${node.value}`)
+    return next
+  }
+  const flipColors = (node: RBNode, operations: string[]) => {
+    node.color = node.color === 'red' ? 'black' : 'red'
+    if (node.left) node.left.color = node.left.color === 'red' ? 'black' : 'red'
+    if (node.right) node.right.color = node.right.color === 'red' ? 'black' : 'red'
+    operations.push(`翻转 ${node.value} 及子节点颜色`)
+  }
+  const insert = (node: RBNode | null, value: number, operations: string[]): RBNode => {
+    if (!node) {
+      operations.push(`插入红色节点 ${value}`)
+      return { id: `rb_${nextId++}`, value, color: 'red', left: null, right: null }
+    }
+    if (value < node.value) node.left = insert(node.left, value, operations)
+    else if (value > node.value) node.right = insert(node.right, value, operations)
+    else operations.push(`忽略重复值 ${value}`)
 
-  const edges: { parentId: string; childId: string; port: 'left' | 'right' }[] = []
-  for (let i = 0; i < nums.length; i++) {
-    if (nums[i] === 0) continue
-    const leftIdx = 2 * i + 1
-    const rightIdx = 2 * i + 2
-    if (leftIdx < nums.length && nums[leftIdx] !== 0) edges.push({ parentId: String(i), childId: String(leftIdx), port: 'left' })
-    if (rightIdx < nums.length && nums[rightIdx] !== 0) edges.push({ parentId: String(i), childId: String(rightIdx), port: 'right' })
+    if (isRed(node.right) && !isRed(node.left)) node = rotateLeft(node, operations)
+    if (isRed(node.left) && isRed(node.left?.left ?? null)) node = rotateRight(node, operations)
+    if (isRed(node.left) && isRed(node.right)) flipColors(node, operations)
+    return node
   }
 
-  steps.push({
-    stepId: sid++, codeLine: 0,
-    description: { zh: '红黑树初始结构 — 自平衡 BST,节点分红/黑(根 13 黑,8/17 红,叶层红…)', en: 'Red-Black Tree initial — self-balancing BST, nodes red/black (root 13 black, 8/17 red…)' },
-    action: { type: 'highlight', targets: [], color: 'primary' },
-    stats: { comparisons: 0, swaps: 0, accesses: 0 },
-    events: [treeBuilder.create('0', nodes, edges, 'binary')],
-  })
+  for (const value of values) {
+    const operations: string[] = []
+    root = insert(root, value, operations)
+    root.color = 'black'
+    const snapshot = toSnapshot(root)
+    steps.push({
+      stepId: stepId++,
+      codeLine: 4,
+      description: {
+        zh: `插入 ${value}：${operations.join('；')}`,
+        en: `Insert ${value}: ${operations.join('; ')}`,
+      },
+      action: { type: 'insert', targets: [], color: 'warning' },
+      events: [{
+        type: 'tree.create',
+        variant: 'binary',
+        rootId: root.id,
+        nodes: snapshot.nodes,
+        edges: snapshot.edges,
+      }],
+      stats: { comparisons: operations.length, swaps: operations.filter(item => item.includes('旋')).length, accesses: snapshot.nodes.length },
+    })
+  }
 
+  if (!root) {
+    root = { id: 'rb_0', value: 0, color: 'black', left: null, right: null }
+  }
+  const final = toSnapshot(root)
+  const result = inorder(root)
   steps.push({
-    stepId: sid++, codeLine: 1,
-    description: { zh: '5 条性质：①节点红/黑 ②根黑 ③叶(NIL)黑 ④红节点子必黑 ⑤任一路径黑高相等', en: '5 properties: nodes red/black, root black, leaves black, red children black, equal black-height' },
-    action: { type: 'highlight', targets: [0], color: 'warning' },
-    stats: { comparisons: 0, swaps: 0, accesses: 1 },
-    events: [treeBuilder.compare('0', 13, 'equal')],
-  })
-
-  steps.push({
-    stepId: sid++, codeLine: 3,
-    description: { zh: '插入 6：从根查找 13→8→1(6<13 左,6<8 左,6>1 右),作为节点 1 的右孩子插入,新节点染红', en: 'Insert 6: search 13→8→1 (6<13 left, 6<8 left, 6>1 right), insert as right child of node 1, colored red' },
-    action: { type: 'insert', targets: [3], color: 'warning' },
-    stats: { comparisons: 3, swaps: 0, accesses: 3 },
-    events: [
-      treeBuilder.compare('1', 6, 'less'),
-      treeBuilder.compare('3', 6, 'greater'),
-      treeBuilder.insert('3', { id: '8', value: 6 }, 'right'),
-      treeBuilder.recolor('8', 'red'),
-    ],
-  })
-
-  steps.push({
-    stepId: sid++, codeLine: 5,
-    description: { zh: '父节点 1 为黑色 → 红节点 6 直接插入即满足全部性质(性质④红子黑成立),无需变色或旋转', en: 'Parent node 1 is black → red node 6 inserted directly satisfies all properties (red-children-black holds), no recolor/rotation needed' },
-    action: { type: 'mark', targets: [3, 8], color: 'success' },
-    stats: { comparisons: 3, swaps: 0, accesses: 5 },
-    events: [treeBuilder.visit('8')],
-  })
-
-  steps.push({
-    stepId: sid++, codeLine: 6,
-    description: { zh: '查找 O(log n) | 插入/删除 O(log n) | 靠红黑 5 性质保证最坏也近似平衡', en: 'Search O(log n) | Insert/Delete O(log n) | 5 properties keep it balanced even in worst case' },
+    stepId,
+    codeLine: 10,
+    description: {
+      zh: `红黑树构建完成，中序结果：[${result.join(', ')}]`,
+      en: `Red-black tree complete; inorder: [${result.join(', ')}]`,
+    },
     action: { type: 'mark', targets: [], color: 'success' },
-    stats: { comparisons: 3, swaps: 0, accesses: 5 },
-    events: [treeBuilder.visit('0')],
+    events: [{ type: 'tree.visit', nodeId: root.id }],
+    stats: { comparisons: 0, swaps: 0, accesses: final.nodes.length },
   })
 
-  return { algorithm: 'red_black_tree', complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' }, presentation: { engine: 'scene', module: 'tree' }, initialState: { type: 'tree', data: nums }, result: 'balanced', steps }
+  return {
+    algorithm: 'red_black_tree',
+    complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' },
+    presentation: { engine: 'scene', module: 'tree' },
+    initialState: {
+      type: 'tree',
+      data: result,
+      root: root.id,
+      treeNodes: final.nodes,
+      children: final.children,
+    },
+    result,
+    steps,
+  }
+}
+
+function toSnapshot(root: RBNode) {
+  const nodes: Array<{ id: string; value: number; rbColor: Color }> = []
+  const edges: Array<{ parentId: string; childId: string; port: 'left' | 'right' }> = []
+  const children: Record<string, string[]> = {}
+  const visit = (node: RBNode) => {
+    nodes.push({ id: node.id, value: node.value, rbColor: node.color })
+    const childIds: string[] = []
+    if (node.left) {
+      childIds.push(node.left.id)
+      edges.push({ parentId: node.id, childId: node.left.id, port: 'left' })
+      visit(node.left)
+    }
+    if (node.right) {
+      childIds.push(node.right.id)
+      edges.push({ parentId: node.id, childId: node.right.id, port: 'right' })
+      visit(node.right)
+    }
+    children[node.id] = childIds
+  }
+  visit(root)
+  return { nodes, edges, children }
+}
+
+function inorder(node: RBNode | null): number[] {
+  return node ? [...inorder(node.left), node.value, ...inorder(node.right)] : []
 }

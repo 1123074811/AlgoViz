@@ -173,6 +173,7 @@ export function generateTopologicalSort(input: GraphInput): AnimationScript {
     complexity: { time: { best: 'O(V+E)', average: 'O(V+E)', worst: 'O(V+E)' }, space: 'O(V)' },
     presentation: { engine: 'scene', module: 'graph', layout: 'composite' },
     initialState: { type: 'graph', data: [], nodes, edges: rawEdges.map(e => ({ source: e.source, target: e.target })) },
+    result: output.map(getLabel),
     steps,
   }
 }

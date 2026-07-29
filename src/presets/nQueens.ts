@@ -4,8 +4,22 @@ export function generateNQueens(n?: number): AnimationScript {
   const N = n ?? 4
   const steps: AnimationStep[] = []
   let sid = 1
-  const board: string[][] = Array.from({ length: N }, () => new Array(N).fill('·'))
+  const board: string[][] = Array.from({ length: N }, () => new Array(N).fill('.'))
   const initialBoard = board.map(row => [...row])
+  const solutions: string[][] = []
+
+  function collectSolutions(row: number) {
+    if (row === N) {
+      solutions.push(board.map(cells => cells.join('')))
+      return
+    }
+    for (let col = 0; col < N; col++) {
+      if (!isSafe(row, col)) continue
+      board[row][col] = 'Q'
+      collectSolutions(row + 1)
+      board[row][col] = '.'
+    }
+  }
 
   steps.push({
     stepId: sid++, codeLine: 0,
@@ -37,7 +51,7 @@ export function generateNQueens(n?: number): AnimationScript {
       return true
     }
     for (let col = 0; col < N; col++) {
-      board[row] = new Array(N).fill('·')
+      board[row] = new Array(N).fill('.')
       board[row][col] = '?'
       // Find flat index of this cell
       const idx = row * N + col
@@ -59,7 +73,7 @@ export function generateNQueens(n?: number): AnimationScript {
           stats: { comparisons: sid, swaps: 0, accesses: 0 },
         })
         if (solve(row + 1)) return true
-        board[row][col] = '·'
+        board[row][col] = '.'
         steps.push({
           stepId: sid++, codeLine: 9,
           description: { zh: `回溯：撤销 (${row},${col}) 的皇后`, en: `Backtrack: remove queen at (${row},${col})` },
@@ -73,6 +87,8 @@ export function generateNQueens(n?: number): AnimationScript {
   }
 
   solve(0)
+  board.forEach(row => row.fill('.'))
+  collectSolutions(0)
 
   const initialFlat = initialBoard.flat().map((c) => (c === 'Q' ? 1 : 0))
   return {
@@ -80,6 +96,7 @@ export function generateNQueens(n?: number): AnimationScript {
     complexity: { time: { best: 'O(N!)', average: 'O(N!)', worst: 'O(N!)' }, space: 'O(N)' },
     presentation: { engine: 'scene', module: 'n_queens', variant: 'board' },
     initialState: { type: 'matrix', data: initialFlat, matrix: initialBoard.map((row) => row.map((cell) => cell === 'Q' ? 1 : 0)) },
+    result: solutions,
     steps: steps as AnimationScript['steps'],
   }
 }

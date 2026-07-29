@@ -59,6 +59,7 @@ export function generateQueue(arr?: number[]): AnimationScript {
     complexity: { time: { best: 'O(1)', average: 'O(1)', worst: 'O(1)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'queue' },
     initialState: { type: 'array', data: initialQueue },
+    result: queue,
     steps,
   }
 }

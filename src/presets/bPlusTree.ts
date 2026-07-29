@@ -150,6 +150,7 @@ export function generateBPlusTree(input?: unknown): AnimationScript {
     complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'tree' },
     initialState: { type: 'tree', data: keys },
+    result: searchLeaf.includes(searchKey) ? searchKey : -1,
     steps,
   }
 }

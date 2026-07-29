@@ -2,11 +2,23 @@ import type { AnimationScript, AnimationStep } from '@/types/animation'
 
 type Coord = [number, number]
 
-/** BFS shortest path on a 4×5 grid with a few walls. start=(0,0) target=(3,4). */
-export function generateGridPathfinding(): AnimationScript {
-  const rows = 4, cols = 5
-  const walls = new Set(['1,1', '1,2', '2,3'])
-  const start: Coord = [0, 0], target: Coord = [3, 4]
+export interface GridPathInput {
+  grid?: number[][]
+  start?: Coord
+  target?: Coord
+}
+
+/** BFS shortest path. 0 is traversable and 1 is a wall. */
+export function generateGridPathfinding(input: GridPathInput = {}): AnimationScript {
+  const grid = input.grid?.length
+    ? input.grid
+    : [[0, 0, 0, 0, 0], [0, 1, 1, 0, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 0]]
+  const rows = grid.length, cols = grid[0].length
+  const walls = new Set(
+    grid.flatMap((row, r) => row.flatMap((cell, c) => cell === 1 ? [`${r},${c}`] : [])),
+  )
+  const start: Coord = input.start ?? [0, 0]
+  const target: Coord = input.target ?? [rows - 1, cols - 1]
   const steps: AnimationStep[] = []
   let sid = 1
 
@@ -68,13 +80,22 @@ export function generateGridPathfinding(): AnimationScript {
 
   // reconstruct path
   const path: Coord[] = []
-  let curK: string | null = key(...target)
-  while (curK) { const [r, c] = curK.split(',').map(Number); path.unshift([r, c]); curK = prev.get(curK) ?? null }
+  if (reached) {
+    let curK: string | null = key(...target)
+    while (curK) {
+      const [r, c] = curK.split(',').map(Number)
+      path.unshift([r, c])
+      curK = prev.get(curK) ?? null
+    }
+  }
+  const distance = reached ? path.length - 1 : -1
   steps.push({
     stepId: sid++, codeLine: 10,
-    description: { zh: `最短路长度 ${path.length - 1}：${path.map(p => `(${p[0]},${p[1]})`).join(' → ')}`, en: `Shortest path length ${path.length - 1}` },
-    action: { type: 'mark', targets: [], color: 'success' },
-    events: [{ type: 'grid.path', cells: path }],
+    description: reached
+      ? { zh: `最短路长度 ${distance}：${path.map(p => `(${p[0]},${p[1]})`).join(' → ')}`, en: `Shortest path length ${distance}` }
+      : { zh: '目标不可达，返回 -1', en: 'Target is unreachable; return -1' },
+    action: { type: 'mark', targets: [], color: reached ? 'success' : 'danger' },
+    events: path.length ? [{ type: 'grid.path', cells: path }] : [],
     stats: { comparisons: order, swaps: 0, accesses: order },
   })
 
@@ -82,8 +103,8 @@ export function generateGridPathfinding(): AnimationScript {
     algorithm: 'grid_pathfinding',
     complexity: { time: { best: 'O(V+E)', average: 'O(V+E)', worst: 'O(V+E)' }, space: 'O(V)' },
     presentation: { engine: 'scene', module: 'grid' },
-    initialState: { type: 'array', data: [] },
-    result: path.length - 1,
+    initialState: { type: 'matrix', data: grid.flat(), matrix: grid },
+    result: path,
     steps: steps as AnimationScript['steps'],
   }
 }

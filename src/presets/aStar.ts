@@ -212,6 +212,7 @@ export function generateAStar(input: AStarInput): AnimationScript {
     complexity: { time: { best: 'O(E)', average: 'O(E log V)', worst: 'O(E log V)' }, space: 'O(V)' },
     presentation: { engine: 'scene', module: 'graph' },
     initialState: { type: 'graph', data: [], nodes, edges: edges.map(e => ({ source: e.source, target: e.target, weight: e.weight })) },
+    result: gScore[goalId] === INF ? -1 : gScore[goalId],
     steps,
   }
 }

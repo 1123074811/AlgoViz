@@ -91,6 +91,7 @@ export function generateHashTable(_pairs?: Record<string, string>): AnimationScr
     // Empty data so the array-seeding fallback does NOT create arr_* cells —
     // the hashtable.* events drive the dedicated HashTableView instead.
     initialState: { type: 'array', data: [] },
+    result: pairs.map(([key, value]) => `${key}:${value}`),
     steps: steps as AnimationScript['steps'],
   }
 }

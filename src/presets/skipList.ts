@@ -100,7 +100,7 @@ export function generateSkipList(arr?: number[], target?: number): AnimationScri
     complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'skip_list', layout: 'layered' },
     initialState: { type: 'array', data: values },
-    result: found,
+    result: found >= 0,
     steps: steps as AnimationScript['steps'],
   }
 }

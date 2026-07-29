@@ -32,12 +32,24 @@ function step(
  * scene.seq_push 把每个完整子集输出到底部序列条。
  *
  * 步数控制:节点上限 ~60,超出后停止展开并 scene.note 概括。
- * result = 子集总数 2^n。
+ * 动画可因节点上限截断，但 result 始终返回输入对应的完整子集集合。
  */
 export function generateSubsetsTree(arr?: number[]): AnimationScript {
   const data = arr && arr.length > 0 ? [...arr] : [1, 2, 3]
   const n = data.length
   const total = Math.pow(2, n)
+  const allSubsets: number[][] = []
+  const collect = (index: number, chosen: number[]) => {
+    if (index === n) {
+      allSubsets.push([...chosen])
+      return
+    }
+    collect(index + 1, chosen)
+    chosen.push(data[index])
+    collect(index + 1, chosen)
+    chosen.pop()
+  }
+  collect(0, [])
 
   const steps: AnimationStep[] = []
   let sid = 1
@@ -157,7 +169,7 @@ export function generateSubsetsTree(arr?: number[]): AnimationScript {
     algorithm: 'subsets',
     presentation: { engine: 'scene', module: 'tree' },
     complexity: { time: { best: 'O(2^n)', average: 'O(2^n)', worst: 'O(n·2^n)' }, space: 'O(n)' },
-    result: total,
+    result: allSubsets,
     initialState: { type: 'tree', data: [...data] },
     steps: steps as AnimationScript['steps'],
   }

@@ -63,7 +63,7 @@ export function generateDeque(values?: number[]): AnimationScript {
 
   steps.push({
     stepId: sid++, codeLine: 8,
-    description: { zh: '双端队列操作完成。最终: [2, 3]', en: 'Deque ops done. Final: [2, 3]' },
+    description: { zh: `双端队列操作完成。最终: [${initialValues.join(', ')}]`, en: `Deque ops done. Final: [${initialValues.join(', ')}]` },
     action: { type: 'mark', targets: [], color: 'success' },
     events: [{ type: 'scene.clear_highlight' }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
@@ -74,6 +74,7 @@ export function generateDeque(values?: number[]): AnimationScript {
     complexity: { time: { best: 'O(1)', average: 'O(1)', worst: 'O(1)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'deque' },
     initialState: { type: 'array', data: initialValues },
+    result: initialValues,
     steps,
   }
 }

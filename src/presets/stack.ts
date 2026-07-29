@@ -59,6 +59,7 @@ export function generateStack(arr?: number[]): AnimationScript {
     complexity: { time: { best: 'O(1)', average: 'O(1)', worst: 'O(1)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'stack' },
     initialState: { type: 'array', data: initialStack },
+    result: stack,
     steps,
   }
 }

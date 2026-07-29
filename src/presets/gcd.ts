@@ -147,6 +147,7 @@ export function generateGCD(input?: unknown): AnimationScript {
     },
     presentation: { engine: 'scene', module: 'variables', variant: 'gcd' },
     initialState: { type: 'array', data: [initialA, initialB] },
+    result: a,
     steps,
   }
 }

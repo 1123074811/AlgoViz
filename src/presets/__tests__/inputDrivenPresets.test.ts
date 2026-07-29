@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { generateACM } from '../acm'
 import { generateBPlusTree } from '../bPlusTree'
 import { generateBTree } from '../bTree'
+import { generateDynamicBPlusTreeOp } from '../dynamicOperations'
 import { generateLeetCode } from '../leetcode'
 import { generateSudoku } from '../sudoku'
 import { generatePreset } from '../generators'
@@ -20,6 +21,11 @@ describe('input-driven built-in presets', () => {
 
     expect(script.initialState.data).toEqual([4, 8, 12, 16, 20, 24])
     expect(script.steps.some(step => step.description.zh.includes('search(20)'))).toBe(true)
+    expect(script.result).toBe(20)
+    expect(generateBPlusTree({ keys: [4, 8, 12], target: 5 }).result).toBe(-1)
+    expect(generateDynamicBPlusTreeOp('search', [10, 20, 30, 35, 40, 45, 50, 60], 5)?.result).toBe(-1)
+    expect(generateDynamicBPlusTreeOp('range_query', [10, 20, 30, 35, 40, 45, 50, 60], '30, 50')?.result)
+      .toEqual([30, 35, 40, 45, 50])
   })
 
   it('uses the provided Sudoku board as the initial matrix', () => {
@@ -53,6 +59,24 @@ describe('input-driven built-in presets', () => {
       root: [10, 5, -3, 3, 2, 0, 11, 3, -2, 0, 1],
     })
     expect(generatePreset('binary_tree_traverse', input)?.initialState.data.slice(0, 5)).toEqual([10, 5, -3, 3, 2])
+  })
+
+  it('keeps LeetCode level-order trees connected and returns the actual BFS values', () => {
+    const input = parseAlgorithmInput(
+      'root = [8,3,10,1,6,null,14,12,35,33,80,15,14,11,23,22,19]',
+      'leetcode',
+      'binary_tree_traverse',
+    )
+    const script = generatePreset('binary_tree_traverse', input)!
+    const create = script.steps[0].events?.find(event => event.type === 'tree.create')
+    expect(create?.type).toBe('tree.create')
+    if (!create || create.type !== 'tree.create') return
+
+    const childIds = new Set(create.edges.map(edge => edge.childId))
+    expect(create.nodes.filter(node => !childIds.has(node.id)).map(node => node.id)).toEqual([create.rootId])
+    expect(create.edges).toHaveLength(create.nodes.length - 1)
+    expect(create.nodes.filter(node => node.value === 14)).toHaveLength(2)
+    expect(script.result).toEqual([8, 3, 10, 1, 6, 14, 12, 35, 33, 80, 15, 14, 11, 23, 22, 19])
   })
 
   it('generates a full Path Sum III tree animation from LeetCode input', () => {
@@ -93,5 +117,43 @@ describe('input-driven built-in presets', () => {
   it('passes input through the dynamic preset registry', () => {
     expect(generatePreset('btree', [8, 2, 4, 6])?.initialState.data).toEqual([2, 4, 6, 8])
     expect(generatePreset('acm_templates', [1, 2, 3])?.initialState.data).toEqual([1, 2, 3])
+  })
+
+  it('keeps graph outputs aligned with the algorithm result', () => {
+    const graph = parseAlgorithmInput(
+      'n = 4, edges = [[0,1,2],[0,2,5],[1,2,1],[2,3,3]]',
+      'leetcode',
+      'dijkstra',
+    )
+
+    expect(generatePreset('bfs_graph', graph)?.result).toEqual(['0', '1', '2', '3'])
+    expect(generatePreset('dfs_graph', graph)?.result).toEqual(['0', '1', '2', '3'])
+    expect(generatePreset('dijkstra', graph)?.result).toEqual(['0:0', '1:2', '2:3', '3:6'])
+    expect(generatePreset('prim', graph)?.result).toEqual(['0-1(2)', '1-2(1)', '2-3(3)'])
+    expect(generatePreset('kruskal', graph)?.result).toEqual(['1-2(1)', '0-1(2)', '2-3(3)'])
+  })
+
+  it('uses object-shaped inputs for sliding windows and convex hulls', () => {
+    expect(generatePreset('sliding_window', { nums: [9, 1, 8, 2], k: 2 })?.initialState.data)
+      .toEqual([9, 1, 8, 2])
+    expect(generatePreset('convex_hull', { points: [[0, 0], [2, 0], [0, 2], [1, 1]] })?.result)
+      .toEqual([[0, 0], [2, 0], [0, 2]])
+  })
+
+  it('drives Map, Trie and grid pathfinding from the submitted input', () => {
+    expect(generatePreset('map', { pairs: { answer: 42, mode: 'fast' } })?.result)
+      .toEqual(['answer:42', 'mode:fast'])
+    expect(generatePreset('trie', ['app', 'apple', 'bat'])?.result)
+      .toEqual(['app', 'apple', 'bat'])
+    expect(generatePreset('grid_pathfinding', {
+      grid: [[0, 1, 0], [0, 1, 0], [0, 0, 0]],
+      start: [0, 0],
+      target: [0, 2],
+    })?.result).toEqual([[0, 0], [1, 0], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2]])
+    expect(generatePreset('grid_pathfinding', {
+      grid: [[0, 1, 0], [0, 1, 0], [0, 1, 0]],
+      start: [0, 0],
+      target: [0, 2],
+    })?.result).toEqual([])
   })
 })

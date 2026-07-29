@@ -16,7 +16,7 @@ describe('generateSkipList', () => {
       'skip_list.compare',
       'skip_list.found',
     ])
-    expect(s.result).toBe(4)
+    expect(s.result).toBe(true)
     expect(s.steps).toHaveLength(8)
   })
 
@@ -24,7 +24,7 @@ describe('generateSkipList', () => {
     const s = generateSkipList([1, 3, 4, 7, 9, 12], 8)
     const events = s.steps.flatMap(step => step.events ?? [])
     expect(events[events.length - 1]?.type).toBe('skip_list.miss')
-    expect(s.result).toBe(-1)
+    expect(s.result).toBe(false)
   })
 
   it('uses a default target that demonstrates right and down movement', () => {

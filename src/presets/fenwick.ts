@@ -42,12 +42,13 @@ export function generateFenwick(arr: number[]): AnimationScript {
 
   // Query example
   let sum = 0
-  let idx = 4 // query prefix sum up to index 3
+  const querySize = Math.min(4, n)
+  let idx = querySize
   steps.push({
     stepId: sid++, codeLine: 9,
-    description: { zh: `查询前缀和 prefix(4)`, en: `Query prefix sum(4)` },
-    action: { type: 'highlight', targets: [3], color: 'primary' },
-    events: [{ type: 'array.mark_sorted', indices: [3] }],
+    description: { zh: `查询前 ${querySize} 项的前缀和`, en: `Query the first ${querySize} items` },
+    action: { type: 'highlight', targets: querySize ? [querySize - 1] : [], color: 'primary' },
+    events: [{ type: 'array.mark_sorted', indices: querySize ? [querySize - 1] : [] }],
     stats: { comparisons: sid, swaps: 0, accesses: 0 },
   })
   while (idx > 0) {
@@ -75,6 +76,7 @@ export function generateFenwick(arr: number[]): AnimationScript {
     complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'array', variant: 'fenwick' },
     initialState: { type: 'array', data: initialTree.slice(1) },
+    result: sum,
     steps: steps as AnimationScript['steps'],
   }
 }

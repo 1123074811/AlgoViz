@@ -20,7 +20,8 @@ export function generateConvexHull(input?: Pt[]): AnimationScript {
   ])
 
   // Andrew monotone chain
-  const sorted = pts.map((p, i) => ({ p, i })).sort((a, b) => a.p[0] - b.p[0] || a.p[1] - b.p[1])
+  const sorted = [...new Map(pts.map((p, i) => [`${p[0]},${p[1]}`, { p, i }])).values()]
+    .sort((a, b) => a.p[0] - b.p[0] || a.p[1] - b.p[1])
   const lower: Array<{ p: Pt; i: number }> = []
   for (const cur of sorted) {
     while (lower.length >= 2 && cross(lower[lower.length - 2].p, lower[lower.length - 1].p, cur.p) <= 0) lower.pop()
@@ -28,13 +29,32 @@ export function generateConvexHull(input?: Pt[]): AnimationScript {
     push(`加入点 ${cur.i}，维护下凸壳`, `Add point ${cur.i}, maintain lower hull`,
       lower.slice(1).map((q, k) => ({ type: 'geometry.segment' as const, id: `low_${k}`, from: lower[k].p, to: q.p, color: 'success' })))
   }
-  push('凸包构建完成（下链）', 'Lower hull done', [])
+  const upper: Array<{ p: Pt; i: number }> = []
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const cur = sorted[i]
+    while (upper.length >= 2 && cross(upper[upper.length - 2].p, upper[upper.length - 1].p, cur.p) <= 0) upper.pop()
+    upper.push(cur)
+    push(`加入点 ${cur.i}，维护上凸壳`, `Add point ${cur.i}, maintain upper hull`,
+      upper.slice(1).map((q, k) => ({ type: 'geometry.segment' as const, id: `up_${k}`, from: upper[k].p, to: q.p, color: 'primary' })))
+  }
+  const hull = sorted.length <= 2
+    ? sorted
+    : [...lower.slice(0, -1), ...upper.slice(0, -1)]
+  push('上下凸壳合并完成', 'Lower and upper hull merged',
+    hull.length < 2 ? [] : hull.map((point, index) => ({
+      type: 'geometry.segment' as const,
+      id: `hull_${index}`,
+      from: point.p,
+      to: hull[(index + 1) % hull.length].p,
+      color: 'success',
+    })))
 
   return {
     algorithm: 'convex_hull',
     complexity: { time: { best: 'O(n log n)', average: 'O(n log n)', worst: 'O(n log n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'geometry' },
     initialState: { type: 'array', data: [] },
+    result: hull.map(point => point.p),
     steps,
   }
 }

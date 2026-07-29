@@ -96,6 +96,7 @@ export function generateMonotonicStack(arr: number[]): AnimationScript {
     complexity: { time: { best: 'O(n)', average: 'O(n)', worst: 'O(n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'array', variant: 'monotonic_stack' },
     initialState: { type: 'array', data: [...arr] },
+    result,
     steps,
   }
 }

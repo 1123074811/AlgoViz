@@ -22,7 +22,8 @@ export function generateFloyd(input?: number[][]): AnimationScript {
   function matrixSnapshot() { return matrix.map(row => [...row]) }
 
   // Step 1: Initial matrix
-  const flatInit = matrix.flat()
+  const initialMatrix = matrixSnapshot()
+  const flatInit = initialMatrix.flat()
   steps.push({
     stepId: sid++, codeLine: 2,
     description: {
@@ -96,7 +97,8 @@ export function generateFloyd(input?: number[][]): AnimationScript {
     algorithm: 'floyd',
     complexity: { time: { best: 'O(V³)', average: 'O(V³)', worst: 'O(V³)' }, space: 'O(V²)' },
     presentation: { engine: 'scene', module: 'matrix' },
-    initialState: { type: 'matrix', data: flatInit, matrix: matrix },
+    initialState: { type: 'matrix', data: flatInit, matrix: initialMatrix },
+    result: matrixSnapshot(),
     steps,
   }
 }

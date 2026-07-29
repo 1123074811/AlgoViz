@@ -125,6 +125,7 @@ export function generateHeapOperations(_arr?: number[]): AnimationScript {
     complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'heap' },
     initialState: { type: 'array', data: [] },
+    result: heap,
     steps,
   }
 }

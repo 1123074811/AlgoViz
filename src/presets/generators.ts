@@ -931,6 +931,20 @@ function parseArr(input: unknown): number[] {
   return [5, 3, 8, 1, 9, 2]
 }
 
+function parseTreeLevelOrder(input: unknown): Array<number | null> {
+  const candidate = input && typeof input === 'object' && !Array.isArray(input)
+    ? (Array.isArray((input as Record<string, unknown>).source)
+        ? (input as Record<string, unknown>).source
+        : (input as Record<string, unknown>).root)
+    : input
+  if (!Array.isArray(candidate)) return [8, 3, 10, 1, 6, null, 14]
+  return candidate.map((value) => {
+    if (value === null || value === undefined || value === 'null') return null
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+  })
+}
+
 function parseNum(input: unknown, fallback: number): number {
   if (typeof input === 'number' && input > 0) return Math.floor(input)
   if (Array.isArray(input) && input.length > 0 && typeof input[0] === 'number') return Math.floor(input[0])
@@ -952,8 +966,8 @@ function parseStrs(input: unknown, d1: string, d2?: string): [string, string] {
   if (Array.isArray(input) && input.length >= 2 && typeof input[0] === 'string' && typeof input[1] === 'string') return [input[0], input[1]]
   if (typeof input === 'object' && input !== null) {
     const o = input as Record<string, unknown>
-    const s1 = typeof o.text1 === 'string' ? o.text1 : typeof o.s1 === 'string' ? o.s1 : (typeof o.text === 'string' ? o.text : null)
-    const s2 = typeof o.text2 === 'string' ? o.text2 : typeof o.s2 === 'string' ? o.s2 : (typeof o.pattern === 'string' ? o.pattern : null)
+    const s1 = typeof o.text1 === 'string' ? o.text1 : typeof o.word1 === 'string' ? o.word1 : typeof o.s1 === 'string' ? o.s1 : (typeof o.text === 'string' ? o.text : null)
+    const s2 = typeof o.text2 === 'string' ? o.text2 : typeof o.word2 === 'string' ? o.word2 : typeof o.s2 === 'string' ? o.s2 : (typeof o.pattern === 'string' ? o.pattern : null)
     if (s1) return [s1, s2 ?? d2 ?? d1]
   }
   return [parseStr(input, d1), d2 ?? d1]
@@ -1191,7 +1205,14 @@ const binarySearchWrapper = (input: unknown) => {
     : undefined
   return generateBinarySearch(arr, target)
 }
-const slidingWindowWrapper = (input: unknown) => generateSlidingWindow(parseArr(input), Math.min(3, parseArr(input).length))
+const slidingWindowWrapper = (input: unknown) => {
+  const object = input && typeof input === 'object' && !Array.isArray(input)
+    ? input as Record<string, unknown>
+    : undefined
+  const values = Array.isArray(object?.nums) ? object.nums.map(Number) : parseArr(input)
+  const size = typeof object?.k === 'number' ? object.k : Math.min(3, values.length)
+  return generateSlidingWindow(values, size)
+}
 const monotonicStackWrapper = (input: unknown) => generateMonotonicStack(parseArr(input))
 const asKnapsackObj = (input: unknown) => {
   const o = (input && typeof input === 'object' && !Array.isArray(input)) ? input as Record<string, unknown> : null
@@ -1250,11 +1271,29 @@ const stackWrapper = (input: unknown) => generateStack(parseArr(input))
 
 const queueWrapper = (input: unknown) => generateQueue(parseArr(input))
 const setWrapper = (input: unknown) => generateSet(parseArr(input))
-const mapWrapper = (_input: unknown) => generateMap()
+const mapWrapper = (input: unknown) => {
+  const object = input && typeof input === 'object' && !Array.isArray(input)
+    ? input as Record<string, unknown>
+    : undefined
+  const pairs = object?.pairs && typeof object.pairs === 'object' && !Array.isArray(object.pairs)
+    ? object.pairs as Record<string, unknown>
+    : object
+  return generateMap(pairs)
+}
 const dequeWrapper = (input: unknown) => generateDeque(parseArr(input))
 const bitsetWrapper = (input: unknown) => generateBitset(parseArr(input))
 const heapWrapper = (input: unknown) => generateHeapOperations(parseArr(input).slice(0, 6))
-const reservoirWrapper = (input: unknown) => generateReservoir(parseArr(input))
+const reservoirWrapper = (input: unknown) => {
+  const object = input && typeof input === 'object' && !Array.isArray(input)
+    ? input as Record<string, unknown>
+    : undefined
+  const stream = Array.isArray(object?.stream)
+    ? object.stream as number[]
+    : Array.isArray(object?.data)
+      ? object.data as number[]
+      : parseArr(input)
+  return generateReservoir(stream, typeof object?.seed === 'number' ? object.seed : 1)
+}
 const unionFindWrapper = (input: unknown) => {
   // 边列表数组形式
   if (Array.isArray(input) && input.length > 0 && Array.isArray(input[0])) return generateUnionFind(input as number[][])
@@ -1271,14 +1310,27 @@ const unionFindWrapper = (input: unknown) => {
   }
   return generateUnionFind()
 }
-const binaryTreeWrapper = (input: unknown) => generateBinaryTree(parseArr(input))
+const binaryTreeWrapper = (input: unknown) => generateBinaryTree(parseTreeLevelOrder(input))
 const pathSumIIIWrapper = (input: unknown) => generatePathSumIII(input)
 const avlTreeWrapper = (input: unknown) => generateAVLTree(parseArr(input))
-const redBlackTreeWrapper = (_input: unknown) => generateRedBlackTree()
+const redBlackTreeWrapper = (input: unknown) => generateRedBlackTree(parseArr(input))
 const linkedListReverseWrapper = (input: unknown) => generateLinkedListReverse(parseArr(input))
-const gridPathWrapper = (_input: unknown) => generateGridPathfinding()
+const gridPathWrapper = (input: unknown) => {
+  const object = input && typeof input === 'object' && !Array.isArray(input)
+    ? input as Record<string, unknown>
+    : undefined
+  return generateGridPathfinding({
+    grid: Array.isArray(object?.grid) ? object.grid as number[][] : undefined,
+    start: Array.isArray(object?.start) ? object.start as [number, number] : undefined,
+    target: Array.isArray(object?.target) ? object.target as [number, number] : undefined,
+  })
+}
 const parseGrid = (input: unknown): number[][] | undefined => {
-  const v = Array.isArray(input) ? input : (input && typeof input === 'object' ? (input as { data?: unknown }).data : undefined)
+  const v = Array.isArray(input)
+    ? input
+    : input && typeof input === 'object'
+      ? ((input as { grid?: unknown; data?: unknown }).grid ?? (input as { data?: unknown }).data)
+      : undefined
   return Array.isArray(v) && v.every(r => Array.isArray(r)) ? v as number[][] : undefined
 }
 const gridDPWrapper = (input: unknown) => generateGridDP(parseGrid(input))
@@ -1663,9 +1715,12 @@ function inferPresetResult(algoId: string, inputData: unknown, script: Animation
       return arr.indexOf(target)
     }
     case 'gcd_euclidean': {
+      const object = inputData && typeof inputData === 'object' && !Array.isArray(inputData)
+        ? inputData as Record<string, unknown>
+        : undefined
       const arr = parseArr(inputData)
-      const a = Math.abs(arr[0] ?? 48)
-      const b = Math.abs(arr[1] ?? 18)
+      const a = Math.abs(typeof object?.a === 'number' ? object.a : arr[0] ?? 48)
+      const b = Math.abs(typeof object?.b === 'number' ? object.b : arr[1] ?? 18)
       return gcd(a, b)
     }
     case 'lis': {
@@ -1712,7 +1767,7 @@ function inferPresetResult(algoId: string, inputData: unknown, script: Animation
       return hull.length > 0 ? hull.map(([x, y]) => `(${x},${y})`) : undefined
     }
     case 'kmp_automaton': {
-      const [pattern, text] = parseStrs(inputData, 'aba', 'ababaab')
+      const [text, pattern] = parseStrs(inputData, 'ababaab', 'aba')
       return kmpMatchIndices(pattern, text)
     }
     default:
@@ -1743,8 +1798,12 @@ function andrewHull(input: Array<[number, number]>): Array<[number, number]> {
 }
 
 function parsePointsForResult(input: unknown): Array<[number, number]> {
-  if (Array.isArray(input)) {
-    const pts = input.filter((p): p is [number, number] => Array.isArray(p) && p.length >= 2 && typeof p[0] === 'number' && typeof p[1] === 'number')
+  const object = input && typeof input === 'object' && !Array.isArray(input)
+    ? input as Record<string, unknown>
+    : undefined
+  const source = Array.isArray(object?.points) ? object.points : input
+  if (Array.isArray(source)) {
+    const pts = source.filter((p): p is [number, number] => Array.isArray(p) && p.length >= 2 && typeof p[0] === 'number' && typeof p[1] === 'number')
       .map(p => [p[0], p[1]] as [number, number])
     if (pts.length >= 3) return pts
   }
@@ -1898,17 +1957,29 @@ function scriptTraversalResult(script: AnimationScript): Array<number | string |
   return output.length > 0 ? output : undefined
 }
 
-/** 访问顺序兜底：图/树/链表的 visit 事件序列(去重保序)。 */
+/** 访问顺序兜底：把内部节点 id 映射回用户可见的节点值。 */
 function scriptVisitOrder(script: AnimationScript): Array<number | string> | undefined {
-  const ids: Array<string> = []
+  const valueById = new Map<string, number | string>()
   for (const step of script.steps) {
-    for (const ev of step.events ?? []) {
-      if (ev.type === 'graph.visit_node' || ev.type === 'tree.visit' || ev.type === 'linked_list.visit') {
-        ids.push((ev as { nodeId: string }).nodeId)
+    for (const event of step.events ?? []) {
+      if (event.type === 'tree.create' || event.type === 'linked_list.create') {
+        event.nodes.forEach(node => valueById.set(node.id, node.value))
+      } else if (event.type === 'graph.create') {
+        event.nodes.forEach(node => valueById.set(node.id, node.label ?? node.id))
       }
     }
   }
-  return ids.length > 0 ? ids : undefined
+
+  const output: Array<number | string> = []
+  for (const step of script.steps) {
+    for (const ev of step.events ?? []) {
+      if (ev.type === 'graph.visit_node' || ev.type === 'tree.visit' || ev.type === 'linked_list.visit') {
+        const nodeId = ev.nodeId
+        output.push(valueById.get(nodeId) ?? nodeId)
+      }
+    }
+  }
+  return output.length > 0 ? [...new Set(output)] : undefined
 }
 
 /** 矩阵类(floyd/interval_dp/sudoku 等)：用 initialState.matrix 应用所有 update_cell 得最终矩阵。 */

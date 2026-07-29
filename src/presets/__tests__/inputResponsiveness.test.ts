@@ -8,18 +8,9 @@ import { parseAlgorithmInput, getLeetCodeDefault } from '@/utils/inputParser'
  * 这道关卡守住「输入解析(按算法类型) → 生成器(真正使用输入)」整条链路。
  */
 
-// 模板合集类：本身是固定示例集,无单一可变输入,豁免。
-// red_black_tree/grid_pathfinding/grid_dp 为固定示例演示(grid 类输入在 leetcode 默认通道下
-// 无法构造出网格,生成器回退到内置示例),无单一可变标量输入,豁免。
-// map 为固定的 put/get/remove 字符串键值对内置演示(generateMap 无可变标量输入),豁免。
-const WHITELIST = new Set([
-  'leetcode_hot100', 'acm_templates',
-  'red_black_tree', 'grid_pathfinding', 'grid_dp',
-  'map',
-])
-
 /** 产生与原输入“类型相同但内容不同”的变异输入。 */
-function mutate(s: string): string {
+function mutate(s: string, algorithmId: string): string {
+  if (algorithmId === 'grid_pathfinding') return s.replace('target = [3,4]', 'target = [3,3]')
   // 含带引号字符串(字符串类算法)：改第一个字符串内容。
   if (/"[^"]+"/.test(s)) return s.replace(/"([^"]+)"/, (_m, g: string) => `"${g}x"`)
   // 否则改第一个数字(覆盖数组首元素/n/权重/target 等)。
@@ -29,15 +20,18 @@ function mutate(s: string): string {
 }
 
 function signature(script: ReturnType<typeof generatePreset>): string {
-  return JSON.stringify(script?.steps ?? [])
+  return JSON.stringify({
+    initialState: script?.initialState,
+    result: script?.result,
+    steps: script?.steps,
+  })
 }
 
 describe('输入响应性约束：改输入 → 动画(脚本)必须改变', () => {
   for (const id of PRESET_IDS) {
-    if (WHITELIST.has(id)) continue
     it(`${id} 随输入动态同步`, () => {
       const a = getLeetCodeDefault(id)
-      const b = mutate(a)
+      const b = mutate(a, id)
       expect(b, `变异未改变输入: ${a}`).not.toBe(a)
       const scriptA = generatePreset(id, parseAlgorithmInput(a, 'leetcode', id))
       const scriptB = generatePreset(id, parseAlgorithmInput(b, 'leetcode', id))

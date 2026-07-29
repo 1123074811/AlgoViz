@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { generateKmpAutomaton } from '../kmpAutomaton'
+import { generatePreset } from '../generators'
 import { deriveSceneState } from '@/scene/SceneEngine'
 
 describe('generateKmpAutomaton', () => {
@@ -11,5 +12,10 @@ describe('generateKmpAutomaton', () => {
     expect(evs.some(e => e.type === 'automaton.activate')).toBe(true)
     const scene = deriveSceneState(script, 1)
     expect(Object.keys(scene.entities).some(k => k.startsWith('auto_'))).toBe(true)
+  })
+
+  it('returns every match index from text/pattern input', () => {
+    expect(generatePreset('kmp_automaton', { text: 'ababaab', pattern: 'aba' })?.result)
+      .toEqual([0, 2])
   })
 })

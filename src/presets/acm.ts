@@ -107,6 +107,7 @@ export function generateACM(input?: unknown): AnimationScript {
     complexity: { time: { best: '-', average: '-', worst: '-' }, space: '-' },
     presentation: { engine: 'scene', module: 'array' },
     initialState: { type: 'array', data: nums },
+    result: { powValue, primeIndices, midpoint: nums[mid] },
     steps: steps as AnimationScript['steps'],
   }
 }

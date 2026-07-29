@@ -21,6 +21,7 @@ describe('gcd_euclidean preset', () => {
 
     expect(script.algorithm).toBe('gcd_euclidean')
     expect(script.initialState.data).toEqual([48, 18])
+    expect(script.result).toBe(6)
     expect(events.some(event => event.type === 'math.init')).toBe(true)
     expect(events.some(event => event.type === 'math.set')).toBe(true)
     expect(finalNote(script)).toContain('gcd = a = 6')
@@ -32,6 +33,7 @@ describe('gcd_euclidean preset', () => {
 
     expect(script.algorithm).toBe('gcd_euclidean')
     expect(script.initialState.data).toEqual([84, 30])
+    expect(script.result).toBe(6)
     expect(events.some(event => event.type === 'math.init')).toBe(true)
     expect(events.some(event => event.type === 'math.set')).toBe(true)
     expect(finalNote(script)).toContain('gcd = a = 6')

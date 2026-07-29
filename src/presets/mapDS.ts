@@ -5,7 +5,7 @@ import type { AnimationScript } from '@/types/animation'
  * chaining) so it renders with HashTableView (bucket array + chains + load
  * factor), matching the hash table dedicated visual.
  */
-export function generateMap(): AnimationScript {
+export function generateMap(input: Record<string, unknown> = { name: 'Alice', age: 25, city: 'NYC', country: 'USA' }): AnimationScript {
   const steps: AnimationScript['steps'] = []
   let sid = 1
   const SIZE = 8
@@ -48,24 +48,9 @@ export function generateMap(): AnimationScript {
     })
   }
 
-  function remove(key: string) {
-    const bucket = hashOf(key) % SIZE
-    buckets[bucket] = buckets[bucket].filter(k => k !== key)
-    steps.push({
-      stepId: sid++, codeLine: 5,
-      description: { zh: `remove("${key}") → 定位桶 ${bucket}，删除该键值对`, en: `remove("${key}") → bucket ${bucket}, delete entry` },
-      action: { type: 'delete', targets: [bucket], color: 'danger' },
-      events: [{ type: 'hashtable.remove', key, bucket }],
-      stats: { comparisons: 0, swaps: 0, accesses: 1 },
-    })
-  }
-
-  put('name', 'Alice')
-  put('age', 25)
-  put('city', 'NYC')
-  put('country', 'USA')
-  get('name')
-  remove('city')
+  const entries = Object.entries(input)
+  for (const [key, value] of entries) put(key, typeof value === 'number' ? value : String(value))
+  if (entries[0]) get(entries[0][0])
 
   steps.push({
     stepId: sid++, codeLine: 6,
@@ -80,6 +65,7 @@ export function generateMap(): AnimationScript {
     complexity: { time: { best: 'O(1)', average: 'O(1)', worst: 'O(n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'array' },
     initialState: { type: 'array', data: [] },
+    result: entries.map(([key, value]) => `${key}:${String(value)}`),
     steps,
   }
 }

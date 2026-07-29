@@ -151,6 +151,7 @@ export function generateBTree(input?: unknown): AnimationScript {
     complexity: { time: { best: 'O(log n)', average: 'O(log n)', worst: 'O(log n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'tree' },
     initialState: { type: 'tree', data: keys },
+    result: [...new Set([...keys, insertKey])].sort((a, b) => a - b),
     steps,
   }
 }

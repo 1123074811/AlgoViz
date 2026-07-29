@@ -150,6 +150,7 @@ export function generateUnionFind(edges?: number[][], nodeCount?: number): Anima
     complexity: { time: { best: 'O(α(n))', average: 'O(α(n))', worst: 'O(α(n))' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'union_find' },
     initialState: { type: 'union_find', data: initialParent },
+    result: parent,
     steps,
   }
 }

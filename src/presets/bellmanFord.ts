@@ -204,6 +204,7 @@ export function generateBellmanFord(input: unknown): AnimationScript {
     },
     presentation: { engine: 'scene', module: 'graph' },
     initialState: { type: 'graph', data: [], nodes, edges },
+    result: nodes.map(node => dist[node.id]),
     steps
   }
 }

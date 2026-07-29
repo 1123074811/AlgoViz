@@ -4,6 +4,10 @@ export function generateSet(values?: number[]): AnimationScript {
   const steps: AnimationScript['steps'] = []
   let sid = 1
   const initialValues = values && values.length > 0 ? values : [1, 2, 3]
+  const result = [...new Set(initialValues)]
+  if (!result.includes(4)) result.push(4)
+  const removedIndex = result.indexOf(2)
+  if (removedIndex >= 0) result.splice(removedIndex, 1)
 
   steps.push({
     stepId: sid++, codeLine: 0,
@@ -47,7 +51,7 @@ export function generateSet(values?: number[]): AnimationScript {
 
   steps.push({
     stepId: sid++, codeLine: 6,
-    description: { zh: '集合操作完成。最终: {1, 3, 4}', en: 'Set ops done. Final: {1, 3, 4}' },
+    description: { zh: `集合操作完成。最终: {${result.join(', ')}}`, en: `Set ops done. Final: {${result.join(', ')}}` },
     action: { type: 'mark', targets: [], color: 'success' },
     events: [{ type: 'scene.clear_highlight' }],
     stats: { comparisons: 0, swaps: 0, accesses: 0 },
@@ -58,6 +62,7 @@ export function generateSet(values?: number[]): AnimationScript {
     complexity: { time: { best: 'O(1)', average: 'O(1)', worst: 'O(n)' }, space: 'O(n)' },
     presentation: { engine: 'scene', module: 'set' },
     initialState: { type: 'array', data: initialValues },
+    result,
     steps,
   }
 }

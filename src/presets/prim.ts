@@ -110,6 +110,7 @@ export function generatePrim(input: GraphInput): AnimationScript {
     complexity: { time: { best: 'O((V+E) log V)', average: 'O((V+E) log V)', worst: 'O((V+E) log V)' }, space: 'O(V)' },
     presentation: { engine: 'scene', module: 'graph' },
     initialState: { type: 'graph', data: [], nodes, edges },
+    result: mstEdges.map(edge => `${getLabel(edge.source)}-${getLabel(edge.target)}(${edge.weight})`),
     steps,
   }
 }

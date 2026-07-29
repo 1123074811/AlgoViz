@@ -187,6 +187,7 @@ export function generateBFS(input: GraphInput): AnimationScript {
     complexity: { time: { best: 'O(V+E)', average: 'O(V+E)', worst: 'O(V+E)' }, space: 'O(V)' },
     presentation: { engine: 'scene', module: 'graph', variant: 'vertex', layout: 'composite' },
     initialState: { type: 'graph', data: [], nodes, edges },
+    result: output.map(getLabel),
     steps,
   }
 }
