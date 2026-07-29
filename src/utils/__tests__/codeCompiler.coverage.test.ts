@@ -39,6 +39,14 @@ describe('compileAndValidateCode — prose detection', () => {
     expect(result.errors.filter(e => e.message.includes('非代码文本'))).toEqual([])
   })
 
+  it('allows CJK inside C++ raw strings', () => {
+    const result = compileAndValidateCode(
+      'const char* trace = R"TRACE({"description":"创建数组"})TRACE";',
+      'cpp',
+    )
+    expect(result.errors.filter(e => e.message.includes('非代码文本'))).toEqual([])
+  })
+
   it('allows CJK inside python triple single quote docstring', () => {
     const code = ["def f():", "    '''中文文档'''", "    return 1"].join('\n')
     const result = compileAndValidateCode(code, 'python')

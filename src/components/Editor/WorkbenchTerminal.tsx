@@ -9,6 +9,8 @@ export interface TerminalRunState {
   result?: string
   message?: string
   stdinPrompt?: string
+  interactive?: boolean
+  traceDiagnostics?: string[]
 }
 
 interface WorkbenchTerminalProps {
@@ -53,7 +55,7 @@ export default function WorkbenchTerminal({
   const prompt = interactive
     ? runState.status === 'waiting-input'
         ? (runState.stdinPrompt || (lang === 'zh' ? '程序正在等待输入' : 'Program is waiting for input'))
-        : dirty && runState.status !== 'running'
+        : dirty && runState.status !== 'running' && !runState.interactive
           ? (lang === 'zh' ? '代码已修改，按 Ctrl+Enter 编译运行' : 'Code changed; press Ctrl+Enter to compile and run')
           : runState.message
     : inputCompilation.status === 'incomplete'
@@ -128,6 +130,11 @@ export default function WorkbenchTerminal({
           {errors.map((error, index) => (
             <div key={`${error.type}-${error.line}-${index}`} className="text-red-300">
               [compile:{error.type}] {error.line}:{error.column ?? 1} {error.message}
+            </div>
+          ))}
+          {runState.traceDiagnostics?.map((diagnostic, index) => (
+            <div key={`${diagnostic}-${index}`} className="text-red-300">
+              {diagnostic}
             </div>
           ))}
           {!interactive && inputCompilation.status !== 'ready' && inputDiagnostic && (

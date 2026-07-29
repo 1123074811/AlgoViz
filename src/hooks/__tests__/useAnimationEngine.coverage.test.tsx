@@ -50,6 +50,18 @@ describe('useAnimationEngine — playback control', () => {
     expect(result.current.visualState.arrayData).toEqual([3, 1, 2])
   })
 
+  it('loadLiveScript follows the newest emitted step immediately', () => {
+    const script = arrayScript([3, 1], [
+      { type: 'swap', targets: [0, 1], color: 'warning' },
+    ])
+    const { result } = renderHook(() => useAnimationEngine(script))
+
+    act(() => result.current.loadLiveScript(script))
+
+    expect(result.current.currentStep).toBe(1)
+    expect(result.current.visualState.arrayData).toEqual([1, 3])
+  })
+
   it('stepForward / stepBackward honor [0, totalSteps] bounds', () => {
     const script = arrayScript([1, 2], [
       { type: 'compare', targets: [0], color: 'primary' },

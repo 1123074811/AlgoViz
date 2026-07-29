@@ -47,8 +47,9 @@ function stripTrailingPyComment(line: string): string {
 function extractCodeResidue(lines: string[], language: string): string[] {
   const isPy = language === 'python' || language === 'py'
   const cLike = ['javascript', 'js', 'typescript', 'ts', 'cpp', 'java'].includes(language)
-  type S = 'code' | 'block' | 'tdq' | 'tsq' | 'tmpl'
+  type S = 'code' | 'block' | 'tdq' | 'tsq' | 'tmpl' | 'raw'
   let state: S = 'code'
+  let rawDelimiter = ''
   const out: string[] = []
   for (const raw of lines) {
     let res = ''
@@ -59,12 +60,35 @@ function extractCodeResidue(lines: string[], language: string): string[] {
       if (state === 'tdq') { if (ch === '"' && nx === '"' && nn === '"') { state = 'code'; i += 3 } else i++; continue }
       if (state === 'tsq') { if (ch === "'" && nx === "'" && nn === "'") { state = 'code'; i += 3 } else i++; continue }
       if (state === 'tmpl') { if (ch === '`') { state = 'code'; i++ } else i++; continue }
+      if (state === 'raw') {
+        const closing = `)${rawDelimiter}"`
+        const closeAt = raw.indexOf(closing, i)
+        if (closeAt === -1) { i = raw.length; continue }
+        state = 'code'
+        i = closeAt + closing.length
+        continue
+      }
       if (isPy && ch === '#') break
       if (cLike && ch === '/' && nx === '/') break
       if (cLike && ch === '/' && nx === '*') { state = 'block'; i += 2; continue }
       if (isPy && ch === '"' && nx === '"' && nn === '"') { state = 'tdq'; i += 3; continue }
       if (isPy && ch === "'" && nx === "'" && nn === "'") { state = 'tsq'; i += 3; continue }
       if (cLike && ch === '`') { state = 'tmpl'; i++; continue }
+      if (language === 'cpp' && ch === 'R' && nx === '"') {
+        const opener = raw.slice(i).match(/^R"([^ ()\\\t\r\n]{0,16})\(/)
+        if (opener) {
+          rawDelimiter = opener[1]
+          const closing = `)${rawDelimiter}"`
+          const closeAt = raw.indexOf(closing, i + opener[0].length)
+          if (closeAt === -1) {
+            state = 'raw'
+            i = raw.length
+          } else {
+            i = closeAt + closing.length
+          }
+          continue
+        }
+      }
       if (ch === '"') { i++; while (i < raw.length && raw[i] !== '"') { if (raw[i] === '\\') i++; i++ } i++; continue }
       if (ch === "'") { i++; while (i < raw.length && raw[i] !== "'") { if (raw[i] === '\\') i++; i++ } i++; continue }
       res += ch; i++

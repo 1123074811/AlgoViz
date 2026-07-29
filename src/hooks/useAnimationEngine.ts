@@ -226,6 +226,14 @@ export function useAnimationEngine(script: AnimationScript | null) {
     setPlayback({ script: nextScript, currentStep: 0, isPlaying: false })
   }, [])
 
+  const loadLiveScript = useCallback((nextScript: AnimationScript) => {
+    setPlayback({
+      script: nextScript,
+      currentStep: nextScript.steps.length,
+      isPlaying: false,
+    })
+  }, [])
+
   return {
     visualState,
     currentStepData,
@@ -241,5 +249,6 @@ export function useAnimationEngine(script: AnimationScript | null) {
     goToStep,
     togglePlay,
     loadScript,
+    loadLiveScript,
   }
 }
