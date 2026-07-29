@@ -3,7 +3,9 @@ import {
   parseAlgorithmInput,
   getLeetCodePlaceholder,
   getLeetCodeDefault,
+  hasLeetCodeDefault,
 } from '@/utils/inputParser'
+import { PRESET_IDS } from '@/presets/generators'
 
 // ─── parseAlgorithmInput: JSON format ──────────────────────────────────────
 describe('parseAlgorithmInput — json format', () => {
@@ -81,7 +83,7 @@ describe('parseAlgorithmInput — default array algorithms', () => {
 
   it('keeps vars when k and nums present (sliding_window)', () => {
     const result = parseAlgorithmInput('nums = [1, 3, -1, -3, 5], k = 3', 'leetcode', 'sliding_window')
-    expect(result).toEqual([1, 3, -1, -3, 5])
+    expect(result).toEqual({ nums: [1, 3, -1, -3, 5], k: 3 })
   })
 
   it('handles empty array', () => {
@@ -188,7 +190,7 @@ describe('parseAlgorithmInput — string algorithms', () => {
 
   it('parses edit_distance word1 + word2', () => {
     const result = parseAlgorithmInput('word1 = "horse", word2 = "ros"', 'leetcode', 'edit_distance')
-    expect(result).toEqual({ text1: 'horse', text2: 'ros' })
+    expect(result).toEqual({ word1: 'horse', word2: 'ros' })
   })
 
   it('parses lcs s1 + pattern aliases', () => {
@@ -280,9 +282,12 @@ describe('parseAlgorithmInput — matrix algorithms', () => {
 
 // ─── Tree algorithms ────────────────────────────────────────────────────────
 describe('parseAlgorithmInput — tree algorithms', () => {
-  it('parses root array, converting null to 0', () => {
+  it('parses root array while preserving the original null markers', () => {
     const result = parseAlgorithmInput('root = [8, 3, 10, null, 6]', 'leetcode', 'binary_tree_traverse')
-    expect(result).toEqual([8, 3, 10, 0, 6])
+    expect(result).toEqual({
+      root: [8, 3, 10, 0, 6],
+      source: [8, 3, 10, null, 6],
+    })
   })
 
   it('returns object with root + source when extra vars present', () => {
@@ -491,6 +496,10 @@ describe('getLeetCodePlaceholder', () => {
 
 // ─── getLeetCodeDefault ─────────────────────────────────────────────────────
 describe('getLeetCodeDefault', () => {
+  it('defines an algorithm-specific default for every built-in preset', () => {
+    expect(PRESET_IDS.filter(id => !hasLeetCodeDefault(id))).toEqual([])
+  })
+
   it('returns specific default for known algo', () => {
     expect(getLeetCodeDefault('binary_search')).toBe('nums = [1, 3, 5, 7, 9, 11, 13, 15], target = 7')
   })

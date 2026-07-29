@@ -184,11 +184,19 @@ export interface AnimationStep {
   phase?: { zh: string; en: string }
 }
 
+export type AnimationResult =
+  | null
+  | number
+  | string
+  | boolean
+  | AnimationResult[]
+  | { [key: string]: AnimationResult }
+
 export interface AnimationScript {
   algorithm: string
   complexity: Complexity
   initialState: InitialState
-  result?: number | string | boolean | Array<number | string | boolean>
+  result?: AnimationResult
   /** AI 生成动画的语义一致性校验结果(见 src/ai/verify.ts)。内置生成器无此字段。 */
   verification?: {
     status: 'pass' | 'fail' | 'skipped'

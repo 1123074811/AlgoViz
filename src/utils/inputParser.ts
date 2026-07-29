@@ -35,6 +35,10 @@ export function getLeetCodeDefault(algoId: string): string {
   return LEETCODE_DEFAULTS[algoId] ?? LEETCODE_DEFAULTS['_default']
 }
 
+export function hasLeetCodeDefault(algoId: string): boolean {
+  return Object.prototype.hasOwnProperty.call(LEETCODE_DEFAULTS, algoId)
+}
+
 // ─── Algorithm classification ────────────────────────────────────────────
 
 const GRAPH_ALGOS = new Set([
@@ -103,9 +107,15 @@ const LEETCODE_DEFAULTS: Record<string, string> = {
   a_star: 'n = 5, edges = [[0,1,1],[0,2,4],[1,2,2],[1,3,5],[2,3,1],[3,4,3],[2,4,7]], start = 0, goal = 4',
   union_find: 'n = 6, edges = [[0,1],[1,2],[3,4],[4,5],[2,4]]',
   floyd: 'matrix = [[0,3,999,7],[8,0,2,999],[999,999,0,1],[6,999,999,0]]',
+  grid_dp: 'grid = [[1,3,1],[1,5,1],[4,2,1]]',
+  grid_pathfinding: 'grid = [[0,0,0,0,0],[0,1,1,0,0],[0,0,0,1,0],[0,0,0,0,0]], start = [0,0], target = [3,4]',
   // Data structures
   stack: 'nums = [1, 2, 3]',
   queue: 'nums = [1, 2, 3]',
+  set: 'nums = [5, 3, 5, 8, 3, 1]',
+  map: 'pairs = {"name": "Alice", "age": 25, "city": "Beijing"}',
+  deque: 'nums = [1, 2, 3, 4]',
+  bitset: 'nums = [1, 3, 4, 7]',
   heap_ds: 'nums = [4, 10, 3, 5, 1, 2]',
   trie: 'words = ["cat", "car", "dog"]',
   hash_table: 'pairs = {"name": "Alice", "age": "25", "city": "Beijing"}',
@@ -116,6 +126,7 @@ const LEETCODE_DEFAULTS: Record<string, string> = {
   bst_delete: 'nums = [8, 3, 10, 1, 6, 14]',
   bst_search: 'nums = [8, 3, 10, 1, 6, 14]',
   avl_insert: 'nums = [8, 3, 10, 1, 6, 14]',
+  red_black_tree: 'nums = [13, 8, 17, 1, 11, 15, 25, 6, 22, 27]',
   btree: 'keys = [10, 20, 30, 3, 7, 13, 17, 23, 27, 33, 37]',
   bplus_tree: 'keys = [10, 20, 30, 35, 40, 45, 50, 60]',
   // Backtracking / puzzles
@@ -128,6 +139,10 @@ const LEETCODE_DEFAULTS: Record<string, string> = {
   linked_list_insert: 'nums = [1, 2, 3], param = 5',
   linked_list_delete: 'nums = [1, 2, 3], param = 3',
   linked_list_search: 'nums = [1, 2, 3], param = 3',
+  linked_list_reversal: 'nums = [1, 2, 3, 4, 5]',
+  huffman: 'nums = [5, 9, 12, 13, 16, 45]',
+  skip_list: 'data = [1, 3, 4, 7, 9, 12, 15, 19], target = 9',
+  subsets: 'nums = [1, 2, 3]',
   gcd_euclidean: 'a = 48, b = 18',
   leetcode_hot100: 'nums = [2, 7, 11, 15], target = 9',
   acm_templates: 'nums = [2, 3, 5, 7, 11, 13]',
@@ -150,7 +165,7 @@ function parseCodeInput(raw: string, algoId: string): unknown {
 
   // Try JSON first if it looks like JSON
   if (s.startsWith('{') || s.startsWith('[')) {
-    try { return JSON.parse(s) } catch { /* fall through to code parser */ }
+    try { return JSON.parse(normalizeLeetCodeLiteral(s)) } catch { /* fall through to code parser */ }
   }
 
   // ── Extract variable assignments from code ──────────────────────────
@@ -244,7 +259,7 @@ function parseValue(raw: string): unknown {
   if (raw.startsWith('[')) {
     try {
       const arrStr = extractMatchingBrackets(raw)
-      return JSON.parse(arrStr)
+      return JSON.parse(normalizeLeetCodeLiteral(arrStr))
     } catch { return raw }
   }
 
@@ -252,7 +267,7 @@ function parseValue(raw: string): unknown {
   if (raw.startsWith('{')) {
     try {
       const objStr = extractMatchingBraces(raw)
-      return JSON.parse(objStr)
+      return JSON.parse(normalizeLeetCodeLiteral(objStr))
     } catch { return raw }
   }
 
@@ -360,7 +375,9 @@ function parseStringCodeVars(vars: ParsedVars, algoId: string): unknown {
   if (algoId === 'lcs' || algoId === 'edit_distance') {
     const s1 = typeof vars.text1 === 'string' ? vars.text1 : typeof vars.word1 === 'string' ? vars.word1 : typeof vars.s1 === 'string' ? vars.s1 : undefined
     const s2 = typeof vars.text2 === 'string' ? vars.text2 : typeof vars.word2 === 'string' ? vars.word2 : typeof vars.s2 === 'string' ? vars.s2 : typeof vars.pattern === 'string' ? vars.pattern : undefined
-    if (s1 && s2) return { text1: s1, text2: s2 }
+    if (s1 && s2) return algoId === 'edit_distance'
+      ? { word1: s1, word2: s2 }
+      : { text1: s1, text2: s2 }
     if (s1) return [s1, s2 ?? '']
   }
   // Fallback: return first string found
@@ -371,6 +388,8 @@ function parseStringCodeVars(vars: ParsedVars, algoId: string): unknown {
 }
 
 function parseMatrixCodeVars(vars: ParsedVars, _algoId: string, _s: string): unknown {
+  if (_algoId === 'grid_pathfinding' && Array.isArray(vars.grid)) return vars
+  if (_algoId === 'grid_dp' && Array.isArray(vars.grid)) return vars.grid
   if (Array.isArray(vars.intervals)) return vars
   if (Array.isArray(vars.ranges)) return vars
   if (Array.isArray(vars.segments)) return vars
@@ -398,7 +417,7 @@ function parseTreeCodeVars(vars: ParsedVars, _s: string): unknown {
   if (Array.isArray(vars.root)) {
     const source = [...vars.root]
     const root = vars.root.map(v => v === null || v === 'null' ? 0 : Number(v))
-    return Object.keys(vars).length > 1 ? { ...vars, root, source } : root
+    return { ...vars, root, source }
   }
   // keys for B-Tree / B+ Tree
   if (Array.isArray(vars.keys)) return vars.keys
@@ -445,6 +464,9 @@ function parseGcdCodeVars(vars: ParsedVars): unknown {
 
 function parseDefaultCodeVars(vars: ParsedVars, _s: string): unknown {
   // For simple algorithms, return the first array or number
+  if (typeof vars.k === 'number' && Array.isArray(vars.nums)) {
+    return { nums: vars.nums, k: vars.k }
+  }
   if (Array.isArray(vars.nums)) return vars.nums
   if (Array.isArray(vars.arr)) return vars.arr
   if (Array.isArray(vars.array)) return vars.array
@@ -452,10 +474,16 @@ function parseDefaultCodeVars(vars: ParsedVars, _s: string): unknown {
   if (typeof vars.target === 'number' && Array.isArray(vars.nums)) {
     return { data: vars.nums, param: vars.target }
   }
-  if (typeof vars.k === 'number' && Array.isArray(vars.nums)) {
-    return vars
-  }
   if (typeof vars.n === 'number') return vars.n
   // Return raw vars object
   return vars
+}
+
+/** LeetCode/Python 字面量允许尾随逗号；统一转成 JSON 可解析形式。 */
+function normalizeLeetCodeLiteral(value: string): string {
+  return value
+    .replace(/,\s*([}\]])/g, '$1')
+    .replace(/\bNone\b/g, 'null')
+    .replace(/\bTrue\b/g, 'true')
+    .replace(/\bFalse\b/g, 'false')
 }
