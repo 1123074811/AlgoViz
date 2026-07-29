@@ -10,6 +10,10 @@ const DEFAULT_ALLOWED_BASE_URLS = [
   'https://api.anthropic.com/v1',
 ]
 const DEFAULT_MAX_BODY_BYTES = 1024 * 1024
+const CROSS_ORIGIN_ISOLATION_HEADERS = {
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'require-corp',
+}
 
 export function parseByteLimit(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(value ?? '', 10)
@@ -193,6 +197,10 @@ export function manualChunks(id: string): string | undefined {
 
 export default defineConfig({
   plugins: [react(), apiProxyMiddleware()],
+  optimizeDeps: {
+    // Preserve YoWASP's import.meta-relative WASM and sysroot asset URLs in dev.
+    exclude: ['@yowasp/clang', '@runno/wasi'],
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -201,6 +209,10 @@ export default defineConfig({
   server: {
     port: 5173,
     open: !process.env.CI,
+    headers: CROSS_ORIGIN_ISOLATION_HEADERS,
+  },
+  preview: {
+    headers: CROSS_ORIGIN_ISOLATION_HEADERS,
   },
   build: {
     rollupOptions: {
