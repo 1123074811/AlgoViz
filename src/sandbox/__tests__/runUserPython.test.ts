@@ -22,6 +22,13 @@ describe('buildPyCallSource', () => {
     const src = buildPyCallSource('def f(grid, flag):\n    return 1', { grid: [[1, 0], [0, 1]], flag: true })
     expect(src).toContain('f([[1, 0], [0, 1]], True)')
   })
+
+  it('prefers solve and unwraps a compiled tree source', () => {
+    const code = 'def helper(values):\n    return []\n\ndef solve(values):\n    return values'
+    const src = buildPyCallSource(code, { root: [8, 3, 10, 0], source: [8, 3, 10, null] })
+
+    expect(src).toContain('solve([8, 3, 10, None])')
+  })
 })
 
 describe('runUserPySandboxed', () => {

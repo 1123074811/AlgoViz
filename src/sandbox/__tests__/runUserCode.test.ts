@@ -20,6 +20,13 @@ describe('buildJsCallSource', () => {
   it('returns null when no callable entry is found', () => {
     expect(buildJsCallSource('const x = 1', [1])).toBeNull()
   })
+
+  it('prefers solve and unwraps a compiled tree source', () => {
+    const code = 'function helper(values) { return [] }\nfunction solve(values) { return values }'
+    const src = buildJsCallSource(code, { root: [8, 3, 10, 0], source: [8, 3, 10, null] })
+
+    expect(src).toContain('return solve([8,3,10,null])')
+  })
 })
 
 describe('runUserJsSandboxed (inline fallback in jsdom)', () => {

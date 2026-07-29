@@ -1,4 +1,5 @@
 import type { UserCodeResult } from './userCodeWorker'
+import { normalizeRuntimeValue } from '@/workbench/runtimeContract'
 
 export type { UserCodeResult }
 
@@ -8,7 +9,8 @@ export type { UserCodeResult }
  * 否则整个 input 作为唯一实参。找不到入口返回 null（调用方按 skipped 处理）。
  */
 export function buildJsCallSource(userCode: string, input: unknown): string | null {
-  const fnDecl = userCode.match(/function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)/)
+  const solveDecl = userCode.match(/function\s+(solve)\s*\(([^)]*)\)/)
+  const fnDecl = solveDecl ?? userCode.match(/function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)/)
   const arrowDecl = userCode.match(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\(([^)]*)\)\s*=>/)
   const match = fnDecl ?? arrowDecl
   if (!match) return null
@@ -25,7 +27,7 @@ export function buildJsCallSource(userCode: string, input: unknown): string | nu
   ) {
     args = params.map(p => (input as Record<string, unknown>)[p])
   } else {
-    args = [input]
+    args = [unwrapSingleArgument(input, params)]
   }
 
   let argSource: string
@@ -37,10 +39,21 @@ export function buildJsCallSource(userCode: string, input: unknown): string | nu
   return `${userCode}\n;return ${name}(${argSource});`
 }
 
+function unwrapSingleArgument(input: unknown, params: string[]): unknown {
+  if (params.length !== 1 || input === null || typeof input !== 'object' || Array.isArray(input)) return input
+  const object = input as Record<string, unknown>
+  if (params[0] in object) return object[params[0]]
+  if (/^(?:input|inputData|input_data)$/.test(params[0])) return input
+  for (const key of ['source', 'root', 'nums', 'data', 'grid', 'words', 'keys']) {
+    if (object[key] !== undefined) return object[key]
+  }
+  return input
+}
+
 function executeInline(source: string): UserCodeResult {
   try {
     const fn = new Function(source) as () => unknown
-    return { ok: true, value: fn() }
+    return { ok: true, value: normalizeRuntimeValue(fn()) }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
@@ -75,7 +88,7 @@ export function runUserJsSandboxed(
     worker.onmessage = (ev: MessageEvent<UserCodeResult>) => {
       clearTimeout(timer)
       worker.terminate()
-      resolve(ev.data)
+      resolve(ev.data.ok ? { ...ev.data, value: normalizeRuntimeValue(ev.data.value) } : ev.data)
     }
     worker.onerror = () => {
       clearTimeout(timer)

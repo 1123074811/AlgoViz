@@ -16,7 +16,8 @@ function toPyLiteral(value: unknown): string {
 }
 
 export function buildPyCallSource(userCode: string, input: unknown): string | null {
-  const match = userCode.match(/def\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/)
+  const match = userCode.match(/def\s+(solve)\s*\(([^)]*)\)/)
+    ?? userCode.match(/def\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/)
   if (!match) return null
   const name = match[1]
   const params = match[2]
@@ -34,10 +35,21 @@ export function buildPyCallSource(userCode: string, input: unknown): string | nu
   ) {
     args = params.map(param => (input as Record<string, unknown>)[param])
   } else {
-    args = [input]
+    args = [unwrapSingleArgument(input, params)]
   }
 
   return `import json\n${userCode}\njson.dumps(${name}(${args.map(toPyLiteral).join(', ')}))`
+}
+
+function unwrapSingleArgument(input: unknown, params: string[]): unknown {
+  if (params.length !== 1 || input === null || typeof input !== 'object' || Array.isArray(input)) return input
+  const object = input as Record<string, unknown>
+  if (params[0] in object) return object[params[0]]
+  if (/^(?:input|inputData|input_data)$/.test(params[0])) return input
+  for (const key of ['source', 'root', 'nums', 'data', 'grid', 'words', 'keys']) {
+    if (object[key] !== undefined) return object[key]
+  }
+  return input
 }
 
 let workerSingleton: Worker | null = null
