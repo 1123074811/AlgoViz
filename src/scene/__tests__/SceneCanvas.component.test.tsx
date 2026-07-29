@@ -44,7 +44,7 @@ describe('SceneCanvas interactions', () => {
       />,
     )
 
-    expect(screen.getByText('创建数组')).toBeTruthy()
+    expect(screen.getByText(/创建数组|Create array/)).toBeTruthy()
     fireEvent.click(screen.getByTitle('Zoom In'))
     fireEvent.click(screen.getByTitle('Zoom Out'))
     fireEvent.click(screen.getByTitle('Reset View'))

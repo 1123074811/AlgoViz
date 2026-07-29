@@ -1,38 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
+import ELK from 'elkjs/lib/elk-api'
 import type { ElkNode } from 'elkjs/lib/elk-api'
+import elkWorkerUrl from 'elkjs/lib/elk-worker.min.js?url'
 import type { AnimationScript } from '@/types/animation'
 import type { SceneState } from '../types'
 import { applyElkLayout, createElkLayoutTask, elkLayoutKey, elkPilotMode } from './elkLayout'
 
 const cache = new Map<string, ElkNode>()
-let worker: Worker | undefined
-let requestId = 0
-const pending = new Map<number, { resolve: (graph: ElkNode) => void; reject: (error: Error) => void }>()
+let elk: InstanceType<typeof ELK> | undefined
 
 function requestLayout(graph: ElkNode): Promise<ElkNode> {
-  if (typeof Worker === 'undefined') return Promise.reject(new Error('Web Worker is unavailable'))
-  worker ??= new Worker(new URL('./elkLayout.worker.ts', import.meta.url), { type: 'module' })
-  worker.onmessage ??= (event: MessageEvent<{ id: number; graph?: ElkNode; error?: string }>) => {
-    const request = pending.get(event.data.id)
-    if (!request) return
-    pending.delete(event.data.id)
-    if (event.data.graph) request.resolve(event.data.graph)
-    else request.reject(new Error(event.data.error ?? 'ELK layout failed'))
-  }
-  worker.onerror ??= () => {
-    for (const request of pending.values()) request.reject(new Error('ELK Worker failed'))
-    pending.clear()
-    worker?.terminate()
-    worker = undefined
-  }
-  const id = ++requestId
-  return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject })
-    worker!.postMessage({ id, graph })
-  })
+  if (typeof Worker === 'undefined') return Promise.reject(new Error('ELK Worker unavailable'))
+  elk ??= new ELK({ workerUrl: elkWorkerUrl })
+  return elk.layout(graph)
 }
 
-/** Apply cached Worker-backed ELK layouts only to the bounded pilot structures. */
+/** Apply cached Worker-backed ELK layouts to every compatible topology. */
 export function useElkLayout(scene: SceneState, script: AnimationScript): SceneState {
   const task = useMemo(() => {
     const mode = elkPilotMode(script, scene)

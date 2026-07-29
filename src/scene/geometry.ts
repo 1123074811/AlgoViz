@@ -12,13 +12,15 @@ export interface GeometryBox {
 }
 
 export interface GeometryViolation {
-  type: 'overlap' | 'edge-obstacle' | 'text-overflow'
+  type: 'overlap' | 'edge-obstacle' | 'arrow-obscured' | 'orphan' | 'text-overflow'
   ids: string[]
   message: string
 }
 
 const LABEL_HEIGHT = 18
 const ROUTE_CLEARANCE = 18
+const EDGE_GAP = 5
+const ARROWHEAD_GAP = 10
 
 function box(id: string, kind: GeometryBox['kind'], position: Point, width: number, height: number): GeometryBox {
   return {
@@ -144,10 +146,9 @@ export function resolveAnchor(scene: SceneState, entityId: string, portId?: stri
   }
 }
 
-export function trimAnchor(scene: SceneState, entityId: string, from: Point, to: Point): Point {
+export function trimAnchor(scene: SceneState, entityId: string, from: Point, to: Point, gap = EDGE_GAP): Point {
   const entity = scene.entities[entityId]
   if (!entity || !('size' in entity) || !entity.size || !('position' in entity) || !entity.position) return from
-  const gap = 5
   const center = entity.position
   const dx = to.x - center.x
   const dy = to.y - center.y
@@ -155,7 +156,7 @@ export function trimAnchor(scene: SceneState, entityId: string, from: Point, to:
   if (distance === 0) return from
 
   const isCircle = entity.type === 'node' && (
-    entity.variant.startsWith('tree.')
+    (entity.variant.startsWith('tree.') && entity.variant !== 'tree.btree')
     || entity.variant.startsWith('graph.')
     || entity.variant.startsWith('union_find.')
   )
@@ -215,7 +216,7 @@ function routeEdge(scene: SceneState, edge: SceneEdge, boxes: GeometryBox[]): Po
     }
   }
   const from = trimAnchor(scene, edge.from.entityId, rawFrom, rawTo)
-  const to = trimAnchor(scene, edge.to.entityId, rawTo, rawFrom)
+  const to = trimAnchor(scene, edge.to.entityId, rawTo, rawFrom, edge.directed ? ARROWHEAD_GAP : EDGE_GAP)
   if (edge.from.entityId === edge.to.entityId || edge.variant === 'hop') return [from, to]
 
   const obstacles = boxes.filter(item =>
@@ -223,7 +224,11 @@ function routeEdge(scene: SceneState, edge: SceneEdge, boxes: GeometryBox[]): Po
     && item.id !== edge.from.entityId
     && item.id !== edge.to.entityId,
   )
-  const direct = edge.style?.curved ? computeCurvedRoute(from, to, edge) : [from, to]
+  const direct = fitRouteToAnchors(
+    scene,
+    edge,
+    edge.style?.curved ? computeCurvedRoute(from, to, edge) : [from, to],
+  )
   if (routeCollisionCount(direct, obstacles) === 0) return direct
 
   const top = Math.min(from.y, to.y, ...obstacles.map(item => item.top)) - ROUTE_CLEARANCE
@@ -236,10 +241,28 @@ function routeEdge(scene: SceneState, edge: SceneEdge, boxes: GeometryBox[]): Po
     [from, { x: left, y: from.y }, { x: left, y: to.y }, to],
     [from, { x: right, y: from.y }, { x: right, y: to.y }, to],
   ]
-  return candidates.sort((a, b) =>
+  return candidates.map(route => fitRouteToAnchors(scene, edge, route)).sort((a, b) =>
     routeCollisionCount(a, obstacles) - routeCollisionCount(b, obstacles)
     || routeLength(a) - routeLength(b),
   )[0]
+}
+
+function fitRouteToAnchors(scene: SceneState, edge: SceneEdge, route: Point[]): Point[] {
+  if (route.length < 2) return route
+  const next = route.map(point => ({ ...point }))
+  const rawFrom = resolveAnchor(scene, edge.from.entityId, edge.from.portId)
+  const rawTo = resolveAnchor(scene, edge.to.entityId, edge.to.portId)
+  if (rawFrom) next[0] = trimAnchor(scene, edge.from.entityId, rawFrom, next[1])
+  if (rawTo) {
+    next[next.length - 1] = trimAnchor(
+      scene,
+      edge.to.entityId,
+      rawTo,
+      next[next.length - 2],
+      edge.directed ? ARROWHEAD_GAP : EDGE_GAP,
+    )
+  }
+  return next
 }
 
 function placeEdgeLabel(edge: SceneEdge, obstacles: GeometryBox[]): Point | undefined {
@@ -270,7 +293,12 @@ export function finalizeSceneGeometry(scene: SceneState, preserveRoutes = false)
   const entityBoxes = measureSceneGeometry({ ...scene, edges: {} })
   const routedEdges = Object.fromEntries(Object.values(scene.edges).map(edge => [
     edge.id,
-    { ...edge, route: preserveRoutes && edge.route?.length ? edge.route : routeEdge(scene, edge, entityBoxes) },
+    {
+      ...edge,
+      route: preserveRoutes && edge.route?.length
+        ? fitRouteToAnchors(scene, edge, edge.route)
+        : routeEdge(scene, edge, entityBoxes),
+    },
   ]))
   const placed: GeometryBox[] = [...entityBoxes]
   const edges = Object.fromEntries(Object.values(routedEdges).map(edge => {
@@ -317,10 +345,60 @@ export function validateSceneGeometry(scene: SceneState, clearance = 0): Geometr
         break
       }
     }
+
+    if (edge.directed && edge.variant !== 'dependency' && edge.route && edge.route.length >= 2) {
+      const target = scene.entities[edge.to.entityId]
+      if (target && 'position' in target && target.position) {
+        const endpoint = edge.route[edge.route.length - 1]
+        const required = trimAnchor(
+          scene,
+          edge.to.entityId,
+          target.position,
+          edge.route[edge.route.length - 2],
+          ARROWHEAD_GAP,
+        )
+        const actualDistance = Math.hypot(endpoint.x - target.position.x, endpoint.y - target.position.y)
+        const requiredDistance = Math.hypot(required.x - target.position.x, required.y - target.position.y)
+        if (actualDistance + 0.5 < requiredDistance) {
+          violations.push({
+            type: 'arrow-obscured',
+            ids: [edge.id, edge.to.entityId],
+            message: `${edge.id} arrowhead is obscured by ${edge.to.entityId}`,
+          })
+        }
+      }
+    }
+  }
+
+  const treeNodes = Object.values(scene.entities).filter(
+    entity => entity.type === 'node' && entity.variant.startsWith('tree.'),
+  )
+  if (treeNodes.length > 1) {
+    const treeIds = new Set(treeNodes.map(node => node.id))
+    const rootId = scene.pointers.root?.target?.entityId
+    const attached = new Set(Object.values(scene.edges)
+      .filter(edge => treeIds.has(edge.from.entityId) && treeIds.has(edge.to.entityId) && edge.from.entityId !== edge.to.entityId)
+      .map(edge => edge.to.entityId))
+    for (const node of treeNodes) {
+      if (node.id === rootId || attached.has(node.id)) continue
+      violations.push({
+        type: 'orphan',
+        ids: [node.id],
+        message: `${node.id} is an orphan tree node`,
+      })
+    }
   }
 
   for (const entity of Object.values(scene.entities)) {
-    if (entity.type !== 'cell' || entity.value == null || !entity.size) continue
+    if (
+      entity.type !== 'cell'
+      || entity.value == null
+      || !entity.size
+      || entity.state?.role === 'empty_placeholder'
+      || entity.id === 'heap_variant'
+      || entity.id === 'gan_marker'
+      || entity.id.startsWith('geo_')
+    ) continue
     if (measureTextWidth(String(entity.value), 14) > entity.size.width - 6) {
       violations.push({
         type: 'text-overflow',

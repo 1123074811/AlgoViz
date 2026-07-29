@@ -135,6 +135,8 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
   // 变量(mathvar_)改由固定左上角的 HTML 覆盖层渲染(见 VariablesPanel)，不再画进 SVG 场景。
   const mathVarCells = entities.filter((e): e is SceneCell => e.type === 'cell' && e.id.startsWith('mathvar_'))
   const edges = Object.values(scene.edges)
+  const foregroundEdges = edges.filter(edge => edge.variant === 'dependency')
+  const backgroundEdges = edges.filter(edge => edge.variant !== 'dependency')
   const pointers = Object.values(scene.pointers)
   const labels = Object.values(scene.labels)
   const dpTables = Object.values(scene.overlays?.dpTables ?? {})
@@ -286,7 +288,7 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
           return geoCells.length > 0 ? <GeometryView cells={geoCells} /> : null
         })()}
         <g className="pointer-events-auto">
-          {edges.map((edge) => <EdgeRenderer key={edge.id} edge={edge} scene={scene} />)}
+          {backgroundEdges.map((edge) => <EdgeRenderer key={edge.id} edge={edge} scene={scene} />)}
           {renderArrayIndexAxis(targetScene)}
           {entities.map((entity) => entity.type === 'cell' ? <CellRenderer key={entity.id} cell={entity} /> : null)}
           {(() => {
@@ -295,6 +297,7 @@ function SceneCanvasInner({ script, currentStep, currentStepData, speed = 1, isF
           })()}
           {renderArrayWindowOverlay(entities, 'boundary')}
           {entities.map((entity) => entity.type === 'node' ? <NodeRenderer key={entity.id} node={entity} /> : null)}
+          {foregroundEdges.map((edge) => <EdgeRenderer key={edge.id} edge={edge} scene={scene} />)}
           {(() => {
             const probCells = entities.filter((e): e is SceneCell => e.type === 'cell' && e.id.startsWith('prob_'))
             return probCells.length > 0 ? <DistributionView cells={probCells} /> : null

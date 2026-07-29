@@ -30,7 +30,7 @@ export default function EdgeRenderer({ edge, scene }: EdgeRendererProps) {
   const rawFrom = resolveAnchor(scene, edge.from.entityId, edge.from.portId)
   const rawTo = resolveAnchor(scene, edge.to.entityId, edge.to.portId)
   const from = rawFrom && rawTo ? trimAnchor(scene, edge.from.entityId, rawFrom, rawTo) : rawFrom
-  const to = rawFrom && rawTo ? trimAnchor(scene, edge.to.entityId, rawTo, rawFrom) : rawTo
+  const to = rawFrom && rawTo ? trimAnchor(scene, edge.to.entityId, rawTo, rawFrom, edge.directed ? 10 : 5) : rawTo
   if (!from || !to) return null
 
   // Select marker: trajectory arrows use subtle color-matched markers, structural edges use standard

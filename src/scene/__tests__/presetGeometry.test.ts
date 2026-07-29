@@ -4,14 +4,13 @@ import { deriveSceneState } from '../SceneEngine'
 import { validateSceneGeometry } from '../geometry'
 
 describe('all preset geometry', () => {
-  it('has no overlapping visible primitives at any step', () => {
+  it('satisfies every geometry and topology rule at every step', () => {
     const failures: string[] = []
     for (const presetId of PRESET_IDS) {
       const script = generatePreset(presetId, undefined)
       if (!script) continue
       for (let step = 0; step <= script.steps.length; step++) {
         const violations = validateSceneGeometry(deriveSceneState(script, step))
-          .filter(item => item.type === 'overlap' || item.type === 'edge-obstacle')
         failures.push(...violations.map(item => `${presetId}@${step}: ${item.message}`))
         if (failures.length >= 40) break
       }

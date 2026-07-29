@@ -11,28 +11,19 @@ export interface ElkLayoutTask {
   columns?: Record<string, string[]>
 }
 
-const TREE_ALGORITHMS = new Set([
-  'btree',
-  'btree_search',
-  'btree_insert',
-  'bplus_tree',
-  'bplus_tree_search',
-  'bplus_tree_range_query',
-  'trie',
-])
-
-export function elkPilotMode(script: AnimationScript, scene: SceneState): ElkPilotMode | null {
-  if (script.algorithm === 'skip_list') return 'skip-list'
-  if (TREE_ALGORITHMS.has(script.algorithm)) return 'tree'
-  if (script.algorithm === 'union_find') return 'union-find'
+export function elkPilotMode(_script: AnimationScript, scene: SceneState): ElkPilotMode | null {
+  const skipListCells = Object.values(scene.entities).filter(entity => entity.type === 'cell' && entity.id.startsWith('sl_'))
+  if (skipListCells.length > 1) return 'skip-list'
+  const treeNodes = Object.values(scene.entities).filter(entity => entity.type === 'node' && entity.variant.startsWith('tree.'))
+  if (treeNodes.length > 1) return 'tree'
+  const unionFindNodes = Object.values(scene.entities).filter(entity => entity.type === 'node' && entity.variant === 'union_find.element')
+  if (unionFindNodes.length > 1) return 'union-find'
   const graphNodes = Object.values(scene.entities).filter(entity => entity.type === 'node' && entity.variant === 'graph.vertex')
   const graphEdges = Object.values(scene.edges).filter(edge =>
     graphNodes.some(node => node.id === edge.from.entityId)
     && graphNodes.some(node => node.id === edge.to.entityId),
   )
-  return graphNodes.length > 0 && graphEdges.some(edge => edge.directed) && (graphNodes.length > 6 || graphEdges.length > graphNodes.length)
-    ? 'graph'
-    : null
+  return graphNodes.length > 1 && graphEdges.length > 0 ? 'graph' : null
 }
 
 function layoutOptions(mode: ElkPilotMode): Record<string, string> {
@@ -49,7 +40,7 @@ function layoutOptions(mode: ElkPilotMode): Record<string, string> {
 function regularNodes(scene: SceneState, mode: Exclude<ElkPilotMode, 'skip-list'>): SceneNode[] {
   return Object.values(scene.entities).filter((entity): entity is SceneNode => {
     if (entity.type !== 'node') return false
-    if (mode === 'tree') return entity.variant === 'tree.btree' || entity.variant === 'tree.trie'
+    if (mode === 'tree') return entity.variant.startsWith('tree.')
     if (mode === 'union-find') return entity.variant === 'union_find.element'
     return entity.variant === 'graph.vertex'
   })

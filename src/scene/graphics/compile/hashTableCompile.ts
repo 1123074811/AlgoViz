@@ -9,10 +9,10 @@ const START_X = 200
 const BUCKET_Y = 200
 const CELL_W = 60 // bucket width
 const CELL_H = 44
-const BUCKET_GAP = 52 // horizontal gap between buckets — wide enough for chained entries
+const BUCKET_GAP = 72 // horizontal gap between buckets — wide enough for chained entries
 const CHAIN_GAP = 16 // vertical gap between chained entries (and bucket → first entry)
 const ENTRY_H = 40
-const ENTRY_W = 104 // entry box width — fits "key:value" without truncation
+const ENTRY_W = 120 // entry box width — fits the teaching inputs without truncation
 
 export const hashTableCompiler: EventCompiler = {
   supports: (event): event is HashTableAlgorithmEvent => event.type.startsWith('hashtable.'),
