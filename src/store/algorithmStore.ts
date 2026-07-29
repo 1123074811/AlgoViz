@@ -155,7 +155,10 @@ export const createAlgorithmStore = () =>
     aiRawResponse: '',
     aiHistory: loadAIHistory(),
 
-    setSelectedAlgorithm: (algo) => set({ selectedAlgorithm: algo }),
+    setSelectedAlgorithm: (algo) => set(state => ({
+      selectedAlgorithm: algo,
+      animationScript: state.selectedAlgorithm?.id === algo?.id ? state.animationScript : null,
+    })),
     setAnimationScript: (script) => set({ animationScript: script }),
     setSearchQuery: (query) => set({ searchQuery: query }),
     setActiveCategory: (cat) => set({ activeCategory: cat }),

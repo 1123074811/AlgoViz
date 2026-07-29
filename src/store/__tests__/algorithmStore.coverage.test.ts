@@ -68,8 +68,10 @@ describe('algorithmStore — 选择 / 脚本 / 搜索 / 分类 actions', () => {
 
   it('setSelectedAlgorithm 设置并可清空所选算法', () => {
     const algo = store.getState().algorithms[0]
+    store.getState().setAnimationScript(sampleScript)
     store.getState().setSelectedAlgorithm(algo)
     expect(store.getState().selectedAlgorithm).toBe(algo)
+    expect(store.getState().animationScript).toBeNull()
     store.getState().setSelectedAlgorithm(null)
     expect(store.getState().selectedAlgorithm).toBeNull()
   })

@@ -194,9 +194,11 @@ describe('Visualizer page', () => {
     // Scene region (mocked renderer) is present.
     expect(screen.getByTestId('scene')).toBeTruthy()
 
-    // Code editor + input data editor are both Monaco stubs (>= 2 textareas).
+    // Code stays in Monaco; stdin/stdout is now an IDE-style terminal.
     const editors = document.querySelectorAll('[data-monaco]')
-    expect(editors.length).toBeGreaterThanOrEqual(2)
+    expect(editors.length).toBe(1)
+    expect(screen.getByText('TERMINAL · AlgoViz')).toBeTruthy()
+    expect(document.querySelector('textarea:not([data-monaco])')).toBeTruthy()
 
     // Algorithm info panel + the algorithm name rendered.
     expect(screen.getByText(i18n.t('visualizer.algorithmInfo'))).toBeTruthy()
@@ -209,7 +211,7 @@ describe('Visualizer page', () => {
     expect(codeEditor).toBeTruthy()
   })
 
-  it('seeds the input data panel and regenerates the script on input change', () => {
+  it('freezes the old script while editing and rebuilds only after Run', () => {
     renderVisualizer()
     selectAlgorithm('bubble_sort')
 
@@ -217,18 +219,25 @@ describe('Visualizer page', () => {
     expect(storeApi!.animationScript).not.toBeNull()
     const firstScript = storeApi!.animationScript
 
-    // Locate the input-data editor (the one NOT holding the code template).
-    const editors = Array.from(document.querySelectorAll('[data-monaco]')) as HTMLTextAreaElement[]
-    const inputEditor = editors.find((el) => !el.value.includes('def '))
+    const inputEditor = document.querySelector('textarea:not([data-monaco])') as HTMLTextAreaElement | null
     expect(inputEditor).toBeTruthy()
 
-    // Change the input → effect re-runs the preset generator → new script object.
+    // Draft edits never regenerate a partial animation.
     act(() => {
-      fireEvent.change(inputEditor!, { target: { value: '[9, 1, 5, 2]' } })
+      fireEvent.change(inputEditor!, { target: { value: 'nums = [9, 1' } })
     })
+    expect(storeApi!.animationScript).toBe(firstScript)
+    expect(screen.getByText(/等待输入完成/)).toBeTruthy()
 
+    act(() => {
+      fireEvent.change(inputEditor!, { target: { value: 'nums = [9, 1, 5, 2]' } })
+    })
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /运行 Ctrl\+Enter/ }))
+    })
     expect(storeApi!.animationScript).not.toBeNull()
     expect(storeApi!.animationScript).not.toBe(firstScript)
+    expect(storeApi!.animationScript?.initialState.data).toEqual([9, 1, 5, 2])
   })
 
   it('gates the AI analyze button on getApiConfig presence', () => {

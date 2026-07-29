@@ -50,7 +50,12 @@ export function resolveScript(args: ResolveScriptArgs): AnimationScript | null {
     const concreteAlgoId = getConcreteAlgoId(selectedAlgorithm.id, currentOperationId)
     if (hasGenerator(concreteAlgoId)) {
       const baseData = parsedInput()
-      const paramVal = Number(operationParam) || 5
+      const numericParam = Number(operationParam)
+      const paramVal = currentOperationId === 'range_query'
+        ? operationParam
+        : Number.isFinite(numericParam)
+          ? numericParam
+          : operationParam
       const script = generatePreset(concreteAlgoId, { data: baseData, param: paramVal })
       if (script) {
         return script

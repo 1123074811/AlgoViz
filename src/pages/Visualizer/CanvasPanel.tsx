@@ -17,6 +17,8 @@ interface CanvasPanelProps {
   lang: 'zh' | 'en'
   isFullscreen?: boolean
   onToggleFullscreen?: () => void
+  blocked?: boolean
+  blockedMessage?: string
 }
 
 export default function CanvasPanel({
@@ -32,6 +34,8 @@ export default function CanvasPanel({
   lang,
   isFullscreen,
   onToggleFullscreen,
+  blocked = false,
+  blockedMessage,
 }: CanvasPanelProps) {
   return (
     <>
@@ -65,7 +69,7 @@ export default function CanvasPanel({
           </div>
         </div>
       )}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 relative">
         <SceneCanvas
           script={animationScript}
           currentStep={visualState.currentStep}
@@ -74,6 +78,16 @@ export default function CanvasPanel({
           isFullscreen={isFullscreen}
           onToggleFullscreen={onToggleFullscreen}
         />
+        {blocked && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/45 backdrop-blur-[1px]">
+            <div className="max-w-sm rounded-lg border border-amber-300/40 bg-slate-950/90 px-4 py-3 text-center text-xs font-medium text-amber-100 shadow-xl">
+              <Icon name="pause" size={16} className="mx-auto mb-1.5 text-amber-300" />
+              {blockedMessage ?? (lang === 'zh'
+                ? '动画已冻结；完成输入并运行后重新生成'
+                : 'Animation frozen; complete the input and run again')}
+            </div>
+          </div>
+        )}
       </div>
     </>
   )

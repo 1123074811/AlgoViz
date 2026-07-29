@@ -1,15 +1,10 @@
 import type { OnMount } from '@monaco-editor/react'
-import type { AnimationScript } from '@/types/animation'
-import type { VisualState } from '@/hooks/useAnimationEngine'
 import type { AlgorithmType } from '@/store/algorithmStore'
 import type { CodeLang } from '@/data/algorithms'
-import { ALGORITHM_DEFAULT_INPUTS } from '@/data/algorithms'
 import CodeEditorPanel from '@/components/Editor/CodeEditorPanel'
-import InputDataPanel from '@/components/Editor/InputDataPanel'
-import RunDataPanel from '@/components/Editor/RunDataPanel'
+import WorkbenchTerminal, { type TerminalRunState } from '@/components/Editor/WorkbenchTerminal'
 import type { Diagnostic } from '@/utils/codeCompiler'
-import { parseInputData } from '@/ai'
-import { getLeetCodeDefault, getLeetCodePlaceholder } from '@/utils/inputParser'
+import type { InputCompilation } from '@/workbench/inputCompiler'
 import { CodeDesyncNotice } from './CodeDesyncNotice'
 
 interface WorkspacePanelProps {
@@ -34,10 +29,13 @@ interface WorkspacePanelProps {
   currentOperationId: string
   operationParam: string
   setOperationParam: (value: string) => void
-  animationScript: AnimationScript | null
-  visualState: VisualState
-  currentStep: number
-  totalSteps: number
+  inputCompilation: InputCompilation
+  operationCompilation: InputCompilation | null
+  terminalRunState: TerminalRunState
+  workbenchDirty: boolean
+  interactiveProgram: boolean
+  onRun: () => void
+  onRuntimeInput: (value: string) => void
   lang: 'zh' | 'en'
   t: (key: string) => string
   handleEditorHeightResizeStart: (event: React.MouseEvent<HTMLDivElement>) => void
@@ -65,10 +63,13 @@ export default function WorkspacePanel({
   currentOperationId,
   operationParam,
   setOperationParam,
-  animationScript,
-  visualState,
-  currentStep,
-  totalSteps,
+  inputCompilation,
+  operationCompilation,
+  terminalRunState,
+  workbenchDirty,
+  interactiveProgram,
+  onRun,
+  onRuntimeInput,
   lang,
   t,
   handleEditorHeightResizeStart,
@@ -136,7 +137,7 @@ export default function WorkspacePanel({
         style={isDesktop ? { height: `${100 - editorHeight}%` } : undefined}
       >
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex items-center gap-1.5 px-1.5 py-1 border-b border-border bg-muted/30 shrink-0">
+          {!interactiveProgram && <div className="flex items-center gap-1.5 px-1.5 py-1 border-b border-border bg-muted/30 shrink-0">
             <span className="text-[10px] text-muted-foreground font-medium whitespace-nowrap">
               {lang === 'zh' ? '格式' : 'Fmt'}
             </span>
@@ -146,95 +147,30 @@ export default function WorkspacePanel({
                 const format = e.target.value as 'leetcode' | 'json'
                 setInputFormat(format)
                 localStorage.setItem('algoviz-input-format', format)
-                if (selectedAlgorithm.id) {
-                  if (format === 'leetcode') {
-                    const lcDefault = getLeetCodeDefault(selectedAlgorithm.id)
-                    if (lcDefault) setInputData(lcDefault)
-                  } else {
-                    const defInput = ALGORITHM_DEFAULT_INPUTS[selectedAlgorithm.id]
-                    if (defInput) setInputData(defInput.value)
-                  }
-                }
               }}
               className="text-[11px] border border-border rounded px-1.5 py-0.5 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="leetcode">LeetCode</option>
               <option value="json">JSON</option>
             </select>
-          </div>
-          {hasOperations ? (
-            <div className="flex flex-col gap-2 flex-1 min-h-0 p-1">
-              <InputDataPanel
-                value={inputData}
-                onChange={setInputData}
-                title={lang === 'zh' ? '原始数据 (初始结构)' : 'Original Data (Initial Structure)'}
-                helperText={lang === 'zh' ? '用于构建初始数据结构的数组' : 'Initial elements for building the data structure'}
-                placeholder={
-                  inputFormat === 'leetcode'
-                    ? getLeetCodePlaceholder(selectedAlgorithm.id)
-                    : (ALGORITHM_DEFAULT_INPUTS[selectedAlgorithm.id]?.value ?? '[5, 3, 8, 1, 9, 2]')
-                }
-                disabled={aiAnalyzing}
-                className="h-24 xl:flex-1 xl:h-auto xl:min-h-0"
-              />
-              <InputDataPanel
-                value={operationParam}
-                onChange={setOperationParam}
-                title={(() => {
-                  if (currentOperationId === 'insert') return lang === 'zh' ? '操作输入 (插入节点的值)' : 'Operation Parameter (Value to Insert)'
-                  if (currentOperationId === 'delete') return lang === 'zh' ? '操作输入 (删除节点的值)' : 'Operation Parameter (Value to Delete)'
-                  if (currentOperationId === 'range_query') return lang === 'zh' ? '操作输入 (范围查询 low, high)' : 'Operation Parameter (Range Query low, high)'
-                  return lang === 'zh' ? '操作输入 (查找节点的值)' : 'Operation Parameter (Value to Search)'
-                })()}
-                helperText={
-                  currentOperationId === 'range_query'
-                    ? lang === 'zh' ? '输入范围，如 30, 60' : 'Enter range, e.g. 30, 60'
-                    : lang === 'zh' ? '输入一个具体的数值' : 'Enter a specific numeric value'
-                }
-                placeholder={currentOperationId === 'range_query' ? '30, 60' : '5'}
-                disabled={aiAnalyzing}
-                className="h-20 xl:h-24 xl:shrink-0"
-              />
-              <RunDataPanel
-                script={animationScript}
-                visualState={visualState}
-                currentStep={currentStep}
-                totalSteps={totalSteps}
-                lang={lang}
-                title={lang === 'zh' ? '操作输出' : 'Operation Output'}
-                className="h-20 xl:h-24 xl:shrink-0"
-              />
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2 flex-1 min-h-0 p-1">
-              <InputDataPanel
-                value={inputData}
-                onChange={setInputData}
-                title={t('visualizer.inputData')}
-                helperText={(() => {
-                  const def = ALGORITHM_DEFAULT_INPUTS[selectedAlgorithm.id]
-                  if (def) return def.hint
-                  const info = parseInputData(inputData)
-                  return info.valid ? `类型: ${info.kind} · ${info.summary}` : '支持数组、字符串、JSON 对象'
-                })()}
-                placeholder={(() => {
-                  if (inputFormat === 'leetcode') return getLeetCodePlaceholder(selectedAlgorithm.id)
-                  const def = ALGORITHM_DEFAULT_INPUTS[selectedAlgorithm.id]
-                  return def?.value ?? '[5, 3, 8, 1, 9, 2]'
-                })()}
-                disabled={aiAnalyzing}
-                className="h-28 xl:flex-1 xl:h-auto xl:min-h-0"
-              />
-              <RunDataPanel
-                script={animationScript}
-                visualState={visualState}
-                currentStep={currentStep}
-                totalSteps={totalSteps}
-                lang={lang}
-                className="h-20 xl:h-24 xl:shrink-0"
-              />
-            </div>
-          )}
+          </div>}
+          <WorkbenchTerminal
+            input={inputData}
+            onInputChange={setInputData}
+            operationInput={hasOperations ? operationParam : undefined}
+            onOperationInputChange={hasOperations ? setOperationParam : undefined}
+            operationLabel={currentOperationId || 'arg'}
+            inputCompilation={inputCompilation}
+            operationCompilation={operationCompilation}
+            codeDiagnostics={codeDiagnostics}
+            runState={terminalRunState}
+            dirty={workbenchDirty}
+            interactive={interactiveProgram}
+            disabled={aiAnalyzing}
+            onRun={onRun}
+            onRuntimeInput={onRuntimeInput}
+            lang={lang}
+          />
         </div>
       </div>
     </>

@@ -6,12 +6,11 @@ import { Icon } from '@/icons'
 import { useAlgorithmStore, type AIHistoryEntry } from '@/store/algorithmStore'
 import { useAnimationEngine } from '@/hooks/useAnimationEngine'
 import { resolveScript } from '@/hooks/resolveScript'
-import { getApiConfig, parseInputData } from '@/ai'
+import { getApiConfig } from '@/ai'
 import { useAIGenerator } from '@/hooks/useAIGenerator'
 import type { AnimationScript } from '@/types/animation'
 import { compileAndValidateCode } from '@/utils/codeCompiler'
 import {
-  parseAlgorithmInput,
   getLeetCodeDefault,
 } from '@/utils/inputParser'
 import {
@@ -29,6 +28,22 @@ import { useCodeScope } from './useCodeScope'
 import InfoPanel from './InfoPanel'
 import WorkspacePanel from './WorkspacePanel'
 import CanvasPanel from './CanvasPanel'
+import {
+  compileAlgorithmInput,
+  compileOperationInput,
+} from '@/workbench/inputCompiler'
+import type { TerminalRunState } from '@/components/Editor/WorkbenchTerminal'
+import { runUserJsSandboxed } from '@/sandbox/runUserCode'
+import { runUserPySandboxed } from '@/sandbox/runUserPython'
+import {
+  isInteractiveJavaScript,
+  startInteractiveJavaScriptSession,
+  type InteractiveExecutionSession,
+} from '@/sandbox/runInteractiveJavaScript'
+import {
+  formatRuntimeOutput,
+  getRuntimeLanguageCapability,
+} from '@/workbench/runtimeContract'
 
 let currentAnalysisController: AbortController | null = null
 
@@ -49,6 +64,8 @@ export default function Visualizer() {
     return (localStorage.getItem('algoviz-editor-code-lang') as CodeLang) || 'python'
   })
   const [inputDataByScope, setInputDataByScope] = useState<Record<string, string>>({})
+  const [committedInputByScope, setCommittedInputByScope] = useState<Record<string, string>>({})
+  const [executedCodeByScope, setExecutedCodeByScope] = useState<Record<string, string>>({})
   const [inputFormat, setInputFormat] = useState<'leetcode' | 'json'>(() => {
     return (localStorage.getItem('algoviz-input-format') as 'leetcode' | 'json') || 'leetcode'
   })
@@ -57,6 +74,8 @@ export default function Visualizer() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [operationIdByAlgo, setOperationIdByAlgo] = useState<Record<string, string>>({})
   const [operationParam, setOperationParam] = useState<string>('5')
+  const [committedOperationParam, setCommittedOperationParam] = useState<string>('5')
+  const [terminalRunStateByScope, setTerminalRunStateByScope] = useState<Record<string, TerminalRunState>>({})
 
   const operations = selectedAlgorithm ? getOperationsForAlgo(selectedAlgorithm.id) : undefined
   const hasOperations = operations && operations.length > 0
@@ -64,6 +83,7 @@ export default function Visualizer() {
   const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null)
   const decorationsRef = useRef<string[]>([])
   const prevAlgoId = useRef<string | null>(null)
+  const interactiveSessionRef = useRef<InteractiveExecutionSession | null>(null)
   const {
     leftWidth,
     rightWidth,
@@ -109,6 +129,7 @@ export default function Visualizer() {
       : (ALGORITHM_DEFAULT_INPUTS[selectedAlgorithm.id]?.value ?? '')
     : ''
   const inputData = inputDataByScope[inputScopeKey] ?? defaultInputData
+  const committedInputData = committedInputByScope[inputScopeKey] ?? defaultInputData
   const setInputData = useCallback(
     (nextValue: string) => {
       setInputDataByScope((prev) =>
@@ -146,53 +167,80 @@ export default function Visualizer() {
     ? operations?.find((op) => op.id === currentOperationId)
     : undefined
   const codeScopeKey = `${selectedAlgorithm?.id ?? 'none'}:${currentOperationId || 'main'}:${codeLanguage}`
+  const terminalScopeKey = `${codeScopeKey}:${inputFormat}`
+  const storedTerminalRunState = terminalRunStateByScope[terminalScopeKey]
+  const setTerminalRunState = useCallback(
+    (nextState: TerminalRunState) => {
+      setTerminalRunStateByScope(prev => ({ ...prev, [terminalScopeKey]: nextState }))
+    },
+    [terminalScopeKey],
+  )
   const defaultCode = currentOperation
     ? currentOperation.code[codeLanguage] || currentOperation.code.python || ''
     : selectedAlgorithm
       ? getCodeTemplate(selectedAlgorithm.id, codeLanguage)
       : ''
-  const { code, setCode, isCodeDirty } = useCodeScope({ scopeKey: codeScopeKey, defaultCode })
+  const { code, setCode } = useCodeScope({ scopeKey: codeScopeKey, defaultCode })
+  const interactiveProgram = codeLanguage === 'javascript' && isInteractiveJavaScript(code)
+  const committedCode = executedCodeByScope[codeScopeKey] ?? defaultCode
+  const codeDirty = code !== committedCode
   const codeDiagnostics = useMemo(() => {
     if (!code.trim()) return []
     const result = compileAndValidateCode(code, codeLanguage)
     return [...result.errors, ...result.warnings]
   }, [code, codeLanguage])
-
-  // Parse input data from text — returns the natural type for the algorithm
-  const parsedInput = useCallback((): unknown => {
-    if (!selectedAlgorithm?.id) return [5, 3, 8, 1, 9, 2]
-    if (!inputData.trim()) {
-      const def = selectedAlgorithm?.id ? ALGORITHM_DEFAULT_INPUTS[selectedAlgorithm.id] : null
-      if (def) {
-        try {
-          return JSON.parse(def.value)
-        } catch {
-          /* ignore */
+  const inputCompilation = useMemo(
+    () => compileAlgorithmInput(inputData, inputFormat, selectedAlgorithm?.id ?? ''),
+    [inputData, inputFormat, selectedAlgorithm],
+  )
+  const committedInputCompilation = useMemo(
+    () => compileAlgorithmInput(committedInputData, inputFormat, selectedAlgorithm?.id ?? ''),
+    [committedInputData, inputFormat, selectedAlgorithm],
+  )
+  const operationCompilation = useMemo(
+    () => hasOperations ? compileOperationInput(operationParam, currentOperationId) : null,
+    [currentOperationId, hasOperations, operationParam],
+  )
+  const inputDirty = inputData !== committedInputData
+  const operationDirty = Boolean(hasOperations && operationParam !== committedOperationParam)
+  const hasCodeErrors = codeDiagnostics.some(item => item.severity === 'error')
+  const workbenchDirty = codeDirty || inputDirty || operationDirty
+  const terminalRunState = storedTerminalRunState
+    ?? (animationScript
+      ? {
+          status: 'ready' as const,
+          message: `运行完成，共 ${animationScript.steps.length} 个动画步骤`,
+          output: formatRuntimeOutput(animationScript.result),
         }
-      }
-      return [5, 3, 8, 1, 9, 2]
-    }
-    return parseAlgorithmInput(inputData, inputFormat, selectedAlgorithm.id)
-  }, [inputData, selectedAlgorithm, inputFormat])
+      : {
+          status: 'waiting' as const,
+          message: '等待输入 / Waiting for input',
+        })
+  const workbenchBlocked = workbenchDirty
+    || inputCompilation.status !== 'ready'
+    || Boolean(operationCompilation && operationCompilation.status !== 'ready')
+    || hasCodeErrors
+    || aiStatus === 'analyzing'
+
+  useEffect(() => {
+    if (workbenchBlocked && isPlaying) togglePlay()
+  }, [isPlaying, togglePlay, workbenchBlocked])
+
+  // Only committed input can produce an animation. Draft edits stay frozen in the terminal.
+  const parsedInput = useCallback((): unknown => {
+    return committedInputCompilation.status === 'ready'
+      ? committedInputCompilation.value
+      : null
+  }, [committedInputCompilation])
 
   // Raw-string variant of parsedInput for the shared AI generator hook (it parses
   // an explicit string — the current box or the AI's @sample — not just state).
   const parseInputRaw = useCallback(
     (raw: string): { valid: boolean; value: unknown } => {
-      const trimmed = raw.trim()
-      if (!trimmed) return { valid: false, value: null }
-      if (inputFormat === 'json') {
-        try {
-          return { valid: true, value: JSON.parse(trimmed) }
-        } catch {
-          return { valid: false, value: null }
-        }
-      }
-      // LeetCode format never throws; treat any non-empty input as parseable.
-      return {
-        valid: true,
-        value: parseAlgorithmInput(trimmed, inputFormat, selectedAlgorithm?.id ?? ''),
-      }
+      const compiled = compileAlgorithmInput(raw, inputFormat, selectedAlgorithm?.id ?? '')
+      return compiled.status === 'ready'
+        ? { valid: true, value: compiled.value }
+        : { valid: false, value: null }
     },
     [inputFormat, selectedAlgorithm]
   )
@@ -205,7 +253,7 @@ export default function Visualizer() {
     analyze: analyzeGenerator,
     reset: resetGenerator,
   } = useAIGenerator({
-    inputData,
+    inputData: committedInputData,
     parseInput: parseInputRaw,
     applyScript: useCallback(
       (s: AnimationScript) => {
@@ -217,8 +265,7 @@ export default function Visualizer() {
     setStatus: setAIStatus,
   })
 
-  const aiLiveActive = Boolean(liveAlgoId || generator)
-  const showCodeDesync = isCodeDirty && !aiLiveActive
+  const showCodeDesync = codeDirty
 
   // Mirror live mode in a ref so the preset effect can detect it without taking
   // liveAlgoId/generator as deps (which would re-run the preset path on analysis).
@@ -230,6 +277,7 @@ export default function Visualizer() {
   // Load preset or regenerate when algorithm or input changes
   useEffect(() => {
     if (!selectedAlgorithm) return
+    if (codeDirty) return
 
     // In AI live mode, an input change is handled by the useAIGenerator hook (it
     // re-runs the recognized preset / AI generator). Skip the built-in preset path
@@ -251,20 +299,29 @@ export default function Visualizer() {
       currentOperationId,
       operations,
       parsedInput,
-      operationParam,
+      operationParam: committedOperationParam,
     })
     setAnimationScript(script)
+    if (script) {
+      loadScript(script)
+    }
   }, [
     selectedAlgorithm,
-    inputData,
-    operationParam,
+    committedInputData,
+    committedOperationParam,
+    codeDirty,
     setAnimationScript,
     parsedInput,
     currentOperationId,
     operations,
     resetGenerator,
     setAIStatus,
+    loadScript,
   ])
+
+  useEffect(() => {
+    if (workbenchBlocked && isPlaying) togglePlay()
+  }, [isPlaying, togglePlay, workbenchBlocked])
 
   const handleEditorMount: OnMount = useCallback((editor) => {
     editorRef.current = editor
@@ -333,17 +390,27 @@ export default function Visualizer() {
   const handleAIAnalyze = useCallback(async () => {
     const compResult = compileAndValidateCode(code, codeLanguage)
     if (!compResult.success) {
+      const message = `[${compResult.errors[0].type}] ${compResult.errors[0].message} (第 ${compResult.errors[0].line} 行)`
       setAIStatus(
         'error',
-        `[${compResult.errors[0].type}] ${compResult.errors[0].message} (第 ${compResult.errors[0].line} 行)${compResult.errors[0].context ? `\n\n代码上下文:\n\`\`\`\n${compResult.errors[0].context}\n\`\`\`` : ''}`
+        `${message}${compResult.errors[0].context ? `\n\n代码上下文:\n\`\`\`\n${compResult.errors[0].context}\n\`\`\`` : ''}`
       )
-      setAnimationScript(null)
-      return
+      setTerminalRunState({ status: 'error', message })
+      return false
+    }
+
+    const compiledInput = compileAlgorithmInput(inputData, inputFormat, selectedAlgorithm?.id ?? '')
+    if (compiledInput.status !== 'ready') {
+      const message = compiledInput.diagnostics[0]?.message ?? '输入尚未完成'
+      setAIStatus('error', message)
+      setTerminalRunState({ status: 'error', message })
+      return false
     }
 
     if (!hasApiConfig) {
       setAIStatus('error', t('controls.aiConfigureHint'))
-      return
+      setTerminalRunState({ status: 'error', message: t('controls.aiConfigureHint') })
+      return false
     }
 
     currentAnalysisController?.abort()
@@ -352,7 +419,7 @@ export default function Visualizer() {
 
     setAIStatus('analyzing')
 
-    const currentValid = inputData.trim() !== '' && parseInputData(inputData).valid
+    const currentValid = true
 
     try {
       const result = await analyzeGenerator(
@@ -370,11 +437,13 @@ export default function Visualizer() {
       if (controller.signal.aborted) return
       currentAnalysisController = null
 
-      if (!result.ok) {
+      if (!result.ok || !result.script) {
         // analyze() already set the error status; nothing recorded in history on failure.
         if (result.error === 'AbortError') return
-        return
+        setTerminalRunState({ status: 'error', message: result.error ?? '动画编译失败' })
+        return false
       }
+      const script = result.script
 
       const entry: AIHistoryEntry = {
         id: Date.now().toString(),
@@ -387,13 +456,26 @@ export default function Visualizer() {
         // AI @sample when the box was empty/invalid), so restore stays consistent.
         inputData: result.usedInput ?? inputData,
         status: 'success',
-        script: result.script,
+        script,
         ...(result.artifact ? { artifact: result.artifact } : {}),
       }
       addAIHistory(entry)
+      const usedInput = result.usedInput ?? inputData
+      setCommittedInputByScope(prev => ({ ...prev, [inputScopeKey]: usedInput }))
+      setCommittedOperationParam(operationParam)
+      setExecutedCodeByScope(prev => ({ ...prev, [codeScopeKey]: code }))
+      setTerminalRunState({
+        status: 'ready',
+        message: `代码、输入与动画已编译，共 ${script.steps.length} 个步骤`,
+        output: formatRuntimeOutput(script.result),
+      })
+      return true
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return
-      setAIStatus('error', e instanceof Error ? e.message : t('common.error'))
+      const message = e instanceof Error ? e.message : t('common.error')
+      setAIStatus('error', message)
+      setTerminalRunState({ status: 'error', message })
+      return false
     }
   }, [
     addAIHistory,
@@ -402,12 +484,169 @@ export default function Visualizer() {
     codeLanguage,
     hasApiConfig,
     inputData,
+    inputFormat,
+    inputScopeKey,
+    codeScopeKey,
+    operationParam,
+    selectedAlgorithm,
+    setAIStatus,
+    setInputData,
+    t,
+    setTerminalRunState,
+  ])
+
+  const handleRun = useCallback(async () => {
+    if (!selectedAlgorithm) return
+    const compilation = compileAndValidateCode(code, codeLanguage)
+    if (!compilation.success) {
+      setTerminalRunState({
+        status: 'error',
+        message: `[${compilation.errors[0].type}] ${compilation.errors[0].message}`,
+      })
+      return
+    }
+    if (interactiveProgram) {
+      interactiveSessionRef.current?.cancel()
+      const session = startInteractiveJavaScriptSession(code, state => {
+        const status: TerminalRunState['status'] =
+          state.phase === 'waiting-input'
+            ? 'waiting-input'
+            : state.phase === 'finished'
+              ? 'ready'
+              : state.phase === 'error' || state.phase === 'cancelled'
+                ? 'error'
+                : 'running'
+        setTerminalRunState({
+          status,
+          output: state.stdout || undefined,
+          stderr: state.stderr || undefined,
+          result: state.result === undefined ? undefined : formatRuntimeOutput(state.result),
+          stdinPrompt: state.stdinRequest?.prompt,
+          message: state.phase === 'finished'
+            ? state.trace.length > 0
+              ? `代码执行完成，产生 ${state.trace.length} 个 trace 事件；旧动画保持冻结`
+              : '代码执行完成，当前会话未产生 trace 动画；旧动画保持冻结'
+            : state.phase === 'error'
+              ? state.error
+              : state.phase === 'cancelled'
+                ? '执行已取消'
+                : state.phase === 'compiling'
+                  ? '正在编译…'
+                  : state.phase === 'waiting-input'
+                    ? state.stdinRequest?.prompt || '程序正在等待输入'
+                    : '正在执行…',
+        })
+      })
+      interactiveSessionRef.current = session
+      return
+    }
+    if (inputCompilation.status !== 'ready') {
+      setTerminalRunState({
+        status: inputCompilation.status === 'incomplete' ? 'waiting' : 'error',
+        message: inputCompilation.diagnostics[0]?.message ?? '输入尚未完成',
+      })
+      return
+    }
+    if (operationCompilation && operationCompilation.status !== 'ready') {
+      setTerminalRunState({
+        status: operationCompilation.status === 'incomplete' ? 'waiting' : 'error',
+        message: operationCompilation.diagnostics[0]?.message ?? '操作参数无效',
+      })
+      return
+    }
+
+    setTerminalRunState({ status: 'running', message: '正在编译并执行…' })
+
+    if (code === defaultCode) {
+      resetGenerator()
+      const script = resolveScript({
+        selectedAlgorithm,
+        currentOperationId,
+        operations,
+        parsedInput: () => inputCompilation.value,
+        operationParam,
+      })
+      if (!script) {
+        setTerminalRunState({ status: 'error', message: '当前代码没有可用的动画生成器' })
+        return
+      }
+      setCommittedInputByScope(prev => ({ ...prev, [inputScopeKey]: inputData }))
+      setCommittedOperationParam(operationParam)
+      setExecutedCodeByScope(prev => ({ ...prev, [codeScopeKey]: code }))
+      setAnimationScript(script)
+      loadScript(script)
+      setAIStatus('idle')
+      setTerminalRunState({
+        status: 'ready',
+        message: `运行完成，共 ${script.steps.length} 个动画步骤`,
+        output: formatRuntimeOutput(script.result),
+      })
+      return
+    }
+
+    if (getRuntimeLanguageCapability(codeLanguage) === 'static-only') {
+      setTerminalRunState({
+        status: 'error',
+        message: `${codeLanguage === 'cpp' ? 'C++' : 'Java'} 当前仅支持静态诊断；浏览器内没有对应运行时，未执行也未生成动画`,
+      })
+      return
+    }
+
+    const runtime = codeLanguage === 'javascript'
+      ? await runUserJsSandboxed(code, inputCompilation.value)
+      : await runUserPySandboxed(code, inputCompilation.value)
+    if (!runtime.ok) {
+      setTerminalRunState({ status: 'error', message: runtime.error ?? '用户代码执行失败' })
+      return
+    }
+    if (!hasApiConfig) {
+      setTerminalRunState({
+        status: 'error',
+        message: '代码执行成功，但修改后的代码需要先通过 AI 编译为可复用动画生成器；当前未配置 API，旧动画保持冻结',
+        output: formatRuntimeOutput(runtime.value),
+      })
+      return
+    }
+
+    setTerminalRunState({
+      status: 'running',
+      message: '代码执行成功，正在编译可复用动画生成器…',
+      output: formatRuntimeOutput(runtime.value),
+    })
+    await handleAIAnalyze()
+  }, [
+    code,
+    codeLanguage,
+    codeScopeKey,
+    currentOperationId,
+    defaultCode,
+    handleAIAnalyze,
+    hasApiConfig,
+    interactiveProgram,
+    inputCompilation,
+    inputData,
+    inputScopeKey,
+    loadScript,
+    operationCompilation,
+    operationParam,
+    operations,
+    resetGenerator,
     selectedAlgorithm,
     setAIStatus,
     setAnimationScript,
-    setInputData,
-    t,
+    setTerminalRunState,
   ])
+
+  const handleRuntimeInput = useCallback((value: string) => {
+    interactiveSessionRef.current?.sendInput(value)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      interactiveSessionRef.current?.cancel()
+      interactiveSessionRef.current = null
+    }
+  }, [code, terminalScopeKey])
 
   useEffect(() => {
     const handleRepairRequest = () => {
@@ -462,12 +701,21 @@ export default function Visualizer() {
     hasOperations, operations, currentOperationId, setCurrentOperationId,
     setOperationParam, animationScript, visualState, currentStepData, speed, lang,
     isFullscreen, onToggleFullscreen: toggleFullscreen,
+    blocked: workbenchBlocked,
+    blockedMessage: inputCompilation.status === 'incomplete'
+      ? (lang === 'zh' ? '正在输入：动画已暂停，完成输入后按 Ctrl+Enter' : 'Input in progress: animation paused; press Ctrl+Enter when complete')
+      : inputCompilation.status === 'error'
+        ? inputCompilation.diagnostics[0]?.message
+        : codeDirty
+          ? (lang === 'zh' ? '代码已修改：旧动画已冻结，请重新编译运行' : 'Code changed: old animation frozen; compile and run again')
+          : undefined,
   }
   const playbackControlsProps = {
     isPlaying, currentStep, totalSteps, speed,
     onReset: reset, onStepBackward: stepBackward, onTogglePlay: togglePlay,
     onStepForward: stepForward, onGoToEnd: goToEnd, onSpeedChange: setSpeed,
     onSeek: goToStep, currentPhase,
+    disabled: workbenchBlocked,
     labels: {
       reset: t('controls.reset'), prevStep: t('controls.prevStep'), play: t('controls.play'),
       pause: t('controls.pause'), nextStep: t('controls.nextStep'), end: t('controls.end'),
@@ -526,10 +774,13 @@ export default function Visualizer() {
             currentOperationId={currentOperationId}
             operationParam={operationParam}
             setOperationParam={setOperationParam}
-            animationScript={animationScript}
-            visualState={visualState}
-            currentStep={currentStep}
-            totalSteps={totalSteps}
+            inputCompilation={inputCompilation}
+            operationCompilation={operationCompilation}
+            terminalRunState={terminalRunState}
+            workbenchDirty={workbenchDirty}
+            interactiveProgram={interactiveProgram}
+            onRun={handleRun}
+            onRuntimeInput={handleRuntimeInput}
             lang={lang}
             t={t}
             handleEditorHeightResizeStart={handleEditorHeightResizeStart}
