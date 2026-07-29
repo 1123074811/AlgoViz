@@ -1,8 +1,8 @@
 # AlgoViz 架构定义
 
 > 状态：当前架构与目标架构的单一事实源
-> 更新日期：2026-07-28
-> 适用范围：浏览器端算法生成、可复用动画生成器、沙箱执行、Scene 渲染和本地持久化
+> 更新日期：2026-07-29
+> 适用范围：浏览器端算法生成、可复用动画生成器、沙箱执行、Scene 布局/渲染和本地持久化
 
 ## 1. 目标与边界
 
@@ -42,7 +42,7 @@ AlgoViz 的核心不是保存某个输入对应的一段动画，而是把一份
 | `src/ai` | LLM 请求、Prompt、响应解析、修复、分类和质量规则 | AnimationScript/事件契约 | React 页面 |
 | `src/sandbox` | Builder、Generator 执行、用户代码执行、Worker 与超时 | AnimationScript/事件契约 | React、Store、网络 |
 | `src/presets` | 可信的本地可复用算法生成器 | Builder、AnimationScript | LLM 客户端 |
-| `src/scene` | 事件编译、场景派生、布局、补间和渲染 | AnimationScript/事件契约 | AI、Store、页面 |
+| `src/scene` | 事件编译、场景派生、确定性/ELK 布局、几何测量与路由、补间和渲染 | AnimationScript/事件契约、ELK Worker | AI、Store、页面 |
 | `src/store` | 用户选择、当前脚本、AI 历史等客户端状态 | 数据与核心类型 | Scene 内部实现 |
 | `src/data` | 算法目录、元数据与代码模板 | 核心类型 | 页面状态 |
 | `server` | 同源 LLM 代理和生产静态服务 | HTTP/环境配置 | 前端状态 |
@@ -78,42 +78,108 @@ flowchart TD
 - JS/Python 尽可能执行原代码获得真值；`@expect` 是降级依据，不是强信任根。
 - 失败时 `fallbackScene` 生成合法但明确标记失败的动画，避免空白画布。
 
-### 2.3 当前输入变化数据流
+### 2.3 当前工作台编译会话
 
-当前项目已经实现“换输入不调用 LLM”。`useAIGenerator` 保存 `liveAlgoId` 或
-`GeneratorArtifact`，输入变化经过 400ms 防抖后本地重跑：
+代码和输入都是会话输入；逐键编辑不再直接驱动动画。页面保存 Draft 与 Committed 两份输入/代码，只有显式“运行”或 `Ctrl+Enter` 才提交：
 
 ```mermaid
 flowchart LR
-    A["输入值变化"] --> B["parseInput"]
-    B --> C{"当前来源"}
-    C -->|"内置算法"| D["generatePreset"]
-    C -->|"AI Generator"| E["runArtifact"]
-    E --> F["InputContract + Worker + verifyArtifact"]
-    D --> G["AnimationScript"]
-    F --> G
-    G --> H["applyScript"]
+    A["Draft stdin / code / operation arg"] --> B["compileAlgorithmInput + compileAndValidateCode"]
+    B -->|"incomplete / error"| C["IDE 终端诊断"]
+    C --> D["暂停播放并冻结旧动画"]
+    B -->|"ready + Run"| E["Commit 会话"]
+    E --> F{"代码来源"}
+    F -->|"可信内置模板"| G["generatePreset"]
+    F -->|"修改后的 JS/Python"| H["用户代码 Worker 真值"]
+    F -->|"C++/Java"| I["static-only 诊断"]
+    H -->|"无 API"| J["只显示 stdout，旧动画保持冻结"]
+    H -->|"有 API"| K["compileArtifact → GeneratorArtifact"]
+    K --> L["runArtifact + InputContract + Worker"]
+    G --> M["AnimationScript"]
+    L --> M
+    M --> N["Committed animation + stdout"]
 ```
 
-当前边界：
+公共边界：
 
-- InputContract 只表达已观察到的顶层类型、数组元素类型和对象字段类型；复杂嵌套约束仍未引入 JSON Schema。
-- “无解/平局”等领域语义无法从输入形状可靠推断，调用方需向多输入验收服务提供显式用例。
-- Python 真值依赖 Python Worker/Pyodide 可用性；不可用时报告降级，不把 `@expect` 当作高可信差分。
+- `src/workbench/inputCompiler.ts` 统一输入结构扫描、类型/领域校验和 `E_INPUT_*` 源位置诊断；未闭合输入是 `incomplete`，不是错误也不会触发默认值回退。
+- `src/workbench/runtimeContract.ts` 统一语言能力（JS/Python 为 Worker，C++/Java 为 static-only）、Map/Set/Infinity/BigInt 等 JSON-safe 输出和终端格式化。
+- `src/components/Editor/WorkbenchTerminal.tsx` 只负责 IDE 式 stdin/arg/diagnostics/runtime/stdout 展示，不解析算法。
+- `src/data/codeTemplates.ts` 的全部内置 Python/JavaScript 模板使用 `solve(inputData)` ABI；`src/sandbox/runUserCode.ts` 与 `runUserPython.ts` 优先调用 `solve`，并在 Worker 不可用时失败关闭。
+- `AnimationScript.result` 是递归 JSON 值；二维矩阵、路径、棋盘、子集和编码表保持结构，不再压成说明字符串。
+- 永久门禁对全部 75 个 preset 执行默认 JavaScript 模板并比较真实返回值与 `script.result`；输入响应门禁无豁免地验证输入变化会改变初始状态、结果或步骤。
 
-### 2.4 Scene 数据流
+InputContract 仍只表达已观察到的顶层类型、数组元素类型和对象字段类型；复杂嵌套约束稳定后再评估 JSON Schema/Ajv。Python 真值依赖 Python Worker/Pyodide 可用性；不可用时明确失败，不把 `@expect` 当作高可信差分。
+
+### 2.4 严格进程式执行会话
+
+长期目标是让代码而不是工作台表单决定是否读取输入、读取几次、输出什么以及何时推进动画。进程式程序启动后保持同一个 Language Worker；执行到读取语句才请求 stdin，提交后从原调用栈继续：
+
+```mermaid
+sequenceDiagram
+    participant UI as IDE Terminal
+    participant S as Execution Session
+    participant W as Language Worker
+    participant A as Animation
+
+    UI->>S: compile/run(code)
+    S->>W: start
+    W-->>UI: stdout/stderr
+    W-->>S: stdin-request
+    S-->>A: pause and preserve current Scene
+    UI->>S: stdin-response
+    S->>W: stdin bytes
+    W-->>S: result + trace-event
+    S-->>A: resume/apply trace
+    W-->>S: exit
+```
+
+公共协议由 `src/workbench/executionProtocol.ts` 定义，包含 `compiling`、`running`、`stdout`、`stderr`、`stdin-request`、`stdin-response`、`result`、`trace-event`、`exit`、`error`、`cancel/timeout`。状态机固定为：
+
+```text
+idle → compiling → running
+running → waiting-input → running
+running → finished | error | cancelled
+```
+
+边界约束：
+
+- `stdout`/`stderr` 只承载人类可读文本，`result` 承载结构化最终值，`trace-event` 承载动画事实，`diagnostics` 承载编译错误；禁止从 stdout 文本反推动画。
+- 到达输入边界时暂停动画并保留当前 Scene；等待用户输入不计入 CPU 执行超时，提交后同一 Worker 继续，Reset、代码切换或算法切换会终止会话。
+- 当前首条纵切支持 JavaScript `main()`、异步 `readLine()`、流式输出、结构化结果和 trace 收集；旧 `solve(inputData)` ABI 继续服务内置模板和已有生成器。
+- C++/Java 不使用 Docker、宿主机编译器、远程执行或有限正则转译器。目标分别是随项目本地分发并在 Worker 中运行的 Clang/LLVM WASM + WASI，以及 javac + 浏览器 JVM；依赖选型和资源许可验收完成前继续明确报告 static-only。
+- 生成器 Artifact 与输入契约继续持久化；同一份程序和生成器对新输入在浏览器本地重跑，不再次请求 LLM。
+
+分阶段演进：
+
+1. 公共协议与 JavaScript async `readLine()` 纵切。
+2. Python `input()` 迁入同一会话协议。
+3. 配置 COOP/COEP，以 SharedArrayBuffer + Atomics 建立共享 stdin 字节管道。
+4. 接入本地 Clang/LLVM WASM + WASI。
+5. 接入本地 javac + 浏览器 JVM。
+6. 75 个模板从 `solve(inputData)` 迁移到可产生 trace 的进程式 ABI。
+7. 全部语言完成后，旧 `solve` ABI 仅保留兼容用途。
+
+### 2.5 Scene 数据流
 
 ```mermaid
 flowchart TD
     A["AnimationScript.steps[].events"] --> B["compileEvent"]
     B --> C["sceneEventCompilers / overlayCompiler"]
     C --> D["SceneCommand[]"]
-    D --> E["applyCommands"]
-    E --> F["deriveSceneState(step)"]
-    F --> G["快照缓存 + 辅助结构派生"]
-    G --> H["useSceneTransition / interpolateScene"]
-    H --> I["SceneCanvas"]
-    I --> J["graphics/renderers + overlays"]
+    D --> E["deriveSceneState: applyCommands + 快照缓存"]
+    E --> F["确定性结构布局 + 辅助结构/复合区域"]
+    F --> G["finalizeSceneGeometry: 测量、边路由、标签避碰"]
+    G --> H{"ELK 兼容拓扑?"}
+    H -->|"否"| J["目标 SceneState"]
+    H -->|"是"| I["useElkLayout: Worker + 结构缓存"]
+    I -->|"成功并重新完成几何处理"| J
+    I -->|"失败，保留确定性 Scene"| J
+    J --> K["useSceneTransition / interpolateScene"]
+    K --> L["完整 viewBox（图元 + route + 边标签）"]
+    L --> M["SceneCanvas: graphics/renderers + overlays"]
+    G -. "Vitest 几何门禁" .-> V["validateSceneGeometry"]
+    J -. "异步布局验收" .-> V
 ```
 
 契约边界：
@@ -121,9 +187,13 @@ flowchart TD
 - `AlgorithmEvent` 表达算法语义。
 - `SceneCommand` 表达场景修改。
 - `SceneState` 是某一步的完整目标快照。
+- `SceneEdge.route` 和 `SceneEdge.labelPosition` 是布局阶段写入的持久化几何，Renderer 不再临时猜测连线。
 - Renderer 只读取 `SceneState`，不解释算法源码，也不访问 LLM。
 - 编译器顺序由 `src/scene/compilerRegistry.ts` 统一管理，先匹配先生效。
 - `deriveSceneState` 可以缓存，但其输出必须只由脚本和步骤决定。
+- `measureSceneGeometry` 统一测量可见节点与文本；`finalizeSceneGeometry` 负责确定性避障路由、箭头净空和边标签候选位置；`validateSceneGeometry` 在测试中拒绝图元/文本重叠、穿越非端点障碍的边、被目标节点遮挡的箭头和树中的孤立节点。
+- ELK 按 Scene 拓扑为所有树、带边的图、并查集和跳表提供异步布局；数组、矩阵、DP、栈、队列等语义布局不进入 ELK。Worker 不可用或布局失败时保留已有确定性 Scene，不引入第二套 Renderer。
+- 几何、自动机、概率等专用 Renderer 自己管理内部坐标，不伪装成通用 `SceneCell` 参与外层碰撞计算。
 
 ### 2.5 持久化
 
@@ -131,7 +201,7 @@ flowchart TD
 |---|---|---|
 | `algoviz-api-config` | 模型服务配置和 API Key | 仅适合本地个人使用 |
 | `algoviz-lang` | 语言 | 无 |
-| `algoviz-ai-history` | 代码、输入、脚本、Generator body | 尚未形成版本化 Generator Artifact |
+| `algoviz-ai-history` | 代码、输入、最近脚本和版本化 GeneratorArtifact | 旧 `generatorBody/generatorType` 记录在读取时迁移 |
 
 ## 3. 目标生成架构
 
@@ -338,7 +408,13 @@ src/
 │  ├─ builder.ts
 │  ├─ executeGenerator.ts
 │  ├─ generatorWorker.ts
+│  ├─ interactiveJavaScriptWorker.ts
+│  ├─ runInteractiveJavaScript.ts
 │  └─ runGenerator.ts
+├─ workbench/                  # IDE 编译会话的纯领域服务
+│  ├─ executionProtocol.ts     # 进程状态机与 stdin/stdout/trace 协议
+│  ├─ inputCompiler.ts         # 输入状态机与 E_INPUT_* 诊断
+│  └─ runtimeContract.ts       # 语言能力、JSON-safe 输出与 stdout 格式
 ├─ presets/                    # 可信本地 Generator
 ├─ scene/
 │  ├─ graphics/
@@ -374,6 +450,7 @@ src/
 | [XState](https://github.com/statelyai/xstate) | 显式异步状态、guard、actor、持久化快照，适合复杂工作流 | 当前主要问题是职责集中而非状态机能力缺失；现在加入会增加概念和包体 | 先抽纯服务；状态转换继续失控时再采用 |
 | [Ajv](https://github.com/ajv-validator/ajv) | 浏览器可用的 JSON Schema 编译验证器，适合持久化 `InputContract` | 当前尚未稳定输入契约格式；立即加入会固化未成熟 Schema | InputContract 定稿后优先候选 |
 | [Knip](https://knip.dev) | 从入口图检查未使用文件、依赖和未声明依赖 | 导出级报告对公共 API 和测试辅助函数会有噪声 | Phase 1 已作为开发依赖接入；当前门禁只检查高置信度的文件和依赖问题 |
+| [Eclipse ELK / elkjs](https://github.com/kieler/elkjs) | 分层布局、正交边路由和浏览器 Worker 支持 | 全量替换会形成第二套布局/渲染协议，且数组、DP、栈等结构并不受益 | 已以 `elkjs@^0.12.0` 覆盖所有兼容拓扑；懒加载 Worker，失败回退确定性 Scene |
 
 采用原则：
 
@@ -445,6 +522,49 @@ Hook 五次换输入且 LLM mock 为零、历史持久化和旧格式迁移。
 `src/sandbox/builder.ts`、`src/sandbox/executeGenerator.ts`。运行时测试覆盖 JS 真值通过/失败、
 其他语言未验证、五类显式边界输入，以及不同事件预算下结果一致。
 
+### Phase 5：Scene 几何契约与 ELK 兼容拓扑布局
+
+- [x] 跳表改用专用 `skip_list` 模块和真实逐层搜索事件：创建、比较、右移、下沉、命中/未命中。
+- [x] 跳表确定性布局按文本宽度计算列宽，避免 `initialState` 重复种入数组。
+- [x] 增加共享几何测量、确定性避障路由和边标签候选位置；路由与标签位置写入 `SceneEdge`。
+- [x] 补间层插值边路由与标签位置，viewBox 纳入完整路由和边标签范围。
+- [x] 以 Worker + 结构缓存接入 ELK，按 Scene 拓扑覆盖所有树、带边的图、并查集和跳表；失败保留确定性布局。
+- [x] `graph.create.directed` 贯穿编译，避免有向图在布局选择前丢失方向语义。
+- [x] 全部内置预设逐步骤执行重叠、穿线、箭头净空和树节点连通门禁；跳表在桌面与紧凑视口执行 Playwright 截图回归。
+- [x] 二叉树按 LeetCode 队列式层序输入建树，保留 `null` 和重复值，并从真实拓扑计算遍历轨迹与 BFS 结果；B+ 树搜索/范围查询返回用户可见结果。
+
+实现位置：`src/scene/geometry.ts`、`src/scene/layouts/elkLayout.ts`、
+`src/scene/layouts/useElkLayout.ts`、`src/scene/graphics/compile/skipListCompile.ts`。
+几何门禁覆盖图元/文本重叠、边穿越非端点障碍、箭头遮挡和树孤立节点；专用 Renderer 的内部几何继续由各自测试负责。
+
+### Phase 6：IDE 编译会话与全算法结果契约
+
+- [x] Draft/Committed 输入和代码分离；编辑期间暂停并冻结旧动画，显式运行后才提交。
+- [x] IDE 式终端统一 stdin、操作参数、编译诊断、运行状态和 stdout。
+- [x] 输入编译器统一未完成、语法、类型与领域错误；覆盖图引用/负权、数独冲突、网格端点、窗口范围和结构专用约束。
+- [x] `AnimationResult` 扩展为递归 JSON 值，矩阵、路径、棋盘、子集、SCC 和编码表保留结构。
+- [x] 全部内置 Python/JavaScript 模板提供 `solve(inputData)`；C++/Java 明确为 static-only。
+- [x] 全部 75 个 JavaScript 模板真实执行结果与 preset 结果一致；全部 75 个 preset 通过无豁免输入响应门禁。
+- [x] 水塘抽样使用显式 seed 的确定性 RNG，动画和代码可复现。
+
+实现位置：`src/workbench/inputCompiler.ts`、`src/workbench/runtimeContract.ts`、
+`src/components/Editor/WorkbenchTerminal.tsx`、`src/data/codeTemplates.ts`、
+`src/sandbox/runUserCode.ts`、`src/sandbox/runUserPython.ts`。
+
+### Phase 7：严格交互式语言会话
+
+- [x] 定义统一执行事件、请求协议和 `idle → compiling → running → waiting-input` 状态机。
+- [x] JavaScript `main()` 在独立 Worker 中支持异步 `readLine()`、流式 stdout/stderr、结构化 result、trace 收集、取消与分段 CPU 超时。
+- [x] IDE 终端仅在程序请求输入时激活单行 `stdin>`，并将 stdout、stderr、result 分开显示。
+- [ ] 将 trace 事件编译并增量提交给动画引擎。
+- [ ] Python 迁移到严格交互协议，并完成共享 stdin 字节管道与 COOP/COEP。
+- [ ] 完成 C++ Clang/WASI 与 Java javac/JVM 的本地资源、Worker 运行、缓存、许可和端到端验收。
+- [ ] 逐步迁移 75 个模板；迁移完成前保留 `solve(inputData)` 兼容层。
+
+实现位置：`src/workbench/executionProtocol.ts`、
+`src/sandbox/interactiveJavaScriptWorker.ts`、`src/sandbox/runInteractiveJavaScript.ts`、
+`src/components/Editor/WorkbenchTerminal.tsx`、`src/pages/Visualizer/index.tsx`。
+
 ## 8. 架构决策记录
 
 ### ADR-001：保留 Scene Engine
@@ -467,6 +587,10 @@ Hook 五次换输入且 LLM mock 为零、历史持久化和旧格式迁移。
 
 原因：大规模路径移动只改善表面结构，却放大冲突和回归风险。文件只在职责被实际抽取时迁移。
 
+### ADR-006：ELK 只增强布局，不替换 Scene
+
+原因：ELK 擅长结构布局和边路由，但不是算法动画 Renderer。按 Scene 拓扑启用、Worker 隔离和确定性回退可以复用其能力，同时保持事件、补间、图元和测试体系只有一套。
+
 ## 9. 变更检查表
 
 修改生成管线时必须回答：
@@ -479,6 +603,9 @@ Hook 五次换输入且 LLM mock 为零、历史持久化和旧格式迁移。
 - Worker 失败是否仍然失败关闭？
 - 新事件是否有 Schema、编译、场景派生和 Renderer 验证？
 - 是否在至少一个非样例输入上验证？
+- 新布局是否保留事件语义（特别是有向边）并在 Worker 失败时保持可用？
+- 新图元是否进入几何测量，或明确由专用 Renderer 管理内部几何？
+- 新预设是否逐步骤通过重叠、穿线、箭头净空和树节点连通门禁，并在必要视口补充截图回归？
 
 修改目录时必须回答：
 

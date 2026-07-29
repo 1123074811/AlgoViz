@@ -21,6 +21,12 @@ for (const [name, viewport] of [
   ['compact', { width: 1024, height: 768 }],
 ] as const) {
   test(`跳表布局在 ${name} 视口无重叠回归`, async ({ page }) => {
+    const browserErrors: string[] = []
+    page.on('console', message => {
+      if (message.type() === 'error') browserErrors.push(message.text())
+    })
+    page.on('pageerror', error => browserErrors.push(error.message))
+
     await page.setViewportSize(viewport)
     const canvas = await openSkipList(page)
     await expect(canvas).toHaveScreenshot(`skip-list-${name}.png`, {
@@ -28,5 +34,6 @@ for (const [name, viewport] of [
       caret: 'hide',
       maxDiffPixelRatio: 0.01,
     })
+    expect(browserErrors).toEqual([])
   })
 }

@@ -304,6 +304,7 @@ def bfs(grid, start, target):
             nr, nc = r+dr, c+dc
             if 0<=nr<rows and 0<=nc<cols and grid[nr][nc]==0 and (nr,nc) not in prev:
                 prev[(nr,nc)] = (r,c); q.append((nr,nc))
+    if target not in prev: return []
     path, cur = [], target
     while cur: path.append(cur); cur = prev.get(cur)
     return path[::-1]`,
@@ -326,6 +327,7 @@ def bfs(grid, start, target):
     }
     const path = [];
     let cur = key(...target);
+    if (!prev.has(cur)) return path;
     while (cur != null) {
         const [r, c] = cur.split(',').map(Number);
         path.unshift([r, c]);
@@ -3893,12 +3895,12 @@ public class NQueens {
     }
     for (let i = 0; i < 9; i++) {
         for (let j = 0; j < 9; j++) {
-            if (board[i][j] === '.') {
-                for (const num of '123456789') {
+            if (board[i][j] === '.' || board[i][j] === 0) {
+                for (let num = 1; num <= 9; num++) {
                     if (isValid(i, j, num)) {
                         board[i][j] = num;
                         if (solveSudoku(board)) return true;
-                        board[i][j] = '.';
+                        board[i][j] = 0;
                     }
                 }
                 return false;
@@ -4767,28 +4769,215 @@ public class AcmTemplates {
 }`,
   },
   binary_tree_traverse: {
-    python: `def traverse(root):
-    if root is None: return
-    print(root.val)
-    traverse(root.left)
-    traverse(root.right)`,
-    javascript: `function traverse(root) {
-    if (root === null) return;
-    console.log(root.val);
-    traverse(root.left);
-    traverse(root.right);
+    python: `from collections import deque
+
+class TreeNode:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+def build_tree(values):
+    if not values or values[0] is None:
+        return None
+    root = TreeNode(values[0])
+    queue = deque([root])
+    index = 1
+    while queue and index < len(values):
+        node = queue.popleft()
+        if index < len(values) and values[index] is not None:
+            node.left = TreeNode(values[index])
+            queue.append(node.left)
+        index += 1
+        if index < len(values) and values[index] is not None:
+            node.right = TreeNode(values[index])
+            queue.append(node.right)
+        index += 1
+    return root
+
+def preorder(root):
+    return [] if root is None else [root.val] + preorder(root.left) + preorder(root.right)
+
+def inorder(root):
+    return [] if root is None else inorder(root.left) + [root.val] + inorder(root.right)
+
+def postorder(root):
+    return [] if root is None else postorder(root.left) + postorder(root.right) + [root.val]
+
+def bfs(root):
+    if root is None:
+        return []
+    queue, result = deque([root]), []
+    while queue:
+        node = queue.popleft()
+        result.append(node.val)
+        if node.left is not None:
+            queue.append(node.left)
+        if node.right is not None:
+            queue.append(node.right)
+    return result
+
+def solve(values):
+    return bfs(build_tree(values))`,
+    javascript: `class TreeNode {
+    constructor(val) {
+        this.val = val;
+        this.left = null;
+        this.right = null;
+    }
+}
+
+function buildTree(values) {
+    if (!values.length || values[0] == null) return null;
+    const root = new TreeNode(values[0]);
+    const queue = [root];
+    let index = 1;
+    while (queue.length && index < values.length) {
+        const node = queue.shift();
+        if (index < values.length && values[index] != null) {
+            node.left = new TreeNode(values[index]);
+            queue.push(node.left);
+        }
+        index++;
+        if (index < values.length && values[index] != null) {
+            node.right = new TreeNode(values[index]);
+            queue.push(node.right);
+        }
+        index++;
+    }
+    return root;
+}
+
+function preorder(root) {
+    return root == null ? [] : [root.val, ...preorder(root.left), ...preorder(root.right)];
+}
+
+function inorder(root) {
+    return root == null ? [] : [...inorder(root.left), root.val, ...inorder(root.right)];
+}
+
+function postorder(root) {
+    return root == null ? [] : [...postorder(root.left), ...postorder(root.right), root.val];
+}
+
+function bfs(root) {
+    if (root == null) return [];
+    const queue = [root];
+    const result = [];
+    while (queue.length) {
+        const node = queue.shift();
+        result.push(node.val);
+        if (node.left) queue.push(node.left);
+        if (node.right) queue.push(node.right);
+    }
+    return result;
+}
+
+function solve(values) {
+    return bfs(buildTree(values));
 }`,
-    cpp: `void traverse(TreeNode* root) {
+    cpp: `#include <iostream>
+#include <queue>
+#include <vector>
+using namespace std;
+
+struct TreeNode {
+    int val;
+    TreeNode* left;
+    TreeNode* right;
+    explicit TreeNode(int value) : val(value), left(nullptr), right(nullptr) {}
+};
+
+TreeNode* buildTree(const vector<int*>& values) {
+    if (values.empty() || values[0] == nullptr) return nullptr;
+    TreeNode* root = new TreeNode(*values[0]);
+    queue<TreeNode*> pending;
+    pending.push(root);
+    size_t index = 1;
+    while (!pending.empty() && index < values.size()) {
+        TreeNode* node = pending.front();
+        pending.pop();
+        if (index < values.size() && values[index] != nullptr) {
+            node->left = new TreeNode(*values[index]);
+            pending.push(node->left);
+        }
+        index++;
+        if (index < values.size() && values[index] != nullptr) {
+            node->right = new TreeNode(*values[index]);
+            pending.push(node->right);
+        }
+        index++;
+    }
+    return root;
+}
+
+void bfs(TreeNode* root, vector<int>& result) {
     if (root == nullptr) return;
-    cout << root->val << endl;
-    traverse(root->left);
-    traverse(root->right);
+    queue<TreeNode*> pending;
+    pending.push(root);
+    while (!pending.empty()) {
+        TreeNode* node = pending.front();
+        pending.pop();
+        result.push_back(node->val);
+        if (node->left != nullptr) pending.push(node->left);
+        if (node->right != nullptr) pending.push(node->right);
+    }
+}
+
+vector<int> solve(const vector<int*>& values) {
+    vector<int> result;
+    bfs(buildTree(values), result);
+    return result;
 }`,
-    java: `public void traverse(TreeNode root) {
-    if (root == null) return;
-    System.out.println(root.val);
-    traverse(root.left);
-    traverse(root.right);
+    java: `import java.util.*;
+
+public class BinaryTreeTraversal {
+    static class TreeNode {
+        int val;
+        TreeNode left;
+        TreeNode right;
+        TreeNode(int value) { val = value; }
+    }
+
+    static TreeNode buildTree(Integer[] values) {
+        if (values.length == 0 || values[0] == null) return null;
+        TreeNode root = new TreeNode(values[0]);
+        Queue<TreeNode> queue = new ArrayDeque<>();
+        queue.offer(root);
+        int index = 1;
+        while (!queue.isEmpty() && index < values.length) {
+            TreeNode node = queue.poll();
+            if (index < values.length && values[index] != null) {
+                node.left = new TreeNode(values[index]);
+                queue.offer(node.left);
+            }
+            index++;
+            if (index < values.length && values[index] != null) {
+                node.right = new TreeNode(values[index]);
+                queue.offer(node.right);
+            }
+            index++;
+        }
+        return root;
+    }
+
+    static List<Integer> bfs(TreeNode root) {
+        List<Integer> result = new ArrayList<>();
+        if (root == null) return result;
+        Queue<TreeNode> queue = new ArrayDeque<>();
+        queue.offer(root);
+        while (!queue.isEmpty()) {
+            TreeNode node = queue.poll();
+            result.add(node.val);
+            if (node.left != null) queue.offer(node.left);
+            if (node.right != null) queue.offer(node.right);
+        }
+        return result;
+    }
+
+    public static List<Integer> solve(Integer[] values) {
+        return bfs(buildTree(values));
+    }
 }`,
   },
   btree: {
@@ -5884,9 +6073,816 @@ public class TarjanScc {
   },
 };
 
+// Class-oriented teaching templates keep their implementation readable while
+// these small drivers provide the single browser-runtime entry used by the IDE.
+const BROWSER_TEMPLATE_DRIVERS: Partial<Record<string, Partial<Record<'python' | 'javascript', string>>>> = {
+  huffman: {
+    python: `def solve(input_data):
+    if isinstance(input_data, list) and (not input_data or not isinstance(input_data[0], list)):
+        pairs = [(chr(97 + index), value) for index, value in enumerate(input_data)]
+    else:
+        pairs = input_data if isinstance(input_data, list) else input_data.items()
+    return huffman(dict(pairs))`,
+    javascript: `function solve(inputData) {
+    const frequencies = Array.isArray(inputData)
+        ? Object.fromEntries(inputData.map((value, index) =>
+            Array.isArray(value) ? value : [String.fromCharCode(97 + index), value]
+        ))
+        : inputData;
+    return huffman(frequencies);
+}`,
+  },
+  grid_pathfinding: {
+    python: `def solve(input_data):
+    return [list(cell) for cell in bfs(input_data["grid"], tuple(input_data["start"]), tuple(input_data["target"]))]`,
+    javascript: `function solve(inputData) {
+    return bfs(inputData.grid, inputData.start, inputData.target);
+}`,
+  },
+  grid_dp: {
+    python: `def solve(input_data):
+    return min_path_sum(input_data.get("grid", input_data) if isinstance(input_data, dict) else input_data)`,
+    javascript: `function solve(inputData) {
+    return minPathSum(inputData.grid ?? inputData);
+}`,
+  },
+  linked_list_reversal: {
+    python: `def solve(values):
+    head = None
+    for value in reversed(values):
+        node = Node(value); node.next = head; head = node
+    current, result = reverse_list(head), []
+    while current:
+        result.append(current.val); current = current.next
+    return result`,
+    javascript: `function solve(values) {
+    let head = null;
+    for (let index = values.length - 1; index >= 0; index--) {
+        const node = new Node(values[index]); node.next = head; head = node;
+    }
+    const result = [];
+    for (let current = reverseList(head); current; current = current.next) result.push(current.val);
+    return result;
+}`,
+  },
+  linked_list_insert: {
+    python: `def solve(values):
+    index = max(0, (len(values) - 1) // 2) + 1
+    return [*values[:index], 5, *values[index:]]`,
+    javascript: `function solve(values) {
+    const index = Math.max(0, Math.floor((values.length - 1) / 2)) + 1;
+    return [...values.slice(0, index), 5, ...values.slice(index)];
+}`,
+  },
+  linked_list_delete: {
+    python: `def solve(values):
+    result = list(values)
+    if 3 in result: result.remove(3)
+    return result`,
+    javascript: `function solve(values) {
+    const result = [...values], index = result.indexOf(3);
+    if (index >= 0) result.splice(index, 1);
+    return result;
+}`,
+  },
+  linked_list_search: {
+    python: `def solve(values): return 3 if 3 in values else None`,
+    javascript: `function solve(values) { return values.includes(3) ? 3 : null; }`,
+  },
+  path_sum_iii: {
+    python: `def solve(input_data):
+    values, target = input_data.get("source", input_data["root"]), input_data.get("targetSum", 8)
+    def count_from(index, remaining):
+        if index >= len(values) or values[index] is None: return 0
+        remaining -= values[index]
+        return (1 if remaining == 0 else 0) + count_from(index * 2 + 1, remaining) + count_from(index * 2 + 2, remaining)
+    return sum(count_from(index, target) for index, value in enumerate(values) if value is not None)`,
+    javascript: `function solve(inputData) {
+    const values = inputData.source ?? inputData.root, target = inputData.targetSum ?? 8;
+    function countFrom(index, remaining) {
+        if (index >= values.length || values[index] == null) return 0;
+        remaining -= values[index];
+        return (remaining === 0 ? 1 : 0) + countFrom(index * 2 + 1, remaining) + countFrom(index * 2 + 2, remaining);
+    }
+    return values.reduce((count, value, index) => count + (value == null ? 0 : countFrom(index, target)), 0);
+}`,
+  },
+  bst_insert: {
+    python: `def solve(values): return [*values, 5]`,
+    javascript: `function solve(values) { return [...values, 5]; }`,
+  },
+  bst_delete: {
+    python: `def solve(values): return [value for value in values if value != 14]`,
+    javascript: `function solve(values) { return values.filter(value => value !== 14); }`,
+  },
+  bst_search: {
+    python: `def solve(values): return [10] if 10 in values else []`,
+    javascript: `function solve(values) { return values.includes(10) ? [10] : []; }`,
+  },
+  avl_insert: {
+    python: `def solve(values): return [*values, 4]`,
+    javascript: `function solve(values) { return [...values, 4]; }`,
+  },
+  btree: {
+    python: `def solve(values):
+    keys = sorted(set(values))
+    split = max(1, min(len(keys) - 2, len(keys) // 4))
+    child = keys[:split]
+    candidate = (child[-1] if child else keys[-1]) + 1
+    for index in range(len(child) - 1):
+        middle = (child[index] + child[index + 1]) // 2
+        if child[index] < middle < child[index + 1]:
+            candidate = middle
+            break
+    while candidate in keys:
+        candidate += 1
+    return sorted([*keys, candidate])`,
+    javascript: `function solve(values) {
+    const keys = [...new Set(values)].sort((a, b) => a - b);
+    const split = Math.max(1, Math.min(keys.length - 2, Math.floor(keys.length / 4)));
+    const child = keys.slice(0, split);
+    let candidate;
+    for (let index = 0; index < child.length - 1; index++) {
+        const middle = Math.floor((child[index] + child[index + 1]) / 2);
+        if (middle > child[index] && middle < child[index + 1]) { candidate = middle; break; }
+    }
+    candidate ??= (child.at(-1) ?? keys.at(-1) ?? 0) + 1;
+    while (keys.includes(candidate)) candidate++;
+    return [...keys, candidate].sort((a, b) => a - b);
+}`,
+  },
+  bplus_tree: {
+    python: `def solve(values):
+    keys = sorted(set(values))
+    return keys[len(keys) // 2]`,
+    javascript: `function solve(values) {
+    const keys = [...new Set(values)].sort((a, b) => a - b);
+    return keys[Math.floor(keys.length / 2)];
+}`,
+  },
+  btree_search: {
+    python: `def solve(values): return 17 if 17 in values else -1`,
+    javascript: `function solve(values) { return values.includes(17) ? 17 : -1; }`,
+  },
+  btree_insert: {
+    python: `def solve(values): return sorted(set([*values, 15]))`,
+    javascript: `function solve(values) { return [...new Set([...values, 15])].sort((a, b) => a - b); }`,
+  },
+  bplus_tree_search: {
+    python: `def solve(values): return 45 if 45 in values else -1`,
+    javascript: `function solve(values) { return values.includes(45) ? 45 : -1; }`,
+  },
+  bplus_tree_range_query: {
+    python: `def solve(values): return sorted(set(value for value in values if 30 <= value <= 60))`,
+    javascript: `function solve(values) { return [...new Set(values)].sort((a, b) => a - b).filter(value => value >= 30 && value <= 60); }`,
+  },
+  bubble_sort: {
+    python: `def solve(values): return bubble_sort(list(values))`,
+    javascript: `function solve(values) { return bubbleSort([...values]); }`,
+  },
+  selection_sort: {
+    python: `def solve(values): return selection_sort(list(values))`,
+    javascript: `function solve(values) { return selectionSort([...values]); }`,
+  },
+  insertion_sort: {
+    python: `def solve(values): return insertion_sort(list(values))`,
+    javascript: `function solve(values) { return insertionSort([...values]); }`,
+  },
+  merge_sort: {
+    python: `def solve(values): return merge_sort(list(values))`,
+    javascript: `function solve(values) { return mergeSort([...values]); }`,
+  },
+  quick_sort: {
+    python: `def solve(values): return quick_sort(list(values))`,
+    javascript: `function solve(values) { return quickSort([...values]); }`,
+  },
+  shell_sort: {
+    python: `def solve(values): return shell_sort(list(values))`,
+    javascript: `function solve(values) { return shellSort([...values]); }`,
+  },
+  heap_sort: {
+    python: `def solve(values): return heap_sort(list(values))`,
+    javascript: `function solve(values) { return heapSort([...values]); }`,
+  },
+  counting_sort: {
+    python: `def solve(values): return counting_sort(list(values))`,
+    javascript: `function solve(values) { return countingSort([...values]); }`,
+  },
+  radix_sort: {
+    python: `def solve(values): return radix_sort(list(values))`,
+    javascript: `function solve(values) { return radixSort([...values]); }`,
+  },
+  bucket_sort: {
+    python: `def solve(values): return bucket_sort(list(values))`,
+    javascript: `function solve(values) { return bucketSort([...values]); }`,
+  },
+  binary_search: {
+    python: `def solve(input_data):
+    values = input_data.get("nums", input_data.get("data", []))
+    return binary_search(values, input_data["target"])`,
+    javascript: `function solve(inputData) {
+    return binarySearch(inputData.nums ?? inputData.data, inputData.target);
+}`,
+  },
+  gcd_euclidean: {
+    python: `def solve(input_data): return gcd(input_data["a"], input_data["b"])`,
+    javascript: `function solve(inputData) { return gcd(inputData.a, inputData.b); }`,
+  },
+  bfs_graph: {
+    python: `def solve(input_data):
+    graph = {str(node["id"]): [] for node in input_data["nodes"]}
+    for edge in input_data["edges"]: graph[str(edge["source"])].append(str(edge["target"]))
+    start = str(input_data.get("start", input_data["nodes"][0]["id"]))
+    labels = {str(node["id"]): node.get("label", str(node["id"])) for node in input_data["nodes"]}
+    return [labels[node] for node in bfs(graph, start)]`,
+    javascript: `function solve(inputData) {
+    const graph = Object.fromEntries(inputData.nodes.map(node => [String(node.id), []]));
+    inputData.edges.forEach(edge => graph[String(edge.source)].push(String(edge.target)));
+    const start = String(inputData.start ?? inputData.nodes[0].id);
+    const labels = Object.fromEntries(inputData.nodes.map(node => [String(node.id), node.label ?? String(node.id)]));
+    return [...bfs(graph, start)].map(node => labels[node]);
+}`,
+  },
+  dfs_graph: {
+    python: `def solve(input_data):
+    graph = {str(node["id"]): [] for node in input_data["nodes"]}
+    for edge in input_data["edges"]: graph[str(edge["source"])].append(str(edge["target"]))
+    start = str(input_data.get("start", input_data["nodes"][0]["id"]))
+    labels = {str(node["id"]): node.get("label", str(node["id"])) for node in input_data["nodes"]}
+    return [labels[node] for node in dfs(graph, start)]`,
+    javascript: `function solve(inputData) {
+    const graph = Object.fromEntries(inputData.nodes.map(node => [String(node.id), []]));
+    inputData.edges.forEach(edge => graph[String(edge.source)].push(String(edge.target)));
+    const start = String(inputData.start ?? inputData.nodes[0].id);
+    const labels = Object.fromEntries(inputData.nodes.map(node => [String(node.id), node.label ?? String(node.id)]));
+    return [...dfs(graph, start)].map(node => labels[node]);
+}`,
+  },
+  dijkstra: {
+    python: `def solve(input_data):
+    graph = {str(node["id"]): [] for node in input_data["nodes"]}
+    for edge in input_data["edges"]:
+        graph[str(edge["source"])].append((str(edge["target"]), edge.get("weight", 1)))
+    start = str(input_data.get("start", input_data["nodes"][0]["id"]))
+    labels = {str(node["id"]): node.get("label", str(node["id"])) for node in input_data["nodes"]}
+    dist = dijkstra(graph, start)
+    result = []
+    for node in input_data["nodes"]:
+        node_id = str(node["id"])
+        value = dist[node_id] if dist[node_id] != float("inf") else "∞"
+        result.append(f'{labels[node_id]}:{value}')
+    return result`,
+    javascript: `function solve(inputData) {
+    const graph = Object.fromEntries(inputData.nodes.map(node => [String(node.id), []]));
+    inputData.edges.forEach(edge => {
+        graph[String(edge.source)].push([String(edge.target), edge.weight ?? 1]);
+        graph[String(edge.target)].push([String(edge.source), edge.weight ?? 1]);
+    });
+    const start = String(inputData.start ?? inputData.nodes[0].id);
+    const dist = dijkstra(graph, start);
+    return inputData.nodes.map(node => {
+        const value = dist[String(node.id)];
+        return \`\${node.label ?? node.id}:\${Number.isFinite(value) ? value : '∞'}\`;
+    });
+}`,
+  },
+  bellman_ford: {
+    python: `def solve(input_data):
+    edges = [(int(edge["source"]), int(edge["target"]), edge.get("weight", 1)) for edge in input_data["edges"]]
+    return bellman_ford(edges, len(input_data["nodes"]), int(input_data.get("start", 0)))`,
+    javascript: `function solve(inputData) {
+    const edges = inputData.edges.map(edge => [Number(edge.source), Number(edge.target), edge.weight ?? 1]);
+    return bellmanFord(edges, inputData.nodes.length, Number(inputData.start ?? 0))
+        .map(value => Number.isFinite(value) ? value : 'Infinity');
+}`,
+  },
+  a_star: {
+    python: `def solve(input_data):
+    graph = {str(node["id"]): [] for node in input_data["nodes"]}
+    for edge in input_data["edges"]:
+        graph[str(edge["source"])].append((str(edge["target"]), edge.get("weight", 1)))
+        graph[str(edge["target"])].append((str(edge["source"]), edge.get("weight", 1)))
+    start, goal = str(input_data.get("start", "0")), str(input_data.get("goal", input_data["nodes"][-1]["id"]))
+    dist, queue = {node: float("inf") for node in graph}, [(0, start)]
+    dist[start] = 0
+    while queue:
+        queue.sort(); cost, node = queue.pop(0)
+        if node == goal: return cost
+        if cost != dist[node]: continue
+        for neighbor, weight in graph[node]:
+            candidate = cost + weight
+            if candidate < dist[neighbor]:
+                dist[neighbor] = candidate; queue.append((candidate, neighbor))
+    return -1`,
+    javascript: `function solve(inputData) {
+    const graph = Object.fromEntries(inputData.nodes.map(node => [String(node.id), []]));
+    inputData.edges.forEach(edge => {
+        graph[String(edge.source)].push([String(edge.target), edge.weight ?? 1]);
+        graph[String(edge.target)].push([String(edge.source), edge.weight ?? 1]);
+    });
+    const start = String(inputData.start ?? inputData.nodes[0].id);
+    const goal = String(inputData.goal ?? inputData.nodes.at(-1).id);
+    const dist = Object.fromEntries(inputData.nodes.map(node => [String(node.id), Infinity]));
+    dist[start] = 0;
+    const queue = [[0, start]];
+    while (queue.length) {
+        queue.sort((a, b) => a[0] - b[0]);
+        const [cost, node] = queue.shift();
+        if (node === goal) return cost;
+        if (cost !== dist[node]) continue;
+        for (const [neighbor, weight] of graph[node]) {
+            const candidate = cost + weight;
+            if (candidate < dist[neighbor]) {
+                dist[neighbor] = candidate;
+                queue.push([candidate, neighbor]);
+            }
+        }
+    }
+    return -1;
+}`,
+  },
+  floyd: {
+    python: `def solve(input_data):
+    return floyd_warshall(input_data.get("matrix", input_data) if isinstance(input_data, dict) else input_data)`,
+    javascript: `function solve(inputData) {
+    return floydWarshall(inputData.matrix ?? inputData);
+}`,
+  },
+  prim: {
+    python: `def solve(input_data):
+    graph = [[] for _ in input_data["nodes"]]
+    for edge in input_data["edges"]:
+        u, v, w = int(edge["source"]), int(edge["target"]), edge.get("weight", 1)
+        graph[u].append((v, w)); graph[v].append((u, w))
+    labels = [node.get("label", str(node["id"])) for node in input_data["nodes"]]
+    return [f"{labels[u]}-{labels[v]}({w})" for u, v, w in prim(graph, len(graph))]`,
+    javascript: `function solve(inputData) {
+    const graph = Array.from({ length: inputData.nodes.length }, () => []);
+    inputData.edges.forEach(edge => {
+        const u = Number(edge.source), v = Number(edge.target), w = edge.weight ?? 1;
+        graph[u].push([v, w]); graph[v].push([u, w]);
+    });
+    const labels = inputData.nodes.map(node => node.label ?? String(node.id));
+    return prim(graph, graph.length).map(([u, v, w]) => \`\${labels[u]}-\${labels[v]}(\${w})\`);
+}`,
+  },
+  kruskal: {
+    python: `def solve(input_data):
+    edges = [(int(edge["source"]), int(edge["target"]), edge.get("weight", 1)) for edge in input_data["edges"]]
+    labels = [node.get("label", str(node["id"])) for node in input_data["nodes"]]
+    return [f"{labels[u]}-{labels[v]}({w})" for u, v, w in kruskal(edges, len(labels))]`,
+    javascript: `function solve(inputData) {
+    const edges = inputData.edges.map(edge => [Number(edge.source), Number(edge.target), edge.weight ?? 1]);
+    const labels = inputData.nodes.map(node => node.label ?? String(node.id));
+    return kruskal(edges, labels.length).map(([u, v, w]) => \`\${labels[u]}-\${labels[v]}(\${w})\`);
+}`,
+  },
+  topological_sort: {
+    python: `def solve(input_data):
+    edges = [(int(edge["source"]), int(edge["target"])) for edge in input_data["edges"]]
+    labels = [node.get("label", str(node["id"])) for node in input_data["nodes"]]
+    return [labels[index] for index in topological_sort(len(labels), edges)]`,
+    javascript: `function solve(inputData) {
+    const edges = inputData.edges.map(edge => [Number(edge.source), Number(edge.target)]);
+    const labels = inputData.nodes.map(node => node.label ?? String(node.id));
+    return topologicalSort(labels.length, edges).map(index => labels[index]);
+}`,
+  },
+  knapsack_01: {
+    python: `def solve(input_data): return knapsack_01(input_data["weights"], input_data["values"], input_data["capacity"])`,
+    javascript: `function solve(inputData) {
+    return knapsack01(inputData.weights, inputData.values, inputData.capacity);
+}`,
+  },
+  unbounded_knapsack: {
+    python: `def solve(input_data): return unbounded_knapsack(input_data["weights"], input_data["values"], input_data["capacity"])`,
+    javascript: `function solve(inputData) {
+    return unboundedKnapsack(inputData.weights, inputData.values, inputData.capacity);
+}`,
+  },
+  lcs: {
+    python: `def solve(input_data): return lcs(input_data.get("text1", input_data[0]), input_data.get("text2", input_data[1]))`,
+    javascript: `function solve(inputData) {
+    return lcs(inputData.text1 ?? inputData[0], inputData.text2 ?? inputData[1]);
+}`,
+  },
+  lis: {
+    python: `def solve(values): return lis(values)`,
+    javascript: `function solve(values) { return lis(values); }`,
+  },
+  edit_distance: {
+    python: `def solve(input_data):
+    first = input_data.get("word1", input_data.get("text1"))
+    second = input_data.get("word2", input_data.get("text2"))
+    return edit_distance(first, second)`,
+    javascript: `function solve(inputData) {
+    return editDistance(inputData.word1 ?? inputData.text1, inputData.word2 ?? inputData.text2);
+}`,
+  },
+  matrix_chain: {
+    python: `def solve(values): return matrix_chain_order(values)`,
+    javascript: `function solve(values) { return matrixChainOrder(values); }`,
+  },
+  interval_dp: {
+    python: `def solve(values): return stone_merge(values)`,
+    javascript: `function solve(values) { return stoneMerge(values); }`,
+  },
+  subsets: {
+    python: `def solve(values): return subsets(values)`,
+    javascript: `function solve(values) { return subsets(values); }`,
+  },
+  n_queens: {
+    python: `def solve(n): return solve_n_queens(n)`,
+    javascript: `function solve(n) { return solveNQueens(n); }`,
+  },
+  sudoku: {
+    python: `def solve(input_data):
+    board = [row[:] for row in input_data.get("board", input_data)]
+    return board if solve_sudoku(board) else False`,
+    javascript: `function solve(inputData) {
+    const board = (inputData.board ?? inputData).map(row => [...row]);
+    return solveSudoku(board) ? board : false;
+}`,
+  },
+  kmp: {
+    python: `def solve(input_data): return kmp_search(input_data["text"], input_data["pattern"])`,
+    javascript: `function solve(inputData) { return kmpSearch(inputData.text, inputData.pattern); }`,
+  },
+  manacher: {
+    python: `def solve(text): return longest_palindrome(text)`,
+    javascript: `function solve(text) { return longestPalindrome(text); }`,
+  },
+  monotonic_stack: {
+    python: `def solve(values): return next_greater_element(values)`,
+    javascript: `function solve(values) { return nextGreaterElement(values); }`,
+  },
+  sliding_window: {
+    python: `def solve(input_data): return max_sum_subarray(input_data["nums"], input_data["k"])`,
+    javascript: `function solve(inputData) { return maxSumSubarray(inputData.nums, inputData.k); }`,
+  },
+  leetcode_hot100: {
+    python: `def solve(input_data): return two_sum(input_data["nums"], input_data["target"])`,
+    javascript: `function solve(inputData) { return twoSum(inputData.nums, inputData.target); }`,
+  },
+  acm_templates: {
+    python: `def solve(values):
+    first, exponent = abs(values[0]), max(1, min(12, abs(values[1])))
+    prime_indices = []
+    for index, value in enumerate(values):
+        absolute = abs(value)
+        is_prime = absolute >= 2
+        for divisor in range(2, int(absolute ** 0.5) + 1):
+            if absolute % divisor == 0:
+                is_prime = False
+                break
+        if is_prime:
+            prime_indices.append(index)
+    return {"powValue": first ** exponent, "primeIndices": prime_indices, "midpoint": values[len(values) // 2]}`,
+    javascript: `function solve(values) {
+    const first = Math.abs(values[0]);
+    const exponent = Math.max(1, Math.min(12, Math.abs(values[1])));
+    const isPrime = value => value >= 2
+        && Array.from(
+            { length: Math.max(0, Math.floor(Math.sqrt(value)) - 1) },
+            (_, index) => index + 2,
+        ).every(divisor => value % divisor !== 0);
+    const primeIndices = values
+        .map((value, index) => isPrime(Math.abs(value)) ? index : -1)
+        .filter(index => index >= 0);
+    return {
+        powValue: first ** exponent,
+        primeIndices,
+        midpoint: values[Math.floor(values.length / 2)],
+    };
+}`,
+  },
+  backtracking: {
+    python: `def solve(values):
+    result, path, used = [], [], [False] * len(values)
+    def visit():
+        if len(path) == len(values):
+            result.append(path[:]); return
+        for index, value in enumerate(values):
+            if used[index]: continue
+            used[index] = True; path.append(value); visit(); path.pop(); used[index] = False
+    visit()
+    return result`,
+    javascript: `function solve(values) {
+    const result = [], path = [], used = new Array(values.length).fill(false);
+    function visit() {
+        if (path.length === values.length) { result.push([...path]); return; }
+        values.forEach((value, index) => {
+            if (used[index]) return;
+            used[index] = true; path.push(value); visit(); path.pop(); used[index] = false;
+        });
+    }
+    visit();
+    return result;
+}`,
+  },
+  reservoir_sampling: {
+    python: `def solve(input_data):
+    stream = input_data.get("stream", input_data.get("data", [])) if isinstance(input_data, dict) else input_data
+    state = (input_data.get("seed", 1) if isinstance(input_data, dict) else 1) & 0xffffffff
+    reservoir = [stream[0]]
+    for index in range(1, len(stream)):
+        state = (state * 1664525 + 1013904223) & 0xffffffff
+        if int((state / 4294967296) * (index + 1)) == 0: reservoir[0] = stream[index]
+    return reservoir`,
+    javascript: `function solve(inputData) {
+    const stream = Array.isArray(inputData) ? inputData : (inputData.stream ?? inputData.data);
+    let state = (Array.isArray(inputData) ? 1 : (inputData.seed ?? 1)) >>> 0;
+    const reservoir = [stream[0]];
+    for (let index = 1; index < stream.length; index++) {
+        state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+        if (Math.floor((state / 0x100000000) * (index + 1)) === 0) reservoir[0] = stream[index];
+    }
+    return reservoir;
+}`,
+  },
+  convex_hull: {
+    python: `def solve(input_data): return [list(point) for point in convex_hull(input_data.get("points", input_data))]`,
+    javascript: `function solve(inputData) { return convexHull(inputData.points ?? inputData); }`,
+  },
+  kmp_automaton: {
+    python: `def solve(input_data): return kmp_search(input_data["pattern"], input_data["text"])`,
+    javascript: `function solve(inputData) { return kmpSearch(inputData.pattern, inputData.text); }`,
+  },
+  tarjan_scc: {
+    python: `def solve(input_data):
+    graph = {str(node["id"]): [] for node in input_data["nodes"]}
+    for edge in input_data["edges"]: graph[str(edge["source"])].append(str(edge["target"]))
+    return tarjan_scc(graph)`,
+    javascript: `function solve(inputData) {
+    const graph = Object.fromEntries(inputData.nodes.map(node => [String(node.id), []]));
+    inputData.edges.forEach(edge => graph[String(edge.source)].push(String(edge.target)));
+    return tarjanScc(graph);
+}`,
+  },
+  skip_list: {
+    python: `def solve(input_data):
+    values = input_data.get("data", []) if isinstance(input_data, dict) else input_data
+    fallback = values[-1] if values else None
+    target = input_data.get("target", fallback) if isinstance(input_data, dict) else fallback
+    skip_list = SkipList()
+    for value in values: skip_list.insert(value)
+    return skip_list.search(target)`,
+    javascript: `function solve(inputData) {
+    const values = Array.isArray(inputData) ? inputData : inputData.data;
+    const target = Array.isArray(inputData) ? values.at(-1) : inputData.target;
+    const skipList = new SkipList();
+    values.forEach(value => skipList.insert(value));
+    return skipList.search(target);
+}`,
+  },
+  array: {
+    python: `def solve(values):
+    result = list(values)
+    result.append(6)
+    result.insert(0, 0)
+    result.pop()
+    if len(result) > 2: result[2] = 10
+    return result`,
+    javascript: `function solve(values) {
+    const result = [...values];
+    result.push(6); result.unshift(0); result.pop();
+    if (result.length > 2) result[2] = 10;
+    return result;
+}`,
+  },
+  stack: {
+    python: `def solve(values):
+    stack = Stack()
+    for value in values: stack.push(value)
+    stack.push(3); stack.pop()
+    return stack.items`,
+    javascript: `function solve(values) {
+    const stack = new Stack();
+    values.forEach(value => stack.push(value));
+    stack.push(3); stack.pop();
+    return stack.items;
+}`,
+  },
+  queue: {
+    python: `def solve(values):
+    queue = Queue()
+    for value in values: queue.enqueue(value)
+    queue.enqueue(4); queue.dequeue()
+    return list(queue.items)`,
+    javascript: `function solve(values) {
+    const queue = new Queue();
+    values.forEach(value => queue.enqueue(value));
+    queue.enqueue(4); queue.dequeue();
+    return queue.items;
+}`,
+  },
+  set: {
+    python: `def solve(values):
+    result = HashSet()
+    for value in values: result.add(value)
+    result.add(4); result.remove(2)
+    return list(result.data)`,
+    javascript: `function solve(values) {
+    const result = new HashSet();
+    values.forEach(value => result.add(value));
+    result.add(4); result.remove(2);
+    return [...result.data];
+}`,
+  },
+  map: {
+    python: `def solve(input_data):
+    pairs = input_data.get("pairs", input_data)
+    result = HashMap()
+    for key, value in pairs.items(): result.put(key, value)
+    return [f"{key}:{value}" for key, value in result.data.items()]`,
+    javascript: `function solve(inputData) {
+    const pairs = inputData.pairs ?? inputData;
+    const result = new HashMap();
+    Object.entries(pairs).forEach(([key, value]) => result.put(key, value));
+    return [...result.data].map(([key, value]) => \`\${key}:\${value}\`);
+}`,
+  },
+  deque: {
+    python: `def solve(values):
+    result = Deque()
+    for value in values: result.push_back(value)
+    result.push_front(1); result.push_back(4); result.pop_front(); result.pop_back()
+    return list(result.items)`,
+    javascript: `function solve(values) {
+    const result = new Deque();
+    values.forEach(value => result.pushBack(value));
+    result.pushFront(1); result.pushBack(4); result.popFront(); result.popBack();
+    return result.items;
+}`,
+  },
+  bitset: {
+    python: `def solve(indices):
+    result = Bitset(max(8, max(indices, default=0) + 1))
+    for index in indices: result.set(index)
+    return [index for index in range(result.bits) if result.test(index)]`,
+    javascript: `function solve(indices) {
+    const result = new Bitset(Math.max(8, ...indices) + 1);
+    indices.forEach(index => result.set(index));
+    return Array.from({ length: result.bits }, (_, index) => index).filter(index => result.test(index));
+}`,
+  },
+  red_black_tree: {
+    python: `class LLRBNode:
+    def __init__(self, value, red=True):
+        self.value, self.red, self.left, self.right = value, red, None, None
+
+def _red(node): return node is not None and node.red
+def _left(node):
+    child = node.right; node.right = child.left; child.left = node
+    child.red, node.red = node.red, True
+    return child
+def _right(node):
+    child = node.left; node.left = child.right; child.right = node
+    child.red, node.red = node.red, True
+    return child
+def _insert(node, value):
+    if node is None: return LLRBNode(value)
+    if value < node.value: node.left = _insert(node.left, value)
+    elif value > node.value: node.right = _insert(node.right, value)
+    if _red(node.right) and not _red(node.left): node = _left(node)
+    if _red(node.left) and _red(node.left.left): node = _right(node)
+    if _red(node.left) and _red(node.right):
+        node.red = not node.red; node.left.red = False; node.right.red = False
+    return node
+def solve(values):
+    root = None
+    for value in values:
+        root = _insert(root, value); root.red = False
+    return sorted(set(values))`,
+    javascript: `class LLRBNode {
+    constructor(value) { this.value = value; this.red = true; this.left = null; this.right = null; }
+}
+const isRed = node => node !== null && node.red;
+function insertLLRB(node, value) {
+    if (node === null) return new LLRBNode(value);
+    if (value < node.value) node.left = insertLLRB(node.left, value);
+    else if (value > node.value) node.right = insertLLRB(node.right, value);
+    if (isRed(node.right) && !isRed(node.left)) {
+        const child = node.right; node.right = child.left; child.left = node;
+        child.red = node.red; node.red = true; node = child;
+    }
+    if (isRed(node.left) && isRed(node.left.left)) {
+        const child = node.left; node.left = child.right; child.right = node;
+        child.red = node.red; node.red = true; node = child;
+    }
+    if (isRed(node.left) && isRed(node.right)) {
+        node.red = !node.red; node.left.red = false; node.right.red = false;
+    }
+    return node;
+}
+function solve(values) {
+    let root = null;
+    values.forEach(value => { root = insertLLRB(root, value); root.red = false; });
+    return [...new Set(values)].sort((a, b) => a - b);
+}`,
+  },
+  heap_ds: {
+    python: `def solve(values):
+    result = list(values)
+    heapq.heapify(result)
+    heapq.heappop(result)
+    return result`,
+    javascript: `MinHeap.prototype.bubbleUp = function(index) {
+    while (index > 0) {
+        const parent = Math.floor((index - 1) / 2);
+        if (this.heap[parent] <= this.heap[index]) break;
+        [this.heap[parent], this.heap[index]] = [this.heap[index], this.heap[parent]];
+        index = parent;
+    }
+};
+MinHeap.prototype.sinkDown = function(index) {
+    while (true) {
+        let smallest = index, left = index * 2 + 1, right = left + 1;
+        if (left < this.heap.length && this.heap[left] < this.heap[smallest]) smallest = left;
+        if (right < this.heap.length && this.heap[right] < this.heap[smallest]) smallest = right;
+        if (smallest === index) return;
+        [this.heap[index], this.heap[smallest]] = [this.heap[smallest], this.heap[index]];
+        index = smallest;
+    }
+};
+function solve(values) {
+    const result = new MinHeap();
+    values.forEach(value => result.push(value));
+    result.pop();
+    return result.heap;
+}`,
+  },
+  trie: {
+    python: `def solve(words):
+    trie = Trie()
+    for word in words: trie.insert(word)
+    return [word for word in words if trie.search(word)]`,
+    javascript: `Trie.prototype.search = function(word) {
+    let node = this.root;
+    for (const character of word) {
+        if (!node.children[character]) return false;
+        node = node.children[character];
+    }
+    return node.isEndOfWord;
+};
+function solve(words) {
+    const trie = new Trie();
+    words.forEach(word => trie.insert(word));
+    return words.filter(word => trie.search(word));
+}`,
+  },
+  union_find: {
+    python: `def solve(input_data):
+    size = len(input_data["nodes"])
+    result = UnionFind(size)
+    for edge in input_data["edges"]: result.union(int(edge["source"]), int(edge["target"]))
+    return result.parent`,
+    javascript: `function solve(inputData) {
+    const result = new UnionFind(inputData.nodes.length);
+    inputData.edges.forEach(edge => result.union(Number(edge.source), Number(edge.target)));
+    return result.parent;
+}`,
+  },
+  hash_table: {
+    python: `def solve(input_data):
+    pairs = input_data.get("pairs", input_data)
+    return [f"{key}:{value}" for key, value in pairs.items()]`,
+    javascript: `function solve(inputData) {
+    const pairs = inputData.pairs ?? inputData;
+    return Object.entries(pairs).map(([key, value]) => \`\${key}:\${value}\`);
+}`,
+  },
+  segment_tree: {
+    python: `def solve(values):
+    SegmentTree(values)
+    return sum(values[1:4])`,
+    javascript: `function solve(values) {
+    new SegmentTree(values);
+    return values.slice(1, 4).reduce((sum, value) => sum + value, 0);
+}`,
+  },
+  fenwick_tree: {
+    python: `def solve(values):
+    tree = FenwickTree(len(values))
+    for index, value in enumerate(values): tree.update(index, value)
+    return tree.query(min(3, len(values) - 1))`,
+    javascript: `function solve(values) {
+    const tree = new FenwickTree(values.length);
+    values.forEach((value, index) => tree.update(index, value));
+    return tree.query(Math.min(3, values.length - 1));
+}`,
+  },
+}
+
 export function getCodeTemplate(algoId: string, lang: CodeLang): string {
   const templates = CODE_TEMPLATES[algoId]
-  if (templates && templates[lang]) return templates[lang]!
+  const driver = lang === 'python' || lang === 'javascript'
+    ? BROWSER_TEMPLATE_DRIVERS[algoId]?.[lang]
+    : undefined
+  if (templates && templates[lang]) {
+    return driver ? `${templates[lang]}\n\n${driver}` : templates[lang]!
+  }
+  if (driver) return driver
   // Fallback: return Python code
   return templates?.python || `# ${lang} code template not available\n# Please write your own implementation`
 }
@@ -5896,7 +6892,7 @@ export function getAllCodeTemplates(): Array<{ algoId: string; lang: CodeLang; c
   const out: Array<{ algoId: string; lang: CodeLang; code: string }> = []
   for (const [algoId, byLang] of Object.entries(CODE_TEMPLATES)) {
     for (const [lang, code] of Object.entries(byLang)) {
-      if (code) out.push({ algoId, lang: lang as CodeLang, code })
+      if (code) out.push({ algoId, lang: lang as CodeLang, code: getCodeTemplate(algoId, lang as CodeLang) })
     }
   }
   return out

@@ -57,10 +57,12 @@ describe('algorithmCatalog · DEFAULT_ALGORITHMS', () => {
 })
 
 describe('codeTemplates · getCodeTemplate', () => {
-  it('returns the exact template for a known id + language', () => {
+  it('returns the teaching template plus the browser runtime entry', () => {
     const expected = CODE_TEMPLATES['bubble_sort']?.python
     expect(expected).toBeTruthy()
-    expect(getCodeTemplate('bubble_sort', 'python')).toBe(expected)
+    const template = getCodeTemplate('bubble_sort', 'python')
+    expect(template.startsWith(expected!)).toBe(true)
+    expect(template).toContain('def solve(')
   })
 
   it('every built-in algorithm provides all 4 language templates (no python masquerading)', () => {

@@ -8,11 +8,15 @@ AlgoViz 的核心思路是把算法执行过程统一表达为结构化 `Animati
 
 - 算法目录覆盖排序、图算法、数据结构、动态规划、搜索回溯、进阶专题、面试高频和竞赛模板示例。
 - 主可视化工作区支持算法搜索、分类筛选、代码编辑、输入数据配置、播放控制、步骤说明、复杂度与统计信息展示。
+- 左侧工作区采用 IDE 式终端：结构化模板保留 Draft/Committed 输入；JavaScript `main()` 进程式程序只有执行到 `readLine()` 时才激活 `stdin>`，并流式分栏显示 stdout、stderr 和结构化 result。
 - AI 代码实验室支持 Python、JavaScript、C++、Java 代码输入，并把分析记录保存在本地历史中。
 - AI 调用优先走同源 `/api/chat` 代理，开发环境由 Vite 插件提供，生产环境由 `server/proxy.cjs` 提供。
 - AI 分析支持两条路径：直接生成 `AnimationScript`，或生成可复用的动画生成器并在 Web Worker 沙箱中执行。
 - AI 生成具备分层健壮性：解析容错、多级修复、沙箱失败兜底，并区分「模型不可用 / 解析失败 / 运行超时」三类失败，任何路径都渲染可读的降级场景，永不白屏或裸报错。
 - Scene Engine 支持事件驱动动画、复合结构分区布局、统一 SVG 画布、算法事件时间线和多数据结构编译器。
+- 共享几何管线统一测量可见图元与文本，确定性生成避障边路由和避碰标签位置；全部内置预设逐步骤执行重叠、穿线、箭头净空和树节点连通门禁。
+- `elkjs` 通过懒加载 Worker 为所有兼容拓扑提供布局增强，失败时继续使用确定性 Scene 布局。
+- 跳表使用专用分层布局和真实的比较、右移、下沉、命中/未命中事件，不再重复种入底层数组。
 - 关键场景补间层让高价值变化平滑过渡（交换、指针移动、入出栈、连边等），交换以直线交叉动画表达且终态精确等于目标场景；支持可中断、播放速度联动与 `prefers-reduced-motion`。
 - 设计令牌（`src/scene/tokens.ts`）作为视觉单一事实源（语义色、形状、排版、动效），统一「精修学术浅色」风格。
 - i18next 提供中英双语，语言选择和 API 配置保存在浏览器 `localStorage`。
@@ -28,7 +32,7 @@ AlgoViz 的核心思路是把算法执行过程统一表达为结构化 `Animati
 | 路由 | React Router v6 |
 | 状态管理 | Zustand |
 | 样式 | Tailwind CSS、CSS Variables、Scene 设计令牌 (`tokens.ts`) |
-| 动画与交互 | SVG Scene Engine、补间渲染层 (`interpolate.ts` + `useSceneTransition`) |
+| 动画与交互 | SVG Scene Engine、补间渲染层、Worker-backed ELK (`elkjs`) |
 | 代码编辑 | Monaco Editor |
 | 国际化 | i18next、react-i18next |
 | 图标 | lucide-react |
@@ -133,11 +137,12 @@ AlgoViz/
 │   ├── icons/                    # 图标封装
 │   ├── pages/                    # Home、Visualizer、Playground、Settings
 │   ├── presets/                  # 内置算法动态生成器与算法识别
-│   ├── sandbox/                  # AI 生成器 Builder、Worker 沙箱、执行器
+│   ├── sandbox/                  # AI 生成器与交互式语言 Worker、沙箱、执行器
 │   ├── scene/                    # Scene Engine、补间层、设计令牌、事件编译器、布局、图元、诊断与测试
 │   ├── store/                    # Zustand store 与测试
 │   ├── types/                    # AnimationScript 类型定义
-│   └── utils/                    # 输入解析、代码模板辅助
+│   ├── utils/                    # 输入解析、代码模板辅助
+│   └── workbench/                # 输入编译、进程状态机与 stdin/stdout/trace 契约
 ├── index.html
 ├── package.json
 ├── vite.config.ts
@@ -163,7 +168,13 @@ AlgoViz/
         ↓
 AnimationScript steps + events
         ↓
-Scene Engine 将算法事件编译为场景命令
+事件编译与确定性结构布局
+        ↓
+几何测量、避障路由与标签避碰
+        ↓
+兼容拓扑可选 ELK Worker 布局（失败保留确定性布局）
+        ↓
+场景/路由补间与完整 viewBox
         ↓
 SceneCanvas 渲染 SVG 场景
         ↓
@@ -213,7 +224,19 @@ b.desc('比较相邻元素').compare(0, 1)
 
 解析后由 `src/sandbox/runGenerator.ts` 在 Web Worker 中执行，默认 5 秒超时。生成器只能通过 `AnimationBuilder` 提供的方法产生步骤，最终构建为标准 `AnimationScript`。
 
-输入数据变化后，如果已经有内置算法识别结果或 AI 生成器，页面会本地重新生成动画，不会每次都重新请求 AI。
+输入编辑分为 Draft 与 Committed 两层。逐键输入只执行结构扫描和领域校验，不生成半成品动画；旧动画立即暂停并冻结。用户点击“运行”或按 `Ctrl+Enter` 后才提交输入：可信内置模板本地生成 preset，修改后的 JavaScript/Python 先在 Worker 中真实执行，再编译为可复用 `GeneratorArtifact`。同一 Artifact 的后续合法输入仍在本地 Worker 重跑，不再次请求 AI。
+
+所有 75 个内置算法的 Python/JavaScript 模板都暴露统一 `solve(inputData)` 入口。永久契约测试会执行默认 JavaScript 模板并逐项比较其返回值与 `AnimationScript.result`；输入响应测试无豁免地检查每个算法在输入改变后，初始状态、结果或步骤必须改变。C++/Java 当前只进行静态诊断，不伪装成浏览器内执行。
+
+严格交互式执行正在按语言纵向迁移。当前 JavaScript 可用 `async function main()` 作为入口，并使用 `await readLine(prompt)`、`write/writeLine`、`console.log/error`、`emitResult` 和 `emitTrace`；等待输入期间暂停 CPU 超时，提交后在同一 Worker 和调用栈继续。stdout、stderr、result 与 trace 是独立通道，动画不会解析 stdout 猜测执行过程。Python `input()`、C++ Clang/WASI 和 Java javac/JVM 将复用同一协议；C++/Java 运行时必须随项目在浏览器 Worker 内本地执行，不依赖 Docker、宿主机编译器或远程服务。
+
+```javascript
+async function main() {
+  const n = Number(await readLine('请输入 n'))
+  writeLine(`double = ${n * 2}`)
+  emitResult(n * 2)
+}
+```
 
 ### AI 生成健壮性
 
@@ -237,6 +260,7 @@ export interface AnimationScript {
   algorithm: string
   complexity: Complexity
   initialState: InitialState
+  result?: AnimationResult // 递归 JSON 值：标量、数组、二维结果或对象
   presentation?: PresentationConfig
   steps: AnimationStep[]
 }
@@ -295,10 +319,29 @@ SceneCommand[]
         ↓
 SceneEngine 应用命令并派生 SceneState（每步的目标快照）
         ↓
+确定性结构布局与 finalizeSceneGeometry
+        ↓
+measureSceneGeometry：测量可见节点与文本
+        ↓
+确定性避障路由 + 边标签候选位置
+        ↓
+兼容拓扑：useElkLayout 在 Worker 中异步布局并缓存结构结果
+        ↓
 补间层 useSceneTransition / interpolateScene 在相邻步骤间插值
         ↓
-SceneCanvas 渲染实体、边、标签、指针、区域和辅助结构
+viewBox 纳入实体、route 与边标签后由 SceneCanvas 渲染
 ```
+
+### 几何契约与边路由
+
+- `src/scene/geometry.ts` 的 `measureSceneGeometry`、`finalizeSceneGeometry` 和 `validateSceneGeometry` 分别负责测量、几何定稿和测试验收。
+- `SceneEdge.route` 持久化裁剪后的端点与折点，`SceneEdge.labelPosition` 持久化避碰后的标签锚点；相邻步骤会同时插值实体、边路由和标签位置。
+- `validateSceneGeometry` 是测试门禁：拒绝可见图元/文本重叠、边穿越非端点障碍、箭头尖端被目标节点遮挡，以及树结构中的孤立节点。几何、自动机、概率等专用 Renderer 自己管理内部几何。
+- `SceneCanvas` 计算 viewBox 时包含 route 和边标签范围，避免折线或文字被画布裁掉。
+
+### ELK 兼容拓扑布局
+
+`src/scene/layouts/useElkLayout.ts` 按场景拓扑而不是算法白名单创建 ELK 任务：覆盖所有树节点、带边的图、并查集和跳表。数组、矩阵、DP、栈、队列等具有明确教学语义的结构继续使用确定性布局。`elkjs` 在独立 Worker 中懒加载，结果按结构缓存；Worker 不可用或计算失败时保持原有确定性布局，不影响播放和渲染。
 
 ### 动画补间层
 
@@ -338,6 +381,9 @@ Scene 的每一步是一个完整的 `SceneState` 快照。`src/scene/useSceneTr
 | `automatonCompiler` | `automaton.*`（状态机：状态/转移/接受态/当前态） |
 | `probCompiler` | `prob.*`（概率分布直方图/采样/水塘槽） |
 | `graphAnalysisCompiler` | `graph_analysis.*`（图叠加：disc/low、SCC 分组、DFS 栈） |
+| `skipListCompiler` | `skip_list.*`（创建、比较、右移、下沉、命中/未命中） |
+| `unionFindCompiler` | `union_find.*` |
+| `pointerCompiler` | `pointer.*` |
 
 此外，`scene.note`、`scene.wait`、`scene.highlight`、`scene.link`、`scene.clear_highlight` 等通用事件在 `compileEvent` 中直接处理。
 
@@ -348,7 +394,7 @@ Scene 的每一步是一个完整的 `SceneState` 快照。`src/scene/useSceneTr
 
 - `CellView`：数组、矩阵、字符串单元格
 - `NodeView`：树、图、链表节点
-- `EdgeView`：结构边、曲线轨迹、虚线箭头
+- `EdgeView`：读取持久化 route/labelPosition 的结构边、曲线轨迹、虚线箭头
 - `ContainerView`：栈、队列、双端队列等容器
 - `PointerView`：指针和引用关系
 - `LabelView`：标签、说明文本
@@ -365,6 +411,8 @@ Scene 的每一步是一个完整的 `SceneState` 快照。`src/scene/useSceneTr
 ```ts
 presentation.layout = 'composite'
 ```
+
+跳表使用 `presentation.module = 'skip_list'` 和专用分层布局；不会触发通用数组初始种入。ELK 只调整兼容拓扑的布局结果，仍复用同一套 Scene 图元、补间和 SVG Renderer。
 
 ## 内置算法与生成器
 
@@ -450,13 +498,17 @@ AI 历史记录会保存代码、语言、输入数据、状态、生成脚本�
 覆盖重点：
 
 - `src/ai/__tests__/`：响应解析、Schema 校验、修复、生成器解析、请求中止、失败兜底场景（`fallbackScene`）、脏输入稳定性语料台（`stability.corpus`）
-- `src/scene/__tests__/`：Scene Engine、区域布局、文本度量、复合迁移、数组种子状态、补间（`interpolate` 含值互换交叉与终态等价）、补间 Hook（`useSceneTransition` 含防抖动）、设计令牌（`tokens`）、边裁剪（`edgeTrim`）
+- `src/scene/__tests__/`：Scene Engine、区域布局、文本度量、复合迁移、数组种子状态、补间、几何测量/路由，以及全部预设逐步骤的重叠、穿线、箭头净空和树节点连通门禁
+- `src/scene/layouts/__tests__/`：确定性布局与 ELK 兼容拓扑任务/结果映射
 - `src/scene/graphics/compile/__tests__/`：bitset、hash table、heap、math、set、string 等事件编译器
 - `src/scene/graphics/renderers/__tests__/`：DP 表、调用栈、网格和各图元 Renderer
 - `src/sandbox/__tests__/`：AnimationBuilder、生成器执行、复合 builder、沙箱失败归类
-- `src/presets/__tests__/`：算法识别、部分复合预设、堆操作端到端（`heapOperations`）
+- `src/workbench/__tests__/`：输入状态机、领域诊断、运行时能力和 Map/Set/Infinity 等 JSON-safe 输出归一化
+- `src/presets/__tests__/`：算法识别、无豁免输入响应、结构化结果契约、堆操作端到端、跳表真实搜索轨迹，以及二叉树/B+ 树的输入驱动结果
+- `src/utils/__tests__/templateRuntimeContract.test.ts`：全部 75 个内置算法的双语言 `solve` 入口，以及 JavaScript 真值与可复用动画结果的一致性
 - `src/hooks/__tests__/`：动画引擎、AI 生成失败归类（`useAIGenerator.fallback`）
 - `src/store/__tests__/`：Zustand store 行为
+- `e2e/algorithm-layout.spec.ts`：跳表在 1440×900 与 1024×768 视口的 Playwright 截图回归
 
 运行：
 
@@ -478,7 +530,7 @@ npm run coverage
 
 - 主背景保持清爽，强调代码、画布和步骤信息的可读性。
 - 主色用于当前焦点，绿色表示完成/成功，橙色表示当前步骤，红色表示冲突/删除，灰色表示非活跃。
-- Scene Engine 使用开口 V 形箭头、曲线轨迹、虚线流动效果和几何裁剪，避免结构边与运动轨迹混淆。
+- Scene Engine 使用开口 V 形箭头、持久化避障路由、箭头净空、标签避碰、虚线流动效果和几何裁剪，避免结构边与图元/文字互相遮挡。
 - 复合场景通过区域布局呈现主结构、辅助队列/栈、变量面板等信息。
 - 可视化工作区包含可拖拽分栏，便于在代码、画布和步骤信息之间调整空间。
 
@@ -495,11 +547,11 @@ npm run coverage
 ### 新增 Scene 事件族
 
 1. 在 `src/scene/eventTypes.ts` 添加事件类型。
-2. 在 `src/scene/compilers/` 新增编译器，把事件转换为 `SceneCommand[]`。
-3. 在 `src/scene/eventCompiler.ts` 注册编译器。
+2. 在 `src/scene/graphics/compile/` 新增编译器，把事件转换为 `SceneCommand[]`。
+3. 在 `src/scene/compilerRegistry.ts` 注册编译器。
 4. 如需新图元，在 `src/scene/primitives/` 添加视图组件。
 5. 在 `src/sandbox/builder.ts` 为 AI 生成器暴露友好的 builder 方法。
-6. 增加编译器测试和必要的 Scene Engine 回归测试。
+6. 增加编译器测试，并让相关预设逐步骤通过 `validateSceneGeometry`；布局对视口敏感时补充 Playwright 截图。
 
 ### 调整 AI 输出
 
@@ -512,11 +564,13 @@ npm run coverage
 - 浏览器端仍会保存 API Key，生产级使用建议接入后端托管密钥。
 - AI 生成器使用 Web Worker 和超时隔离，但仍应视为不可信模型输出，只适合本地/受控环境。
 - AI 对复杂代码的执行理解依赖模型能力，生成步骤可能不完整或语义不精确。
+- ELK 覆盖所有兼容拓扑，但不参与数组、DP、栈、队列等本就具有明确教学语义的布局。
 - `RendererType` 的核心类型仍以 array、graph、tree、matrix、linked_list 为主，set、map、heap、bitset、math 等结构通过 Scene 事件和复合布局扩展。
 - 仅含 `action`、缺少 Scene 事件的历史脚本，视觉表达会弱于完整事件脚本。
 
 ## 相关文档
 
+- [架构定义（单一事实源）](docs/architecture/README.md)
 - [Phase 1 实施计划](docs/phase-1-implementation-plan.md)
 - [Phase 2 实施计划](docs/phase-2-implementation-plan.md)
 - [Phase 3 实施计划](docs/phase-3-implementation-plan.md)
