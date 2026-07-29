@@ -5,7 +5,7 @@ export type RuntimeLanguageCapability = 'worker' | 'static-only'
 export function getRuntimeLanguageCapability(
   language: 'python' | 'javascript' | 'cpp' | 'java',
 ): RuntimeLanguageCapability {
-  return language === 'python' || language === 'javascript' ? 'worker' : 'static-only'
+  return language === 'java' ? 'static-only' : 'worker'
 }
 
 export function normalizeRuntimeValue(value: unknown): AnimationResult | undefined {

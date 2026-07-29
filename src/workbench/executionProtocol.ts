@@ -1,6 +1,11 @@
 import type { AnimationResult } from '@/types/animation'
 import { normalizeRuntimeValue } from './runtimeContract'
 
+export const STDIN_HEADER_BYTES = 8
+export const STDIN_STATE_INDEX = 0
+export const STDIN_LENGTH_INDEX = 1
+export const DEFAULT_STDIN_BUFFER_BYTES = 64 * 1024
+
 export type ExecutionPhase =
   | 'idle'
   | 'compiling'
@@ -23,7 +28,7 @@ export type RuntimeExecutionEvent =
   | { type: 'cancelled' }
 
 export type RuntimeWorkerRequest =
-  | { type: 'start'; code: string }
+  | { type: 'start'; code: string; stdinBuffer?: SharedArrayBuffer }
   | { type: 'stdin'; requestId: number; value: string }
   | { type: 'cancel' }
 

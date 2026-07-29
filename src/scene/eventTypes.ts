@@ -181,3 +181,57 @@ export type GraphAnalysisAlgorithmEvent =
   | { type: 'graph_analysis.clear' }
 
 export type AlgorithmEvent = CommonAlgorithmEvent | PointerAlgorithmEvent | LinkedListAlgorithmEvent | TreeAlgorithmEvent | ArrayAlgorithmEvent | GraphAlgorithmEvent | MatrixAlgorithmEvent | NQueensAlgorithmEvent | StackAlgorithmEvent | QueueAlgorithmEvent | StringAlgorithmEvent | SetAlgorithmEvent | MapAlgorithmEvent | DequeAlgorithmEvent | HashTableAlgorithmEvent | HeapAlgorithmEvent | BitsetAlgorithmEvent | SkipListAlgorithmEvent | UnionFindAlgorithmEvent | MathAlgorithmEvent | GeometryAlgorithmEvent | AutomatonAlgorithmEvent | ProbAlgorithmEvent | GraphAnalysisAlgorithmEvent | CallStackEvent | DPEvent | GridEvent
+
+export const ALGORITHM_EVENT_TYPES = new Set<AlgorithmEvent['type']>([
+  'scene.note', 'scene.highlight', 'scene.clear_highlight', 'scene.link', 'scene.wait',
+  'scene.seq_push', 'scene.seq_clear',
+  'pointer.create', 'pointer.move', 'pointer.clear', 'pointer.highlight',
+  'linked_list.create', 'linked_list.visit', 'linked_list.move_pointer',
+  'linked_list.insert_after', 'linked_list.insert_before', 'linked_list.delete',
+  'linked_list.reverse_link', 'linked_list.set_head', 'linked_list.set_tail',
+  'tree.create', 'tree.visit', 'tree.compare', 'tree.insert', 'tree.delete',
+  'tree.rotate', 'tree.update_metadata', 'tree.recolor',
+  'array.create', 'array.compare', 'array.swap', 'array.move', 'array.set_value',
+  'array.mark_sorted', 'array.window', 'array.partition',
+  'graph.create', 'graph.visit_node', 'graph.visit_edge', 'graph.relax_edge',
+  'graph.enqueue', 'graph.dequeue',
+  'matrix.create', 'matrix.visit_cell', 'matrix.update_cell', 'matrix.mark_path',
+  'matrix.mark_conflict', 'matrix.transition',
+  'n_queens.try_place', 'n_queens.place', 'n_queens.conflict',
+  'n_queens.backtrack', 'n_queens.solution',
+  'stack.create', 'stack.push', 'stack.pop', 'stack.peek',
+  'queue.create', 'queue.enqueue', 'queue.dequeue', 'queue.peek_front',
+  'string.create', 'string.create_double', 'string.compare', 'string.match',
+  'string.mismatch', 'string.mark_range', 'string.shift_pattern',
+  'set.create', 'set.add', 'set.remove', 'set.contains',
+  'map.create', 'map.put', 'map.get', 'map.remove',
+  'deque.create', 'deque.push_front', 'deque.push_back', 'deque.pop_front',
+  'deque.pop_back', 'deque.peek_front', 'deque.peek_back',
+  'hashtable.create', 'hashtable.put', 'hashtable.get', 'hashtable.remove',
+  'hashtable.highlight_bucket',
+  'heap.create', 'heap.push', 'heap.pop', 'heap.sift', 'heap.peek',
+  'bitset.create', 'bitset.set', 'bitset.highlight',
+  'skip_list.create', 'skip_list.compare', 'skip_list.move_right',
+  'skip_list.drop_down', 'skip_list.found', 'skip_list.miss',
+  'union_find.create', 'union_find.find', 'union_find.link', 'union_find.compress',
+  'union_find.same', 'union_find.done',
+  'math.init', 'math.set', 'math.highlight', 'math.note',
+  'geometry.plane', 'geometry.point', 'geometry.segment', 'geometry.polygon',
+  'geometry.sweepline', 'geometry.clear',
+  'automaton.create', 'automaton.transition', 'automaton.activate',
+  'automaton.consume', 'automaton.clear',
+  'prob.dist', 'prob.sample', 'prob.reservoir', 'prob.note', 'prob.clear',
+  'graph_analysis.update', 'graph_analysis.clear',
+  'callstack.create', 'callstack.push', 'callstack.update', 'callstack.return',
+  'callstack.pop', 'callstack.highlight',
+  'dp.create', 'dp.set', 'dp.highlight', 'dp.dependency', 'dp.formula',
+  'dp.traceback', 'dp.roll',
+  'grid.create', 'grid.set_cell', 'grid.visit', 'grid.frontier', 'grid.path',
+  'grid.wall', 'grid.weight', 'grid.arrow',
+])
+
+export function isAlgorithmEvent(value: unknown): value is AlgorithmEvent {
+  if (!value || typeof value !== 'object') return false
+  const type = (value as { type?: unknown }).type
+  return typeof type === 'string' && ALGORITHM_EVENT_TYPES.has(type as AlgorithmEvent['type'])
+}

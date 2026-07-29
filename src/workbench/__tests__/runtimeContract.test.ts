@@ -22,7 +22,7 @@ describe('runtime contract', () => {
   it('declares browser runtime support explicitly', () => {
     expect(getRuntimeLanguageCapability('javascript')).toBe('worker')
     expect(getRuntimeLanguageCapability('python')).toBe('worker')
-    expect(getRuntimeLanguageCapability('cpp')).toBe('static-only')
+    expect(getRuntimeLanguageCapability('cpp')).toBe('worker')
     expect(getRuntimeLanguageCapability('java')).toBe('static-only')
   })
 })
