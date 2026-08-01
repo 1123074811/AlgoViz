@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlgoViz · 纸上算法 — Living Manuscript</title>
+<!--
+  ============================================================
+  AlgoViz 第六稿 ·「纸上算法 / Living Manuscript」
+  概念：一本活的算法书。纸为底、墨为形、朱为批。
+  与既有五稿（gallery / atlas / blueprint / workshop / signal-room）
+  完全不同的方向：东方 editorial 手稿风 + 真实可交互可视化。
+  单文件交付：内联 CSS + 原生 JS，无构建、无框架依赖。
+  ============================================================
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,600&family=Noto+Serif+SC:wght@500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ============ 基调：纸 · 墨 · 朱 ============ */
+:root{
+  --paper:#f5efe2;
+  --paper-2:#ece3cf;
+  --card:#faf5e9;
+  --ink:#1d1a14;
+  --ink-2:#4a4436;
+  --mute:#8b8271;
+  --line:#d8cdb4;
+  --line-soft:#e4dcc8;
+  --cinnabar:#c03f2b;
+  --cinnabar-deep:#9c3322;
+  --pine:#33604f;
+  --night:#1b1813;
+  --night-2:#241f18;
+  --night-line:#3a332a;
+  --night-text:#efe8d6;
+  --night-mute:#9a917e;
+  --serif:'Fraunces','Noto Serif SC','Songti SC','STSong','SimSun',serif;
+  --sans:'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+  --ease:cubic-bezier(.22,.9,.28,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.7;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+/* 纸面纤维噪点 */
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+::selection{background:var(--cinnabar);color:var(--paper)}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+:focus-visible{outline:2px solid var(--cinnabar);outline-offset:3px;border-radius:2px}
+
+.wrap{max-width:1240px;margin:0 auto;padding:0 40px;position:relative;z-index:1}
+
+/* ============ 顶栏 ============ */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--cinnabar);z-index:99;transition:width .12s linear}
+header#nav{
+  position:fixed;top:0;left:0;right:0;z-index:90;
+  transition:background .35s,box-shadow .35s,padding .35s;
+  padding:20px 0;
+}
+#nav.scrolled{
+  background:rgba(245,239,226,.88);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  box-shadow:0 1px 0 var(--line);
+  padding:12px 0;
+}
+#nav .wrap{display:flex;align-items:center;gap:28px}
+.brand{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.seal{
+  width:38px;height:38px;background:var(--cinnabar);color:#f8f1e2;
+  display:grid;place-items:center;border-radius:6px;
+  font-family:var(--serif);font-weight:900;font-size:19px;
+  box-shadow:inset 0 0 0 1.5px rgba(248,241,226,.5), 2px 3px 0 rgba(29,26,20,.16);
+  transform:rotate(-3deg);
+}
+.brand b{font-family:var(--serif);font-size:19px;font-weight:700;letter-spacing:.02em}
+.brand small{display:block;font-family:var(--mono);font-size:10px;color:var(--mute);letter-spacing:.18em}
+nav.links{display:flex;gap:4px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+nav.links::-webkit-scrollbar{display:none}
+.nlink{
+  font-size:13.5px;padding:7px 13px;border-radius:99px;color:var(--ink-2);
+  white-space:nowrap;transition:color .25s,background .25s;position:relative;
+}
+.nlink sup{font-family:var(--mono);font-size:9px;color:var(--cinnabar);margin-right:3px}
+.nlink:hover{color:var(--ink)}
+.nlink.active{background:var(--ink);color:var(--paper)}
+.nlink.active sup{color:var(--paper-2)}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:11px 22px;border-radius:99px;font-size:14px;font-weight:600;
+  transition:transform .25s var(--ease),box-shadow .25s,background .25s,color .25s;
+  flex-shrink:0;
+}
+.btn:active{transform:scale(.96)}
+.btn-ink{background:var(--ink);color:var(--paper);box-shadow:3px 4px 0 rgba(29,26,20,.18)}
+.btn-ink:hover{transform:translate(-1px,-2px);box-shadow:5px 7px 0 rgba(29,26,20,.18);background:var(--cinnabar-deep)}
+.btn-line{border:1.5px solid var(--ink);color:var(--ink)}
+.btn-line:hover{background:var(--ink);color:var(--paper)}
+#nav .btn{padding:9px 18px;font-size:13px}
+
+/* ============ 通用版面语汇 ============ */
+section{position:relative}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.22em;color:var(--ink-2);
+  text-transform:uppercase;
+}
+.eyebrow::before{content:"";width:9px;height:9px;background:var(--cinnabar);transform:rotate(45deg)}
+.chapter{
+  font-family:var(--serif);font-weight:900;
+  font-size:clamp(34px,4.6vw,58px);line-height:1.16;letter-spacing:.01em;
+  margin:18px 0 14px;
+}
+.chapter em{font-style:normal;color:var(--cinnabar)}
+.lede{max-width:620px;color:var(--ink-2);font-size:16.5px}
+.vtext{writing-mode:vertical-rl;font-family:var(--serif);letter-spacing:.5em;color:var(--mute);user-select:none}
+.sec-head{display:flex;align-items:flex-end;gap:32px;margin-bottom:54px;flex-wrap:wrap}
+.sec-no{
+  font-family:var(--serif);font-size:15px;color:var(--cinnabar);
+  border:1.5px solid var(--cinnabar);border-radius:99px;padding:5px 16px;
+  white-space:nowrap;transform:translateY(-8px);flex-shrink:0;
+}
+.rule{height:1px;background:var(--line);flex:1;min-width:60px;transform:translateY(-14px)}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(26px);transition:opacity .8s var(--ease),transform .8s var(--ease);transition-delay:var(--d,0s)}
+.rv.on{opacity:1;transform:none}
+
+/* ============ HERO · 卷一 ============ */
+#top{padding:150px 0 90px;position:relative}
+#top .wrap{display:grid;grid-template-columns:.92fr 1.08fr;gap:56px;align-items:center}
+.hero-v{position:absolute;right:26px;top:170px;font-size:14px;opacity:.8}
+.hero-v i{font-style:normal;color:var(--cinnabar)}
+h1.hero-title{
+  font-family:var(--serif);font-weight:900;
+  font-size:clamp(46px,5.6vw,78px);line-height:1.14;letter-spacing:.01em;
+  margin:22px 0 24px;
+}
+h1 .mark{position:relative;white-space:nowrap}
+h1 .mark::after{
+  content:"";position:absolute;left:-2%;right:-2%;bottom:.08em;height:.34em;z-index:-1;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' preserveAspectRatio='none'%3E%3Cpath d='M3 14 Q 60 6 110 11 T 197 9' fill='none' stroke='%23c03f2b' stroke-width='5' stroke-linecap='round' opacity='.85'/%3E%3C/svg%3E") no-repeat center/100% 100%;
+}
+.hero-sub{color:var(--ink-2);font-size:17px;max-width:480px}
+.hero-sub b{color:var(--ink)}
+.hero-cta{display:flex;gap:14px;margin:34px 0 22px;flex-wrap:wrap}
+.hero-trust{font-family:var(--mono);font-size:12px;color:var(--mute);letter-spacing:.06em}
+.hero-trust i{font-style:normal;color:var(--cinnabar);margin:0 6px}
+
+/* 演算纸 */
+.demo-paper{
+  position:relative;background:var(--card);
+  border:1px solid var(--line);border-radius:4px;
+  box-shadow:0 1px 0 var(--line-soft),0 18px 44px -18px rgba(29,26,20,.28),0 40px 90px -50px rgba(29,26,20,.22);
+  padding:26px 30px 24px;
+  transform:rotate(-.7deg);
+}
+.demo-paper::before,.demo-paper::after{ /* 纸胶带 */
+  content:"";position:absolute;width:96px;height:26px;
+  background:rgba(216,205,180,.6);border-left:1px dashed rgba(29,26,20,.14);border-right:1px dashed rgba(29,26,20,.14);
+  top:-13px;
+}
+.demo-paper::before{left:36px;transform:rotate(-4deg)}
+.demo-paper::after{right:52px;transform:rotate(3deg)}
+.paper-holes{position:absolute;left:10px;top:0;bottom:0;width:4px;display:flex;flex-direction:column;justify-content:space-evenly}
+.paper-holes i{width:9px;height:9px;border-radius:50%;background:var(--paper);border:1px solid var(--line);box-shadow:inset 0 1px 2px rgba(29,26,20,.2)}
+.dp-head{display:flex;align-items:baseline;gap:14px;border-bottom:1.5px solid var(--ink);padding:0 0 12px 14px;margin-bottom:18px}
+.dp-head .no{font-family:var(--mono);font-size:11px;color:var(--cinnabar);letter-spacing:.15em}
+.dp-head h3{font-family:var(--serif);font-size:21px;font-weight:700}
+.dp-head h3 span{font-family:var(--mono);font-size:12px;font-weight:400;color:var(--mute);margin-left:8px;letter-spacing:.08em}
+.dp-chip{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-2);border:1px solid var(--line);border-radius:99px;padding:4px 12px;white-space:nowrap}
+#qBox{position:relative;height:230px;margin:4px 6px 8px 20px}
+.qbar{
+  position:absolute;bottom:0;
+  background:var(--card);border:1.5px solid var(--ink);border-radius:3px 3px 0 0;
+  transition:left .48s var(--ease),height .48s var(--ease),background .3s,border-color .3s;
+}
+.qbar::after{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--ink);border-radius:2px 2px 0 0;opacity:.9}
+#qBox.noanim .qbar{transition:none!important}
+.qbar.cmp{background:var(--cinnabar);border-color:var(--cinnabar-deep)}
+.qbar.cmp::after{background:#f3e7d8;opacity:.85}
+.qbar.piv{border-color:var(--cinnabar);border-width:2px;box-shadow:0 0 0 3px rgba(192,63,43,.15)}
+.qbar.swapA{background:var(--pine);border-color:var(--pine)}
+.qbar.swapA::after{background:#eef0e4}
+.qbar.sorted{background:var(--ink);border-color:var(--ink)}
+.qbar.sorted::after{background:var(--card);opacity:.5}
+.dp-baseline{height:1.5px;background:var(--ink);margin:0 6px 14px 20px;position:relative}
+.dp-baseline::after{content:"0";position:absolute;right:-2px;top:4px;font-family:var(--mono);font-size:9px;color:var(--mute)}
+.dp-note{
+  font-family:var(--serif);font-size:15.5px;color:var(--ink-2);min-height:1.8em;
+  padding-left:20px;display:flex;gap:9px;align-items:baseline;
+}
+.dp-note::before{content:"朱批";flex-shrink:0;font-size:10.5px;color:#f3e7d8;background:var(--cinnabar);border-radius:3px;padding:2px 6px;letter-spacing:.1em;transform:translateY(-2px)}
+.dp-stats{
+  font-family:var(--mono);font-size:12px;color:var(--ink-2);letter-spacing:.04em;
+  padding:10px 0 14px 20px;display:flex;gap:22px;flex-wrap:wrap;
+}
+.dp-stats b{color:var(--ink);font-weight:600}
+.dp-stats .cur{color:var(--cinnabar)}
+.dp-controls{display:flex;align-items:center;gap:9px;padding-left:20px;flex-wrap:wrap}
+.ctl{
+  font-size:13px;font-weight:600;padding:8px 15px;border-radius:99px;
+  border:1.5px solid var(--ink);color:var(--ink);transition:all .22s var(--ease);
+  display:inline-flex;align-items:center;gap:6px;
+}
+.ctl:hover{background:var(--ink);color:var(--paper)}
+.ctl.primary{background:var(--ink);color:var(--paper)}
+.ctl.primary:hover{background:var(--cinnabar-deep);border-color:var(--cinnabar-deep)}
+.ctl:active{transform:scale(.94)}
+.dp-speed{margin-left:auto;display:flex;gap:4px;border:1px solid var(--line);border-radius:99px;padding:3px}
+.qspd{font-family:var(--mono);font-size:11px;padding:4px 11px;border-radius:99px;color:var(--mute);transition:all .2s}
+.qspd.on{background:var(--ink);color:var(--paper)}
+.annot{
+  position:absolute;font-family:var(--serif);font-style:italic;font-size:14px;color:var(--cinnabar-deep);
+  transform:rotate(-6deg);pointer-events:none;
+}
+.annot svg{display:block;margin:2px auto 0}
+
+/* ============ 跑马灯 ============ */
+.marquee{
+  border-top:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);
+  padding:15px 0;overflow:hidden;position:relative;background:var(--paper);
+}
+.mq-track{display:flex;gap:0;width:max-content;animation:mq 30s linear infinite}
+.marquee:hover .mq-track{animation-play-state:paused}
+.mq-track span{
+  font-family:var(--serif);font-size:16px;white-space:nowrap;padding:0 14px;color:var(--ink-2);
+}
+.mq-track span b{font-family:var(--mono);font-weight:400;font-size:11.5px;color:var(--mute);letter-spacing:.14em;margin-left:8px}
+.mq-track i{font-style:normal;color:var(--cinnabar);font-size:11px;align-self:center}
+@keyframes mq{to{transform:translateX(-50%)}}
+
+/* ============ 卷二 · 算法索引 ============ */
+#catalog{padding:110px 0 90px}
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:38px}
+.ftab{
+  font-size:13.5px;font-weight:600;padding:9px 18px;border-radius:99px;
+  border:1.5px solid var(--line);color:var(--ink-2);transition:all .25s var(--ease);
+}
+.ftab small{font-family:var(--mono);font-size:10px;margin-left:5px;color:var(--mute)}
+.ftab:hover{border-color:var(--ink);color:var(--ink)}
+.ftab.on{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.ftab.on small{color:var(--paper-2)}
+.acards{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
+.acard{
+  grid-column:span 2;background:var(--card);border:1px solid var(--line);border-radius:6px;
+  padding:22px 22px 18px;position:relative;overflow:hidden;
+  transition:transform .35s var(--ease),box-shadow .35s,border-color .35s,opacity .4s;
+  display:flex;flex-direction:column;gap:8px;min-height:176px;
+}
+.acard.wide{grid-column:span 3}
+.acard:hover{transform:translateY(-5px);border-color:var(--cinnabar);box-shadow:0 16px 34px -16px rgba(156,51,34,.3)}
+.acard.hide{display:none}
+.acard .idx{
+  font-family:var(--mono);font-size:10.5px;color:var(--cinnabar);letter-spacing:.16em;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.acard .glyph{width:44px;height:30px}
+.acard .glyph svg{width:100%;height:100%;stroke:var(--ink-2);fill:none;stroke-width:1.6;transition:stroke .3s}
+.acard:hover .glyph svg{stroke:var(--cinnabar)}
+.acard h4{font-family:var(--serif);font-size:19px;font-weight:700;line-height:1.3}
+.acard h4 span{display:block;font-family:var(--mono);font-size:10.5px;font-weight:400;color:var(--mute);letter-spacing:.1em;margin-top:3px}
+.acard p{font-size:12.5px;color:var(--mute);line-height:1.6}
+.acard .foot{margin-top:auto;display:flex;align-items:center;gap:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.acard .cx{font-family:var(--mono);font-size:11px;color:var(--ink-2)}
+.acard .cat{font-size:11px;color:var(--mute)}
+.acard .go{margin-left:auto;font-size:12px;font-weight:600;color:var(--cinnabar);opacity:0;transform:translateX(-6px);transition:all .3s var(--ease)}
+.acard:hover .go{opacity:1;transform:none}
+
+/* ============ 卷三 · 演武场 ============ */
+#workbench{padding:110px 0;background:var(--paper-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+#workbench::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(rgba(29,26,20,.05) 1px,transparent 1px);background-size:26px 26px}
+.wb-grid{display:grid;grid-template-columns:.9fr 1.15fr .95fr;gap:22px;align-items:stretch}
+.wb-col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.wb-tag{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+.wb-tag::after{content:"";flex:1;height:1px;background:var(--line)}
+.wb-panel{background:var(--card);border:1px solid var(--line);border-radius:6px;flex:1;display:flex;flex-direction:column;overflow:hidden}
+.code-panel{padding:6px 0;font-family:var(--mono);font-size:12.5px;line-height:2.05}
+.code-panel .cline{display:flex;padding:0 16px;color:var(--ink-2);transition:background .3s,color .3s;white-space:pre;overflow-x:auto;scrollbar-width:none}
+.code-panel .cline::-webkit-scrollbar{display:none}
+.cline .ln{width:26px;flex-shrink:0;color:var(--mute);user-select:none;font-size:11px}
+.cline.on{background:var(--cinnabar);color:#f8efe2}
+.cline.on .ln{color:rgba(248,239,226,.7)}
+.cline.done{color:var(--ink)}
+.code-foot{margin-top:auto;border-top:1px dashed var(--line);padding:10px 16px;font-family:var(--mono);font-size:10.5px;color:var(--mute);letter-spacing:.06em}
+#stagePanel{padding:18px 14px 8px}
+#gSvg{width:100%;height:auto;display:block}
+.gnode circle{fill:var(--card);stroke:var(--ink);stroke-width:1.8;transition:fill .35s,stroke .35s}
+.gnode text{font-family:var(--mono);font-size:12px;fill:var(--ink);text-anchor:middle;transition:fill .35s}
+.gnode{transition:opacity .3s}
+.gnode.frontier circle{stroke:var(--cinnabar);stroke-dasharray:4 3;animation:dashspin 6s linear infinite}
+@keyframes dashspin{to{stroke-dashoffset:-56}}
+.gnode.cur circle{fill:var(--cinnabar);stroke:var(--cinnabar-deep)}
+.gnode.cur text{fill:#f8efe2}
+.gnode.seen circle{fill:var(--ink);stroke:var(--ink)}
+.gnode.seen text{fill:var(--paper)}
+.gedge{stroke:var(--line);stroke-width:1.6;transition:stroke .4s}
+.gedge.lit{stroke:var(--cinnabar);stroke-width:2.2;stroke-dasharray:120;stroke-dashoffset:120;animation:draw .6s var(--ease) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.stage-foot{margin-top:auto;padding:12px 6px 6px}
+.gqueue{display:flex;align-items:center;gap:7px;min-height:34px;flex-wrap:wrap}
+.gqueue .qlabel{font-family:var(--mono);font-size:10.5px;color:var(--mute);letter-spacing:.1em;margin-right:4px}
+.qchip{
+  font-family:var(--mono);font-size:12px;width:30px;height:30px;display:grid;place-items:center;
+  border:1.5px solid var(--ink);border-radius:6px;background:var(--card);
+  animation:chipin .35s var(--ease);
+}
+@keyframes chipin{from{opacity:0;transform:translateY(8px) scale(.8)}}
+.qchip.head{background:var(--cinnabar);border-color:var(--cinnabar-deep);color:#f8efe2}
+.qempty{font-family:var(--mono);font-size:11px;color:var(--mute)}
+.wb-controls{display:flex;gap:9px;padding:12px 6px 14px;flex-wrap:wrap}
+.note-panel{padding:20px 22px}
+.gstep{font-family:var(--mono);font-size:11px;color:var(--cinnabar);letter-spacing:.14em;margin-bottom:10px}
+#gDesc{font-family:var(--serif);font-size:17px;line-height:1.75;color:var(--ink);min-height:5.2em}
+#gDesc::first-letter{color:var(--cinnabar);font-weight:700}
+.note-div{border:none;border-top:1.5px solid var(--ink);margin:16px 0 12px}
+.note-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--mute)}
+.wb-arrow{align-self:center;color:var(--mute);display:grid;place-items:center}
+
+/* ============ 卷四 · 格物（深色） ============ */
+#lab{background:var(--night);color:var(--night-text);padding:110px 0 100px;position:relative;overflow:hidden}
+#lab::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E")}
+#lab .eyebrow{color:var(--night-mute)}
+#lab .lede{color:var(--night-mute)}
+#lab .rule{background:var(--night-line)}
+#lab .wrap{position:relative;z-index:1}
+.lab-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:34px;align-items:start}
+.term{
+  background:var(--night-2);border:1px solid var(--night-line);border-radius:10px;overflow:hidden;
+  box-shadow:0 30px 70px -30px rgba(0,0,0,.55);
+}
+.term-bar{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--night-line)}
+.term-bar i{width:11px;height:11px;border-radius:50%;border:1.5px solid var(--night-mute);opacity:.7}
+.term-bar i:first-child{background:var(--cinnabar);border-color:var(--cinnabar)}
+.term-bar .ttile{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--night-mute);letter-spacing:.12em}
+.term-tabs{display:flex;border-bottom:1px solid var(--night-line)}
+.ttab{
+  font-family:var(--mono);font-size:12px;padding:10px 18px;color:var(--night-mute);
+  border-right:1px solid var(--night-line);transition:all .25s;position:relative;
+}
+.ttab:hover{color:var(--night-text)}
+.ttab.on{color:var(--night-text);background:rgba(192,63,43,.12)}
+.ttab.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--cinnabar)}
+#termBody{padding:20px 20px 26px;font-family:var(--mono);font-size:13px;line-height:2.1;min-height:270px}
+.tline{white-space:pre-wrap;word-break:break-all}
+.tline.cmd{color:var(--night-mute)}
+.tline.in{color:var(--night-text)}
+.tline.in::before{content:"";display:inline-block;width:8px;height:8px;background:var(--cinnabar);transform:rotate(45deg);margin-right:10px}
+.tline.out{color:#b9b09c}
+.tline.res{color:#7fb08f}
+.tline .cursor{display:inline-block;width:8px;height:15px;background:var(--cinnabar);vertical-align:-2px;animation:blink 1s steps(1) infinite;margin-left:2px}
+@keyframes blink{50%{opacity:0}}
+.lab-side h3{font-family:var(--serif);font-size:26px;font-weight:700;margin-bottom:8px}
+.lab-side h3 em{font-style:normal;color:var(--cinnabar)}
+.lab-side>p{color:var(--night-mute);font-size:14.5px;margin-bottom:26px}
+.pipe{display:flex;flex-direction:column;gap:0}
+.pnode{display:flex;align-items:center;gap:14px;padding:13px 0}
+.pnode + .pnode{border-top:1px dashed var(--night-line)}
+.pnode .dot{
+  width:34px;height:34px;flex-shrink:0;border:1.5px solid var(--night-mute);border-radius:50%;
+  display:grid;place-items:center;font-family:var(--mono);font-size:11px;color:var(--night-mute);
+  transition:all .3s;
+}
+.pnode:hover .dot{border-color:var(--cinnabar);color:var(--cinnabar);transform:rotate(45deg)}
+.pnode b{font-size:14.5px;font-weight:600;display:block}
+.pnode small{font-family:var(--mono);font-size:10.5px;color:var(--night-mute);letter-spacing:.05em}
+.fallback-note{
+  margin-top:24px;border:1px solid var(--night-line);border-radius:8px;padding:16px 18px;
+  font-size:13px;color:var(--night-mute);line-height:1.8;
+}
+.fallback-note b{color:var(--night-text)}
+.fallback-note .kinds{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.fallback-note .kinds span{font-family:var(--mono);font-size:10.5px;border:1px solid var(--cinnabar);color:var(--cinnabar);border-radius:99px;padding:4px 12px}
+
+/* ============ 数字带 ============ */
+#stats{padding:80px 0;border-bottom:1.5px solid var(--ink)}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.stat{position:relative;padding-left:20px}
+.stat::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:2px;background:var(--cinnabar)}
+.stat .cnum{font-family:var(--mono);font-weight:600;font-size:clamp(38px,4vw,54px);line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+.stat .cnum sup{font-size:.42em;color:var(--cinnabar);margin-left:2px}
+.stat p{font-size:13px;color:var(--mute);margin-top:8px}
+
+/* ============ 卷五 · 匠心 ============ */
+#craft{padding:110px 0 100px}
+.craft-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+.cpanel{
+  background:var(--card);border:1px solid var(--line);border-radius:8px;padding:30px 32px;
+  position:relative;overflow:hidden;transition:transform .35s var(--ease),box-shadow .35s;
+}
+.cpanel:hover{transform:translateY(-4px);box-shadow:0 20px 40px -20px rgba(29,26,20,.3)}
+.cpanel.offset{transform:translateY(34px)}
+.cpanel.offset:hover{transform:translateY(30px)}
+.cpanel .cno{font-family:var(--mono);font-size:10.5px;color:var(--cinnabar);letter-spacing:.18em;margin-bottom:14px}
+.cpanel h4{font-family:var(--serif);font-size:23px;font-weight:700;margin-bottom:10px}
+.cpanel p{font-size:14px;color:var(--ink-2);line-height:1.8;max-width:44ch}
+.cpanel p code{font-family:var(--mono);font-size:12px;background:var(--paper-2);padding:2px 7px;border-radius:4px;color:var(--cinnabar-deep)}
+.cpanel .cfig{margin-top:20px}
+.cpanel .cfig svg{width:100%;height:auto;display:block}
+.cpanel.wide{grid-column:span 2}
+.mini-row{display:flex;gap:26px;flex-wrap:wrap;margin-top:18px}
+.mini{flex:1;min-width:150px}
+.mini b{font-family:var(--mono);font-size:12px;color:var(--ink);display:block;margin-bottom:6px}
+.mini p{font-size:12.5px;color:var(--mute)}
+
+/* ============ 卷尾 ============ */
+footer{padding:100px 0 46px;position:relative;overflow:hidden}
+.foot-quote{
+  font-family:var(--serif);font-size:clamp(22px,2.6vw,32px);font-weight:600;line-height:1.7;
+  max-width:640px;margin-bottom:70px;
+}
+.foot-quote .qq::before{content:"「";color:var(--cinnabar)}
+.foot-quote .qq::after{content:"」";color:var(--cinnabar)}
+.foot-quote small{display:block;font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.2em;margin-top:14px}
+.foot-main{display:flex;align-items:flex-end;gap:40px;flex-wrap:wrap;margin-bottom:60px}
+.foot-big{
+  font-family:var(--serif);font-weight:900;font-size:clamp(64px,10vw,150px);line-height:.95;
+  letter-spacing:-.01em;
+}
+.foot-big i{font-style:normal;color:var(--cinnabar)}
+.foot-seal{align-self:flex-start;margin-top:14px}
+.foot-cols{display:flex;gap:60px;margin-left:auto;flex-wrap:wrap}
+.fcol b{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--mute);display:block;margin-bottom:14px}
+.fcol a{display:block;font-size:14px;color:var(--ink-2);padding:4px 0;transition:color .25s,transform .25s}
+.fcol a:hover{color:var(--cinnabar);transform:translateX(4px)}
+.foot-bar{
+  border-top:1.5px solid var(--ink);padding-top:22px;display:flex;gap:20px;align-items:center;
+  font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.06em;flex-wrap:wrap;
+}
+.foot-bar .dotsep{color:var(--cinnabar)}
+.foot-bar .right{margin-left:auto}
+.foot-v{position:absolute;left:22px;bottom:120px;font-size:12px;opacity:.7}
+
+/* ============ 响应式 ============ */
+@media (max-width:1080px){
+  .wb-grid{grid-template-columns:1fr;gap:26px}
+  .lab-grid{grid-template-columns:1fr}
+  .cpanel.offset{transform:none}
+  .cpanel.offset:hover{transform:translateY(-4px)}
+  .foot-v,.hero-v{display:none}
+}
+@media (max-width:900px){
+  #top .wrap{grid-template-columns:1fr;gap:44px}
+  .acards{grid-template-columns:repeat(2,1fr)}
+  .acard,.acard.wide{grid-column:span 1}
+  .stat-row{grid-template-columns:repeat(2,1fr);gap:34px}
+  .craft-grid{grid-template-columns:1fr}
+  .cpanel.wide{grid-column:span 1}
+  nav.links{display:none}
+}
+@media (max-width:640px){
+  .wrap{padding:0 22px}
+  .acards{grid-template-columns:1fr}
+  .dp-speed{margin-left:0}
+  .foot-cols{margin-left:0;gap:36px}
+  .demo-paper{padding:20px 18px 18px;transform:none}
+  .dp-head{flex-wrap:wrap;gap:6px 12px;padding-left:10px}
+  .dp-head h3{font-size:18px}
+  .dp-chip{margin-left:0}
+  #qBox{margin-left:10px;height:170px}
+  .dp-baseline{margin-left:10px}
+  .dp-note,.dp-stats,.dp-controls{padding-left:10px}
+  .annot{display:none}
+  .code-panel{font-size:11px}
+  .foot-big{font-size:56px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  html{scroll-behavior:auto}
+  .rv{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<!-- ============ 顶栏 ============ -->
+<header id="nav">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <span class="seal">演</span>
+      <span><b>AlgoViz · 纸上算法</b><small>LIVING MANUSCRIPT</small></span>
+    </a>
+    <nav class="links">
+      <a class="nlink" href="#top" data-sec="top"><sup>壹</sup>卷首</a>
+      <a class="nlink" href="#catalog" data-sec="catalog"><sup>贰</sup>索引</a>
+      <a class="nlink" href="#workbench" data-sec="workbench"><sup>叁</sup>演武场</a>
+      <a class="nlink" href="#lab" data-sec="lab"><sup>肆</sup>格物</a>
+      <a class="nlink" href="#craft" data-sec="craft"><sup>伍</sup>匠心</a>
+    </nav>
+    <a class="btn btn-ink" href="#workbench">进入演武场</a>
+  </div>
+</header>
+
+<!-- ============ 卷首 HERO ============ -->
+<section id="top">
+  <span class="vtext hero-v">卷一 · 排序之道 — <i>凡是讲授，皆成画面</i></span>
+  <div class="wrap">
+    <div>
+      <span class="eyebrow rv">AI 驱动的算法可视化学习平台</span>
+      <h1 class="hero-title rv" style="--d:.08s">看见算法的<br><span class="mark">每一步</span>。</h1>
+      <p class="hero-sub rv" style="--d:.16s">AlgoViz 把排序、图论、动态规划写成可以逐帧播放的画面 —— <b>75 种内置算法</b>、四种语言沙箱、AI 代码分析，全部在浏览器里完成，无需后端。</p>
+      <div class="hero-cta rv" style="--d:.24s">
+        <button class="btn btn-ink" id="heroPlay">▶ 开始演算</button>
+        <a class="btn btn-line" href="#catalog">翻开算法索引</a>
+      </div>
+      <p class="hero-trust rv" style="--d:.3s">75+ ALGORITHMS <i>◆</i> SCENE ENGINE <i>◆</i> MIT OPEN SOURCE</p>
+    </div>
+
+    <!-- 演算纸：真实可交互的快速排序 -->
+    <div class="rv" style="--d:.2s;position:relative">
+      <div class="demo-paper" id="demoPaper">
+        <div class="paper-holes"><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dp-head">
+          <span class="no">例 01</span>
+          <h3>快速排序<span>QUICKSORT · 分治</span></h3>
+          <span class="dp-chip">平均 O(n log n)</span>
+        </div>
+        <div id="qBox"></div>
+        <div class="dp-baseline"></div>
+        <p class="dp-note" id="qDesc">洗好的牌已就位 —— 点击播放，看分治如何一步步收敛。</p>
+        <div class="dp-stats" id="qStats">
+          <span>比较 <b id="qCmp">0</b></span>
+          <span>交换 <b id="qSwp">0</b></span>
+          <span class="cur">步骤 <b id="qStep">0 / 0</b></span>
+        </div>
+        <div class="dp-controls">
+          <button class="ctl primary" id="qPlay">▶ 播放</button>
+          <button class="ctl" id="qPrev">← 上一步</button>
+          <button class="ctl" id="qNext">下一步 →</button>
+          <button class="ctl" id="qShuffle">⟳ 换一组</button>
+          <div class="dp-speed">
+            <button class="qspd" data-s="0.5">0.5×</button>
+            <button class="qspd on" data-s="1">1×</button>
+            <button class="qspd" data-s="2">2×</button>
+            <button class="qspd" data-s="4">4×</button>
+          </div>
+        </div>
+      </div>
+      <span class="annot" style="right:-14px;top:-34px">此处可交互<svg width="30" height="26" viewBox="0 0 30 26"><path d="M15 2 C 18 12, 16 18, 12 24" fill="none" stroke="#9c3322" stroke-width="1.6" stroke-linecap="round"/><path d="M8 18 L12 24 L17 19" fill="none" stroke="#9c3322" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 跑马灯 ============ -->
+<div class="marquee" aria-hidden="true">
+  <div class="mq-track" id="mqTrack">
+    <span>冒泡排序<b>BUBBLE SORT</b></span><i>◆</i>
+    <span>迪杰斯特拉<b>DIJKSTRA</b></span><i>◆</i>
+    <span>红黑树<b>RED-BLACK TREE</b></span><i>◆</i>
+    <span>背包问题<b>KNAPSACK</b></span><i>◆</i>
+    <span>跳表<b>SKIP LIST</b></span><i>◆</i>
+    <span>KMP 匹配<b>KMP</b></span><i>◆</i>
+    <span>拓扑排序<b>TOPOLOGICAL SORT</b></span><i>◆</i>
+    <span>线段树<b>SEGMENT TREE</b></span><i>◆</i>
+    <span>凸包<b>CONVEX HULL</b></span><i>◆</i>
+    <span>强连通分量<b>TARJAN SCC</b></span><i>◆</i>
+  </div>
+</div>
+
+<!-- ============ 卷二 · 算法索引 ============ -->
+<section id="catalog">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-no">卷二</span>
+      <div>
+        <span class="eyebrow rv">ALGORITHM INDEX</span>
+        <h2 class="chapter rv" style="--d:.06s">算法索引，<em>每一页都能翻开</em>。</h2>
+        <p class="lede rv" style="--d:.12s">从冒泡到 Tarjan，75 种内置算法按类归档。以下摘录十六种 —— 点开任意一页，都是一场可以播放的演算。</p>
+      </div>
+      <div class="rule"></div>
+    </div>
+
+    <div class="filter-bar rv">
+      <button class="ftab on" data-f="all">全部<small>16</small></button>
+      <button class="ftab" data-f="sort">排序<small>4</small></button>
+      <button class="ftab" data-f="graph">图论<small>4</small></button>
+      <button class="ftab" data-f="ds">数据结构<small>4</small></button>
+      <button class="ftab" data-f="dp">动态规划<small>2</small></button>
+      <button class="ftab" data-f="back">搜索回溯<small>1</small></button>
+      <button class="ftab" data-f="adv">进阶专题<small>1</small></button>
+    </div>
+
+    <div class="acards" id="acards">
+      <article class="acard wide rv" data-cat="sort">
+        <div class="idx"><span>第 01 页</span><span class="glyph"><svg viewBox="0 0 44 30"><path d="M4 26 V14 M12 26 V6 M20 26 V18 M28 26 V10 M36 26 V22 M40 26 V4"/></svg></span></div>
+        <h4>冒泡排序<span>BUBBLE SORT</span></h4>
+        <p>相邻交换，大者沉底 —— 所有人算法生涯的第一页。</p>
+        <div class="foot"><span class="cx">O(n²)</span><span class="cat">排序</span><span class="go">开卷 →</span></div>
+      </article>
+      <article class="acard rv" data-cat="sort" style="--d:.05s">
+        <div class="idx"><span>第 02 页</span><span class="glyph"><svg viewBox="0 0 44 30"><path d="M4 26 V10 M12 26 V20 M20 26 V4 M28 26 V16 M36 26 V8"/><circle cx="20" cy="4" r="2.4"/></svg></span></div>
+        <h4>快速排序<span>QUICKSORT</span></h4>
+        <p>分而治之，枢轴归位。</p>
+        <div class="foot"><span class="cx">O(n log n)</span><span class="cat">排序</span><span class="go">开卷 →</span></div>
+      </article>
+      <article class="acard rv" data-cat="sort" style="--d:.1s">
+        <div class="idx"><span>第 03 页</span><span class="glyph"><svg viewBox="0 0 44 30"><path d="M4 12 H16 M4 20 H16 M24 8 H40 M24 16 H40 M24 24 H40 M16 12 L24 10 M16 20 L24 22"/></svg></span></div>
+        <h4>归并排序<span>MERGE SORT</span></h4>
+        <p>先分后合，稳定归并。</p>
+        <div class="foot"><span class="cx">O(n log n)</span><span class="cat">排序</span><span class="go">开卷 →</span></div>
+      </article>
+      <article class="acard rv" data-cat="sort" style="--d:.15s">
+        <div class="idx"><span>第 04 页</span><span class="glyph"><svg viewBox="0 0 44 30"><circle cx="22" cy="7" r="3"/><circle cx="12" cy="17" r="3"/><circle cx="32" cy="17" r="3"/><circle cx="7" cy="26" r="3"/><circle cx="17" cy="26" r="3"/><path d="M22 10 L12 14 M22 10 L32 14 M12 20 L7 23 M12 20 L17 23"/></svg></span></div>
+        <h4>堆排序<span>HEAP SORT</span></h4>
+        <p>大顶之上，逐一摘取。</p>
+        <div class="foot"><span class="cx">O(n log n)</span><span class="cat">排序</span><span class="go">开卷 →</span></div>
+      </article>
+
+      <article class="acard rv" data-cat="graph">
+        <div class="idx"><span>第 05 页</span><span class="glyph"><svg viewBox="0 0 44 30"><circle cx="8" cy="15" r="3"/><circle cx="22" cy="7" r="3"/><circle cx="22" cy="23" r="3"/><circle cx="36" cy="15" r="3"/><path d="M11 15 L19 8 M11 15 L19 22 M25 8 L33 14 M25 22 L33 16"/></svg></span></div>
+        <h4>广度优先搜索<span>BFS</span></h4>
+        <p>层层扩散，最短无权路。</p>
+        <div class="foot"><span class="cx">O(V+E)</span><span class="cat">图论</span><span class="go">开卷 →</span></div>
+      </article>
+      <article class="acard wide rv" data-cat="graph" style="--d:.05s">
+        <div class="idx"><span>第 06 页</span><span class="glyph"><svg viewBox="0 0 44 30"><circle cx="6" cy="24" r="3"/><circle cx="18" cy="10" r="3"/><circle cx="30" cy="18" r="3"/><circle cx="40" cy="6" r="3"/><path d="M9 22 L16 12 M21 11 L28 16 M33 16 L38 8" stroke-dasharray="3 2"/></svg></span></div>
+        <h4>Dijkstra 最短路径<span>DIJKSTRA</span></h4>
+        <p>贪心松弛，每一步都走向当前最近 —— 加权图上的寻路基石。</p>
+        <div class="foot"><span class="cx">O((V+E) log V)</span><span class="cat">图论</span><span class="go">开卷 →</span></div>
+      </article>
+      <article class="acard rv" data-cat="graph" style="--d:.1s">
+        <div class="idx"><span>第 07 页</span><span class="glyph"><svg viewBox="0 0 44 30"><circle cx="12" cy="10" r="3"/><circle cx="32" cy="10" r="3"/><circle cx="22" cy="24" r="3"/><path d="M15 11 L29 11 M30 13 L24 21 M20 21 L14 13 M12 13 C 6 18, 8 24, 14 25"/></svg></span></div>
+        <h4>Tarjan 强连通<span>TARJAN SCC</span></h4>
+        <p>disc / low，一栈定环。</p>
+        <div class="foot"><span class="cx">O(V+E)</span><span class="cat">图论</span><span class="go">开卷 →</span></div>
+      </article>
+      <article class="acard rv" data-cat="graph" style="--d:.15s">
+        <div class="idx"><span>第 08 页</span><span class="glyph"><svg viewBox="0 0 44 30"><circle cx="8" cy="8" r="3"/><circle cx="36" cy="8" r="3"/><circle cx="8" cy="24" r="3"/><circle cx="36" cy="24" r="3"/><circle cx="22" cy="16" r="3"/><path d="M11 8 L19 15 M25 15 L33 9 M9 22 L19 17 M25 17 L34 22"/></svg></span></div>
+        <h4>Kruskal 最小生成树<span>KRUSKAL MST</span></h4>
+        <p>并查护林，择边成树。</p>
+        <div class="foot"><span class="cx">O(E log E)</span><span class="cat">图论</span><span class="go">开卷 →</span></div>
+      </article>
+
+      <article class="acard rv" data-cat="ds">
+        <div class="idx"><span>第 09 页</span><span class="glyph"><svg viewBox="0 0 44 30"><path d="M4 8 H14 M4 16 H24 M4 24 H34" stroke-dasharray="1 0"/><circle cx="18" cy="8" r="2.4"/><circle cx="28" cy="16" r="2.4"/><circle cx="38" cy="24" r="2.4"/><path d="M14 8 L18 8 M20 8 L26 14 M30 16 L36 22" stroke-dasharray="2 2"/></svg></span></div>
+        <h4>跳表<span>SKIP LIST</span></h4>
+        <p>分层捷径，右移下沉。</p>
+        <div class="foot"><span class="cx">O(log n)</span><span class="cat">数据结构</span><span class="go">开卷 →</span></div>
+      </article>
+      <article class="acard rv" data-cat="ds" style="--d:.05s">
+        <div class="idx"><span>第 10 页</span><span class="glyph"><svg viewBox="0 0 44 30"><circle cx="22" cy="6" r="3"/><circle cx="12" cy="16" r="3"/><circle cx="32" cy="16" r="3"/><circle cx="7" cy="26" r="3"/><circle cx="17" cy="26" r="3"/><path d="M22 9 L12 13 M22 9 L32 13 M12 19 L7 23 M12 19 L17 23"/><circle cx="32" cy="16" r="4.6" stroke-dasharray="2 2"/></svg></span></div>
+        <h4>红黑树<span>RED-BLACK TREE</span></h4>
+        <p>旋转变色，自衡之舞。</p>
+        <div class="foot"><span class="cx">O(log n)</span><span class="cat">数据结构</span><span class="go">开卷 →</span></div>
+      </article>
+      <article class="acard wide rv" data-cat="ds" style="--d:.1s">
+        <div class="idx"><span>第 11 页</span><span class="glyph"><svg viewBox="0 0 44 30"><rect x="4" y="4" width="12" height="7" rx="1"/><rect x="4" y="20" width="9" height="7" rx="1"/><rect x="17" y="20" width="9" height="7" rx="1"/><rect x="30" y="20" width="10" height="7" rx="1"/><path d="M8 11 L8 20 M12 11 L21 20 M14 11 L34 20 M13 23.5 H17 M26 23.5 H30" /></svg></span></div>
+        <h4>B+ 树<span>B+ TREE</span></h4>
+        <p>叶链成序，磁盘之友 —— 数据库索引的幕后主角。</p>
+        <div class="foot"><span class="cx">O(log n)</span><span class="cat">数据结构</span><span class="go">开卷 →</span></div>
+      </article>
+      <article class="acard rv" data-cat="ds" style="--d:.15s">
+        <div class="idx"><span>第 12 页</span><span class="glyph"><svg viewBox="0 0 44 30"><circle cx="10" cy="9" r="3"/><circle cx="10" cy="23" r="3"/><circle cx="30" cy="9" r="3"/><circle cx="30" cy="23" r="3"/><path d="M10 12 L10 20 M30 12 L30 20 M13 9 L27 9" stroke-dasharray="3 2"/></svg></span></div>
+        <h4>并查集<span>UNION-FIND</span></h4>
+        <p>路径压缩，按秩合并。</p>
+        <div class="foot"><span class="cx">≈ O(1)</span><span class="cat">数据结构</span><span class="go">开卷 →</span></div>
+      </article>
+
+      <article class="acard rv" data-cat="dp">
+        <div class="idx"><span>第 13 页</span><span class="glyph"><svg viewBox="0 0 44 30"><rect x="5" y="5" width="34" height="22" rx="1"/><path d="M5 12 H39 M5 19 H39 M16 5 V27 M27 5 V27"/><rect x="16" y="12" width="11" height="7" fill="currentColor" opacity=".14"/></svg></span></div>
+        <h4>0/1 背包<span>KNAPSACK</span></h4>
+        <p>取舍之间，价值最优。</p>
+        <div class="foot"><span class="cx">O(nW)</span><span class="cat">动态规划</span><span class="go">开卷 →</span></div>
+      </article>
+      <article class="acard rv" data-cat="dp" style="--d:.05s">
+        <div class="idx"><span>第 14 页</span><span class="glyph"><svg viewBox="0 0 44 30"><path d="M6 24 L14 16 L20 20 L30 8"/><path d="M30 8 L38 8 M30 8 L30 16" stroke-dasharray="2 2"/><circle cx="6" cy="24" r="2.2"/><circle cx="30" cy="8" r="2.2"/></svg></span></div>
+        <h4>编辑距离<span>EDIT DISTANCE</span></h4>
+        <p>增删改换，最短路价。</p>
+        <div class="foot"><span class="cx">O(nm)</span><span class="cat">动态规划</span><span class="go">开卷 →</span></div>
+      </article>
+      <article class="acard rv" data-cat="back" style="--d:.1s">
+        <div class="idx"><span>第 15 页</span><span class="glyph"><svg viewBox="0 0 44 30"><rect x="6" y="4" width="32" height="24" rx="1"/><path d="M6 10 H38 M6 16 H38 M6 22 H38 M14 4 V28 M22 4 V28 M30 4 V28"/><circle cx="10" cy="7" r="2.2"/><circle cx="18" cy="13" r="2.2"/><circle cx="34" cy="19" r="2.2"/></svg></span></div>
+        <h4>N 皇后<span>N-QUEENS</span></h4>
+        <p>置子剪枝，进退有度。</p>
+        <div class="foot"><span class="cx">O(N!)</span><span class="cat">搜索回溯</span><span class="go">开卷 →</span></div>
+      </article>
+      <article class="acard wide rv" data-cat="adv" style="--d:.15s">
+        <div class="idx"><span>第 16 页</span><span class="glyph"><svg viewBox="0 0 44 30"><path d="M4 22 H40 M8 22 V14 H16 V22 M20 22 V10 H28 V22 M32 22 V17 H38 V22"/><path d="M8 10 C 16 4, 28 4, 36 9" stroke-dasharray="3 2"/></svg></span></div>
+        <h4>KMP 匹配<span>KMP · AUTOMATON</span></h4>
+        <p>失配回退，自动机行 —— 状态机被直接画出来的那一刻，一切都通了。</p>
+        <div class="foot"><span class="cx">O(n+m)</span><span class="cat">进阶专题</span><span class="go">开卷 →</span></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 卷三 · 演武场 ============ -->
+<section id="workbench">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-no">卷三</span>
+      <div>
+        <span class="eyebrow rv">THE WORKBENCH</span>
+        <h2 class="chapter rv" style="--d:.06s">演武场：<em>代码、画布、步骤</em>，三位一体。</h2>
+        <p class="lede rv" style="--d:.12s">主工作区把编辑器、Scene 画布与步骤批注放在同一张书案上。以下以 BFS 为例 —— 每一次出队，代码行、节点颜色与队列变化严格同步。</p>
+      </div>
+      <div class="rule"></div>
+    </div>
+
+    <div class="wb-grid">
+      <!-- 代码栏 -->
+      <div class="wb-col rv">
+        <span class="wb-tag">代码 · CODE</span>
+        <div class="wb-panel">
+          <div class="code-panel" id="gCode">
+            <div class="cline" data-l="1"><span class="ln">01</span>function bfs(graph, start) {</div>
+            <div class="cline" data-l="2"><span class="ln">02</span>  const seen = new Set([start])</div>
+            <div class="cline" data-l="3"><span class="ln">03</span>  const queue = [start]</div>
+            <div class="cline" data-l="4"><span class="ln">04</span>  while (queue.length &gt; 0) {</div>
+            <div class="cline" data-l="5"><span class="ln">05</span>    const node = queue.shift()</div>
+            <div class="cline" data-l="6"><span class="ln">06</span>    for (const next of graph[node])</div>
+            <div class="cline" data-l="7"><span class="ln">07</span>      if (!seen.has(next)) seen.add(next), queue.push(next)</div>
+            <div class="cline" data-l="8"><span class="ln">08</span>  }</div>
+            <div class="cline" data-l="9"><span class="ln">09</span>}</div>
+          </div>
+          <div class="code-foot">MONACO EDITOR · 行级高亮与播放引擎同步</div>
+        </div>
+      </div>
+
+      <!-- 画布栏 -->
+      <div class="wb-col rv" style="--d:.08s">
+        <span class="wb-tag">画布 · SCENE CANVAS</span>
+        <div class="wb-panel" id="stagePanel">
+          <svg id="gSvg" viewBox="0 0 460 310" aria-label="BFS 图遍历演示">
+            <g id="gEdges">
+              <line class="gedge" data-e="A-B" x1="230" y1="48" x2="122" y2="112"/>
+              <line class="gedge" data-e="A-C" x1="230" y1="48" x2="338" y2="112"/>
+              <line class="gedge" data-e="B-D" x1="122" y1="112" x2="62" y2="192"/>
+              <line class="gedge" data-e="B-E" x1="122" y1="112" x2="182" y2="192"/>
+              <line class="gedge" data-e="C-F" x1="338" y1="112" x2="278" y2="192"/>
+              <line class="gedge" data-e="C-G" x1="338" y1="112" x2="398" y2="192"/>
+              <line class="gedge" data-e="E-H" x1="182" y1="192" x2="182" y2="262"/>
+            </g>
+            <g id="gNodes">
+              <g class="gnode" data-n="A" transform="translate(230,48)"><circle r="18"/><text dy="4.5">A</text></g>
+              <g class="gnode" data-n="B" transform="translate(122,112)"><circle r="18"/><text dy="4.5">B</text></g>
+              <g class="gnode" data-n="C" transform="translate(338,112)"><circle r="18"/><text dy="4.5">C</text></g>
+              <g class="gnode" data-n="D" transform="translate(62,192)"><circle r="18"/><text dy="4.5">D</text></g>
+              <g class="gnode" data-n="E" transform="translate(182,192)"><circle r="18"/><text dy="4.5">E</text></g>
+              <g class="gnode" data-n="F" transform="translate(278,192)"><circle r="18"/><text dy="4.5">F</text></g>
+              <g class="gnode" data-n="G" transform="translate(398,192)"><circle r="18"/><text dy="4.5">G</text></g>
+              <g class="gnode" data-n="H" transform="translate(182,262)"><circle r="18"/><text dy="4.5">H</text></g>
+            </g>
+          </svg>
+          <div class="stage-foot">
+            <div class="gqueue" id="gQueue"><span class="qlabel">QUEUE →</span><span class="qempty">∅ 空</span></div>
+            <div class="wb-controls">
+              <button class="ctl primary" id="gPlay">▶ 播放</button>
+              <button class="ctl" id="gNext">下一步 →</button>
+              <button class="ctl" id="gReplay">⟳ 重演</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 批注栏 -->
+      <div class="wb-col rv" style="--d:.16s">
+        <span class="wb-tag">步骤批注 · NARRATION</span>
+        <div class="wb-panel note-panel">
+          <div class="gstep" id="gStep">准备就绪 · 共 10 步</div>
+          <p id="gDesc">从源点 A 出发的广度优先搜索即将开始。队列是这场遍历的「书籤」—— 先进先出，绝不漏页。点击播放，或逐步行进。</p>
+          <hr class="note-div">
+          <div class="note-meta"><span>BFS · 广度优先</span><span>O(V + E)</span></div>
+          <hr class="note-div" style="border-top:1px dashed var(--line)">
+          <div class="note-meta"><span id="gSeen">已访问 0 / 8</span><span>_SCENE ENGINE_</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 卷四 · 格物（AI 实验室） ============ -->
+<section id="lab">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-no" style="border-color:var(--cinnabar)">卷四</span>
+      <div>
+        <span class="eyebrow rv">AI PLAYGROUND</span>
+        <h2 class="chapter rv" style="--d:.06s;color:var(--night-text)">格物：把你的代码，<em>讲成动画</em>。</h2>
+        <p class="lede rv" style="--d:.12s">AI 代码实验室支持 Python、JavaScript、C++、Java。代码交给 OpenAI 兼容模型分析，或直接在浏览器内的真实沙箱里执行 —— stdin 只在读取边界激活，stdout、stderr、result 与 trace 分栏流淌。</p>
+      </div>
+      <div class="rule"></div>
+    </div>
+
+    <div class="lab-grid">
+      <div class="term rv">
+        <div class="term-bar"><i></i><i></i><i></i><span class="ttile">ALGOVIZ · WORKBENCH TERMINAL</span></div>
+        <div class="term-tabs">
+          <button class="ttab on" data-lang="python">Python</button>
+          <button class="ttab" data-lang="javascript">JavaScript</button>
+          <button class="ttab" data-lang="cpp">C++</button>
+          <button class="ttab" data-lang="java">Java</button>
+        </div>
+        <div id="termBody"></div>
+      </div>
+
+      <div class="lab-side rv" style="--d:.12s">
+        <h3>从代码到画面，<em>一条可信的管线</em>。</h3>
+        <p>自定义代码经由 AI 或本地沙箱，统一归一为 AnimationScript，再由 Scene Engine 逐帧渲染。</p>
+        <div class="pipe">
+          <div class="pnode"><span class="dot">01</span><div><b>源代码输入</b><small>PY · JS · C++ · JAVA — 四种语言模板</small></div></div>
+          <div class="pnode"><span class="dot">02</span><div><b>AI 解析 / 沙箱执行</b><small>ANIMATIONSCRIPT 或 WORKER 生成器</small></div></div>
+          <div class="pnode"><span class="dot">03</span><div><b>事件编译</b><small>23 个事件编译器 · 几何测量与避障</small></div></div>
+          <div class="pnode"><span class="dot">04</span><div><b>逐帧渲染</b><small>SCENE CANVAS · 补间动画 · 步骤批注</small></div></div>
+        </div>
+        <div class="fallback-note">
+          <b>永不白屏的承诺：</b>任何失败路径都会渲染出可读的降级场景 —— 至少画出你的输入，并给出重试入口。
+          <div class="kinds"><span>模型不可用</span><span>解析失败</span><span>运行超时</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 数字带 ============ -->
+<section id="stats">
+  <div class="wrap">
+    <div class="stat-row">
+      <div class="stat rv"><span class="cnum" data-n="75">0</span><p>内置算法与生成器<br>覆盖八大分类</p></div>
+      <div class="stat rv" style="--d:.08s"><span class="cnum" data-n="23">0</span><p>场景事件编译器<br>数组 / 树 / 图 / 自动机…</p></div>
+      <div class="stat rv" style="--d:.16s"><span class="cnum" data-n="4">0</span><p>语言沙箱真实执行<br>Pyodide · WASI · JVM</p></div>
+      <div class="stat rv" style="--d:.24s"><span class="cnum" data-n="0">0</span><p>白屏与裸报错<br>三层防线兜底</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 卷五 · 匠心 ============ -->
+<section id="craft">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-no">卷五</span>
+      <div>
+        <span class="eyebrow rv">CRAFTSMANSHIP</span>
+        <h2 class="chapter rv" style="--d:.06s">匠心，藏在<em>看不见的地方</em>。</h2>
+        <p class="lede rv" style="--d:.12s">好的可视化不是「画出来」而已 —— 它要精确、稳定、经得起单步推敲。</p>
+      </div>
+      <div class="rule"></div>
+    </div>
+
+    <div class="craft-grid">
+      <div class="cpanel rv">
+        <div class="cno">其一 · TWEEN LAYER</div>
+        <h4>交换，以直线交叉表达</h4>
+        <p>补间层识别「值互换」语义，让两个元素沿直线交叉滑过 —— 路径与坐标系无关，数组单元与树节点共用同一机制。终态在数学上精确等于目标场景，支持 <code>prefers-reduced-motion</code> 降级。</p>
+        <div class="cfig">
+          <svg viewBox="0 0 400 90">
+            <rect x="40" y="30" width="34" height="34" rx="4" fill="none" stroke="#1d1a14" stroke-width="1.8"/>
+            <rect x="326" y="30" width="34" height="34" rx="4" fill="none" stroke="#1d1a14" stroke-width="1.8"/>
+            <path d="M80 38 C 170 38, 230 56, 320 56" fill="none" stroke="#c03f2b" stroke-width="2" stroke-dasharray="5 4"/>
+            <path d="M320 38 C 230 38, 170 56, 80 56" fill="none" stroke="#33604f" stroke-width="2" stroke-dasharray="5 4"/>
+            <text x="52" y="52" font-family="JetBrains Mono" font-size="13" fill="#1d1a14">8</text>
+            <text x="338" y="52" font-family="JetBrains Mono" font-size="13" fill="#1d1a14">3</text>
+          </svg>
+        </div>
+      </div>
+      <div class="cpanel offset rv" style="--d:.1s">
+        <div class="cno">其二 · GEOMETRY CONTRACT</div>
+        <h4>几何契约：边不压字，字不压点</h4>
+        <p>共享几何管线统一测量每个可见图元与文本，确定性生成避障边路由与标签避碰位置。每一步都通过 <code>validateSceneGeometry</code> 门禁：拒绝重叠、穿线与箭头遮挡。</p>
+        <div class="cfig">
+          <svg viewBox="0 0 400 90">
+            <circle cx="70" cy="45" r="16" fill="none" stroke="#1d1a14" stroke-width="1.8"/>
+            <circle cx="330" cy="45" r="16" fill="none" stroke="#1d1a14" stroke-width="1.8"/>
+            <rect x="180" y="20" width="40" height="50" rx="4" fill="none" stroke="#8b8271" stroke-width="1.4" stroke-dasharray="4 3"/>
+            <path d="M86 45 C 130 45, 150 10, 200 10 C 250 10, 270 45, 314 45" fill="none" stroke="#c03f2b" stroke-width="2"/>
+            <text x="183" y="8" font-family="JetBrains Mono" font-size="10" fill="#8b8271">绕障路由</text>
+          </svg>
+        </div>
+      </div>
+      <div class="cpanel wide rv" style="--d:.06s">
+        <div class="cno">其三 · ROBUSTNESS & TRUST</div>
+        <h4>分层健壮，本地优先</h4>
+        <div class="mini-row">
+          <div class="mini"><b>解析容错</b><p>兼容 markdown 包裹、尾随逗号等脏输出，本地修复先行。</p></div>
+          <div class="mini"><b>沙箱隔离</b><p>AI 生成器在 Web Worker 中执行，5 秒超时即熔断。</p></div>
+          <div class="mini"><b>双语界面</b><p>i18next 中英切换，语言与配置保存在 localStorage。</p></div>
+          <div class="mini"><b>设计令牌</b><p>tokens.ts 是视觉单一事实源：语义色、缓动、排版。</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 卷尾 ============ -->
+<footer id="end">
+  <span class="vtext foot-v">卷终 · 躬行 — PRACTICE MAKES PERMANENT</span>
+  <div class="wrap">
+    <p class="foot-quote rv"><span class="qq">纸上得来终觉浅，绝知此事要躬行。</span><small>— 陆游《冬夜读书示子聿》 · 与每一位算法学习者共勉</small></p>
+    <div class="foot-main rv" style="--d:.08s">
+      <h2 class="foot-big">Algo<i>Viz</i></h2>
+      <span class="seal foot-seal" style="width:52px;height:52px;font-size:26px">演</span>
+      <div class="foot-cols">
+        <div class="fcol">
+          <b>卷帙 · VOLUMES</b>
+          <a href="#catalog">算法索引</a>
+          <a href="#workbench">演武场</a>
+          <a href="#lab">AI 实验室</a>
+        </div>
+        <div class="fcol">
+          <b>同期稿 · SIBLINGS</b>
+          <a href="./algoviz-atlas.html">Atlas 图集</a>
+          <a href="./algoviz-blueprint.html">Blueprint 图纸</a>
+          <a href="./algoviz-signal-room.html">Signal Room 信号室</a>
+          <a href="./algoviz-gallery.html">Gallery 画廊</a>
+          <a href="./algoviz-redesign-workshop.html">Workshop 工坊</a>
+        </div>
+        <div class="fcol">
+          <b>项目 · PROJECT</b>
+          <a href="../README.md">README</a>
+          <a href="../docs/architecture/README.md">架构文档</a>
+          <a href="../LICENSE">MIT License</a>
+        </div>
+      </div>
+    </div>
+    <div class="foot-bar">
+      <span>ALGOVIZ · 纸上算法 — LIVING MANUSCRIPT</span>
+      <span class="dotsep">◆</span><span>设计稿 06 / 06</span>
+      <span class="dotsep">◆</span><span>单文件 · 无依赖 · 可交互</span>
+      <span class="right">2026 · 以墨演算，以朱批注</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ============================================================
+   交互引擎 · 全部原生 JS
+   ============================================================ */
+(function(){
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- 滚动进度 & 顶栏 ---------- */
+const nav=$('#nav'), prog=$('#progress');
+addEventListener('scroll',()=>{
+  const h=document.documentElement;
+  prog.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';
+  nav.classList.toggle('scrolled',h.scrollTop>40);
+},{passive:true});
+
+/* ---------- reveal ---------- */
+const io=new IntersectionObserver(es=>es.forEach(e=>{
+  if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target)}
+}),{threshold:.12});
+$$('.rv').forEach(el=>io.observe(el));
+
+/* ---------- scrollspy ---------- */
+const links=$$('.nlink');
+const spy=new IntersectionObserver(es=>es.forEach(e=>{
+  if(e.isIntersecting){
+    links.forEach(l=>l.classList.toggle('active',l.dataset.sec===e.target.id));
+  }
+}),{rootMargin:'-38% 0px -55% 0px'});
+['top','catalog','workbench','lab','craft'].forEach(id=>{const el=document.getElementById(id);if(el)spy.observe(el)});
+
+/* ---------- 跑马灯：内容复制一份实现无缝 ---------- */
+const mq=$('#mqTrack');mq.innerHTML+=mq.innerHTML;
+
+/* ============================================================
+   卷一 · 快速排序演示（真实算法，事件回放）
+   ============================================================ */
+const qBox=$('#qBox'), qDesc=$('#qDesc'), qCmp=$('#qCmp'), qSwp=$('#qSwp'), qStepEl=$('#qStep');
+const N=22;
+const Q={events:[],idx:0,timer:null,speed:1,playing:false,userPaused:false,bars:[],initial:[]};
+
+function qGen(){
+  const vals=new Set();
+  while(vals.size<N)vals.add(14+Math.floor(Math.random()*84));
+  return [...vals];
+}
+function qEvents(a0){
+  const a=a0.slice(),ev=[];
+  function part(lo,hi){
+    const p=a[hi];let i=lo;
+    ev.push({t:'pivot',i:hi,d:'选定枢轴 '+p+'（最右元素），左右分治从此开始'});
+    for(let j=lo;j<hi;j++){
+      ev.push({t:'cmp',i:j,j:hi,d:'比较 '+a[j]+' 与枢轴 '+p+(a[j]<p?' —— 较小，划归左岸':' —— 不小，留在右岸')});
+      if(a[j]<p){
+        if(i!==j){[a[i],a[j]]=[a[j],a[i]];ev.push({t:'swap',i:i,j:j,d:'交换 '+a[j]+' ↔ '+a[i]+'，小区扩张一格'});}
+        i++;
+      }
+    }
+    if(i!==hi){[a[i],a[hi]]=[a[hi],a[i]];ev.push({t:'swap',i:i,j:hi,d:'枢轴 '+p+' 归位 —— 它的最终位置就此确定'});}
+    ev.push({t:'lock',i:i,d:p+' 已锁定，不再参与后续比较'});
+    return i;
+  }
+  (function sort(lo,hi){
+    if(lo>hi)return;
+    if(lo===hi){ev.push({t:'lock',i:lo,d:a[lo]+' 自成一区，天然有序'});return;}
+    const p=part(lo,hi);sort(lo,p-1);sort(p+1,hi);
+  })(0,a.length-1);
+  ev.push({t:'done',d:'全卷演算完毕 —— 数组已严格升序'});
+  return ev;
+}
+function qBuild(){
+  clearInterval(Q.timer);Q.playing=false;$('#qPlay').textContent='▶ 播放';
+  Q.bars=qGen();Q.initial=Q.bars.slice();Q.events=qEvents(Q.bars);Q.idx=0;Q.userPaused=false;
+  qBox.innerHTML='';
+  Q.bars.forEach((v,i)=>{
+    const b=document.createElement('div');b.className='qbar';b.dataset.v=v;
+    b.style.left=(i*100/N)+'%';b.style.width=(100/N-1.2)+'%';b.style.height=v+'%';
+    qBox.appendChild(b);
+  });
+  Q.cur=Q.bars.slice();
+  qCmp.textContent=qSwp.textContent='0';
+  qStepEl.textContent='0 / '+Q.events.length;
+  qDesc.textContent='洗好的牌已就位 —— 点击播放，看分治如何一步步收敛。';
+}
+function qPaint(e,cmpN,swpN){
+  // 重绘当前状态：cur 数组 + 事件高亮
+  Array.from(qBox.children).forEach(b=>{b.className='qbar'});
+  if(!e)return;
+  if(e.t==='cmp'){qBox.children[e.i].classList.add('cmp');qBox.children[e.j].classList.add('piv');}
+  else if(e.t==='pivot'){qBox.children[e.i].classList.add('piv');}
+  else if(e.t==='swap'){qBox.children[e.i].classList.add('swapA');qBox.children[e.j].classList.add('swapA');}
+  else if(e.t==='lock'){qBox.children[e.i].classList.add('sorted');}
+  else if(e.t==='done'){Array.from(qBox.children).forEach(b=>b.classList.add('sorted'));}
+}
+function qApply(e){
+  if(e.t==='swap'){[Q.cur[e.i],Q.cur[e.j]]=[Q.cur[e.j],Q.cur[e.i]];}
+}
+function qLayout(instant){
+  if(instant)qBox.classList.add('noanim');
+  Q.cur.forEach((v,i)=>{
+    const b=Array.from(qBox.children).find(x=>+x.dataset.v===v);
+    if(b)b.style.left=(i*100/N)+'%';
+  });
+  if(instant){void qBox.offsetWidth;qBox.classList.remove('noanim');}
+}
+function qStep(back){
+  if(back){
+    if(Q.idx<=0)return;
+    Q.idx--; 
+    // 重放到 idx（确定性回放，保证「上一步」精确）
+    Q.cur=Q.initial.slice();let c=0,s=0,e=null;
+    for(let k=0;k<Q.idx;k++){const ev=Q.events[k];qApply(ev);if(ev.t==='cmp')c++;if(ev.t==='swap')s++;e=ev;}
+    qLayout(true);qPaint(e);qCmp.textContent=c;qSwp.textContent=s;
+    qStepEl.textContent=Q.idx+' / '+Q.events.length;
+    qDesc.textContent=e?e.d:'';
+    return;
+  }
+  if(Q.idx>=Q.events.length){qStop(true);return;}
+  const e=Q.events[Q.idx];
+  qApply(e);qLayout(false);qPaint(e);
+  const c=Q.events.slice(0,Q.idx+1).filter(x=>x.t==='cmp').length;
+  const s=Q.events.slice(0,Q.idx+1).filter(x=>x.t==='swap').length;
+  qCmp.textContent=c;qSwp.textContent=s;
+  Q.idx++;qStepEl.textContent=Q.idx+' / '+Q.events.length;
+  qDesc.textContent=e.d;
+  if(Q.idx>=Q.events.length)qStop(true);
+}
+function qPlay(){
+  if(Q.idx>=Q.events.length)qBuild();
+  Q.playing=true;Q.userPaused=false;$('#qPlay').textContent='⏸ 暂停';
+  clearInterval(Q.timer);
+  Q.timer=setInterval(()=>qStep(false),Math.max(120,900/Q.speed));
+}
+function qStop(finish){
+  clearInterval(Q.timer);Q.playing=false;
+  $('#qPlay').textContent=finish?'⟳ 再演一遍':'▶ 播放';
+}
+$('#qPlay').addEventListener('click',()=>{
+  if(Q.playing){Q.userPaused=true;qStop(false);}else qPlay();
+});
+$('#qNext').addEventListener('click',()=>{Q.userPaused=true;qStop(false);qStep(false);});
+$('#qPrev').addEventListener('click',()=>{Q.userPaused=true;qStop(false);qStep(true);});
+$('#qShuffle').addEventListener('click',()=>{Q.userPaused=false;qBuild();qPlay();});
+$$('.qspd').forEach(b=>b.addEventListener('click',()=>{
+  $$('.qspd').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  Q.speed=+b.dataset.s;
+  if(Q.playing)qPlay(); // 以新速度重建节拍
+}));
+$('#heroPlay').addEventListener('click',()=>{
+  document.getElementById('demoPaper').scrollIntoView({behavior:RM?'auto':'smooth',block:'center'});
+  if(!Q.playing)qPlay();
+});
+qBuild();
+// 进入视口自动开演一次
+if(!RM){
+  const once=new IntersectionObserver(es=>es.forEach(e=>{
+    if(e.isIntersecting){setTimeout(()=>{if(!Q.userPaused)qPlay();},500);once.disconnect();}
+  }),{threshold:.4});
+  once.observe(qBox);
+}
+
+/* ============================================================
+   卷三 · BFS 图遍历演示
+   ============================================================ */
+const STEPS=[
+ {l:2,q:['A'],seen:['A'],cur:'A',edges:[],d:'源点 A 入队，标记为已访问。队列是它唯一的行囊。'},
+ {l:5,q:['B','C'],seen:['A','B','C'],cur:'A',edges:['A-B','A-C'],d:'A 出队接受检阅：发现邻接 B、C 均未拜访，依次入队。'},
+ {l:5,q:['C','D','E'],seen:['A','B','C','D','E'],cur:'B',edges:['A-B','A-C','B-D','B-E'],d:'B 出队：发现 D、E，入队。先进先出，C 排在最前。'},
+ {l:5,q:['D','E','F','G'],seen:['A','B','C','D','E','F','G'],cur:'C',edges:['A-B','A-C','B-D','B-E','C-F','C-G'],d:'C 出队：发现 F、G。第一层已全部检阅完毕。'},
+ {l:5,q:['E','F','G'],seen:['A','B','C','D','E','F','G'],cur:'D',edges:['A-B','A-C','B-D','B-E','C-F','C-G'],d:'D 出队：邻接唯有 B，早已拜访 —— 无需入队。'},
+ {l:5,q:['F','G','H'],seen:['A','B','C','D','E','F','G','H'],cur:'E',edges:['A-B','A-C','B-D','B-E','C-F','C-G','E-H'],d:'E 出队：发现最后的未访节点 H，入队。'},
+ {l:5,q:['G','H'],seen:['A','B','C','D','E','F','G','H'],cur:'F',edges:['A-B','A-C','B-D','B-E','C-F','C-G','E-H'],d:'F 出队：邻接 C 已访问，队列继续收缩。'},
+ {l:5,q:['H'],seen:['A','B','C','D','E','F','G','H'],cur:'G',edges:['A-B','A-C','B-D','B-E','C-F','C-G','E-H'],d:'G 出队：同样无功而返。只剩 H 在等待。'},
+ {l:5,q:[],seen:['A','B','C','D','E','F','G','H'],cur:'H',edges:['A-B','A-C','B-D','B-E','C-F','C-G','E-H'],d:'H 出队：邻接 E 已访问。队列至此清空。'},
+ {l:4,q:[],seen:['A','B','C','D','E','F','G','H'],cur:null,edges:['A-B','A-C','B-D','B-E','C-F','C-G','E-H'],d:'while 条件不成立，遍历结束 —— 八个顶点无一漏网，层层推进的访问序即最短无权路径。'}
+];
+const G={idx:0,timer:null,playing:false};
+const gDesc=$('#gDesc'),gStep=$('#gStep'),gQueue=$('#gQueue'),gSeen=$('#gSeen');
+function gRender(){
+  const s=STEPS[G.idx];
+  $$('.gnode').forEach(n=>{
+    const id=n.dataset.n;
+    n.classList.remove('cur','seen','frontier');
+    if(s.cur===id)n.classList.add('cur');
+    else if(s.seen.includes(id)&&!s.q.includes(id))n.classList.add('seen');
+    else if(s.q.includes(id))n.classList.add('frontier');
+    else if(s.seen.includes(id))n.classList.add('seen');
+  });
+  $$('.gedge').forEach(e=>e.classList.toggle('lit',s.edges.includes(e.dataset.e)));
+  $$('#gCode .cline').forEach(c=>{
+    const on=+c.dataset.l===s.l;
+    c.classList.toggle('on',on);
+    if(s.seen.length&&+c.dataset.l<s.l)c.classList.add('done');else if(!on)c.classList.remove('done');
+  });
+  gQueue.innerHTML='<span class="qlabel">QUEUE →</span>'+
+    (s.q.length?s.q.map((x,i)=>'<span class="qchip'+(i===0?' head':'')+'">'+x+'</span>').join(''):'<span class="qempty">∅ 空</span>');
+  gDesc.textContent=s.d;
+  gStep.textContent='第 '+(G.idx+1)+' 步 · 共 '+STEPS.length+' 步';
+  gSeen.textContent='已访问 '+s.seen.length+' / 8';
+}
+function gStop(){$('#gPlay').textContent='▶ 播放';clearInterval(G.timer);G.playing=false;}
+function gPlayFn(){
+  if(G.idx>=STEPS.length-1)G.idx=0;
+  G.playing=true;$('#gPlay').textContent='⏸ 暂停';
+  clearInterval(G.timer);
+  G.timer=setInterval(()=>{
+    if(G.idx<STEPS.length-1){G.idx++;gRender();}
+    else gStop();
+  },1300);
+}
+$('#gPlay').addEventListener('click',()=>G.playing?gStop():gPlayFn());
+$('#gNext').addEventListener('click',()=>{gStop();if(G.idx<STEPS.length-1){G.idx++;gRender();}});
+$('#gReplay').addEventListener('click',()=>{gStop();G.idx=0;gRender();gPlayFn();});
+gRender();
+
+/* ============================================================
+   卷四 · 终端打字机
+   ============================================================ */
+const SCRIPTS={
+ python:[['cmd','$ algoviz run --lang python bubble_sort.py'],
+  ['in','stdin> 5 3 8 1'],
+  ['out','stdout ← 数组已接收，编译 Runtime Trace v1'],
+  ['out','stdout ← trace#01 init · array [5, 3, 8, 1]'],
+  ['out','stdout ← trace#07 step · 比较 5 ↔ 3，交换'],
+  ['res','result → {"sorted": [1, 3, 5, 8], "steps": 14}']],
+ javascript:[['cmd','$ algoviz run --lang node main.js'],
+  ['in','stdin> [8, 4, 2, 9]'],
+  ['out','stdout ← emitTrace: init · array [8, 4, 2, 9]'],
+  ['out','stdout ← emitTrace: step · pivot=9 归位'],
+  ['res','result → {"sorted": [2, 4, 8, 9], "steps": 11}']],
+ cpp:[['cmd','$ algoviz run --lang cpp dijkstra.cpp'],
+  ['out','stdout ← yowasp-clang 21 → main.wasi 编译完成'],
+  ['in','std::cin >> 0 3  （起点 0，共 3 条边）'],
+  ['out','std::cout << dist[3] = 7'],
+  ['res','emit_result → {"dist": [0, 2, 5, 7]}']],
+ java:[['cmd','$ algoviz run --lang java Main.java'],
+  ['out','stdout ← javac → Main.class · DoppioJVM 启动'],
+  ['in','Scanner(System.in) >> 6 1 4'],
+  ['out','System.out << LIS length = 2'],
+  ['res','AlgoViz.emitResult → {"lis": [1, 4], "length": 2}']]
+};
+const termBody=$('#termBody');
+let termToken=0;
+async function typeLine(cls,text,tk){
+  const div=document.createElement('div');div.className='tline '+cls;
+  const cur=document.createElement('span');cur.className='cursor';
+  termBody.appendChild(div);div.appendChild(cur);
+  for(let i=0;i<=text.length;i++){
+    if(tk!==termToken)return;
+    div.textContent=text.slice(0,i);div.appendChild(cur);
+    await new Promise(r=>setTimeout(r,RM?0:16+Math.random()*22));
+  }
+  cur.remove();
+}
+async function runTerm(lang){
+  const tk=++termToken;
+  termBody.innerHTML='';
+  for(const [cls,text] of SCRIPTS[lang]){
+    if(tk!==termToken)return;
+    await typeLine(cls,text,tk);
+    await new Promise(r=>setTimeout(r,RM?0:380));
+  }
+  await new Promise(r=>setTimeout(r,RM?0:5200));
+  if(tk===termToken)runTerm(lang);
+}
+$$('.ttab').forEach(t=>t.addEventListener('click',()=>{
+  $$('.ttab').forEach(x=>x.classList.remove('on'));t.classList.add('on');
+  runTerm(t.dataset.lang);
+}));
+runTerm('python');
+
+/* ============================================================
+   数字带 · 计数
+   ============================================================ */
+const cio=new IntersectionObserver(es=>es.forEach(e=>{
+  if(!e.isIntersecting)return;cio.unobserve(e.target);
+  const el=e.target,n=+el.dataset.n;
+  if(RM||n===0){el.textContent=n;return;}
+  const t0=performance.now(),dur=1200;
+  (function tick(t){
+    const p=Math.min(1,(t-t0)/dur),v=Math.round(n*(1-Math.pow(1-p,3)));
+    el.textContent=v;
+    if(p<1)requestAnimationFrame(tick);
+  })(t0);
+}),{threshold:.5});
+$$('.cnum').forEach(el=>cio.observe(el));
+
+/* ============================================================
+   卷二 · 索引筛选
+   ============================================================ */
+$$('.ftab').forEach(t=>t.addEventListener('click',()=>{
+  $$('.ftab').forEach(x=>x.classList.remove('on'));t.classList.add('on');
+  const f=t.dataset.f;
+  $$('.acard').forEach(c=>{
+    const show=f==='all'||c.dataset.cat===f;
+    c.classList.toggle('hide',!show);
+    if(show){c.style.animation='none';void c.offsetWidth;c.style.animation='chipin .4s var(--ease)';}
+  });
+}));
+})();
+</script>
+</body>
+</html>

@@ -90,9 +90,9 @@ flowchart LR
     B -->|"ready + Run"| E["Commit 会话"]
     E --> F{"代码来源"}
     F -->|"可信内置模板"| G["generatePreset"]
-    F -->|"进程式 JS/Python/C++ main"| P["Language Worker + Runtime Trace"]
+    F -->|"进程式 JS/Python/C++/Java main"| P["Language Worker + Runtime Trace"]
     F -->|"修改后的 solve JS/Python"| H["用户代码 Worker 真值"]
-    F -->|"Java / 非 main C++"| I["static-only 诊断"]
+    F -->|"非 main C++/Java"| I["static-only 诊断"]
     P --> M
     H -->|"无 API"| J["只显示 stdout，旧动画保持冻结"]
     H -->|"有 API"| K["compileArtifact → GeneratorArtifact"]
@@ -105,7 +105,7 @@ flowchart LR
 公共边界：
 
 - `src/workbench/inputCompiler.ts` 统一输入结构扫描、类型/领域校验和 `E_INPUT_*` 源位置诊断；未闭合输入是 `incomplete`，不是错误也不会触发默认值回退。
-- `src/workbench/runtimeContract.ts` 统一语言能力（JS/Python/C++ 为 Worker，Java 为 static-only）、Map/Set/Infinity/BigInt 等 JSON-safe 输出和终端格式化。
+- `src/workbench/runtimeContract.ts` 统一 Map/Set/Infinity/BigInt 等 JSON-safe 输出和终端格式化；四种语言的 `main` 程序均进入 Worker，会话入口检测由各语言沙箱模块负责。
 - `src/components/Editor/WorkbenchTerminal.tsx` 只负责 IDE 式 stdin/arg/diagnostics/runtime/stdout 展示，不解析算法。
 - `src/data/codeTemplates.ts` 的全部内置 Python/JavaScript 模板使用 `solve(inputData)` ABI；`src/sandbox/runUserCode.ts` 与 `runUserPython.ts` 优先调用 `solve`，并在 Worker 不可用时失败关闭。
 - `AnimationScript.result` 是递归 JSON 值；二维矩阵、路径、棋盘、子集和编码表保持结构，不再压成说明字符串。
@@ -149,15 +149,17 @@ running → finished | error | cancelled
 
 - `stdout`/`stderr` 只承载人类可读文本，`result` 承载结构化最终值，`trace-event` 承载动画事实，`diagnostics` 承载编译错误；禁止从 stdout 文本反推动画。
 - 到达输入边界时暂停动画并保留当前 Scene；等待用户输入不计入 CPU 执行超时，提交后同一 Worker 继续，Reset、代码切换或算法切换会终止会话。
-- JavaScript `main()`、Python 进程式代码与 C++ `int main()` 共用会话协议；旧 `solve(inputData)` ABI 继续服务内置模板和已有生成器。
+- JavaScript `main()`、Python 进程式代码、C++ `int main()` 与 Java `public static void main(String[] args)` 共用会话协议；旧 `solve(inputData)` ABI 继续服务内置模板和已有生成器。
 - C++ 使用随项目分发的 `@yowasp/clang` 21 与 `@runno/wasi`，在模块 Worker 中完成真实 C++20 → WASI 编译和执行。约 102 MB 工具链只在首次运行 C++ 时懒加载，同一 Worker 复用已加载资源；取消、超时或崩溃会终止 Worker，不回退主线程。
 - C++ `std::cin` 接入 SharedArrayBuffer stdin；`std::cout/std::cerr` 保持文本通道，`emit_result(JSON字符串)` 与 `emit_trace(JSON字符串)` 通过 WASM 宿主导入发送结构化数据，禁止解析 stdout。Clang stderr 原样进入终端，真实编译器是 `main()` 程序的语义门禁。
-- Java 仍不使用 Docker、宿主机编译器、远程执行或有限正则转译器；完成随项目本地分发的 javac + 浏览器 JVM 选型和验收前继续明确报告 static-only。
+- Java 使用 `@seth0x41/doppio@1.0.0` 分发的 DoppioJVM、OpenJDK 8 `tools.jar` 和 Java 类库，在模块 Worker 内先调用真实 `com.sun.tools.javac.Main` 生成 `.class`，再创建新的 JVM 实例执行入口类。约 47 MB 资源首次运行时本地懒加载到 BrowserFS，同一 Worker 复用文件系统；Doppio JVM 实例按上游约束不跨编译/执行复用。
+- Java `Scanner(System.in)` 在 BrowserFS 可读事件处暂停并从原 Java 调用栈继续；`System.out/System.err` 保持文本通道。同包辅助类 `AlgoViz` 的 `emitResult(JSON字符串)` / `emitTrace(JSON字符串)` 通过 Doppio native module 发送结构化通道，不解析 stdout。javac 诊断原样进入 stderr；取消、超时或崩溃会终止 Worker，不回退主线程。
+- Java 兼容上限是 Java 8。该路径不使用 Docker、宿主机 javac、远程执行服务或有限正则转译器。
 - 生成器 Artifact 与输入契约继续持久化；同一份程序和生成器对新输入在浏览器本地重跑，不再次请求 LLM。
 
 #### Runtime Trace v1
 
-JavaScript `emitTrace(value)`、Python `emit_trace(value)` 与 C++ `emit_trace(JSON字符串)` 使用同一版本化契约。一次会话先发送且只能发送一次 `init`，后续每个 `step` 都是独立的教学步骤：
+JavaScript `emitTrace(value)`、Python `emit_trace(value)`、C++ `emit_trace(JSON字符串)` 与 Java `AlgoViz.emitTrace(JSON字符串)` 使用同一版本化契约。一次会话先发送且只能发送一次 `init`，后续每个 `step` 都是独立的教学步骤：
 
 ```javascript
 emitTrace({
@@ -190,7 +192,7 @@ emitTrace({
 1. 公共协议与 JavaScript async `readLine()` 纵切。
 2. 配置 COOP/COEP，以 SharedArrayBuffer + Atomics 建立共享 stdin 字节管道，并将 Python `input()` 迁入同一会话协议。
 3. 接入本地 Clang/LLVM WASM + WASI。
-4. 接入本地 javac + 浏览器 JVM。
+4. 接入本地 OpenJDK 8 javac + DoppioJVM（已完成）。
 5. 75 个模板从 `solve(inputData)` 迁移到可产生 trace 的进程式 ABI。
 6. 全部语言完成后，旧 `solve` ABI 仅保留兼容用途。
 
@@ -443,9 +445,11 @@ src/
 │  ├─ executeGenerator.ts
 │  ├─ generatorWorker.ts
 │  ├─ interactiveCppWorker.ts
+│  ├─ interactiveJavaWorker.ts
 │  ├─ interactiveJavaScriptWorker.ts
 │  ├─ interactivePythonWorker.ts
 │  ├─ runInteractiveCpp.ts
+│  ├─ runInteractiveJava.ts
 │  ├─ runInteractiveJavaScript.ts
 │  ├─ runInteractivePython.ts
 │  ├─ runInteractiveSession.ts
@@ -455,7 +459,7 @@ src/
 │  ├─ executionProtocol.ts     # 进程状态机与 stdin/stdout/trace 协议
 │  ├─ inputCompiler.ts         # 输入状态机与 E_INPUT_* 诊断
 │  ├─ runtimeTraceCompiler.ts  # Runtime Trace v1 校验、事件编译与 Scene 推进
-│  └─ runtimeContract.ts       # 语言能力、JSON-safe 输出与 stdout 格式
+│  └─ runtimeContract.ts       # JSON-safe 输出与 stdout 格式
 ├─ presets/                    # 可信本地 Generator
 ├─ scene/
 │  ├─ graphics/
@@ -495,6 +499,9 @@ src/
 | [YoWASP Clang](https://github.com/YoWASP/clang) | 真实 LLVM/Clang/LLD 21 与 C++ sysroot 均可作为本地 WebAssembly 资源分发；Apache-2.0/ISC/LLVM exception | 工具链资源约 102 MB，仓库已归档，不适合首屏或频繁创建 Worker | 已懒加载到独立缓存 Worker；锁定 `21.1.4-3`，以真实编译/执行 E2E 和许可证 notice 作为升级门禁 |
 | [Runno WASI](https://github.com/taybenlor/runno) | 浏览器 WASI preview1、stdin/stdout 回调与空文件系统沙箱；MIT | 完整 `@runno/runtime` 默认从 `runno.dev` 拉取旧 Clang 8 工具链，不符合本地分发要求 | 只采用小型 `@runno/wasi@0.10.0`，不采用 Runtime、编辑器或远程语言资源 |
 | `@omni-wasm/cpp` | API 简单，包说明声称浏览器 C++23 | 实际 README 明确使用 JSCPP 有限解释器，不支持完整 STL、分配与完整语言语义 | 拒绝；不把有限转译/解释器标成真实 C++ 执行 |
+| [DoppioJVM](https://github.com/plasma-umass/doppio) + BrowserFS | MIT 开源 Java 8 JVM，可运行 OpenJDK `javac`，标准流和 native module 可接入统一 Worker 协议 | 上游较旧；JVM 对象退出后不可复用，旧 BrowserFS 的模块 Worker TTY 需要小型 Buffer/Web Crypto 兼容层 | 采用 `@seth0x41/doppio@1.0.0` 与 `browserfs@1.4.3`；本地打包约 47 MB Java Home，缓存 Worker/文件系统但每次创建独立 javac/JVM 实例 |
+| [CheerpJ](https://cheerpj.com/) | 完整 OpenJDK 浏览器运行时、兼容性和性能较好 | 默认由厂商 CDN 加载，自托管与商业授权边界不符合当前“随项目本地分发”的开源门禁 | 拒绝当前接入；授权和离线分发条件发生变化时再评估 |
+| [clientbox](https://github.com/Yaman-cyber/clientbox) / BJVM | 提供简洁的浏览器多语言 API 或轻量 JVM 原型 | clientbox 的 Java 使用 CheerpJ CDN 并带转译回退；BJVM 不包含可用 javac 和完整标准库 | 拒绝；不以转译回退或仅 JVM 原型冒充 javac + JVM |
 
 采用原则：
 
@@ -587,7 +594,7 @@ Hook 五次换输入且 LLM mock 为零、历史持久化和旧格式迁移。
 - [x] IDE 式终端统一 stdin、操作参数、编译诊断、运行状态和 stdout。
 - [x] 输入编译器统一未完成、语法、类型与领域错误；覆盖图引用/负权、数独冲突、网格端点、窗口范围和结构专用约束。
 - [x] `AnimationResult` 扩展为递归 JSON 值，矩阵、路径、棋盘、子集、SCC 和编码表保留结构。
-- [x] 全部内置 Python/JavaScript 模板提供 `solve(inputData)`；C++/Java 明确为 static-only。
+- [x] 全部内置 Python/JavaScript 模板提供 `solve(inputData)`；C++/Java 函数式模板保留兼容层，带 main 的程序进入真实语言 Worker。
 - [x] 全部 75 个 JavaScript 模板真实执行结果与 preset 结果一致；全部 75 个 preset 通过无豁免输入响应门禁。
 - [x] 水塘抽样使用显式 seed 的确定性 RNG，动画和代码可复现。
 
@@ -603,14 +610,15 @@ Hook 五次换输入且 LLM mock 为零、历史持久化和旧格式迁移。
 - [x] IDE 终端仅在程序请求输入时激活单行 `stdin>`，并将 stdout、stderr、result 分开显示。
 - [x] Runtime Trace v1 校验事件并通过 Scene Engine 增量编译；合法步骤立即推进到最新场景，stdin 暂停保留 Scene，非法步骤只写入 `E_TRACE_*` 诊断。
 - [x] C++ `main()` 使用本地 YoWASP Clang 21 + Runno WASI 在缓存 Worker 中真实编译运行；覆盖严格 stdin、stdout/stderr、result、trace、Clang 错误、超时、资源打包与许可 notice。
-- [ ] 完成 Java javac/JVM 的本地资源、Worker 运行、缓存、许可和端到端验收。
+- [x] Java 使用本地 OpenJDK 8 javac + DoppioJVM；覆盖严格 stdin、独立 result/trace、缓存 Worker、资源打包、许可 notice 和真实 Chromium E2E。
 - [ ] 逐步迁移 75 个模板；迁移完成前保留 `solve(inputData)` 兼容层。
 
 实现位置：`src/workbench/executionProtocol.ts`、`src/workbench/runtimeTraceCompiler.ts`、
 `src/sandbox/runInteractiveSession.ts`、`src/sandbox/interactiveJavaScriptWorker.ts`、
 `src/sandbox/runInteractiveJavaScript.ts`、`src/sandbox/interactivePythonWorker.ts`、
 `src/sandbox/runInteractivePython.ts`、`src/sandbox/interactiveCppWorker.ts`、
-`src/sandbox/runInteractiveCpp.ts`、`src/sandbox/sharedStdin.ts`、
+`src/sandbox/runInteractiveCpp.ts`、`src/sandbox/interactiveJavaWorker.ts`、
+`src/sandbox/runInteractiveJava.ts`、`src/sandbox/javaEntryPoint.ts`、`src/sandbox/sharedStdin.ts`、
 `vite.config.ts`、`server/proxy.cjs`、
 `src/components/Editor/WorkbenchTerminal.tsx`、`src/hooks/useAnimationEngine.ts`、
 `src/pages/Visualizer/index.tsx`。

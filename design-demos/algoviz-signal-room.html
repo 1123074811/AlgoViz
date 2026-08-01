@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALGOVIZ ▮ 信号室 — Algorithm Visualization Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Sans+SC:wght@700;900&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   ALGOVIZ · SIGNAL ROOM — 信号室设计系统
+   仪器控制台美学：磷光绿 / 琥珀 / 警示红 · 断裂网格 · 取景器角框
+   ============================================================ */
+:root{
+  --bg:#0A0C0E;
+  --panel:#0E1216;
+  --panel-2:#12181D;
+  --edge:#222B2A;
+  --edge-hi:#3A4A42;
+  --phos:#3DF58B;
+  --phos-dim:#1E6B44;
+  --amber:#FFB224;
+  --red:#FF5340;
+  --paper:#E9F2EA;
+  --dim:#63756A;
+  --faint:#38443D;
+  --gridline:rgba(120,170,135,.055);
+  --mono:'IBM Plex Mono','JetBrains Mono',Consolas,monospace;
+  --disp:'Anton','Noto Sans SC','Microsoft YaHei',sans-serif;
+  --cn:'Noto Sans SC','Microsoft YaHei',sans-serif;
+  --rail:58px;
+  --topbar:56px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--paper);
+  font-family:var(--mono);
+  font-size:14px;
+  line-height:1.6;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+/* 工程网格底纹 + 扫描线 */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(var(--gridline) 1px,transparent 1px),
+    linear-gradient(90deg,var(--gridline) 1px,transparent 1px);
+  background-size:56px 56px;
+}
+body::after{
+  content:'';position:fixed;inset:0;z-index:60;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px);
+}
+::selection{background:var(--phos);color:#000;}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--edge-hi);border:2px solid var(--bg);}
+::-webkit-scrollbar-thumb:hover{background:var(--phos);}
+
+/* ---------- 通用元件 ---------- */
+.mono-label{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);}
+.led{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--phos);box-shadow:0 0 6px var(--phos);animation:blink 2.4s steps(2,start) infinite;}
+.led.a{background:var(--amber);box-shadow:0 0 6px var(--amber);animation-delay:.7s;}
+.led.r{background:var(--red);box-shadow:0 0 6px var(--red);animation-delay:1.3s;}
+@keyframes blink{50%{opacity:.25;}}
+.barcode{height:26px;background:repeating-linear-gradient(90deg,var(--paper) 0 2px,transparent 2px 5px,var(--paper) 5px 6px,transparent 6px 11px,var(--paper) 11px 14px,transparent 14px 17px);opacity:.8;}
+.tbtn{
+  font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  background:transparent;color:var(--paper);border:1px solid var(--edge-hi);
+  padding:10px 18px;cursor:pointer;position:relative;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%);
+  transition:background .15s,color .15s,border-color .15s,transform .15s;
+}
+.tbtn:hover{background:var(--phos);color:#000;border-color:var(--phos);}
+.tbtn:active{transform:translate(1px,1px);}
+.tbtn.on{background:var(--phos);color:#000;border-color:var(--phos);}
+.tbtn.warn:hover{background:var(--amber);border-color:var(--amber);}
+.xh{position:relative;}
+.panel{background:var(--panel);border:1px solid var(--edge);position:relative;}
+.cnr{position:absolute;width:11px;height:11px;pointer-events:none;z-index:5;}
+.cnr.tl{top:-1px;left:-1px;border-top:2px solid var(--phos);border-left:2px solid var(--phos);}
+.cnr.tr{top:-1px;right:-1px;border-top:2px solid var(--phos);border-right:2px solid var(--phos);}
+.cnr.bl{bottom:-1px;left:-1px;border-bottom:2px solid var(--phos);border-left:2px solid var(--phos);}
+.cnr.br{bottom:-1px;right:-1px;border-bottom:2px solid var(--phos);border-right:2px solid var(--phos);}
+[data-reveal]{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1);}
+[data-reveal].in{opacity:1;transform:none;}
+
+/* ---------- 左侧固定轨道 ---------- */
+.rail{
+  position:fixed;left:0;top:0;bottom:0;width:var(--rail);z-index:50;
+  background:var(--bg);border-right:1px solid var(--edge);
+  display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:18px;
+}
+.rail-mark{width:30px;height:30px;border:2px solid var(--phos);display:grid;place-items:center;font-family:var(--disp);font-size:14px;color:var(--phos);cursor:pointer;}
+.rail-nav{display:flex;flex-direction:column;gap:26px;flex:1;justify-content:center;}
+.rail-nav a{
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  font-size:10px;letter-spacing:.3em;color:var(--dim);text-decoration:none;
+  transition:color .2s;position:relative;padding:4px 0;
+}
+.rail-nav a:hover,.rail-nav a.active{color:var(--phos);}
+.rail-nav a.active::before{content:'▸';position:absolute;left:-2px;top:-14px;color:var(--phos);}
+.rail-prog{width:2px;height:70px;background:var(--edge);position:relative;}
+.rail-prog i{position:absolute;left:0;top:0;width:100%;height:0%;background:var(--phos);}
+.rail-leds{display:flex;flex-direction:column;gap:8px;}
+
+/* ---------- 顶栏 ---------- */
+.topbar{
+  position:fixed;top:0;left:var(--rail);right:0;height:var(--topbar);z-index:49;
+  background:rgba(10,12,14,.92);backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--edge);
+  display:flex;align-items:stretch;
+}
+.logo-block{
+  background:var(--paper);color:#000;display:flex;align-items:center;gap:10px;
+  padding:0 18px;font-family:var(--disp);font-size:20px;letter-spacing:.04em;
+  cursor:pointer;user-select:none;
+}
+.logo-block b{color:#000;}
+.logo-block .cursorblk{width:10px;height:20px;background:#000;animation:blink 1.1s steps(2,start) infinite;}
+.topnav{display:flex;align-items:center;gap:2px;padding:0 20px;border-right:1px solid var(--edge);}
+.topnav a{color:var(--dim);text-decoration:none;font-size:11px;letter-spacing:.14em;padding:6px 12px;transition:color .2s,background .2s;}
+.topnav a:hover{color:#000;background:var(--phos);}
+.top-ticker{flex:1;overflow:hidden;display:flex;align-items:center;}
+.top-ticker-inner{display:flex;gap:44px;white-space:nowrap;animation:tick 40s linear infinite;font-size:10px;letter-spacing:.2em;color:var(--dim);}
+.top-ticker-inner b{color:var(--phos);font-weight:500;}
+@keyframes tick{to{transform:translateX(-50%);}}
+.top-status{display:flex;align-items:center;gap:16px;padding:0 20px;border-left:1px solid var(--edge);font-size:11px;color:var(--dim);letter-spacing:.1em;}
+.top-status .led{margin-right:-10px;}
+#sysclock{color:var(--phos);font-weight:600;}
+
+/* ---------- 页面主体 ---------- */
+main{position:relative;z-index:1;margin-left:var(--rail);padding-top:var(--topbar);}
+section{position:relative;}
+
+/* ---------- HERO ---------- */
+.hero{
+  min-height:100vh;display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);
+  border-bottom:1px solid var(--edge);position:relative;
+}
+.hero-left{padding:9vh 4vw 60px;display:flex;flex-direction:column;justify-content:space-between;position:relative;}
+.hero-eyebrow{display:flex;align-items:center;gap:14px;margin-bottom:5vh;}
+.hero-eyebrow .dash{width:52px;height:1px;background:var(--phos);}
+.hero-title{font-family:var(--disp);font-weight:900;line-height:.95;letter-spacing:-.01em;}
+.hero-title .l1{display:block;font-size:clamp(58px,8.6vw,138px);color:var(--paper);font-family:var(--cn);font-weight:900;}
+.hero-title .l2{display:block;font-size:clamp(58px,8.6vw,138px);color:transparent;-webkit-text-stroke:1.5px var(--phos);font-family:var(--cn);font-weight:900;}
+.hero-title .l3{display:block;font-size:clamp(20px,2.2vw,34px);color:var(--dim);margin-top:26px;letter-spacing:.34em;font-family:var(--mono);font-weight:400;}
+.hero-title .l3 b{color:var(--amber);font-weight:500;}
+.hero-meta{display:flex;gap:0;border:1px solid var(--edge);width:fit-content;margin-top:6vh;}
+.hero-meta div{padding:14px 22px;border-right:1px solid var(--edge);}
+.hero-meta div:last-child{border-right:none;}
+.hero-meta .num{font-family:var(--disp);font-size:30px;color:var(--phos);line-height:1;}
+.hero-meta .num.a{color:var(--amber);}
+.hero-meta .lab{font-size:9px;letter-spacing:.22em;color:var(--dim);margin-top:6px;text-transform:uppercase;}
+.hero-cta{display:flex;gap:14px;margin-top:5vh;align-items:center;}
+.hero-cta .note{font-size:10px;color:var(--faint);letter-spacing:.15em;}
+.hero-right{
+  border-left:1px solid var(--edge);display:flex;flex-direction:column;
+  background:var(--panel);position:relative;min-height:60vh;
+}
+.hero-viz-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--edge);}
+.hero-viz-wrap{flex:1;position:relative;cursor:crosshair;}
+#heroviz{position:absolute;inset:0;width:100%;height:100%;display:block;}
+.hero-viz-foot{display:flex;justify-content:space-between;padding:10px 18px;border-top:1px solid var(--edge);font-size:10px;color:var(--dim);letter-spacing:.15em;}
+.crosshair-x,.crosshair-y{position:absolute;background:rgba(61,245,139,.28);pointer-events:none;display:none;z-index:4;}
+.crosshair-x{left:0;right:0;height:1px;}
+.crosshair-y{top:0;bottom:0;width:1px;}
+.crosshair-tag{
+  position:absolute;pointer-events:none;display:none;z-index:4;
+  font-size:9px;color:var(--phos);background:#000;border:1px solid var(--edge-hi);
+  padding:2px 6px;letter-spacing:.1em;white-space:nowrap;
+}
+/* 断裂网格：标题压画布 */
+.hero-right{transform:translateY(0);}
+.hero-float{
+  position:absolute;z-index:6;right:26px;top:22px;text-align:right;
+  font-size:10px;color:var(--dim);letter-spacing:.18em;line-height:2;
+}
+.hero-float b{color:var(--phos);font-weight:500;}
+.hero-marquee{
+  position:absolute;left:0;right:0;bottom:0;border-top:1px solid var(--edge);
+  background:var(--bg);overflow:hidden;height:44px;display:flex;align-items:center;z-index:7;
+}
+.hero-marquee-inner{display:flex;gap:60px;white-space:nowrap;animation:tick 26s linear infinite;font-family:var(--disp);font-size:17px;letter-spacing:.12em;color:var(--faint);}
+.hero-marquee-inner b{color:var(--phos);font-weight:400;}
+.hero-marquee-inner i{font-style:normal;color:var(--amber);}
+
+/* ---------- 区块公共 ---------- */
+.sec-head{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
+  padding:76px 4vw 34px;flex-wrap:wrap;
+}
+.sec-index{font-size:11px;letter-spacing:.3em;color:var(--phos);margin-bottom:12px;}
+.sec-title{font-family:var(--cn);font-weight:900;font-size:clamp(38px,5.4vw,84px);line-height:1;letter-spacing:-.01em;}
+.sec-title .en{display:block;font-family:var(--disp);font-size:.42em;color:transparent;-webkit-text-stroke:1px var(--dim);letter-spacing:.06em;margin-top:10px;}
+.sec-side{font-size:11px;color:var(--dim);max-width:300px;letter-spacing:.05em;line-height:1.9;border-left:2px solid var(--amber);padding-left:16px;}
+
+/* ---------- 算法库 ---------- */
+.catalog{display:grid;grid-template-columns:230px minmax(0,1fr);gap:0;border-top:1px solid var(--edge);}
+.cat-rail{border-right:1px solid var(--edge);padding:26px 0;position:sticky;top:var(--topbar);align-self:start;background:var(--bg);max-height:calc(100vh - var(--topbar));overflow:auto;}
+.cat-rail h4{font-size:10px;letter-spacing:.3em;color:var(--dim);padding:0 22px 14px;text-transform:uppercase;}
+.cat-btn{
+  display:flex;justify-content:space-between;align-items:baseline;width:100%;
+  background:none;border:none;border-left:2px solid transparent;color:var(--dim);
+  font-family:var(--mono);font-size:12px;letter-spacing:.06em;padding:11px 22px;cursor:pointer;
+  transition:all .15s;text-align:left;
+}
+.cat-btn small{font-size:10px;color:var(--faint);}
+.cat-btn:hover{color:var(--paper);background:var(--panel-2);}
+.cat-btn.on{color:var(--phos);border-left-color:var(--phos);background:var(--panel-2);}
+.cat-btn.on small{color:var(--amber);}
+.cat-grid{
+  display:grid;grid-template-columns:repeat(12,1fr);gap:1px;background:var(--edge);
+  border-bottom:1px solid var(--edge);
+}
+.acard{
+  grid-column:span 4;background:var(--panel);padding:18px 20px 16px;min-height:148px;
+  display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;
+  position:relative;overflow:hidden;transition:background .18s;
+}
+.acard:nth-child(7n+3){grid-column:span 8;}
+.acard:nth-child(11n+5){grid-column:span 6;}
+.acard:nth-child(13n+9){grid-column:span 6;}
+.acard .idx{font-size:9px;letter-spacing:.22em;color:var(--faint);display:flex;justify-content:space-between;}
+.acard .idx .tagc{color:var(--dim);}
+.acard .nm{font-family:var(--cn);font-weight:900;font-size:19px;margin-top:8px;color:var(--paper);line-height:1.25;}
+.acard .en{font-size:10px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-top:3px;}
+.acard .ft{display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px;}
+.acard .cx{font-size:10px;color:var(--amber);letter-spacing:.08em;}
+.acard .bars{display:flex;align-items:flex-end;gap:2px;height:22px;}
+.acard .bars i{width:4px;background:var(--edge-hi);display:block;transition:background .18s;}
+.acard:hover{background:var(--phos);}
+.acard:hover .nm,.acard:hover .en,.acard:hover .cx{color:#000;}
+.acard:hover .idx,.acard:hover .idx .tagc{color:#0A3A1E;}
+.acard:hover .bars i{background:#000;}
+.acard.sel{outline:2px solid var(--amber);outline-offset:-2px;}
+.acard.sel .idx::after{content:'● LOADED';color:var(--amber);letter-spacing:.15em;}
+.acard.hide{display:none;}
+
+/* ---------- 可视化工作区 ---------- */
+.workbench{border-top:1px solid var(--edge);}
+.wb-toolbar{
+  display:flex;align-items:stretch;border-bottom:1px solid var(--edge);flex-wrap:wrap;
+  background:var(--panel);
+}
+.wb-tabs{display:flex;}
+.wb-tab{
+  background:none;border:none;border-right:1px solid var(--edge);color:var(--dim);
+  font-family:var(--mono);font-size:11px;letter-spacing:.12em;padding:14px 20px;cursor:pointer;
+  transition:all .15s;text-transform:uppercase;
+}
+.wb-tab:hover{color:var(--paper);background:var(--panel-2);}
+.wb-tab.on{background:var(--phos);color:#000;font-weight:600;}
+.wb-ctrl{display:flex;align-items:center;gap:10px;padding:0 18px;border-right:1px solid var(--edge);}
+.wb-ctrl button{
+  width:36px;height:36px;background:transparent;border:1px solid var(--edge-hi);color:var(--paper);
+  font-family:var(--mono);font-size:14px;cursor:pointer;transition:all .12s;
+}
+.wb-ctrl button:hover{background:var(--phos);color:#000;border-color:var(--phos);}
+.wb-ctrl button.play{background:var(--phos);color:#000;border-color:var(--phos);}
+.wb-slider{display:flex;align-items:center;gap:10px;padding:0 18px;border-right:1px solid var(--edge);font-size:10px;color:var(--dim);letter-spacing:.14em;}
+.wb-slider b{color:var(--phos);font-weight:500;min-width:34px;}
+input[type=range]{-webkit-appearance:none;width:110px;height:2px;background:var(--edge-hi);outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:var(--phos);border:none;cursor:grab;}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;background:var(--phos);border:none;cursor:grab;}
+.wb-note{margin-left:auto;display:flex;align-items:center;padding:0 18px;font-size:10px;color:var(--amber);letter-spacing:.12em;}
+.wb-main{display:grid;grid-template-columns:minmax(0,8fr) minmax(0,4fr);}
+.wb-stage{position:relative;border-right:1px solid var(--edge);background:var(--bg);min-height:520px;display:flex;flex-direction:column;}
+.wb-canvas-wrap{flex:1;position:relative;cursor:crosshair;}
+#mainviz{position:absolute;inset:0;width:100%;height:100%;display:block;}
+.wb-ruler{display:flex;justify-content:space-between;padding:6px 18px;border-top:1px solid var(--edge);font-size:9px;color:var(--faint);letter-spacing:.2em;}
+.wb-scrub{height:34px;border-top:1px solid var(--edge);position:relative;background:var(--panel);cursor:ew-resize;}
+.wb-scrub-fill{position:absolute;left:0;top:0;bottom:0;width:0%;background:var(--phos-dim);pointer-events:none;}
+.wb-scrub-fill::after{content:'';position:absolute;right:-1px;top:0;bottom:0;width:2px;background:var(--phos);}
+.wb-scrub:hover .wb-scrub-fill{background:#2A8A56;}
+.wb-side{display:flex;flex-direction:column;background:var(--panel);}
+.wb-code{flex:1;border-bottom:1px solid var(--edge);overflow:auto;max-height:300px;}
+.wb-code-head{display:flex;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--edge);font-size:10px;letter-spacing:.2em;color:var(--dim);position:sticky;top:0;background:var(--panel);}
+.wb-code pre{padding:14px 0;font-size:12px;line-height:1.9;}
+.wb-code .cl{display:block;padding:0 16px;white-space:pre;color:var(--dim);transition:all .12s;border-left:2px solid transparent;}
+.wb-code .cl .ln{display:inline-block;width:26px;color:var(--faint);user-select:none;}
+.wb-code .cl.hl{background:rgba(61,245,139,.1);color:var(--paper);border-left-color:var(--phos);}
+.wb-code .cl.hl .ln{color:var(--phos);}
+.wb-term{border-bottom:1px solid var(--edge);padding:12px 16px;min-height:118px;}
+.wb-term-head{font-size:10px;letter-spacing:.2em;color:var(--dim);margin-bottom:8px;display:flex;justify-content:space-between;}
+#termlog{font-size:11px;line-height:1.85;color:var(--phos);height:74px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;}
+#termlog div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#termlog .old{color:var(--dim);}
+.wb-stats{display:grid;grid-template-columns:repeat(4,1fr);}
+.wb-stats>div{padding:14px 8px 12px;border-right:1px solid var(--edge);text-align:center;}
+.wb-stats>div:last-child{border-right:none;}
+.wb-stats .v{font-family:var(--disp);font-size:24px;color:var(--phos);line-height:1.1;}
+.wb-stats .v.a{color:var(--amber);}
+.wb-stats .v.r{color:var(--red);}
+.wb-stats .k{font-size:8px;letter-spacing:.2em;color:var(--dim);margin-top:4px;text-transform:uppercase;}
+/* ---------- 图论实验室 ---------- */
+.graphlab{border-top:1px solid var(--edge);}
+.gl-wrap{display:grid;grid-template-columns:minmax(0,8fr) minmax(0,4fr);border-top:1px solid var(--edge);}
+.gl-stage{position:relative;background:var(--bg);border-right:1px solid var(--edge);min-height:520px;}
+#graphsvg{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;}
+#graphsvg.dragging{cursor:grabbing;}
+.gnode{cursor:grab;}
+.gnode circle{fill:var(--panel-2);stroke:var(--edge-hi);stroke-width:1.5;transition:fill .2s,stroke .2s;}
+.gnode text{fill:var(--paper);font-family:var(--mono);font-size:13px;font-weight:600;text-anchor:middle;pointer-events:none;}
+.gnode.start circle{stroke:var(--amber);stroke-dasharray:4 3;}
+.gnode.queued circle{fill:var(--amber);stroke:var(--amber);}
+.gnode.queued text{fill:#000;}
+.gnode.done circle{fill:var(--phos-dim);stroke:var(--phos);}
+.gnode.done text{fill:var(--phos);}
+.gnode.visiting circle{fill:var(--phos);stroke:var(--phos);filter:drop-shadow(0 0 8px rgba(61,245,139,.7));}
+.gnode.visiting text{fill:#000;}
+.gedge{stroke:var(--edge-hi);stroke-width:1.5;transition:stroke .2s;}
+.gedge.lit{stroke:var(--phos);stroke-width:2.5;filter:drop-shadow(0 0 4px rgba(61,245,139,.6));}
+.gl-hint{position:absolute;left:18px;bottom:14px;font-size:10px;color:var(--dim);letter-spacing:.14em;pointer-events:none;}
+.gl-side{background:var(--panel);display:flex;flex-direction:column;}
+.gl-side-head{padding:14px 18px;border-bottom:1px solid var(--edge);display:flex;justify-content:space-between;align-items:center;}
+.gl-queue{padding:16px 18px;border-bottom:1px solid var(--edge);min-height:120px;}
+.gl-queue h5,.gl-order h5{font-size:10px;letter-spacing:.24em;color:var(--dim);margin-bottom:12px;text-transform:uppercase;}
+#queuebox,#orderbox{display:flex;flex-wrap:wrap;gap:6px;min-height:34px;}
+.qchip{
+  min-width:32px;height:32px;display:grid;place-items:center;padding:0 6px;
+  border:1px solid var(--amber);color:var(--amber);font-size:12px;font-weight:600;
+  animation:chipin .25s cubic-bezier(.2,.9,.3,1.4);
+}
+.qchip.done{border-color:var(--phos);color:#000;background:var(--phos);}
+@keyframes chipin{from{transform:scale(.4);opacity:0;}}
+.gl-order{padding:16px 18px;border-bottom:1px solid var(--edge);flex:1;}
+#orderbox .qchip{border-color:var(--edge-hi);color:var(--dim);}
+#orderbox .qchip.on{border-color:var(--phos);color:var(--phos);}
+.gl-ctrl{padding:16px 18px;display:flex;gap:10px;flex-wrap:wrap;}
+.gl-status{padding:0 18px 16px;font-size:11px;color:var(--dim);letter-spacing:.08em;}
+.gl-status b{color:var(--phos);font-weight:500;}
+
+/* ---------- PLAYGROUND ---------- */
+.playground{border-top:1px solid var(--edge);}
+.pg-shell{border-top:1px solid var(--edge);display:grid;grid-template-columns:minmax(0,1fr) 300px;}
+.pg-main{background:var(--panel);}
+.pg-tabs{display:flex;border-bottom:1px solid var(--edge);}
+.pg-tab{
+  background:none;border:none;border-right:1px solid var(--edge);color:var(--dim);
+  font-family:var(--mono);font-size:11px;letter-spacing:.14em;padding:12px 22px;cursor:pointer;transition:all .15s;
+}
+.pg-tab:hover{color:var(--paper);}
+.pg-tab.on{background:var(--bg);color:var(--phos);box-shadow:inset 0 -2px 0 var(--phos);}
+.pg-code{padding:22px 26px;font-size:13px;line-height:1.95;min-height:300px;white-space:pre;overflow:auto;}
+.pg-code .k{color:var(--phos);}
+.pg-code .s{color:var(--amber);}
+.pg-code .c{color:var(--faint);font-style:italic;}
+.pg-code .n{color:#7FD4FF;}
+.pg-out{border-left:1px solid var(--edge);background:#07090B;display:flex;flex-direction:column;}
+.pg-out-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--edge);}
+#pgterm{flex:1;padding:14px 16px;font-size:11.5px;line-height:1.9;color:var(--phos);overflow:auto;max-height:330px;}
+#pgterm .dim{color:var(--dim);}
+#pgterm .amb{color:var(--amber);}
+#pgterm .cursor{display:inline-block;width:8px;height:14px;background:var(--phos);vertical-align:-2px;animation:blink 1s steps(2,start) infinite;}
+.pg-aside{background:var(--bg);border-left:1px solid var(--edge);padding:26px;display:flex;flex-direction:column;gap:18px;}
+.pg-feat{border:1px solid var(--edge);padding:16px 18px;transition:all .18s;cursor:default;}
+.pg-feat:hover{border-color:var(--phos);transform:translate(-3px,-3px);box-shadow:4px 4px 0 var(--phos-dim);}
+.pg-feat h4{font-family:var(--cn);font-weight:900;font-size:15px;margin-bottom:6px;}
+.pg-feat h4 span{color:var(--phos);margin-right:8px;font-family:var(--mono);font-weight:500;font-size:11px;}
+.pg-feat p{font-size:11px;color:var(--dim);line-height:1.8;}
+
+/* ---------- 页脚 ---------- */
+footer{border-top:1px solid var(--edge);position:relative;overflow:hidden;}
+.foot-marquee{border-bottom:1px solid var(--edge);overflow:hidden;padding:26px 0;background:var(--panel);}
+.foot-marquee-inner{display:flex;gap:70px;white-space:nowrap;animation:tick 30s linear infinite;font-family:var(--disp);font-size:clamp(40px,5vw,72px);color:transparent;-webkit-text-stroke:1px var(--faint);letter-spacing:.04em;}
+.foot-marquee-inner b{color:var(--phos);-webkit-text-stroke:0;font-weight:400;}
+.foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:1px;background:var(--edge);}
+.foot-grid>div{background:var(--bg);padding:34px 30px;}
+.foot-grid h5{font-size:10px;letter-spacing:.26em;color:var(--dim);margin-bottom:16px;text-transform:uppercase;}
+.foot-grid a{display:block;color:var(--dim);text-decoration:none;font-size:12px;padding:4px 0;transition:color .15s;}
+.foot-grid a:hover{color:var(--phos);}
+.foot-big{font-family:var(--cn);font-weight:900;font-size:26px;line-height:1.4;}
+.foot-big span{color:var(--phos);}
+.foot-bottom{display:flex;justify-content:space-between;align-items:center;padding:18px 30px;border-top:1px solid var(--edge);font-size:10px;color:var(--faint);letter-spacing:.18em;flex-wrap:wrap;gap:12px;}
+
+/* ---------- 响应式 ---------- */
+@media (max-width:1100px){
+  .hero{grid-template-columns:1fr;}
+  .hero-right{border-left:none;border-top:1px solid var(--edge);min-height:52vh;}
+  .wb-main,.gl-wrap{grid-template-columns:1fr;}
+  .wb-stage,.gl-stage{border-right:none;border-bottom:1px solid var(--edge);}
+  .pg-shell{grid-template-columns:1fr;}
+  .pg-out,.pg-aside{border-left:none;border-top:1px solid var(--edge);}
+  .foot-grid{grid-template-columns:1fr 1fr;}
+}
+@media (max-width:760px){
+  .rail{display:none;}
+  main{margin-left:0;}
+  .topbar{left:0;}
+  .topnav{display:none;}
+  .catalog{grid-template-columns:1fr;}
+  .cat-rail{position:static;display:flex;overflow-x:auto;padding:12px;gap:6px;border-right:none;border-bottom:1px solid var(--edge);max-height:none;}
+  .cat-rail h4{display:none;}
+  .cat-btn{white-space:nowrap;border:1px solid var(--edge);}
+  .acard,.acard:nth-child(7n+3),.acard:nth-child(11n+5),.acard:nth-child(13n+9){grid-column:span 12;}
+  .wb-stats{grid-template-columns:repeat(2,1fr);}
+  .foot-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ 左侧轨道 ============ -->
+<aside class="rail">
+  <div class="rail-mark" title="ALGOVIZ">A</div>
+  <nav class="rail-nav">
+    <a href="#top" data-sec="top">00 / 起始</a>
+    <a href="#catalog" data-sec="catalog">01 / 算法库</a>
+    <a href="#workbench" data-sec="workbench">02 / 引擎</a>
+    <a href="#graphlab" data-sec="graphlab">03 / 图论</a>
+    <a href="#playground" data-sec="playground">04 / 实验室</a>
+  </nav>
+  <div class="rail-prog"><i id="scrollbarfill"></i></div>
+  <div class="rail-leds"><span class="led"></span><span class="led a"></span><span class="led r"></span></div>
+</aside>
+
+<!-- ============ 顶栏 ============ -->
+<header class="topbar">
+  <div class="logo-block" onclick="location.hash='top'">ALGO<b>VIZ</b><span class="cursorblk"></span></div>
+  <nav class="topnav">
+    <a href="#catalog">算法库</a>
+    <a href="#workbench">可视化引擎</a>
+    <a href="#graphlab">图论实验室</a>
+    <a href="#playground">PLAYGROUND</a>
+  </nav>
+  <div class="top-ticker"><div class="top-ticker-inner" id="topticker"></div></div>
+  <div class="top-status">
+    <span><span class="led"></span>&nbsp;SYS.ONLINE</span>
+    <span id="sysclock">00:00:00</span>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="hero-left">
+    <div>
+      <div class="hero-eyebrow">
+        <span class="dash"></span>
+        <span class="mono-label">ALGOVIZ — ALGORITHM VISUALIZATION CONSOLE · V2.0</span>
+      </div>
+      <h1 class="hero-title">
+        <span class="l1">让算法</span>
+        <span class="l2">看得见。</span>
+        <span class="l3">ALGORITHMS, <b>MADE VISIBLE</b> — 75 ALGOS / 8 CATEGORIES / 1 CONSOLE</span>
+      </h1>
+      <div class="hero-meta">
+        <div><div class="num">75</div><div class="lab">Algorithms</div></div>
+        <div><div class="num a">08</div><div class="lab">Categories</div></div>
+        <div><div class="num">05</div><div class="lab">Live Engines</div></div>
+        <div><div class="num a">∞</div><div class="lab">Replay</div></div>
+      </div>
+    </div>
+    <div class="hero-cta">
+      <button class="tbtn" onclick="document.getElementById('workbench').scrollIntoView()">▶ 启动引擎 START</button>
+      <button class="tbtn warn" onclick="document.getElementById('catalog').scrollIntoView()">浏览算法库</button>
+      <span class="note">NO INSTALL · OPEN IN BROWSER</span>
+    </div>
+  </div>
+  <div class="hero-right" data-corners>
+    <div class="hero-viz-head">
+      <span class="mono-label">LIVE FEED — QUICKSORT · AUTO LOOP</span>
+      <span class="mono-label" id="herostep">STEP 0000</span>
+    </div>
+    <div class="hero-viz-wrap" id="herowrap">
+      <canvas id="heroviz"></canvas>
+      <div class="crosshair-x"></div>
+      <div class="crosshair-y"></div>
+      <div class="crosshair-tag"></div>
+    </div>
+    <div class="hero-float">CH-01 ▮ SIGNAL<br><b>QUICKSORT</b> · 48 CH<br>REC ▮ <b>ACTIVE</b></div>
+    <div class="hero-viz-foot">
+      <span>▲ CLICK CANVAS TO RESHUFFLE</span>
+      <span class="barcode" style="width:90px;"></span>
+    </div>
+  </div>
+  <div class="hero-marquee"><div class="hero-marquee-inner" id="heromarq"></div></div>
+</section>
+<!-- ============ 01 算法库 ============ -->
+<section id="catalog">
+  <div class="sec-head" data-reveal>
+    <div>
+      <div class="sec-index">SEC.01 — THE CATALOG</div>
+      <h2 class="sec-title">算法兵器库<span class="en">75 ALGORITHMS · 8 DIVISIONS</span></h2>
+    </div>
+    <p class="sec-side">每一张卡片都是一发弹药。排序类算法可直接装入引擎实测；其余类别在完整版中提供场景动画。</p>
+  </div>
+  <div class="catalog">
+    <aside class="cat-rail">
+      <h4>FILTER / 分类</h4>
+      <div id="catfilters"></div>
+    </aside>
+    <div class="cat-grid" id="catgrid"></div>
+  </div>
+</section>
+
+<!-- ============ 02 可视化引擎 ============ -->
+<section id="workbench" class="workbench">
+  <div class="sec-head" data-reveal>
+    <div>
+      <div class="sec-index">SEC.02 — THE ENGINE</div>
+      <h2 class="sec-title">可视化引擎<span class="en">SORTING ENGINE · LIVE</span></h2>
+    </div>
+    <p class="sec-side">真实运行的排序引擎：五种算法、逐帧快照、可拖拽进度、代码行级同步高亮。按 SPACE 播放/暂停。</p>
+  </div>
+  <div class="wb-toolbar">
+    <div class="wb-tabs" id="algtabs"></div>
+    <div class="wb-ctrl">
+      <button id="btnshuffle" title="重洗数组">⟳</button>
+      <button id="btnprev" title="上一步">◂</button>
+      <button id="btnplay" class="play" title="播放/暂停 (Space)">▶</button>
+      <button id="btnnext" title="下一步">▸</button>
+    </div>
+    <label class="wb-slider">SPEED <input type="range" id="speed" min="1" max="20" value="8"> <b id="speedv">×8</b></label>
+    <label class="wb-slider">BARS <input type="range" id="bsize" min="12" max="160" value="64"> <b id="bsizev">64</b></label>
+    <div class="wb-note" id="wbnote"></div>
+  </div>
+  <div class="wb-main">
+    <div class="wb-stage" data-corners>
+      <div class="wb-canvas-wrap" id="stagewrap">
+        <canvas id="mainviz"></canvas>
+        <div class="crosshair-x"></div>
+        <div class="crosshair-y"></div>
+        <div class="crosshair-tag"></div>
+      </div>
+      <div class="wb-ruler"><span>IDX 0</span><span>ARRAY / VALUE MAPPING</span><span id="rulern">IDX 63</span></div>
+      <div class="wb-scrub" id="scrub"><div class="wb-scrub-fill" id="scrubfill"></div></div>
+    </div>
+    <aside class="wb-side">
+      <div class="wb-code">
+        <div class="wb-code-head"><span>SOURCE — <b id="codetitle" style="color:var(--phos)">QUICKSORT.JS</b></span><span>UTF-8</span></div>
+        <pre id="codepane"></pre>
+      </div>
+      <div class="wb-term">
+        <div class="wb-term-head"><span>STEP TERMINAL</span><span id="termstep">0000/0000</span></div>
+        <div id="termlog"></div>
+      </div>
+      <div class="wb-stats">
+        <div><div class="v" id="stcmp">0</div><div class="k">COMPARE</div></div>
+        <div><div class="v r" id="stswp">0</div><div class="k">SWAP/WRITE</div></div>
+        <div><div class="v a" id="ststep">0</div><div class="k">STEPS</div></div>
+        <div><div class="v" id="sttime">0.0s</div><div class="k">ELAPSED</div></div>
+      </div>
+    </aside>
+  </div>
+</section>
+<!-- ============ 03 图论实验室 ============ -->
+<section id="graphlab" class="graphlab">
+  <div class="sec-head" data-reveal>
+    <div>
+      <div class="sec-index">SEC.03 — GRAPH LAB</div>
+      <h2 class="sec-title">图论实验室<span class="en">BFS · DRAG THE NODES</span></h2>
+    </div>
+    <p class="sec-side">节点可直接拖拽重组拓扑，点击节点设为起点，RUN BFS 观察队列的实时吞吐——这就是广度优先的呼吸感。</p>
+  </div>
+  <div class="gl-wrap">
+    <div class="gl-stage" data-corners>
+      <svg id="graphsvg" viewBox="0 0 1000 520" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="gl-hint">▲ DRAG NODES · CLICK = SET START · EDGES RECOMPUTE LIVE</div>
+    </div>
+    <aside class="gl-side">
+      <div class="gl-side-head">
+        <span class="mono-label">BFS CONTROL DECK</span>
+        <span class="led"></span>
+      </div>
+      <div class="gl-queue">
+        <h5>QUEUE / 队列</h5>
+        <div id="queuebox"></div>
+      </div>
+      <div class="gl-order">
+        <h5>VISIT ORDER / 访问序列</h5>
+        <div id="orderbox"></div>
+      </div>
+      <div class="gl-ctrl">
+        <button class="tbtn" id="bfsrun">▶ RUN BFS</button>
+        <button class="tbtn warn" id="bfsreset">RESET</button>
+      </div>
+      <div class="gl-status" id="bfsstatus">STATUS: <b>IDLE</b> — 等待指令</div>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ 04 PLAYGROUND ============ -->
+<section id="playground" class="playground">
+  <div class="sec-head" data-reveal>
+    <div>
+      <div class="sec-index">SEC.04 — PLAYGROUND</div>
+      <h2 class="sec-title">代码实验室<span class="en">AI CODE LAB · 4 LANGUAGES</span></h2>
+    </div>
+    <p class="sec-side">写下任何算法，AI 会逐行分析并生成动画脚本。这里先跑一个归并排序试试水温。</p>
+  </div>
+  <div class="pg-shell">
+    <div class="pg-main">
+      <div class="pg-tabs" id="pgtabs"></div>
+      <div class="pg-code" id="pgcode"></div>
+    </div>
+    <div class="pg-out">
+      <div class="pg-out-head">
+        <span class="mono-label">STDOUT</span>
+        <button class="tbtn" id="pgrun" style="padding:6px 14px;">▶ RUN</button>
+      </div>
+      <div id="pgterm"><span class="dim">// 按 RUN 执行 · output stream ready</span><br><span class="cursor"></span></div>
+    </div>
+    <aside class="pg-aside">
+      <div class="pg-feat"><h4><span>01</span>AI 代码解析</h4><p>粘贴任意语言代码，模型自动提取关键操作，编译为 AnimationScript。</p></div>
+      <div class="pg-feat"><h4><span>02</span>STDIN 模拟</h4><p>支持标准输入流，竞赛题目的输入样例可直接灌入运行。</p></div>
+      <div class="pg-feat"><h4><span>03</span>四语言内核</h4><p>JavaScript / Python / C++ / Java 统一接入，输出一致的动画事件。</p></div>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ 页脚 ============ -->
+<footer>
+  <div class="foot-marquee"><div class="foot-marquee-inner" id="footmarq"></div></div>
+  <div class="foot-grid">
+    <div>
+      <h5>ALGOVIZ · 信号室</h5>
+      <p class="foot-big">每一步比较<br>每一次交换<br><span>都看得见。</span></p>
+      <div class="barcode" style="width:140px;margin-top:24px;"></div>
+    </div>
+    <div>
+      <h5>MODULES</h5>
+      <a href="#catalog">算法兵器库</a>
+      <a href="#workbench">可视化引擎</a>
+      <a href="#graphlab">图论实验室</a>
+      <a href="#playground">代码实验室</a>
+    </div>
+    <div>
+      <h5>ENGINES</h5>
+      <a href="#workbench">QUICKSORT</a>
+      <a href="#workbench">MERGE SORT</a>
+      <a href="#workbench">BUBBLE SORT</a>
+      <a href="#graphlab">BFS / DFS</a>
+    </div>
+    <div>
+      <h5>SPEC</h5>
+      <a href="#top">75 ALGORITHMS</a>
+      <a href="#top">8 CATEGORIES</a>
+      <a href="#top">SVG SCENE ENGINE</a>
+      <a href="#top">AI ANIMATION SCRIPT</a>
+    </div>
+  </div>
+  <div class="foot-bottom">
+    <span>ALGOVIZ CONSOLE V2.0 — SIGNAL ROOM BUILD</span>
+    <span>LAT 22.5431 N · LON 114.0579 E</span>
+    <span>DESIGNED IN THE SIGNAL ROOM © 2026</span>
+  </div>
+</footer>
+<script>
+'use strict';
+/* ============================================================
+   ALGOVIZ · SIGNAL ROOM — 交互引擎
+   ============================================================ */
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const PHOS='#3DF58B', AMBER='#FFB224', RED='#FF5340', BASE='#2E3B33', DIM='#63756A', PAPER='#E9F2EA';
+
+/* ---------- 系统时钟 ---------- */
+setInterval(()=>{const d=new Date();$('#sysclock').textContent=[d.getHours(),d.getMinutes(),d.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');},1000);
+
+/* ---------- 取景器角框注入 ---------- */
+$$('[data-corners]').forEach(el=>{['tl','tr','bl','br'].forEach(p=>{const s=document.createElement('span');s.className='cnr '+p;el.appendChild(s);});});
+
+/* ---------- 滚动显现 ---------- */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.12});
+$$('[data-reveal]').forEach(el=>io.observe(el));
+
+/* ---------- 滚动进度 + 轨道导航激活 ---------- */
+const secIds=['top','catalog','workbench','graphlab','playground'];
+addEventListener('scroll',()=>{
+  const h=document.documentElement, p=h.scrollTop/(h.scrollHeight-h.clientHeight);
+  $('#scrollbarfill').style.height=(p*100).toFixed(1)+'%';
+  let cur='top'; secIds.forEach(id=>{const el=document.getElementById(id);if(el&&el.getBoundingClientRect().top<innerHeight*.4)cur=id;});
+  $$('.rail-nav a').forEach(a=>a.classList.toggle('active',a.dataset.sec===cur));
+},{passive:true});
+
+/* ---------- 十字准线 ---------- */
+function bindCrosshair(wrap){
+  const cx=wrap.querySelector('.crosshair-x'), cy=wrap.querySelector('.crosshair-y'), tag=wrap.querySelector('.crosshair-tag');
+  if(!cx)return;
+  wrap.addEventListener('pointermove',e=>{
+    const r=wrap.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
+    cx.style.display=cy.style.display=tag.style.display='block';
+    cx.style.top=y+'px'; cy.style.left=x+'px';
+    tag.style.left=Math.min(x+12,r.width-150)+'px'; tag.style.top=Math.max(y-26,4)+'px';
+    tag.textContent='X '+String(Math.round(x)).padStart(4,'0')+' · Y '+String(Math.round(y)).padStart(4,'0');
+  });
+  wrap.addEventListener('pointerleave',()=>{cx.style.display=cy.style.display=tag.style.display='none';});
+}
+bindCrosshair($('#herowrap')); bindCrosshair($('#stagewrap'));
+
+/* ---------- Ticker / Marquee 内容 ---------- */
+const tickItems='QUICKSORT <b>O(n log n)</b>|BFS <b>O(V+E)</b>|DIJKSTRA <b>O(E log V)</b>|MERGE SORT <b>O(n log n)</b>|KMP <b>O(n+m)</b>|BINARY SEARCH <b>O(log n)</b>|HEAP SORT <b>O(n log n)</b>|TARJAN <b>O(V+E)</b>|KNAPSACK <b>O(nW)</b>|A* <b>HEURISTIC</b>'.split('|');
+const tickHTML=tickItems.concat(tickItems).map(t=>'<span>'+t+'</span>').join('');
+$('#topticker').innerHTML=tickHTML;
+const marqWords='让算法 <b>看得见</b>|EVERY COMPARISON <i>MATTERS</i>|每一次交换 <b>都有迹可循</b>|SORT THE SIGNAL FROM THE NOISE|数据即 <b>几何</b>|CODE IS <i>GEOMETRY</i>'.split('|');
+const marqHTML=marqWords.concat(marqWords).map(t=>'<span>'+t+'</span>').join('');
+$('#heromarq').innerHTML=marqHTML;
+$('#footmarq').innerHTML='<span>SEE THE ALGORITHM —</span><span><b>看见算法</b> —</span><span>ALGOVIZ —</span><span>SIGNAL ROOM —</span>'.repeat(4);
+
+/* ============================================================
+   排序引擎 — 快照式逐帧回放
+   ============================================================ */
+const ALGOS={
+  quick:{name:'QUICKSORT',cn:'快速排序',file:'QUICKSORT.JS',code:[
+'function quickSort(a, lo, hi) {',
+'  if (lo >= hi) return;',
+'  const p = a[hi];           // pivot',
+'  let i = lo;',
+'  for (let j = lo; j < hi; j++) {',
+'    if (a[j] < p) {',
+'      swap(a, i, j);',
+'      i++;',
+'    }',
+'  }',
+'  swap(a, i, hi);            // pivot 归位',
+'  quickSort(a, lo, i - 1);',
+'  quickSort(a, i + 1, hi);',
+'}']},
+  merge:{name:'MERGE SORT',cn:'归并排序',file:'MERGESORT.JS',code:[
+'function mergeSort(a, lo, hi) {',
+'  if (lo >= hi) return;',
+'  const mid = (lo + hi) >> 1;',
+'  mergeSort(a, lo, mid);',
+'  mergeSort(a, mid + 1, hi);',
+'  const buf = [];',
+'  let i = lo, j = mid + 1;',
+'  while (i <= mid && j <= hi)',
+'    buf.push(a[i] <= a[j] ? a[i++] : a[j++]);',
+'  while (i <= mid) buf.push(a[i++]);',
+'  while (j <= hi) buf.push(a[j++]);',
+'  for (let k = 0; k < buf.length; k++)',
+'    a[lo + k] = buf[k];      // 写回',
+'}']},
+  bubble:{name:'BUBBLE SORT',cn:'冒泡排序',file:'BUBBLESORT.JS',code:[
+'function bubbleSort(a) {',
+'  const n = a.length;',
+'  for (let i = 0; i < n - 1; i++) {',
+'    for (let j = 0; j < n - 1 - i; j++) {',
+'      if (a[j] > a[j + 1]) {',
+'        swap(a, j, j + 1);   // 大数上浮',
+'      }',
+'    }',
+'  }',
+'}']},
+  selection:{name:'SELECTION',cn:'选择排序',file:'SELECTION.JS',code:[
+'function selectionSort(a) {',
+'  const n = a.length;',
+'  for (let i = 0; i < n; i++) {',
+'    let m = i;               // 最小值下标',
+'    for (let j = i + 1; j < n; j++) {',
+'      if (a[j] < a[m]) m = j;',
+'    }',
+'    swap(a, i, m);           // 最小值归位',
+'  }',
+'}']},
+  insertion:{name:'INSERTION',cn:'插入排序',file:'INSERTION.JS',code:[
+'function insertionSort(a) {',
+'  for (let i = 1; i < a.length; i++) {',
+'    const k = a[i];          // 待插入牌',
+'    let j = i - 1;',
+'    while (j >= 0 && a[j] > k) {',
+'      a[j + 1] = a[j];       // 右移腾位',
+'      j--;',
+'    }',
+'    a[j + 1] = k;            // 插入',
+'  }',
+'}']}
+};
+function buildSteps(key,arr){
+  const a=arr.slice(), steps=[]; let cmp=0, swp=0;
+  const push=(c,s,p,line,msg)=>{steps.push({a:a.slice(),c:c||[],s:s||[],p:p==null?-1:p,line:line==null?-1:line,msg,cmp,swp});};
+  const swap=(i,j)=>{const t=a[i];a[i]=a[j];a[j]=t;swp++;};
+  if(key==='quick'){
+    const qs=(lo,hi)=>{ if(lo>=hi)return;
+      const p=a[hi]; push([],[ ],hi,2,'PIVOT = a['+hi+'] ('+p+')');
+      let i=lo;
+      for(let j=lo;j<hi;j++){ cmp++; push([j,hi],[],hi,5,'CMP a['+j+']='+a[j]+' vs pivot='+p);
+        if(a[j]<p){ swap(i,j); push([],[i,j],hi,6,'SWAP a['+i+'] ↔ a['+j+']'); i++; } }
+      swap(i,hi); push([],[i,hi],i,10,'PIVOT 归位 → '+i);
+      qs(lo,i-1); qs(i+1,hi);
+    }; qs(0,a.length-1);
+  }else if(key==='merge'){
+    const ms=(lo,hi)=>{ if(lo>=hi)return;
+      const mid=(lo+hi)>>1; ms(lo,mid); ms(mid+1,hi);
+      const buf=[]; let i=lo,j=mid+1;
+      while(i<=mid&&j<=hi){ cmp++;
+        if(a[i]<=a[j]){buf.push(a[i++]);}else{buf.push(a[j++]);}
+        push([lo<=i?i-1:i, j-1<=hi?j-1:j],[],-1,8,'MERGE ['+lo+'..'+mid+'] + ['+(mid+1)+'..'+hi+']'); }
+      while(i<=mid)buf.push(a[i++]);
+      while(j<=hi)buf.push(a[j++]);
+      for(let k=0;k<buf.length;k++){ a[lo+k]=buf[k]; swp++; push([],[lo+k],-1,12,'WRITE a['+(lo+k)+'] = '+buf[k]); }
+    }; ms(0,a.length-1);
+  }else if(key==='bubble'){
+    const n=a.length;
+    for(let i=0;i<n-1;i++)for(let j=0;j<n-1-i;j++){
+      cmp++; push([j,j+1],[],-1,4,'CMP a['+j+']='+a[j]+' vs a['+(j+1)+']='+a[j+1]);
+      if(a[j]>a[j+1]){ swap(j,j+1); push([],[j,j+1],-1,5,'SWAP a['+j+'] ↔ a['+(j+1)+'] — 大数上浮'); }
+    }
+  }else if(key==='selection'){
+    const n=a.length;
+    for(let i=0;i<n;i++){ let m=i; push([],[i],i,3,'锚点 i='+i+' · 找最小值');
+      for(let j=i+1;j<n;j++){ cmp++; push([j,m],[],i,5,'CMP a['+j+']='+a[j]+' vs min=a['+m+']='+a[m]); if(a[j]<a[m])m=j; }
+      if(m!==i){ swap(i,m); push([],[i,m],-1,7,'SWAP 最小值 a['+m+'] → 位置 '+i); } }
+  }else if(key==='insertion'){
+    for(let i=1;i<a.length;i++){ const k=a[i]; push([i],[],i,2,'取出 a['+i+']='+k);
+      let j=i-1;
+      while(j>=0){ cmp++; push([j],[],i,4,'CMP a['+j+']='+a[j]+' > '+k+' ?');
+        if(a[j]>k){ a[j+1]=a[j]; swp++; push([],[j+1],-1,5,'SHIFT a['+j+'] → a['+(j+1)+']'); j--; } else break; }
+      a[j+1]=k; swp++; push([],[j+1],-1,8,'INSERT '+k+' → 位置 '+(j+1)); }
+  }
+  push([],[],-1,-1,'✓ SORTED — '+a.length+' 个元素已就位');
+  return steps;
+}
+
+/* ---------- Canvas 渲染器 ---------- */
+function makeRenderer(canvas){
+  const ctx=canvas.getContext('2d');
+  return function draw(step,sweepIdx){
+    const r=canvas.getBoundingClientRect(), dpr=devicePixelRatio||1;
+    if(canvas.width!==Math.round(r.width*dpr)){canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);}
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const W=r.width,H=r.height,a=step.a,n=a.length;
+    ctx.clearRect(0,0,W,H);
+    /* 基准网格 */
+    ctx.strokeStyle='rgba(120,170,135,.09)';ctx.lineWidth=1;ctx.beginPath();
+    for(let g=1;g<4;g++){const y=H*g/4;ctx.moveTo(0,y);ctx.lineTo(W,y);}
+    ctx.stroke();
+    const bw=W/n,max=Math.max.apply(null,a),pad=6;
+    for(let i=0;i<n;i++){
+      const h=Math.max(2,(a[i]/max)*(H-pad*2)), x=i*bw, y=H-h;
+      let fill=BASE;
+      if(step.c.indexOf(i)>-1)fill=AMBER;
+      if(step.s.indexOf(i)>-1)fill=RED;
+      if(step.p===i)fill=PAPER;
+      if(sweepIdx!=null&&i<=sweepIdx)fill=PHOS;
+      ctx.fillStyle=fill;
+      ctx.fillRect(x+0.5,y,Math.max(1,bw-1.5),h);
+      if(step.p===i){ctx.fillStyle=PAPER;ctx.fillRect(x+bw/2-1,H-4,2,4);}
+    }
+    /* 顶部数值游标 */
+    if(step.c.length){ctx.fillStyle=AMBER;step.c.forEach(i=>{ctx.fillRect(i*bw+bw/2-1,0,2,5);});}
+  };
+}
+
+/* ---------- 播放器 ---------- */
+function makePlayer(canvas, hooks){
+  hooks=hooks||{};
+  const draw=makeRenderer(canvas);
+  const P={algo:'quick',n:64,steps:[],pos:0,playing:false,speed:8,elapsed:0,sweep:null,
+    load(algo,n){this.algo=algo;this.n=n;this.reshuffle();},
+    reshuffle(){const arr=[];for(let i=0;i<this.n;i++)arr.push(4+Math.floor(Math.random()*96));
+      this.steps=buildSteps(this.algo,arr);this.pos=0;this.elapsed=0;this.sweep=null;this.render();
+      if(hooks.onLoad)hooks.onLoad();},
+    step(){return this.steps[Math.min(Math.floor(this.pos),this.steps.length-1)];},
+    render(){draw(this.step(),this.sweep); if(hooks.onFrame)hooks.onFrame(this);},
+    toggle(){this.playing=!this.playing;
+      if(this.playing&&this.pos>=this.steps.length-1)this.reshuffle();
+      if(hooks.onState)hooks.onState(this);},
+    seek(k){this.pos=Math.max(0,Math.min(k,this.steps.length-1));this.sweep=null;this.render();}
+  };
+  let last=0;
+  function loop(ts){
+    const dt=Math.min(.05,(ts-last)/1000||0); last=ts;
+    if(P.playing){
+      P.elapsed+=dt;
+      P.pos+=dt*(P.speed*P.speed*.8+2);
+      if(P.pos>=P.steps.length-1){
+        P.pos=P.steps.length-1; P.playing=false;
+        /* 完成扫光 */
+        let si=0; const n=P.step().a.length;
+        const sv=setInterval(()=>{P.sweep=si++;P.render();if(si>n){clearInterval(sv);if(hooks.onDone)hooks.onDone(P);}},Math.max(4,400/n));
+        if(hooks.onState)hooks.onState(P);
+      }
+      P.render();
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+  return P;
+}
+
+/* ---------- 主工作台 ---------- */
+const codeCache={};
+function renderCode(key){
+  if(!codeCache[key])codeCache[key]=ALGOS[key].code.map((l,i)=>'<span class="cl" data-l="'+i+'"><span class="ln">'+String(i+1).padStart(2,'0')+'</span>'+l.replace(/</g,'&lt;')+'</span>').join('\n');
+  $('#codepane').innerHTML=codeCache[key];
+  $('#codetitle').textContent=ALGOS[key].file;
+}
+const termLines=[];
+function termLog(msg){
+  termLines.push(msg); if(termLines.length>4)termLines.shift();
+  $('#termlog').innerHTML=termLines.map((m,i)=>'<div class="'+(i<termLines.length-1?'old':'')+'">'+m+'</div>').join('');
+}
+const player=makePlayer($('#mainviz'),{
+  onLoad(){renderCode(player.algo);termLines.length=0;termLog('▸ LOADED '+ALGOS[player.algo].name+' · '+player.n+' bars · '+player.steps.length+' steps');$('#rulern').textContent='IDX '+(player.n-1);$('#btnplay').textContent='▶';},
+  onState(p){$('#btnplay').textContent=p.playing?'❚❚':'▶';},
+  onFrame(p){
+    const s=p.step(), idx=Math.min(Math.floor(p.pos),p.steps.length-1);
+    $$('#codepane .cl').forEach(el=>el.classList.toggle('hl',+el.dataset.l===s.line));
+    $('#stcmp').textContent=s.cmp; $('#stswp').textContent=s.swp;
+    $('#ststep').textContent=idx; $('#termstep').textContent=String(idx).padStart(4,'0')+'/'+String(p.steps.length-1).padStart(4,'0');
+    $('#sttime').textContent=p.elapsed.toFixed(1)+'s';
+    $('#scrubfill').style.width=(idx/(p.steps.length-1)*100)+'%';
+    if(s.msg&&$('#termlog').dataset.last!==String(idx)){termLog(s.msg);$('#termlog').dataset.last=String(idx);}
+  },
+  onDone(p){termLog('✓ DONE — '+p.step().cmp+' 次比较 · '+p.step().swp+' 次写入 · '+p.elapsed.toFixed(1)+'s');}
+});
+player.load('quick',64);
+$('#btnplay').onclick=()=>player.toggle();
+$('#btnshuffle').onclick=()=>{player.playing=false;player.reshuffle();};
+$('#btnprev').onclick=()=>{player.playing=false;player.seek(Math.floor(player.pos)-1);};
+$('#btnnext').onclick=()=>{player.playing=false;player.seek(Math.floor(player.pos)+1);};
+$('#speed').oninput=e=>{player.speed=+e.target.value;$('#speedv').textContent='×'+e.target.value;};
+$('#bsize').oninput=e=>{player.n=+e.target.value;$('#bsizev').textContent=e.target.value;const was=player.playing;player.reshuffle();player.playing=was;};
+/* 拖拽进度条 */
+const scrub=$('#scrub');
+function scrubTo(e){const r=scrub.getBoundingClientRect();player.seek(Math.round((e.clientX-r.left)/r.width*(player.steps.length-1)));}
+scrub.addEventListener('pointerdown',e=>{player.playing=false;$('#btnplay').textContent='▶';scrubTo(e);scrub.setPointerCapture(e.pointerId);
+  const mv=ev=>scrubTo(ev); scrub.addEventListener('pointermove',mv);
+  scrub.addEventListener('pointerup',()=>scrub.removeEventListener('pointermove',mv),{once:true});});
+/* 算法 Tabs */
+Object.keys(ALGOS).forEach(k=>{
+  const b=document.createElement('button');b.className='wb-tab'+(k==='quick'?' on':'');b.textContent=ALGOS[k].name;b.dataset.alg=k;
+  b.onclick=()=>{$$('.wb-tab').forEach(t=>t.classList.remove('on'));b.classList.add('on');$('#wbnote').textContent='';player.playing=false;player.load(k,player.n);};
+  $('#algtabs').appendChild(b);
+});
+/* Space 播放暂停 */
+addEventListener('keydown',e=>{if(e.code==='Space'&&!e.target.closest('input')){e.preventDefault();player.toggle();}});
+
+/* ---------- HERO 自动演示 ---------- */
+const heroPlayer=makePlayer($('#heroviz'),{
+  onFrame(p){$('#herostep').textContent='STEP '+String(Math.floor(p.pos)).padStart(4,'0');},
+  onDone(){setTimeout(()=>{heroPlayer.reshuffle();heroPlayer.playing=true;},1400);}
+});
+heroPlayer.load('quick',48); heroPlayer.speed=11; heroPlayer.playing=true;
+$('#herowrap').addEventListener('click',()=>heroPlayer.reshuffle());
+
+/* ============================================================
+   算法库 — 75 张卡片
+   ============================================================ */
+const CATS=[
+  ['all','全部 ALL'],['sorting','排序'],['graph','图论'],['ds','数据结构'],['dp','动态规划'],
+  ['search','搜索回溯'],['advanced','高级技巧'],['interview','面试高频'],['contest','竞赛专题']];
+const D=(id,cat,en,cn,cx)=>({id,cat,en,cn,cx});
+const ALGDATA=[
+D('bubble','sorting','Bubble Sort','冒泡排序','O(n²)'),D('selection','sorting','Selection Sort','选择排序','O(n²)'),
+D('insertion','sorting','Insertion Sort','插入排序','O(n²)'),D('shell','sorting','Shell Sort','希尔排序','O(n^1.3)'),
+D('merge','sorting','Merge Sort','归并排序','O(n log n)'),D('quick','sorting','Quick Sort','快速排序','O(n log n)'),
+D('heap','sorting','Heap Sort','堆排序','O(n log n)'),D('counting','sorting','Counting Sort','计数排序','O(n+k)'),
+D('radix','sorting','Radix Sort','基数排序','O(d·n)'),D('bucket','sorting','Bucket Sort','桶排序','O(n+k)'),
+D('bfs','graph','Breadth-First Search','广度优先搜索','O(V+E)'),D('dfs','graph','Depth-First Search','深度优先搜索','O(V+E)'),
+D('dijkstra','graph','Dijkstra','单源最短路','O(E log V)'),D('bellman','graph','Bellman-Ford','负权最短路','O(VE)'),
+D('floyd','graph','Floyd-Warshall','全源最短路','O(V³)'),D('kruskal','graph','Kruskal','最小生成树','O(E log E)'),
+D('prim','graph','Prim','最小生成树','O(E log V)'),D('topo','graph','Topological Sort','拓扑排序','O(V+E)'),
+D('tarjan','graph','Tarjan SCC','强连通分量','O(V+E)'),D('astar','graph','A* Search','启发式搜索','O(E)'),
+D('linkedlist','ds','Linked List','链表','O(1) 插删'),D('stack','ds','Stack','栈','O(1)'),
+D('queue','ds','Queue','队列','O(1)'),D('deque','ds','Deque','双端队列','O(1)'),
+D('heapds','ds','Binary Heap','二叉堆','O(log n)'),D('bst','ds','Binary Search Tree','二叉搜索树','O(log n)'),
+D('avl','ds','AVL Tree','AVL 平衡树','O(log n)'),D('rbtree','ds','Red-Black Tree','红黑树','O(log n)'),
+D('btree','ds','B-Tree','B 树','O(log n)'),D('trie','ds','Trie','字典树','O(L)'),
+D('unionfind','ds','Union-Find','并查集','O(α(n))'),D('hashtable','ds','Hash Table','哈希表','O(1) 均摊'),
+D('fib','dp','Fibonacci','斐波那契','O(n)'),D('climb','dp','Climbing Stairs','爬楼梯','O(n)'),
+D('coin','dp','Coin Change','零钱兑换','O(n·amount)'),D('knapsack','dp','0/1 Knapsack','01 背包','O(nW)'),
+D('lis','dp','Longest Increasing Subseq','最长上升子序列','O(n log n)'),D('lcs','dp','Longest Common Subseq','最长公共子序列','O(nm)'),
+D('editdist','dp','Edit Distance','编辑距离','O(nm)'),D('matrixchain','dp','Matrix Chain','矩阵链乘','O(n³)'),
+D('robber','dp','House Robber','打家劫舍','O(n)'),D('stock','dp','Best Time to Buy Stock','股票买卖','O(n)'),
+D('binarysearch','search','Binary Search','二分查找','O(log n)'),D('nqueens','search','N-Queens','N 皇后','O(N!)'),
+D('sudoku','search','Sudoku Solver','数独求解','O(9^k)'),D('perm','search','Permutations','全排列','O(n!)'),
+D('subsets','search','Subsets','子集枚举','O(2^n)'),D('wordsearch','search','Word Search','单词搜索','O(mn·4^L)'),
+D('maze','search','Rat in a Maze','迷宫寻路','O(4^k)'),D('knight','search','Knight Tour','骑士周游','O(8^k)'),
+D('combsum','search','Combination Sum','组合总和','O(2^n)'),
+D('kmp','advanced','KMP','字符串匹配','O(n+m)'),D('rabin','advanced','Rabin-Karp','滚动哈希匹配','O(n+m)'),
+D('manacher','advanced','Manacher','最长回文','O(n)'),D('zfunc','advanced','Z-Function','Z 函数','O(n)'),
+D('suffix','advanced','Suffix Array','后缀数组','O(n log n)'),D('bit','advanced','Fenwick Tree','树状数组','O(log n)'),
+D('monostack','advanced','Monotonic Stack','单调栈','O(n)'),D('sparse','advanced','Sparse Table','ST 表','O(1) 查询'),
+D('convex','advanced','Convex Hull','凸包','O(n log n)'),
+D('twosum','interview','Two Sum','两数之和','O(n)'),D('lru','interview','LRU Cache','LRU 缓存','O(1)'),
+D('intervals','interview','Merge Intervals','合并区间','O(n log n)'),D('rain','interview','Trapping Rain Water','接雨水','O(n)'),
+D('slidewin','interview','Sliding Window Max','滑动窗口最大值','O(n)'),D('majority','interview','Majority Element','多数元素','O(n)'),
+D('rotate','interview','Rotate Array','轮转数组','O(n)'),D('median','interview','Median of Two Arrays','两数组中位数','O(log n)'),
+D('fastpow','contest','Fast Power','快速幂','O(log n)'),D('matpow','contest','Matrix Power','矩阵快速幂','O(k³ log n)'),
+D('mo','contest','Mo Algorithm','莫队','O(n√n)'),D('hld','contest','Heavy-Light Decomp','树链剖分','O(log²n)'),
+D('persist','contest','Persistent Segment Tree','可持久化线段树','O(log n)'),D('cdq','contest','CDQ Divide & Conquer','CDQ 分治','O(n log²n)'),
+D('slope','contest','Slope Trick','斜率优化','O(n log n)')];
+const SORTABLE=['quick','merge','bubble','selection','insertion'];
+const catName={sorting:'SORT',graph:'GRAPH',ds:'DS',dp:'DP',search:'BACKTRK',advanced:'ADV',interview:'INTERVW',contest:'CONTEST'};
+function seededBars(seed){let h='';let x=seed*2654435761>>>0;for(let i=0;i<10;i++){x=(x*1103515245+12345)>>>0;h+='<i style="height:'+(20+(x%80))+'%"></i>';}return h;}
+function renderCatalog(filter){
+  const grid=$('#catgrid');grid.innerHTML='';
+  ALGDATA.forEach((d,i)=>{
+    if(filter&&filter!=='all'&&d.cat!==filter)return;
+    const c=document.createElement('div');c.className='acard';c.dataset.id=d.id;
+    c.innerHTML='<div class="idx"><span>№ '+String(i+1).padStart(3,'0')+'</span><span class="tagc">'+catName[d.cat]+'</span></div>'+
+      '<div><div class="nm">'+d.cn+'</div><div class="en">'+d.en+'</div></div>'+
+      '<div class="ft"><span class="cx">'+d.cx+'</span><span class="bars">'+seededBars(i+7)+'</span></div>';
+    c.onclick=()=>{
+      $$('.acard').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');
+      if(SORTABLE.indexOf(d.id)>-1){
+        $('#wbnote').textContent='';
+        $$('.wb-tab').forEach(t=>t.classList.toggle('on',t.dataset.alg===d.id));
+        player.playing=false;player.load(d.id,player.n);
+        document.getElementById('workbench').scrollIntoView({behavior:'smooth'});
+        setTimeout(()=>{player.playing=true;},650);
+      }else if(d.cat==='graph'){
+        document.getElementById('graphlab').scrollIntoView({behavior:'smooth'});
+      }else{
+        $('#wbnote').textContent='⚠ '+d.cn+' 需完整版引擎 · 当前演示 '+ALGOS[player.algo].cn;
+        document.getElementById('workbench').scrollIntoView({behavior:'smooth'});
+      }
+    };
+    grid.appendChild(c);
+  });
+}
+CATS.forEach(([k,label],i)=>{
+  const b=document.createElement('button');b.className='cat-btn'+(i===0?' on':'');
+  const cnt=k==='all'?ALGDATA.length:ALGDATA.filter(d=>d.cat===k).length;
+  b.innerHTML='<span>'+label+'</span><small>'+String(cnt).padStart(2,'0')+'</small>';
+  b.onclick=()=>{$$('.cat-btn').forEach(x=>x.classList.remove('on'));b.classList.add('on');renderCatalog(k);};
+  $('#catfilters').appendChild(b);
+});
+renderCatalog('all');
+
+/* ============================================================
+   图论实验室 — 可拖拽 BFS
+   ============================================================ */
+const GNODES=[{id:'A',x:120,y:260},{id:'B',x:260,y:120},{id:'C',x:260,y:400},{id:'D',x:400,y:260},
+  {id:'E',x:520,y:110},{id:'F',x:540,y:400},{id:'G',x:660,y:250},{id:'H',x:790,y:120},
+  {id:'I',x:800,y:390},{id:'J',x:910,y:250},{id:'K',x:470,y:470},{id:'L',x:90,y:70}];
+const GEDGES=[['A','B'],['A','C'],['A','L'],['B','D'],['B','E'],['C','D'],['C','K'],['D','G'],
+  ['E','G'],['E','H'],['F','G'],['F','I'],['F','K'],['G','J'],['H','J'],['I','J'],['C','F']];
+const svg=$('#graphsvg');const NS='http://www.w3.org/2000/svg';
+let gStart=0, bfsTimer=null;
+const adj={};GNODES.forEach((_,i)=>adj[i]=[]);
+GEDGES.forEach(([a,b])=>{const i=a.charCodeAt(0)-65,j=b.charCodeAt(0)-65;adj[i].push(j);adj[j].push(i);});
+function svgEl(t,attrs){const el=document.createElementNS(NS,t);for(const k in attrs)el.setAttribute(k,attrs[k]);return el;}
+function drawGraph(){
+  svg.innerHTML='';
+  GEDGES.forEach(([a,b])=>{
+    const n1=GNODES[a.charCodeAt(0)-65], n2=GNODES[b.charCodeAt(0)-65];
+    const l=svgEl('line',{x1:n1.x,y1:n1.y,x2:n2.x,y2:n2.y,class:'gedge'});l.dataset.e=a+b;svg.appendChild(l);
+  });
+  GNODES.forEach((n,i)=>{
+    const g=svgEl('g',{class:'gnode'+(i===gStart?' start':''),transform:'translate('+n.x+','+n.y+')','data-i':i});
+    g.appendChild(svgEl('circle',{r:22}));
+    const t=svgEl('text',{dy:5});t.textContent=n.id;g.appendChild(t);
+    svg.appendChild(g);
+  });
+}
+drawGraph();
+/* 拖拽 */
+let dragNode=null;
+svg.addEventListener('pointerdown',e=>{
+  const g=e.target.closest('.gnode');if(!g)return;
+  const i=+g.dataset.i;
+  if(bfsTimer){return;}
+  dragNode={i,moved:false};
+  svg.setPointerCapture(e.pointerId);svg.classList.add('dragging');
+});
+svg.addEventListener('pointermove',e=>{
+  if(!dragNode)return;
+  const r=svg.getBoundingClientRect();
+  const x=(e.clientX-r.left)/r.width*1000, y=(e.clientY-r.top)/r.height*520;
+  dragNode.moved=true;
+  GNODES[dragNode.i].x=Math.max(30,Math.min(970,x));
+  GNODES[dragNode.i].y=Math.max(30,Math.min(490,y));
+  drawGraph();
+});
+svg.addEventListener('pointerup',()=>{
+  if(dragNode&&!dragNode.moved&&!bfsTimer){gStart=dragNode.i;drawGraph();$('#bfsstatus').innerHTML='STATUS: <b>IDLE</b> — 起点 = '+GNODES[gStart].id;}
+  dragNode=null;svg.classList.remove('dragging');
+});
+function setStatus(html){$('#bfsstatus').innerHTML=html;}
+function chip(id,cls){const s=document.createElement('span');s.className='qchip '+(cls||'');s.textContent=id;return s;}
+$('#bfsreset').onclick=()=>{
+  if(bfsTimer){clearInterval(bfsTimer);bfsTimer=null;}
+  $('#queuebox').innerHTML='';$('#orderbox').innerHTML='';drawGraph();
+  setStatus('STATUS: <b>IDLE</b> — 等待指令');
+};
+$('#bfsrun').onclick=()=>{
+  if(bfsTimer)return;
+  $('#queuebox').innerHTML='';$('#orderbox').innerHTML='';drawGraph();
+  const order=GNODES.map((_,i)=>{const c=chip(GNODES[i].id);$('#orderbox').appendChild(c);return c;});
+  const visited=new Set([gStart]), queue=[gStart]; let visitedCount=0;
+  const total=GNODES.length;
+  setStatus('STATUS: <b>RUNNING</b> — 起点 '+GNODES[gStart].id+' 入队');
+  const gnodeEls=()=>$$('#graphsvg .gnode');
+  bfsTimer=setInterval(()=>{
+    if(!queue.length){
+      clearInterval(bfsTimer);bfsTimer=null;
+      setStatus('STATUS: <b>COMPLETE</b> — 访问 '+visitedCount+'/'+total+' 节点（图不连通时部分不可达）');
+      gnodeEls().forEach(g=>{const i=+g.dataset.i;g.classList.remove('visiting');if(visited.has(i))g.classList.add('done');});
+      return;
+    }
+    const cur=queue.shift();
+    $('#queuebox').innerHTML='';queue.forEach(q=>$('#queuebox').appendChild(chip(GNODES[q].id)));
+    gnodeEls().forEach(g=>{const i=+g.dataset.i;g.classList.remove('visiting');if(i===cur)g.classList.add('visiting');else if(visited.has(i))g.classList.add('done');});
+    order[cur].classList.add('on');visitedCount++;
+    setStatus('STATUS: <b>VISIT '+GNODES[cur].id+'</b> — 第 '+visitedCount+' 个 · 邻居入队中');
+    adj[cur].forEach(nb=>{
+      if(!visited.has(nb)){
+        visited.add(nb);queue.push(nb);
+        const e1=GNODES[cur].id+GNODES[nb].id, e2=GNODES[nb].id+GNODES[cur].id;
+        $$('#graphsvg .gedge').forEach(l=>{if(l.dataset.e===e1||l.dataset.e===e2)l.classList.add('lit');});
+        gnodeEls().forEach(g=>{if(+g.dataset.i===nb)g.classList.add('queued');});
+      }
+    });
+  },520);
+};
+
+/* ============================================================
+   PLAYGROUND — 终端模拟
+   ============================================================ */
+const PGCODE={
+  JS:'// merge sort — top-down\nfunction mergeSort(arr) {\n  if (arr.length <= 1) return arr;\n  const mid = arr.length >> 1;\n  const L = mergeSort(arr.slice(0, mid));\n  const R = mergeSort(arr.slice(mid));\n  const out = [];\n  let i = 0, j = 0;\n  while (i < L.length && j < R.length)\n    out.push(L[i] <= R[j] ? L[i++] : R[j++]);\n  return out.concat(L.slice(i), R.slice(j));\n}\nconsole.log(mergeSort([38, 27, 43, 3, 9, 82, 10]));',
+  PYTHON:'# merge sort — pythonic\ndef merge_sort(arr):\n    if len(arr) <= 1:\n        return arr\n    mid = len(arr) // 2\n    L, R = merge_sort(arr[:mid]), merge_sort(arr[mid:])\n    out, i, j = [], 0, 0\n    while i < len(L) and j < len(R):\n        if L[i] <= R[j]: out.append(L[i]); i += 1\n        else: out.append(R[j]); j += 1\n    return out + L[i:] + R[j:]\n\nprint(merge_sort([38, 27, 43, 3, 9, 82, 10]))',
+  CPP:'// merge sort — stl flavor\n#include <bits/stdc++.h>\nusing namespace std;\nvoid ms(vector<int>& a, int l, int r) {\n    if (l >= r) return;\n    int m = (l + r) / 2;\n    ms(a, l, m); ms(a, m + 1, r);\n    vector<int> buf;\n    int i = l, j = m + 1;\n    while (i <= m && j <= r)\n        buf.push_back(a[i] <= a[j] ? a[i++] : a[j++]);\n    while (i <= m) buf.push_back(a[i++]);\n    while (j <= r) buf.push_back(a[j++]);\n    copy(buf.begin(), buf.end(), a.begin() + l);\n}',
+  JAVA:'// merge sort — oop style\nclass MergeSort {\n    static void ms(int[] a, int l, int r) {\n        if (l >= r) return;\n        int m = (l + r) >>> 1;\n        ms(a, l, m); ms(a, m + 1, r);\n        int[] buf = new int[r - l + 1];\n        int i = l, j = m + 1, k = 0;\n        while (i <= m && j <= r)\n            buf[k++] = a[i] <= a[j] ? a[i++] : a[j++];\n        while (i <= m) buf[k++] = a[i++];\n        while (j <= r) buf[k++] = a[j++];\n        System.arraycopy(buf, 0, a, l, buf.length);\n    }\n}'};
+const PGOUT={
+  JS:['$ node mergesort.js','[ 3, 9, 10, 27, 38, 43, 82 ]','','[OK] exit 0 · 12ms · heap 4.2MB'],
+  PYTHON:['$ python3 merge_sort.py','[3, 9, 10, 27, 38, 43, 82]','','[OK] exit 0 · 28ms · heap 8.1MB'],
+  CPP:['$ g++ -O2 ms.cpp -o ms && ./ms','3 9 10 27 38 43 82','','[OK] exit 0 · 3ms · heap 1.4MB'],
+  JAVA:['$ javac MergeSort.java && java MergeSort','[3, 9, 10, 27, 38, 43, 82]','','[OK] exit 0 · 46ms · heap 12.6MB']};
+let pgLang='JS', pgTimer=null;
+function hlCode(src){
+  let s=src.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  s=s.replace(/(\/\/[^\n]*|#[^\n]*)/g,'<span class="c">$1</span>');
+  s=s.replace(/\b(function|return|const|let|var|if|else|while|for|def|class|static|void|int|include|using|namespace|new|console|print|public|private)\b/g,'<span class="k">$1</span>');
+  s=s.replace(/\b(\d+(?:\.\d+)?)\b/g,'<span class="n">$1</span>');
+  return s;
+}
+function setPg(lang){
+  pgLang=lang;
+  $$('.pg-tab').forEach(t=>t.classList.toggle('on',t.textContent===lang));
+  $('#pgcode').innerHTML=hlCode(PGCODE[lang]);
+  $('#pgterm').innerHTML='<span class="dim">// '+lang+' ready · 按 RUN 执行</span><br><span class="cursor"></span>';
+}
+Object.keys(PGCODE).forEach(k=>{
+  const b=document.createElement('button');b.className='pg-tab'+(k==='JS'?' on':'');b.textContent=k;
+  b.onclick=()=>setPg(k);$('#pgtabs').appendChild(b);
+});
+setPg('JS');
+$('#pgrun').onclick=()=>{
+  if(pgTimer)return;
+  const lines=PGOUT[pgLang], term=$('#pgterm');term.innerHTML='';
+  let li=0,ci=0;
+  pgTimer=setInterval(()=>{
+    if(li>=lines.length){clearInterval(pgTimer);pgTimer=null;term.innerHTML+='<span class="cursor"></span>';return;}
+    const line=lines[li];
+    ci+=3;
+    const shown=line.slice(0,ci);
+    const base=term.innerHTML.replace(/<span class="cursor"><\/span>/,'');
+    const done=lines.slice(0,li).map((l,i)=>'<div class="'+(l.indexOf('$')===0?'amb':(l.indexOf('[OK]')===0?'':'dim'))+'">'+l+'</div>').join('');
+    term.innerHTML=done+'<div class="'+(line.indexOf('$')===0?'amb':'')+'">'+shown+'</div>';
+    if(ci>=line.length){li++;ci=0;}
+    term.scrollTop=term.scrollHeight;
+  },24);
+};
+
+/* ---------- 窗口缩放重绘 ---------- */
+addEventListener('resize',()=>{player.render();heroPlayer.render();});
+</script>
+</main>
+</body>
+</html>

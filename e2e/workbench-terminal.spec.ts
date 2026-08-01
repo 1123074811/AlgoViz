@@ -271,6 +271,76 @@ int main() {
   await expect(progress).toHaveValue('2')
 })
 
+test('Java main 在浏览器 javac/JVM 中严格读取 stdin 并生成 trace 动画', async ({ page }) => {
+  test.setTimeout(150_000)
+  const browserErrors: string[] = []
+  page.on('console', message => {
+    if (message.type() === 'error') browserErrors.push(message.text())
+  })
+  page.on('pageerror', error => browserErrors.push(error.message))
+
+  await openAlgorithm(page, '冒泡', /冒泡排序/)
+  const workspace = page.locator('#left-workspace-panel')
+  await workspace.locator('select').first().selectOption('java')
+  const editor = workspace.locator('.monaco-editor').first()
+  await expect(editor).toBeVisible({ timeout: 15_000 })
+  await replaceEditorCode(
+    page,
+    editor,
+    `import java.util.Scanner;
+
+public class Main {
+  public static void main(String[] args) {
+    System.out.print("nums?");
+    System.out.flush();
+    Scanner scanner = new Scanner(System.in);
+    int left = scanner.nextInt();
+    int right = scanner.nextInt();
+    String values = "[" + left + "," + right + "]";
+    AlgoViz.emitTrace("{\\"version\\":1,\\"kind\\":\\"init\\",\\"initialState\\":{\\"type\\":\\"array\\",\\"data\\":" + values + "}}");
+    AlgoViz.emitTrace("{\\"version\\":1,\\"kind\\":\\"step\\",\\"description\\":\\"创建数组\\",\\"events\\":[{\\"type\\":\\"array.create\\",\\"values\\":" + values + "}]}");
+    if (left > right) {
+      int swap = left;
+      left = right;
+      right = swap;
+      AlgoViz.emitTrace("{\\"version\\":1,\\"kind\\":\\"step\\",\\"description\\":\\"交换\\",\\"events\\":[{\\"type\\":\\"array.swap\\",\\"indices\\":[0,1]}],\\"stats\\":{\\"swaps\\":1}}");
+    }
+    AlgoViz.emitResult("[" + left + "," + right + "]");
+  }
+}
+`,
+  )
+
+  const terminal = workspace.locator('section').filter({ hasText: 'TERMINAL · AlgoViz' })
+  await terminal.getByRole('button', { name: '运行 Ctrl+Enter' }).click()
+  await expect(terminal).toContainText('nums?', { timeout: 120_000 })
+  const stdin = terminal.locator('input')
+  await expect(stdin).toBeVisible()
+  await stdin.fill('3 1')
+  await stdin.press('Enter')
+
+  const progress = page.locator('input[aria-label="进度"], input[aria-label="Progress"]')
+  await expect(progress).toHaveValue('2', { timeout: 30_000 })
+  await expect(terminal).toContainText('代码执行完成，生成 2 个动画步骤')
+  await expect(terminal).toContainText('[\n  1,\n  3\n]')
+  await expect(terminal).not.toContainText('[trace:E_TRACE')
+  expect(browserErrors).toEqual([])
+
+  await replaceEditorCode(
+    page,
+    editor,
+    'public class Main {\n'
+    + '  public static void main(String[] args) {\n'
+    + '    System.out.println("broken")\n'
+    + '  }\n'
+    + '}\n',
+  )
+  await terminal.getByRole('button', { name: '运行 Ctrl+Enter' }).click()
+  await expect(terminal).toContainText("';' expected", { timeout: 30_000 })
+  await expect(terminal).toContainText('Java 编译失败，javac 退出码')
+  await expect(progress).toHaveValue('2')
+})
+
 test('Python input 使用共享 stdin 连续暂停并复用浏览器运行时', async ({ page }) => {
   test.setTimeout(90_000)
   const browserErrors: string[] = []

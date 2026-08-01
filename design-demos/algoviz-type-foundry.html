@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlgoViz · 铸字间 — The Type Foundry</title>
+<!--
+  ═══════════════════════════════════════════════════════════
+  AlgoViz 第七稿 ·「铸字间 / The Type Foundry」
+  概念：一间活的铅字铸造工坊。算法是铅字，可视化是压印。
+  纸为底、铁为骨、朱为魂、铜为饰。
+  物理质感：厚描边、硬阴影、油墨肌理、压印凹凸。
+  交互：真实按压感、活字拾取、墨辊滚过、印刷机拉杆。
+  单文件交付：内联 CSS + 原生 JS，无构建、无框架依赖。
+  ═══════════════════════════════════════════════════════════
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Noto+Serif+SC:wght@600;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════ 基调：纸 · 铁 · 朱 · 铜 ═══════════ */
+:root{
+  --paper:#f4ede0;
+  --paper-warm:#efe5d3;
+  --paper-deep:#e8dcc6;
+  --card:#faf6ee;
+  --ink:#1a1712;
+  --ink-soft:#3d3830;
+  --ink-mute:#7a7264;
+  --line:#c9bda6;
+  --line-hard:#2a2520;
+  --vermillion:#c8371e;
+  --vermillion-deep:#a02c16;
+  --vermillion-glow:#e8492d;
+  --brass:#b8860b;
+  --brass-light:#d4a520;
+  --brass-dim:#8b6914;
+  --iron:#2d2926;
+  --iron-light:#4a4440;
+  --iron-surface:#383330;
+  --shadow-hard:4px 4px 0 var(--ink);
+  --shadow-press:2px 2px 0 var(--ink);
+  --shadow-lift:6px 6px 0 rgba(26,23,18,.25);
+  --serif:'Playfair Display','Noto Serif SC','Songti SC','SimSun',serif;
+  --mono:'JetBrains Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+  --sans:'PingFang SC','Hiragino Sans GB','Microsoft YaHei',system-ui,sans-serif;
+  --ease:cubic-bezier(.25,.8,.25,1);
+  --ease-bounce:cubic-bezier(.34,1.56,.64,1);
+  --radius:2px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.7;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+/* 纸纹肌理 */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  opacity:.35;
+  background-image:url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+}
+::selection{background:var(--vermillion);color:var(--paper)}
+
+/* ═══════════ 排版基础 ═══════════ */
+h1,h2,h3{font-family:var(--serif);font-weight:900;line-height:1.15;letter-spacing:-.02em}
+.mono{font-family:var(--mono)}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+
+/* ═══════════ 顶部报头 MASTHEAD ═══════════ */
+.masthead{
+  position:sticky;top:0;z-index:100;
+  background:var(--iron);
+  color:var(--paper);
+  border-bottom:3px solid var(--ink);
+  box-shadow:0 3px 0 var(--brass-dim);
+}
+.masthead-inner{
+  max-width:1440px;margin:0 auto;
+  display:flex;align-items:center;gap:24px;
+  padding:0 32px;height:64px;
+}
+.logo{
+  font-family:var(--serif);font-size:22px;font-weight:900;
+  letter-spacing:.04em;color:var(--paper);
+  display:flex;align-items:center;gap:10px;
+  user-select:none;
+}
+.logo-mark{
+  width:32px;height:32px;
+  background:var(--vermillion);
+  border:2px solid var(--paper);
+  display:grid;place-items:center;
+  font-size:16px;font-weight:900;color:var(--paper);
+  box-shadow:2px 2px 0 rgba(0,0,0,.4);
+  transition:transform .2s var(--ease-bounce);
+}
+.logo:hover .logo-mark{transform:rotate(-6deg) scale(1.08)}
+.logo-sub{
+  font-family:var(--mono);font-size:10px;font-weight:400;
+  color:var(--brass-light);letter-spacing:.15em;text-transform:uppercase;
+  margin-left:4px;
+}
+.masthead-nav{display:flex;gap:4px;margin-left:auto}
+.nav-btn{
+  font-family:var(--mono);font-size:12px;font-weight:500;
+  padding:8px 16px;color:var(--paper);
+  border:2px solid transparent;
+  letter-spacing:.05em;text-transform:uppercase;
+  transition:all .15s var(--ease);
+  position:relative;
+}
+.nav-btn::after{
+  content:'';position:absolute;bottom:4px;left:16px;right:16px;
+  height:2px;background:var(--vermillion);
+  transform:scaleX(0);transform-origin:left;
+  transition:transform .2s var(--ease);
+}
+.nav-btn:hover::after,.nav-btn.active::after{transform:scaleX(1)}
+.nav-btn:hover{color:var(--brass-light)}
+.nav-btn.active{border-color:var(--brass-dim);color:var(--brass-light)}
+
+/* ═══════════ 主布局 ═══════════ */
+.main{position:relative;z-index:1;max-width:1440px;margin:0 auto;padding:32px}
+
+/* ═══════════ 英雄区 HERO ═══════════ */
+.hero{
+  display:grid;
+  grid-template-columns:1fr 380px;
+  gap:0;
+  border:3px solid var(--line-hard);
+  box-shadow:var(--shadow-hard);
+  margin-bottom:48px;
+  background:var(--card);
+  overflow:hidden;
+}
+.hero-left{padding:56px 48px;position:relative}
+.hero-left::before{
+  content:'ALGO';position:absolute;top:-20px;right:20px;
+  font-family:var(--serif);font-size:180px;font-weight:900;
+  color:transparent;-webkit-text-stroke:1px var(--line);
+  opacity:.3;pointer-events:none;line-height:1;
+}
+.hero-eyebrow{
+  font-family:var(--mono);font-size:11px;font-weight:700;
+  letter-spacing:.25em;text-transform:uppercase;
+  color:var(--vermillion);
+  margin-bottom:16px;
+  display:flex;align-items:center;gap:12px;
+}
+.hero-eyebrow::before{content:'';width:32px;height:2px;background:var(--vermillion)}
+.hero-title{
+  font-size:clamp(36px,5vw,56px);
+  margin-bottom:20px;
+  color:var(--ink);
+}
+.hero-title em{
+  font-style:italic;color:var(--vermillion);
+  text-decoration:underline;text-decoration-thickness:3px;
+  text-underline-offset:6px;
+}
+.hero-desc{
+  font-size:15px;color:var(--ink-soft);
+  max-width:480px;margin-bottom:32px;line-height:1.9;
+}
+.hero-stats{display:flex;gap:32px}
+.stat{display:flex;flex-direction:column;gap:2px}
+.stat-num{font-family:var(--serif);font-size:28px;font-weight:900;color:var(--ink)}
+.stat-label{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-mute)}
+/* 右侧装饰面板 */
+.hero-right{
+  background:var(--iron);
+  border-left:3px solid var(--line-hard);
+  display:flex;flex-direction:column;
+  justify-content:center;align-items:center;
+  padding:40px;position:relative;overflow:hidden;
+}
+.hero-right::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,.015) 3px,rgba(255,255,255,.015) 4px);
+}
+.type-specimen{
+  font-family:var(--serif);font-size:120px;font-weight:900;
+  color:var(--paper);opacity:.12;line-height:.85;
+  position:absolute;top:20px;right:-10px;
+  writing-mode:vertical-rl;
+}
+.hero-anim-box{
+  width:100%;aspect-ratio:1;
+  border:2px solid var(--iron-light);
+  background:var(--iron-surface);
+  position:relative;
+  display:flex;align-items:flex-end;justify-content:center;
+  gap:6px;padding:24px;
+  box-shadow:inset 0 0 30px rgba(0,0,0,.4);
+}
+.hero-bar{
+  width:18px;background:var(--brass-light);
+  border:1px solid var(--brass-dim);
+  transition:height .4s var(--ease-bounce);
+  position:relative;
+}
+.hero-bar.active{background:var(--vermillion-glow);border-color:var(--vermillion)}
+.hero-bar.done{background:var(--brass-dim);opacity:.6}
+
+/* ═══════════ 分类导航 CATEGORY RAIL ═══════════ */
+.section-head{
+  display:flex;align-items:baseline;gap:16px;
+  margin-bottom:24px;padding-bottom:12px;
+  border-bottom:2px solid var(--line-hard);
+}
+.section-head h2{font-size:24px}
+.section-head .count{
+  font-family:var(--mono);font-size:11px;
+  color:var(--ink-mute);letter-spacing:.1em;
+}
+.cat-rail{
+  display:flex;gap:8px;margin-bottom:32px;
+  flex-wrap:wrap;
+}
+.cat-chip{
+  font-family:var(--mono);font-size:12px;font-weight:500;
+  padding:8px 18px;
+  border:2px solid var(--line-hard);
+  background:var(--card);
+  color:var(--ink-soft);
+  letter-spacing:.04em;
+  transition:all .15s var(--ease);
+  box-shadow:var(--shadow-press);
+  user-select:none;
+}
+.cat-chip:hover{
+  transform:translate(-1px,-1px);
+  box-shadow:3px 3px 0 var(--ink);
+}
+.cat-chip:active{
+  transform:translate(2px,2px);
+  box-shadow:none;
+}
+.cat-chip.active{
+  background:var(--ink);color:var(--paper);
+  border-color:var(--ink);
+  box-shadow:var(--shadow-press);
+}
+
+/* ═══════════ 算法字架 TYPE CASE GRID ═══════════ */
+.type-case{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:16px;
+  margin-bottom:56px;
+}
+.type-block{
+  border:2px solid var(--line-hard);
+  background:var(--card);
+  padding:20px;
+  position:relative;
+  cursor:pointer;
+  transition:all .18s var(--ease);
+  box-shadow:var(--shadow-press);
+  overflow:hidden;
+}
+.type-block::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--vermillion);
+  transform:scaleX(0);transform-origin:left;
+  transition:transform .25s var(--ease);
+}
+.type-block:hover{
+  transform:translate(-2px,-2px);
+  box-shadow:var(--shadow-lift);
+}
+.type-block:hover::before{transform:scaleX(1)}
+.type-block:active{
+  transform:translate(1px,1px);
+  box-shadow:1px 1px 0 var(--ink);
+}
+.type-block.selected{
+  border-color:var(--vermillion);
+  box-shadow:4px 4px 0 var(--vermillion-deep);
+}
+.type-block.selected::before{transform:scaleX(1)}
+.tb-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.tb-name{font-family:var(--serif);font-size:16px;font-weight:700;line-height:1.3}
+.tb-name-en{font-family:var(--mono);font-size:10px;color:var(--ink-mute);letter-spacing:.05em;margin-top:2px}
+.tb-diff{
+  font-family:var(--mono);font-size:9px;font-weight:700;
+  padding:3px 8px;letter-spacing:.1em;text-transform:uppercase;
+  border:1.5px solid;white-space:nowrap;
+}
+.tb-diff.easy{color:#2d7a4f;border-color:#2d7a4f;background:rgba(45,122,79,.06)}
+.tb-diff.medium{color:var(--brass-dim);border-color:var(--brass-dim);background:rgba(184,134,11,.06)}
+.tb-diff.hard{color:var(--vermillion);border-color:var(--vermillion);background:rgba(200,55,30,.06)}
+.tb-cat{
+  font-family:var(--mono);font-size:10px;color:var(--ink-mute);
+  margin-top:12px;padding-top:10px;border-top:1px solid var(--line);
+  display:flex;align-items:center;gap:6px;
+}
+.tb-cat::before{content:'◆';font-size:7px;color:var(--brass)}
+
+/* ═══════════ 印刷台 PRESS STAGE ═══════════ */
+.press-section{
+  border:3px solid var(--line-hard);
+  background:var(--iron);
+  box-shadow:var(--shadow-hard);
+  margin-bottom:48px;
+  display:grid;
+  grid-template-columns:1fr 320px;
+  min-height:480px;
+}
+.stage{
+  padding:32px;
+  display:flex;flex-direction:column;
+  position:relative;
+}
+.stage-title{
+  font-family:var(--mono);font-size:11px;font-weight:700;
+  letter-spacing:.2em;text-transform:uppercase;
+  color:var(--brass-light);
+  margin-bottom:24px;
+  display:flex;align-items:center;gap:12px;
+}
+.stage-title::after{content:'';flex:1;height:1px;background:var(--iron-light)}
+.canvas-area{
+  flex:1;
+  display:flex;align-items:flex-end;justify-content:center;
+  gap:4px;
+  padding:24px 16px 16px;
+  background:var(--iron-surface);
+  border:2px solid var(--iron-light);
+  box-shadow:inset 0 2px 12px rgba(0,0,0,.5);
+  position:relative;
+  min-height:280px;
+}
+.canvas-area::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(255,255,255,.02) 39px,rgba(255,255,255,.02) 40px);
+  pointer-events:none;
+}
+.bar{
+  flex:1;max-width:48px;
+  background:linear-gradient(180deg,var(--brass-light),var(--brass));
+  border:1px solid var(--brass-dim);
+  border-bottom:none;
+  position:relative;
+  transition:height .3s var(--ease-bounce),background .2s,transform .15s;
+  transform-origin:bottom;
+}
+.bar::after{
+  content:attr(data-val);
+  position:absolute;top:-20px;left:50%;transform:translateX(-50%);
+  font-family:var(--mono);font-size:10px;color:var(--paper);
+  opacity:.7;
+}
+.bar.comparing{
+  background:linear-gradient(180deg,var(--vermillion-glow),var(--vermillion));
+  border-color:var(--vermillion-deep);
+  transform:scaleX(1.08);
+  box-shadow:0 0 12px rgba(232,73,45,.4);
+}
+.bar.swapping{
+  background:linear-gradient(180deg,#fff,var(--brass-light));
+  border-color:var(--brass-light);
+  transform:scaleX(1.12);
+}
+.bar.sorted{
+  background:linear-gradient(180deg,var(--brass-dim),#5a4a10);
+  border-color:#4a3d0e;opacity:.7;
+}
+/* 控制台 */
+.console{
+  border-left:3px solid var(--line-hard);
+  background:var(--paper-warm);
+  padding:28px 24px;
+  display:flex;flex-direction:column;gap:20px;
+}
+.console-head{
+  font-family:var(--serif);font-size:18px;font-weight:900;
+  padding-bottom:12px;border-bottom:2px solid var(--line-hard);
+}
+.ctrl-group{display:flex;flex-direction:column;gap:8px}
+.ctrl-label{
+  font-family:var(--mono);font-size:10px;font-weight:700;
+  letter-spacing:.15em;text-transform:uppercase;color:var(--ink-mute);
+}
+.ctrl-row{display:flex;gap:8px}
+/* 物理按钮 */
+.btn-press{
+  font-family:var(--mono);font-size:12px;font-weight:700;
+  padding:10px 20px;
+  border:2px solid var(--line-hard);
+  background:var(--card);
+  color:var(--ink);
+  box-shadow:3px 3px 0 var(--ink);
+  transition:all .1s var(--ease);
+  letter-spacing:.05em;
+  user-select:none;
+}
+.btn-press:hover{background:var(--paper-deep)}
+.btn-press:active{
+  transform:translate(3px,3px);
+  box-shadow:none;
+}
+.btn-press.primary{
+  background:var(--vermillion);color:var(--paper);
+  border-color:var(--vermillion-deep);
+  box-shadow:3px 3px 0 var(--vermillion-deep);
+}
+.btn-press.primary:active{box-shadow:none}
+.btn-press.brass{
+  background:var(--brass);color:var(--paper);
+  border-color:var(--brass-dim);
+  box-shadow:3px 3px 0 var(--brass-dim);
+}
+.btn-press.brass:active{box-shadow:none}
+.btn-press:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:3px 3px 0 var(--ink)!important}
+/* 速度滑杆 */
+.speed-slider{
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:6px;
+  background:var(--line);
+  border:1px solid var(--line-hard);
+  outline:none;
+  cursor:pointer;
+}
+.speed-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:18px;height:24px;
+  background:var(--ink);
+  border:2px solid var(--brass);
+  cursor:grab;
+  box-shadow:2px 2px 0 rgba(0,0,0,.3);
+}
+.speed-slider::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.1)}
+/* 状态指示 */
+.status-line{
+  font-family:var(--mono);font-size:11px;
+  color:var(--ink-soft);
+  padding:12px;
+  border:1px solid var(--line);
+  background:var(--card);
+  min-height:60px;
+  line-height:1.8;
+}
+.status-line .hl{color:var(--vermillion);font-weight:700}
+.status-line .num{color:var(--brass-dim);font-weight:700}
+/* 算法信息 */
+.algo-info{
+  padding:16px;border:2px solid var(--line-hard);
+  background:var(--card);
+}
+.algo-info h4{font-family:var(--serif);font-size:15px;margin-bottom:8px}
+.algo-info p{font-size:12px;color:var(--ink-soft);line-height:1.7}
+.complexity{
+  display:flex;gap:16px;margin-top:12px;
+  font-family:var(--mono);font-size:11px;
+}
+.complexity span{color:var(--ink-mute)}
+.complexity strong{color:var(--vermillion)}
+
+/* ═══════════ 代码面板 CODE PANEL ═══════════ */
+.code-section{
+  border:3px solid var(--line-hard);
+  box-shadow:var(--shadow-hard);
+  margin-bottom:48px;
+  background:var(--iron);
+  overflow:hidden;
+}
+.code-head{
+  display:flex;align-items:center;gap:16px;
+  padding:14px 24px;
+  background:var(--iron-surface);
+  border-bottom:2px solid var(--iron-light);
+}
+.code-head h3{
+  font-family:var(--mono);font-size:12px;font-weight:700;
+  color:var(--brass-light);letter-spacing:.1em;text-transform:uppercase;
+}
+.code-dots{display:flex;gap:6px;margin-left:auto}
+.code-dots i{width:10px;height:10px;border:1.5px solid var(--iron-light);display:block}
+.code-dots i:nth-child(1){background:var(--vermillion)}
+.code-dots i:nth-child(2){background:var(--brass)}
+.code-dots i:nth-child(3){background:#2d7a4f}
+.code-body{
+  padding:24px;
+  font-family:var(--mono);font-size:13px;line-height:2;
+  color:var(--paper);
+  overflow-x:auto;
+  counter-reset:line;
+}
+.code-body .ln{
+  display:block;padding:0 16px;
+  transition:background .15s;
+}
+.code-body .ln:hover{background:rgba(255,255,255,.04)}
+.code-body .ln::before{
+  counter-increment:line;content:counter(line);
+  display:inline-block;width:28px;margin-right:16px;
+  text-align:right;color:var(--iron-light);
+  font-size:11px;
+}
+.code-body .ln.active{background:rgba(200,55,30,.15);border-left:3px solid var(--vermillion)}
+.code-body .kw{color:var(--vermillion-glow)}
+.code-body .fn{color:var(--brass-light)}
+.code-body .cm{color:var(--iron-light);font-style:italic}
+.code-body .st{color:#7ab87a}
+.code-body .nu{color:var(--brass-light)}
+
+/* ═══════════ 页脚 FOOTER ═══════════ */
+.footer{
+  border-top:3px solid var(--line-hard);
+  padding:32px;
+  display:flex;align-items:center;justify-content:space-between;
+  font-family:var(--mono);font-size:11px;color:var(--ink-mute);
+  letter-spacing:.05em;
+}
+.footer-brand{font-family:var(--serif);font-size:16px;font-weight:900;color:var(--ink)}
+
+/* ═══════════ 动画 ═══════════ */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes inkSpread{from{transform:scale(0);opacity:.6}to{transform:scale(2.5);opacity:0}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.fade-up{animation:fadeUp .5s var(--ease) both}
+.fade-up-d1{animation-delay:.1s}
+.fade-up-d2{animation-delay:.2s}
+.fade-up-d3{animation-delay:.3s}
+
+/* 墨点涟漪 */
+.ink-ripple{
+  position:absolute;width:20px;height:20px;
+  background:var(--vermillion);border-radius:50%;
+  pointer-events:none;
+  animation:inkSpread .5s var(--ease) forwards;
+}
+
+/* ═══════════ 响应式 ═══════════ */
+@media(max-width:1024px){
+  .hero{grid-template-columns:1fr}
+  .hero-right{display:none}
+  .press-section{grid-template-columns:1fr}
+  .console{border-left:none;border-top:3px solid var(--line-hard)}
+}
+@media(max-width:640px){
+  .main{padding:16px}
+  .masthead-inner{padding:0 16px}
+  .hero-left{padding:32px 24px}
+  .type-case{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ MASTHEAD ═══════════ -->
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="logo">
+      <div class="logo-mark">A</div>
+      <span>AlgoViz</span>
+      <span class="logo-sub">铸字间</span>
+    </div>
+    <nav class="masthead-nav">
+      <button class="nav-btn active" data-view="catalog">字架</button>
+      <button class="nav-btn" data-view="press">印刷台</button>
+      <button class="nav-btn" data-view="code">铅字稿</button>
+      <button class="nav-btn" data-view="settings">工坊设置</button>
+    </nav>
+  </div>
+</header>
+
+<main class="main">
+  <!-- ═══════════ HERO ═══════════ -->
+  <section class="hero fade-up">
+    <div class="hero-left">
+      <div class="hero-eyebrow">Algorithm Visualization Foundry</div>
+      <h1 class="hero-title">将算法<br>铸成<em>可见</em>之形</h1>
+      <p class="hero-desc">
+        每一枚铅字都是一次比较，每一行排版都是一轮循环。
+        在铸字间里，抽象逻辑被浇铸为跳动的金属柱——
+        你看见的不仅是结果，更是思维的形状。
+      </p>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-num">60+</span><span class="stat-label">算法字模</span></div>
+        <div class="stat"><span class="stat-num">8</span><span class="stat-label">分类字架</span></div>
+        <div class="stat"><span class="stat-num">∞</span><span class="stat-label">自定义铸模</span></div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="type-specimen">Ag</div>
+      <div class="hero-anim-box" id="heroAnim"></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ CATALOG ═══════════ -->
+  <section id="catalogView">
+    <div class="section-head">
+      <h2>字架 · 算法目录</h2>
+      <span class="count mono" id="algoCount">60 枚字模</span>
+    </div>
+    <div class="cat-rail" id="catRail"></div>
+    <div class="type-case" id="typeCase"></div>
+  </section>
+
+  <!-- ═══════════ PRESS STAGE ═══════════ -->
+  <section class="press-section fade-up fade-up-d1" id="pressView">
+    <div class="stage">
+      <div class="stage-title">印刷台 · 可视化演示</div>
+      <div class="canvas-area" id="sortCanvas"></div>
+    </div>
+    <div class="console">
+      <div class="console-head">控制台</div>
+      <div class="algo-info" id="algoInfo">
+        <h4>冒泡排序</h4>
+        <p>反复遍历序列，比较相邻元素并交换，直到无需交换。如同气泡浮出水面，最大值逐步"浮"到末端。</p>
+        <div class="complexity">
+          <span>时间 <strong>O(n²)</strong></span>
+          <span>空间 <strong>O(1)</strong></span>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">操作</span>
+        <div class="ctrl-row">
+          <button class="btn-press primary" id="btnRun">▶ 压印</button>
+          <button class="btn-press" id="btnStep">⏭ 单步</button>
+          <button class="btn-press brass" id="btnReset">↺ 重铸</button>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">速度 · <span id="speedVal">50</span>ms</span>
+        <input type="range" class="speed-slider" id="speedSlider" min="10" max="200" value="50">
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">数据量 · <span id="sizeVal">20</span></span>
+        <input type="range" class="speed-slider" id="sizeSlider" min="8" max="40" value="20">
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">状态</span>
+        <div class="status-line" id="statusLine">就绪。选择算法后按下「压印」开始。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ CODE PANEL ═══════════ -->
+  <section class="code-section fade-up fade-up-d2" id="codeView">
+    <div class="code-head">
+      <h3>铅字稿 · 源代码</h3>
+      <div class="code-dots"><i></i><i></i><i></i></div>
+    </div>
+    <div class="code-body" id="codeBody"></div>
+  </section>
+</main>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<footer class="footer">
+  <span class="footer-brand">AlgoViz · 铸字间</span>
+  <span>TYPE FOUNDRY EDITION — 以铅字之名，铸算法之形</span>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   AlgoViz 铸字间 · 交互引擎
+   ═══════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+
+/* ─── 数据 ─── */
+const ALGORITHMS = [
+  {id:'bubble_sort',name:'冒泡排序',en:'Bubble Sort',cat:'sorting',diff:'easy'},
+  {id:'selection_sort',name:'选择排序',en:'Selection Sort',cat:'sorting',diff:'easy'},
+  {id:'insertion_sort',name:'插入排序',en:'Insertion Sort',cat:'sorting',diff:'easy'},
+  {id:'shell_sort',name:'希尔排序',en:'Shell Sort',cat:'sorting',diff:'medium'},
+  {id:'merge_sort',name:'归并排序',en:'Merge Sort',cat:'sorting',diff:'medium'},
+  {id:'quick_sort',name:'快速排序',en:'Quick Sort',cat:'sorting',diff:'medium'},
+  {id:'heap_sort',name:'堆排序',en:'Heap Sort',cat:'sorting',diff:'medium'},
+  {id:'counting_sort',name:'计数排序',en:'Counting Sort',cat:'sorting',diff:'easy'},
+  {id:'radix_sort',name:'基数排序',en:'Radix Sort',cat:'sorting',diff:'medium'},
+  {id:'bucket_sort',name:'桶排序',en:'Bucket Sort',cat:'sorting',diff:'medium'},
+  {id:'bfs_graph',name:'广度优先搜索',en:'BFS (Graph)',cat:'graph',diff:'medium'},
+  {id:'dfs_graph',name:'深度优先搜索',en:'DFS (Graph)',cat:'graph',diff:'medium'},
+  {id:'dijkstra',name:'Dijkstra 最短路径',en:"Dijkstra's",cat:'graph',diff:'hard'},
+  {id:'bellman_ford',name:'Bellman-Ford',en:'Bellman-Ford',cat:'graph',diff:'hard'},
+  {id:'a_star',name:'A* 搜索',en:'A* Search',cat:'graph',diff:'hard'},
+  {id:'floyd',name:'Floyd-Warshall',en:'Floyd-Warshall',cat:'graph',diff:'hard'},
+  {id:'prim',name:'Prim 最小生成树',en:"Prim's MST",cat:'graph',diff:'hard'},
+  {id:'kruskal',name:'Kruskal 最小生成树',en:"Kruskal's MST",cat:'graph',diff:'hard'},
+  {id:'topological_sort',name:'拓扑排序',en:'Topological Sort',cat:'graph',diff:'medium'},
+  {id:'tarjan_scc',name:'Tarjan 强连通',en:'Tarjan SCC',cat:'graph',diff:'hard'},
+  {id:'linked_list',name:'链表操作',en:'Linked List',cat:'data-structure',diff:'easy'},
+  {id:'stack',name:'栈操作演示',en:'Stack Ops',cat:'data-structure',diff:'easy'},
+  {id:'queue',name:'队列操作演示',en:'Queue Ops',cat:'data-structure',diff:'easy'},
+  {id:'hash_table',name:'哈希表',en:'Hash Table',cat:'data-structure',diff:'easy'},
+  {id:'binary_tree',name:'二叉树遍历',en:'Binary Tree',cat:'data-structure',diff:'medium'},
+  {id:'bst',name:'二叉搜索树',en:'BST',cat:'data-structure',diff:'medium'},
+  {id:'avl_tree',name:'AVL 平衡树',en:'AVL Tree',cat:'data-structure',diff:'hard'},
+  {id:'red_black_tree',name:'红黑树',en:'Red-Black Tree',cat:'data-structure',diff:'hard'},
+  {id:'skip_list',name:'跳表',en:'Skip List',cat:'data-structure',diff:'hard'},
+  {id:'heap_ds',name:'堆操作',en:'Heap Ops',cat:'data-structure',diff:'medium'},
+  {id:'btree',name:'B树',en:'B-Tree',cat:'data-structure',diff:'hard'},
+  {id:'trie',name:'Trie 字典树',en:'Trie',cat:'data-structure',diff:'medium'},
+  {id:'knapsack_01',name:'0/1 背包',en:'0/1 Knapsack',cat:'dp',diff:'medium'},
+  {id:'lcs',name:'最长公共子序列',en:'LCS',cat:'dp',diff:'medium'},
+  {id:'lis',name:'最长递增子序列',en:'LIS',cat:'dp',diff:'medium'},
+  {id:'edit_distance',name:'编辑距离',en:'Edit Distance',cat:'dp',diff:'hard'},
+  {id:'interval_dp',name:'区间 DP',en:'Interval DP',cat:'dp',diff:'hard'},
+  {id:'grid_dp',name:'网格DP',en:'Grid DP',cat:'dp',diff:'medium'},
+  {id:'binary_search',name:'二分查找',en:'Binary Search',cat:'search',diff:'easy'},
+  {id:'backtracking',name:'回溯算法',en:'Backtracking',cat:'search',diff:'medium'},
+  {id:'n_queens',name:'N 皇后',en:'N-Queens',cat:'search',diff:'hard'},
+  {id:'sudoku',name:'数独求解',en:'Sudoku Solver',cat:'search',diff:'hard'},
+  {id:'huffman',name:'哈夫曼编码',en:'Huffman Coding',cat:'advanced',diff:'medium'},
+  {id:'kmp',name:'KMP 匹配',en:'KMP',cat:'advanced',diff:'hard'},
+  {id:'manacher',name:'Manacher 回文',en:"Manacher's",cat:'advanced',diff:'hard'},
+  {id:'segment_tree',name:'线段树',en:'Segment Tree',cat:'advanced',diff:'hard'},
+  {id:'fenwick_tree',name:'树状数组',en:'Fenwick Tree',cat:'advanced',diff:'hard'},
+  {id:'sliding_window',name:'滑动窗口',en:'Sliding Window',cat:'advanced',diff:'medium'},
+  {id:'monotonic_stack',name:'单调栈',en:'Monotonic Stack',cat:'advanced',diff:'medium'},
+  {id:'gcd',name:'欧几里得 GCD',en:'Euclidean GCD',cat:'contest',diff:'easy'},
+];
+
+const CATEGORIES = [
+  {id:'all',name:'全部',en:'ALL'},
+  {id:'sorting',name:'排序',en:'SORT'},
+  {id:'graph',name:'图论',en:'GRAPH'},
+  {id:'data-structure',name:'数据结构',en:'DS'},
+  {id:'dp',name:'动态规划',en:'DP'},
+  {id:'search',name:'搜索回溯',en:'SEARCH'},
+  {id:'advanced',name:'进阶',en:'ADV'},
+  {id:'contest',name:'竞赛',en:'CONTEST'},
+];
+
+const CODE_SNIPPET = [
+  {t:'<span class="kw">function</span> <span class="fn">bubbleSort</span>(arr) {',a:false},
+  {t:'  <span class="kw">const</span> n = arr.length;',a:false},
+  {t:'  <span class="cm">// 外层循环：控制遍历轮数</span>',a:false},
+  {t:'  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="nu">0</span>; i < n - <span class="nu">1</span>; i++) {',a:true},
+  {t:'    <span class="cm">// 内层循环：相邻比较与交换</span>',a:false},
+  {t:'    <span class="kw">for</span> (<span class="kw">let</span> j = <span class="nu">0</span>; j < n - i - <span class="nu">1</span>; j++) {',a:true},
+  {t:'      <span class="kw">if</span> (arr[j] > arr[j + <span class="nu">1</span>]) {',a:true},
+  {t:'        <span class="cm">// 交换相邻元素</span>',a:false},
+  {t:'        [arr[j], arr[j+<span class="nu">1</span>]] = [arr[j+<span class="nu">1</span>], arr[j]];',a:true},
+  {t:'      }',a:false},
+  {t:'    }',a:false},
+  {t:'  }',a:false},
+  {t:'  <span class="kw">return</span> arr;',a:false},
+  {t:'}',a:false},
+];
+
+/* ─── 状态 ─── */
+let currentCat = 'all';
+let selectedAlgo = ALGORITHMS[0];
+let sortArr = [];
+let sortSteps = [];
+let stepIdx = 0;
+let running = false;
+let animTimer = null;
+let speed = 50;
+let dataSize = 20;
+
+/* ─── DOM refs ─── */
+const $ = s => document.querySelector(s);
+const catRail = $('#catRail');
+const typeCase = $('#typeCase');
+const sortCanvas = $('#sortCanvas');
+const statusLine = $('#statusLine');
+const codeBody = $('#codeBody');
+const heroAnim = $('#heroAnim');
+
+/* ─── 渲染分类 ─── */
+function renderCats(){
+  catRail.innerHTML = CATEGORIES.map(c=>
+    `<button class="cat-chip${c.id===currentCat?' active':''}" data-cat="${c.id}">${c.name} <span style="opacity:.5;font-size:10px">${c.en}</span></button>`
+  ).join('');
+}
+
+/* ─── 渲染字架 ─── */
+function renderGrid(){
+  const list = currentCat==='all' ? ALGORITHMS : ALGORITHMS.filter(a=>a.cat===currentCat);
+  $('#algoCount').textContent = list.length + ' 枚字模';
+  typeCase.innerHTML = list.map(a=>`
+    <div class="type-block${a.id===selectedAlgo.id?' selected':''}" data-id="${a.id}">
+      <div class="tb-header">
+        <div><div class="tb-name">${a.name}</div><div class="tb-name-en">${a.en}</div></div>
+        <span class="tb-diff ${a.diff}">${a.diff}</span>
+      </div>
+      <div class="tb-cat">${CATEGORIES.find(c=>c.id===a.cat)?.name||a.cat}</div>
+    </div>
+  `).join('');
+}
+
+/* ─── 代码面板 ─── */
+function renderCode(){
+  codeBody.innerHTML = CODE_SNIPPET.map(l=>
+    `<span class="ln${l.a?' active':''}">${l.t}</span>`
+  ).join('');
+}
+
+/* ─── 排序可视化 ─── */
+function genArray(){
+  sortArr = Array.from({length:dataSize},()=>Math.floor(Math.random()*90)+10);
+  sortSteps = [];
+  stepIdx = 0;
+  buildSteps();
+  renderBars();
+}
+
+function buildSteps(){
+  const a = [...sortArr];
+  const n = a.length;
+  sortSteps.push({type:'init',arr:[...a],msg:'初始化序列'});
+  for(let i=0;i<n-1;i++){
+    for(let j=0;j<n-i-1;j++){
+      sortSteps.push({type:'compare',arr:[...a],i:j,j:j+1,msg:`比较 <span class="hl">a[${j}]=${a[j]}</span> 与 <span class="hl">a[${j+1}]=${a[j+1]}</span>`});
+      if(a[j]>a[j+1]){
+        [a[j],a[j+1]]=[a[j+1],a[j]];
+        sortSteps.push({type:'swap',arr:[...a],i:j,j:j+1,msg:`交换 → <span class="num">${a[j]}</span> ↔ <span class="num">${a[j+1]}</span>`});
+      }
+    }
+    sortSteps.push({type:'sorted',arr:[...a],idx:n-i-1,msg:`第 <span class="num">${i+1}</span> 轮完成，位置 ${n-i-1} 已就位`});
+  }
+  sortSteps.push({type:'done',arr:[...a],msg:'✓ 排序完成'});
+}
+
+function renderBars(state){
+  const arr = state ? state.arr : sortArr;
+  const max = Math.max(...arr);
+  sortCanvas.innerHTML = arr.map((v,i)=>{
+    let cls = 'bar';
+    if(state){
+      if(state.type==='compare'&&(i===state.i||i===state.j)) cls+=' comparing';
+      if(state.type==='swap'&&(i===state.i||i===state.j)) cls+=' swapping';
+      if(state.type==='sorted'&&i>=state.idx) cls+=' sorted';
+      if(state.type==='done') cls+=' sorted';
+    }
+    return `<div class="${cls}" style="height:${(v/max)*100}%" data-val="${v}"></div>`;
+  }).join('');
+}
+
+function stepForward(){
+  if(stepIdx>=sortSteps.length){stop();return false;}
+  const s = sortSteps[stepIdx++];
+  renderBars(s);
+  statusLine.innerHTML = s.msg;
+  return true;
+}
+
+function run(){
+  if(running) return;
+  running = true;
+  $('#btnRun').textContent = '⏸ 暂停';
+  (function loop(){
+    if(!running) return;
+    if(!stepForward()){stop();return;}
+    animTimer = setTimeout(loop, speed);
+  })();
+}
+
+function stop(){
+  running = false;
+  clearTimeout(animTimer);
+  $('#btnRun').textContent = '▶ 压印';
+}
+
+function reset(){
+  stop();
+  genArray();
+  statusLine.innerHTML = '重铸完毕。按下「压印」开始新一轮。';
+}
+
+/* ─── Hero 动画 ─── */
+function initHeroAnim(){
+  const bars = 10;
+  heroAnim.innerHTML = Array.from({length:bars},()=>
+    `<div class="hero-bar" style="height:${Math.random()*70+20}%"></div>`
+  ).join('');
+  setInterval(()=>{
+    const els = heroAnim.querySelectorAll('.hero-bar');
+    const i = Math.floor(Math.random()*bars);
+    const j = Math.floor(Math.random()*bars);
+    els.forEach(e=>e.classList.remove('active','done'));
+    els[i].classList.add('active');
+    els[j].classList.add('active');
+    const h1 = els[i].style.height;
+    els[i].style.height = els[j].style.height;
+    els[j].style.height = h1;
+  }, 800);
+}
+
+/* ─── 墨点涟漪效果 ─── */
+document.addEventListener('click', e=>{
+  const block = e.target.closest('.type-block,.btn-press,.cat-chip');
+  if(!block) return;
+  const rect = block.getBoundingClientRect();
+  const rip = document.createElement('span');
+  rip.className = 'ink-ripple';
+  rip.style.left = (e.clientX - rect.left - 10) + 'px';
+  rip.style.top = (e.clientY - rect.top - 10) + 'px';
+  block.style.position = 'relative';
+  block.style.overflow = 'hidden';
+  block.appendChild(rip);
+  setTimeout(()=>rip.remove(), 500);
+});
+
+/* ─── 事件绑定 ─── */
+catRail.addEventListener('click', e=>{
+  const chip = e.target.closest('.cat-chip');
+  if(!chip) return;
+  currentCat = chip.dataset.cat;
+  renderCats();
+  renderGrid();
+});
+
+typeCase.addEventListener('click', e=>{
+  const block = e.target.closest('.type-block');
+  if(!block) return;
+  selectedAlgo = ALGORITHMS.find(a=>a.id===block.dataset.id);
+  renderGrid();
+  // 更新信息面板
+  const info = $('#algoInfo');
+  const catName = CATEGORIES.find(c=>c.id===selectedAlgo.cat)?.name||'';
+  info.querySelector('h4').textContent = selectedAlgo.name;
+  info.querySelector('p').textContent = `${selectedAlgo.en} — ${catName}分类 · ${selectedAlgo.diff} 难度。点击「压印」查看排序动画演示。`;
+});
+
+$('#btnRun').addEventListener('click', ()=>{
+  if(running) stop(); else run();
+});
+$('#btnStep').addEventListener('click', ()=>{stop();stepForward();});
+$('#btnReset').addEventListener('click', reset);
+$('#speedSlider').addEventListener('input', e=>{
+  speed = +e.target.value;
+  $('#speedVal').textContent = speed;
+});
+$('#sizeSlider').addEventListener('input', e=>{
+  dataSize = +e.target.value;
+  $('#sizeVal').textContent = dataSize;
+  reset();
+});
+
+/* 导航切换（简单滚动） */
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const view = btn.dataset.view;
+    const target = view==='catalog'?'#catalogView':view==='press'?'#pressView':view==='code'?'#codeView':null;
+    if(target) document.querySelector(target)?.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+});
+
+/* ─── 初始化 ─── */
+renderCats();
+renderGrid();
+renderCode();
+genArray();
+initHeroAnim();
+
+})();
+</script>
+</body>
+</html>

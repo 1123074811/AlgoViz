@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALGOVIZ · 算法图纸库 — BLUEPRINT</title>
+<style>
+/* ============ 设计令牌 ============ */
+:root{
+  --paper:#F7F8FA;
+  --blue:#2F6BFF;
+  --ink:#12307A;
+  --ink-soft:#3E5A99;
+  --red:#E0453A;
+  --green:#1E9E6A;
+  --amber:#D98324;
+  --fill:#E3EBFF;
+  --fill-red:#FBE4E1;
+  --fill-green:#DFF3EA;
+  --fill-amber:#FBEDDA;
+  --line:rgba(18,48,122,.28);
+  --line-soft:rgba(18,48,122,.14);
+  --term-bg:#0B1E3F;
+  --term-ink:#7CFFB2;
+  --term-blue:#5A9BFF;
+  --mono:"JetBrains Mono","Cascadia Mono","Sarasa Mono SC",Consolas,ui-monospace,monospace;
+  --ease:cubic-bezier(.45,.05,.25,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family:var(--mono);
+  background:var(--paper);
+  color:var(--ink);
+  display:flex;flex-direction:column;overflow:hidden;
+  background-image:radial-gradient(circle,rgba(18,48,122,.09) 1px,transparent 1.2px);
+  background-size:22px 22px;
+}
+::selection{background:var(--blue);color:#fff}
+/* 滚动条：图纸工具风 */
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:rgba(18,48,122,.18);border:2px solid var(--paper)}
+*::-webkit-scrollbar-thumb:hover{background:rgba(18,48,122,.34)}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+
+/* ============ 顶部导航 ============ */
+header{
+  flex:none;display:flex;align-items:center;gap:18px;
+  padding:10px 18px;border-bottom:1.5px solid var(--line);
+  background:rgba(247,248,250,.92);backdrop-filter:blur(3px);
+}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.5px;white-space:nowrap}
+.logo-mark{width:26px;height:26px;border:2px solid var(--blue);border-radius:4px;display:grid;place-items:center;font-size:13px;color:var(--blue);position:relative}
+.logo-mark::after{content:"";position:absolute;inset:4px;border:1px dashed var(--blue);border-radius:2px}
+.logo small{font-weight:400;color:var(--ink-soft);font-size:11px;letter-spacing:2px}
+nav{display:flex;gap:4px;margin-left:auto}
+nav a{
+  color:var(--ink-soft);text-decoration:none;font-size:12.5px;letter-spacing:1px;
+  padding:5px 12px;border:1px solid transparent;position:relative;white-space:nowrap;
+}
+nav a:hover{color:var(--blue);border-color:var(--line-soft)}
+nav a.on{color:var(--red);border:1px solid var(--line);background:#fff}
+nav a.on::after{content:"▸";position:absolute;left:-9px;top:3px;color:var(--red);font-size:10px}
+.nav-sheet{font-size:11px;color:var(--ink-soft);letter-spacing:1px;white-space:nowrap}
+.nav-sheet b{color:var(--blue)}
+
+/* ============ 图纸标题栏 ============ */
+.sheet-title{
+  display:flex;align-items:center;gap:14px;padding:8px 12px;margin-bottom:12px;
+  border:1.5px solid var(--blue);background:#fff;
+  font-size:12px;letter-spacing:1px;color:var(--ink-soft);
+}
+.sheet-title .t-no{color:var(--blue);font-weight:700}
+.sheet-title .t-name{font-size:15px;color:var(--ink);font-weight:700;letter-spacing:3px}
+.sheet-title .t-scale{margin-left:auto}
+.sheet-title .t-sheet{color:var(--blue)}
+.sheet-title .t-stamp{
+  border:1.5px solid var(--blue);color:var(--blue);border-radius:50%;
+  width:34px;height:34px;display:grid;place-items:center;font-size:9px;text-align:center;
+  line-height:1.1;transform:rotate(-10deg);flex:none;
+}
+
+/* ============ 页面容器 ============ */
+main{flex:1;position:relative}
+.page{position:absolute;inset:0;overflow:auto;padding:14px 18px 26px;display:none}
+.page.active{display:block;animation:pageIn .3s var(--ease)}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px) rotateX(3deg)}to{opacity:1;transform:none}}
+.page-wrap{max-width:1560px;margin:0 auto}
+
+/* ============ 通用按钮（机械方钮） ============ */
+.btn{
+  font-family:var(--mono);font-size:12.5px;letter-spacing:1px;
+  background:#fff;color:var(--ink);border:2px solid var(--ink);
+  padding:6px 14px;cursor:pointer;position:relative;user-select:none;
+}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.btn:active{transform:translateY(2px);box-shadow:inset 0 3px 5px rgba(18,48,122,.25);border-color:var(--red);color:var(--red)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.primary:hover{background:var(--ink);color:#fff}
+.btn.primary:active{box-shadow:inset 0 3px 5px rgba(0,0,0,.3)}
+.btn.ghost{border-style:dashed;border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--blue);border-style:solid}
+.btn.red:hover{border-color:var(--red);color:var(--red)}
+.btn.small{padding:3px 9px;font-size:11px;border-width:1.5px}
+
+/* 签注式标签（图纸签注） */
+.tab{
+  font-family:var(--mono);font-size:11.5px;letter-spacing:1.5px;cursor:pointer;user-select:none;
+  padding:3px 10px;color:var(--ink-soft);border:1px solid transparent;position:relative;background:none;
+}
+.tab:hover{color:var(--blue)}
+.tab.on{color:var(--red);border:1px solid var(--line);background:#fff}
+.tab.on::after{content:"▲";position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--red)}
+
+/* ============ 图章 ============ */
+.stamp{
+  position:absolute;display:grid;place-items:center;text-align:center;
+  border:3px solid currentColor;border-radius:50%;color:var(--red);
+  width:84px;height:84px;font-size:12px;letter-spacing:2px;line-height:1.3;
+  transform:rotate(-10deg);opacity:.92;pointer-events:none;z-index:5;
+  animation:stampIn .45s var(--ease);
+}
+.stamp::before{content:"";position:absolute;inset:7px;border:1.5px dashed currentColor;border-radius:50%}
+.stamp::after{content:"◆";position:absolute;top:4px;font-size:9px}
+.stamp.green{color:var(--green)}
+.stamp.blue{color:var(--blue)}
+.stamp.amber{color:var(--amber)}
+.stamp.rect{border-radius:8px;width:auto;padding:8px 16px;transform:rotate(-6deg)}
+.stamp.rect::before{display:none}
+@keyframes stampIn{
+  0%{transform:rotate(-10deg) scale(2.4);opacity:0}
+  55%{transform:rotate(-14deg) scale(.92);opacity:1}
+  75%{transform:rotate(-8deg) scale(1.06)}
+  100%{transform:rotate(-10deg) scale(1);opacity:.92}
+}
+
+/* ============ 扫描线（AI 生成中） ============ */
+.scan{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;transition:opacity .2s}
+.scan.on{opacity:1}
+.scan .veil{position:absolute;inset:0;background:rgba(47,107,255,.07)}
+.scan .beam{
+  position:absolute;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,transparent,var(--blue),transparent);
+  box-shadow:0 0 14px rgba(47,107,255,.8);
+  animation:scanMove 1s linear infinite;
+}
+@keyframes scanMove{from{top:-4px}to{top:100%}}
+
+/* ============ 首页 ============ */
+.hero{padding:44px 6px 30px;border-bottom:1.5px solid var(--line);margin-bottom:26px;position:relative}
+.hero h1{
+  font-size:clamp(34px,4.6vw,58px);letter-spacing:6px;font-weight:700;color:var(--ink);
+  line-height:1.05;position:relative;display:inline-block;
+}
+.hero h1 .bl{color:var(--blue)}
+.hero h1::after{
+  content:"";position:absolute;left:-14px;top:-14px;width:64px;height:64px;
+  border-left:3px solid var(--blue);border-top:3px solid var(--blue);
+}
+.hero .sub{margin-top:14px;font-size:13px;color:var(--ink-soft);letter-spacing:2px;display:flex;gap:16px;flex-wrap:wrap}
+.hero .sub b{color:var(--blue)}
+.hero .rule{
+  position:absolute;right:4px;bottom:-1.5px;height:1.5px;background:var(--blue);
+  width:min(46%,420px);transform-origin:right;
+}
+.hero .rule::after{content:"◄";position:absolute;left:-14px;top:-7px;color:var(--blue);font-size:11px}
+.search-row{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+.search-box{position:relative;flex:1;min-width:260px;max-width:520px}
+.search-box input{
+  width:100%;font-family:var(--mono);font-size:14px;letter-spacing:1px;
+  padding:10px 14px 10px 40px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);outline:none;
+}
+.search-box input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(47,107,255,.12)}
+.search-box::before{content:"⌕";position:absolute;left:12px;top:7px;font-size:19px;color:var(--ink-soft)}
+.search-count{font-size:12px;color:var(--ink-soft);letter-spacing:1px}
+.search-count b{color:var(--red)}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
+.card{
+  position:relative;background:#fff;border:1.5px solid var(--line);cursor:pointer;
+  padding:14px 16px 16px;transition:transform .22s var(--ease),box-shadow .22s, border-color .22s;
+  overflow:hidden;
+}
+.card::before{content:"";position:absolute;inset:5px;border:1px dashed var(--line-soft);pointer-events:none}
+.card:hover{transform:translate(-3px,-5px);box-shadow:6px 8px 0 rgba(18,48,122,.1);border-color:var(--blue)}
+.card:hover .mini-svg{filter:drop-shadow(0 2px 2px rgba(47,107,255,.25))}
+.card .c-no{font-size:10.5px;color:var(--blue);letter-spacing:2px}
+.card h3{font-size:17px;letter-spacing:2px;margin:6px 0 2px;color:var(--ink)}
+.card .c-en{font-size:10.5px;color:var(--ink-soft);letter-spacing:2px}
+.card .c-cnt{position:absolute;right:14px;bottom:12px;font-size:11px;color:var(--ink-soft);letter-spacing:1px}
+.card .c-cnt b{color:var(--blue)}
+.card .c-arrow{position:absolute;right:12px;top:12px;color:var(--line-soft);font-size:14px;transition:color .2s}
+.card:hover .c-arrow{color:var(--red)}
+.mini-svg{width:100%;height:52px;margin:10px 0 6px;display:block}
+/* 微缩动画 */
+.mini-svg g{transform-box:fill-box;transform-origin:center}
+.mi-swap{animation:miSwap 2.6s var(--ease) infinite}
+@keyframes miSwap{
+  0%,18%{transform:translateX(0)}
+  32%{transform:translateX(34px)}
+  50%{transform:translateX(34px)}
+  64%{transform:translateX(0)}
+  82%,100%{transform:translateX(0)}
+}
+.mi-swap2{animation:miSwap2 2.6s var(--ease) infinite}
+@keyframes miSwap2{
+  0%,18%{transform:translateX(0)}
+  32%{transform:translateX(-34px)}
+  50%{transform:translateX(-34px)}
+  64%{transform:translateX(0)}
+  82%,100%{transform:translateX(0)}
+}
+.mi-flow{stroke-dasharray:6 5;animation:miFlow 2.2s linear infinite}
+@keyframes miFlow{from{stroke-dashoffset:0}to{stroke-dashoffset:-22}}
+.mi-tree{animation:miTree 2.4s var(--ease) infinite}
+@keyframes miTree{0%,60%{transform:scale(1)}70%{transform:scale(1.35)}82%,100%{transform:scale(1)}}
+.mi-dp{animation:miDp 3s linear infinite}
+@keyframes miDp{0%,18%{opacity:.25}32%,100%{opacity:1}}
+.mi-dp2{animation:miDp2 3s linear infinite}
+@keyframes miDp2{0%,48%{opacity:.25}62%,100%{opacity:1}}
+.mi-cross{animation:miCross 3.2s var(--ease) infinite}
+@keyframes miCross{0%,14%{transform:translateX(0)}30%,44%{transform:translateX(44px)}58%,72%{transform:translateX(22px)}86%,100%{transform:translateX(0)}}
+.mi-rise{animation:miRise 2s var(--ease) infinite}
+@keyframes miRise{0%,34%{transform:translateY(0)}48%{transform:translateY(-12px)}70%,100%{transform:translateY(0)}}
+.mi-pt{animation:miPt 3.4s var(--ease) infinite}
+@keyframes miPt{0%,10%{transform:translateX(0) translateY(0)}32%,48%{transform:translateX(44px) translateY(-16px)}66%,82%{transform:translateX(88px) translateY(0)}94%,100%{transform:translateX(0) translateY(0)}}
+.mi-bar{transform-box:fill-box;transform-origin:center bottom;animation:miBar 1.6s var(--ease) infinite}
+@keyframes miBar{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.55)}}
+
+.foot-row{margin-top:36px;padding-top:14px;border-top:1.5px solid var(--line);display:flex;gap:22px;font-size:11.5px;color:var(--ink-soft);letter-spacing:2px;flex-wrap:wrap;align-items:center}
+.foot-row b{color:var(--blue)}
+
+/* ============ 工作区 ============ */
+.ws-grid{height:calc(100vh - 128px);min-height:520px;display:grid;gap:12px;
+  grid-template-columns:320px minmax(420px,1fr) 264px;grid-template-rows:1fr auto 118px;
+  grid-template-areas:"code scene spec" "code scene spec" "track track track" "term term term"}
+.panel{background:#fff;border:1.5px solid var(--line);display:flex;flex-direction:column;min-height:0;position:relative}
+.panel .p-title{
+  flex:none;display:flex;align-items:center;gap:10px;padding:7px 12px;
+  border-bottom:1.5px solid var(--line);font-size:11.5px;letter-spacing:2px;color:var(--ink-soft);
+  background:linear-gradient(180deg,rgba(47,107,255,.05),transparent);
+}
+.panel .p-title .name{color:var(--ink);font-weight:700;letter-spacing:1.5px}
+.panel .p-title .cx{margin-left:auto;font-size:10.5px;color:var(--blue);letter-spacing:1px}
+.p-title .grow{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* CODE */
+.code-sheet{grid-area:code;overflow:hidden}
+.code-lines{flex:1;overflow:auto;font-size:12.5px;line-height:1.75}
+.cline{display:flex;padding-right:10px;transition:background .15s}
+.cline .ln{flex:none;width:44px;text-align:right;padding-right:12px;color:var(--line);user-select:none;border-right:1px solid var(--line-soft);margin-right:12px;font-size:11px;line-height:inherit}
+.cline .tx{white-space:pre;color:var(--ink)}
+.cline.active{background:var(--fill-amber)}
+.cline.active .ln{color:var(--amber);font-weight:700}
+.cline.active .tx{color:var(--ink)}
+.cline.active::before{content:"";position:absolute;left:0;width:4px;height:1.75em;background:var(--red)}
+.cline{position:relative}
+.cline.err .tx{color:var(--red)}
+.cline .cm{color:var(--ink-soft);opacity:.65}
+
+/* SCENE */
+.scene{grid-area:scene;overflow:hidden}
+.scene-wrap{flex:1;min-height:0;position:relative;background:
+  radial-gradient(circle,rgba(18,48,122,.075) 1px,transparent 1.2px) 0 0/22px 22px,
+  repeating-linear-gradient(0deg,rgba(18,48,122,.045) 0 1px,transparent 1px 110px),
+  repeating-linear-gradient(90deg,rgba(18,48,122,.045) 0 1px,transparent 1px 110px),
+  #fff;}
+.scene-wrap svg{position:absolute;inset:0;width:100%;height:100%}
+.sc-callout-text{fill:var(--ink);font-size:15px;letter-spacing:.5px}
+.sc-callout-line{stroke:var(--blue);stroke-width:1.2px;stroke-dasharray:4 3}
+.sc-desc-bar{fill:#fff;stroke:var(--blue);stroke-width:1.2px}
+.sc-cell{transition:transform .45s var(--ease)}
+.sc-cell rect{transition:fill .25s,stroke .25s}
+.sc-cell text{fill:var(--ink);font-size:21px;font-weight:700;text-anchor:middle}
+.sc-cell .idx{font-size:11px;fill:var(--ink-soft);font-weight:400}
+.sc-cell.cmp rect{stroke:var(--red);stroke-width:2.5px;fill:var(--fill-red)}
+.sc-cell.cmp .idx{fill:var(--red)}
+.sc-cell.swap rect{stroke:var(--red);stroke-width:2.5px;fill:var(--red)}
+.sc-cell.swap text{fill:#fff}
+.sc-cell.pivot rect{stroke:var(--amber);stroke-width:2.5px;fill:var(--fill-amber)}
+.sc-cell.pivot .idx{fill:var(--amber)}
+.sc-cell.sorted rect{stroke:var(--green);fill:var(--fill-green)}
+.sc-cell.sorted .idx{fill:var(--green)}
+.sc-cell.segment rect{fill:var(--fill)}
+.sc-cell.done rect{stroke:var(--green);fill:var(--fill-green)}
+.sc-cell rect{stroke:var(--blue);fill:#fff;stroke-width:1.5px;rx:3}
+.sc-cell.bump rect{animation:bump .42s var(--ease)}
+@keyframes bump{0%{transform:translateY(0)}40%{transform:translateY(-13px)}100%{transform:translateY(0)}}
+.sc-node{transition:transform .45s var(--ease)}
+.sc-node circle{stroke:var(--blue);fill:#fff;stroke-width:1.8px;transition:fill .25s,stroke .25s}
+.sc-node text{fill:var(--ink);font-size:16px;font-weight:700;text-anchor:middle}
+.sc-node .lbl{font-size:10.5px;fill:var(--ink-soft)}
+.sc-node.vis circle{fill:var(--fill-green);stroke:var(--green)}
+.sc-node.vis text{fill:#0B5D3F}
+.sc-node.cur circle{stroke:var(--red);stroke-width:3px;animation:curPulse 1s var(--ease) infinite}
+@keyframes curPulse{0%,100%{stroke-opacity:1}50%{stroke-opacity:.35}}
+.sc-node.front circle{stroke:var(--amber);stroke-width:3px;stroke-dasharray:4 3}
+.sc-node.inq circle{fill:var(--fill-amber);stroke:var(--amber)}
+.sc-qcell rect{stroke:var(--blue);fill:var(--fill);stroke-width:1.5px;rx:2}
+.sc-qcell text{fill:var(--ink);font-size:14px;font-weight:700;text-anchor:middle}
+.sc-qcell .idx{font-size:9px;fill:var(--ink-soft)}
+.sc-dim{stroke:var(--blue);stroke-width:1px}
+.sc-dim-label{fill:var(--blue);font-size:12px;letter-spacing:.5px}
+.sc-cross-line{stroke:var(--red);stroke-width:2px}
+.sc-cross-dot{fill:var(--red)}
+.sc-edge{stroke:var(--line);stroke-width:1.4px;stroke-dasharray:5 4}
+.sc-edge.hot{stroke:var(--blue);stroke-width:2px;stroke-dasharray:none;transition:stroke .3s}
+.sc-edge.green{stroke:var(--green);stroke-width:2.2px;stroke-dasharray:none}
+.sc-queue-label{fill:var(--ink-soft);font-size:11px;letter-spacing:2px}
+
+/* SPEC */
+.spec{grid-area:spec;overflow:hidden}
+.spec .p-title{gap:6px}
+.var-row{flex:none;padding:8px 12px;border-bottom:1.5px dashed var(--line-soft);display:flex;gap:14px;flex-wrap:wrap}
+.var-row .kv{font-size:15px;letter-spacing:1px}
+.var-row .kv b{color:var(--red);font-size:19px;font-variant-numeric:tabular-nums}
+.stat-row{flex:none;display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1.5px dashed var(--line-soft)}
+.stat{text-align:center;padding:8px 4px}
+.stat + .stat{border-left:1.5px dashed var(--line-soft)}
+.stat .k{font-size:10px;color:var(--ink-soft);letter-spacing:2px}
+.stat .v{font-size:21px;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums;line-height:1.15}
+.stat .bar{height:3px;background:repeating-linear-gradient(90deg,var(--blue) 0 2px,transparent 2px 5px);margin-top:5px;transition:width .3s var(--ease)}
+.steps{flex:1;overflow:auto;padding:6px 0}
+.step-item{display:flex;gap:8px;padding:5px 12px;font-size:11.5px;line-height:1.5;border-left:3px solid transparent;cursor:default}
+.step-item .sno{flex:none;color:var(--line);font-size:10.5px;padding-top:1px}
+.step-item:hover{background:rgba(47,107,255,.05)}
+.step-item.on{background:var(--fill-amber);border-left-color:var(--red);color:var(--ink)}
+.step-item.on .sno{color:var(--amber)}
+
+/* 播放轨道 */
+.track{grid-area:track;overflow:hidden}
+.track-body{flex:1;display:flex;align-items:center;gap:18px;padding:0 16px}
+.track-line{flex:1;position:relative;height:26px;margin:0 6px}
+.track-rail{position:absolute;left:0;right:0;top:12px;height:3px;background:var(--blue);opacity:.85}
+.track-tick{position:absolute;top:8px;width:2px;height:12px;background:rgba(18,48,122,.3)}
+.track-tick.done{background:var(--green)}
+.track-head{position:absolute;top:1px;width:26px;height:26px;transform:translateX(-50%);transition:left .25s var(--ease)}
+.track-head .hl{position:absolute;left:12px;top:-7px;width:2px;height:40px;background:var(--red);opacity:.25}
+.track-head .cross-l{position:absolute;left:3px;top:12px;width:20px;height:2px;background:var(--red)}
+.track-head .cross-t{position:absolute;left:12px;top:3px;width:2px;height:20px;background:var(--red)}
+.track-head .cross-dot{position:absolute;left:10.5px;top:10.5px;width:5px;height:5px;border-radius:50%;background:var(--red)}
+.track-label{position:absolute;top:-13px;left:50%;transform:translateX(-50%);font-size:9.5px;color:var(--red);letter-spacing:1px;white-space:nowrap}
+.track-btns{display:flex;gap:8px;align-items:center;flex:none}
+.tbtn{
+  width:36px;height:32px;display:grid;place-items:center;font-size:13px;cursor:pointer;user-select:none;
+  background:#fff;color:var(--ink);border:2px solid var(--ink);font-family:var(--mono);
+}
+.tbtn:hover{border-color:var(--blue);color:var(--blue)}
+.tbtn:active{transform:translateY(2px);box-shadow:inset 0 3px 5px rgba(18,48,122,.25)}
+.tbtn.play{background:var(--blue);border-color:var(--blue);color:#fff}
+.tbtn.play:hover{background:var(--ink)}
+.tbtn.play.playing{background:var(--red);border-color:var(--red)}
+.speed-tabs{display:flex;gap:4px;align-items:center;flex:none;font-size:10px;color:var(--ink-soft);letter-spacing:1px}
+
+/* 终端（反色设备） */
+.term{grid-area:term;background:var(--term-bg);border-color:#16305e;overflow:hidden}
+.term .p-title{background:rgba(90,155,255,.08);border-color:#16305e;color:#8FB4E8}
+.term .p-title .name{color:var(--term-ink)}
+.term-body{flex:1;overflow:auto;padding:8px 14px;font-size:12px;line-height:1.7;color:var(--term-ink)}
+.term-body .p{white-space:pre-wrap;word-break:break-all}
+.term-body .p.sys{color:var(--term-blue)}
+.term-body .p.err{color:#FF7B6B}
+.term-body .p.dim{color:#5E7FB0}
+.cursor-block{display:inline-block;width:8px;height:14px;background:var(--term-ink);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ============ AI 实验室 ============ */
+.lab-grid{display:grid;grid-template-columns:minmax(420px,1fr) 380px;gap:14px;height:calc(100vh - 128px);min-height:520px}
+.lab-grid .panel{min-height:0}
+.lang-tabs{display:flex;gap:2px;border-bottom:1.5px solid var(--line);padding:6px 10px;background:linear-gradient(180deg,rgba(47,107,255,.05),transparent)}
+.lang-tabs .tab{font-size:12px}
+.code-area{flex:1;min-height:0;display:flex;flex-direction:column;padding:10px 12px;gap:10px}
+.code-area textarea{
+  flex:1;resize:none;border:1.5px solid var(--ink);background:#fff;outline:none;
+  font-family:var(--mono);font-size:12.5px;line-height:1.7;color:var(--ink);padding:10px 12px;
+}
+.code-area textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(47,107,255,.12)}
+.input-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.input-field{display:flex;align-items:center;gap:8px;flex:1;min-width:200px}
+.input-field label{font-size:10.5px;color:var(--ink-soft);letter-spacing:2px}
+.input-field input{
+  flex:1;font-family:var(--mono);font-size:12.5px;padding:6px 10px;border:none;border-bottom:2px solid var(--ink);
+  background:transparent;color:var(--ink);outline:none;letter-spacing:1px;
+}
+.input-field input:focus{border-color:var(--blue)}
+.lab-right{display:flex;flex-direction:column;gap:14px;min-height:0}
+.history{flex:none;max-height:196px;overflow:auto;border:1.5px solid var(--line);background:#fff}
+.hist-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px dashed var(--line-soft);cursor:pointer;font-size:11.5px}
+.hist-item:last-child{border-bottom:none}
+.hist-item:hover{background:rgba(47,107,255,.05)}
+.hist-item.on{background:var(--fill)}
+.hist-item .exp{color:var(--blue);font-weight:700;flex:none}
+.hist-item .lang{color:var(--ink-soft);flex:none;font-size:10.5px}
+.hist-item .st{flex:none;font-size:10px;border:1px solid currentColor;padding:1px 6px;letter-spacing:1px}
+.hist-item .st.ok{color:var(--green)}
+.hist-item .st.warn{color:var(--amber)}
+.hist-item .st.fail{color:var(--red)}
+.hist-item .t{margin-left:auto;color:var(--line);font-size:10.5px}
+.lab-result{flex:1;min-height:0;display:flex;flex-direction:column}
+.result-canvas{flex:1;min-height:0;position:relative;background:
+  radial-gradient(circle,rgba(18,48,122,.075) 1px,transparent 1.2px) 0 0/22px 22px,
+  repeating-linear-gradient(0deg,rgba(18,48,122,.045) 0 1px,transparent 1px 110px),
+  repeating-linear-gradient(90deg,rgba(18,48,122,.045) 0 1px,transparent 1px 110px),
+  #fff;overflow:hidden}
+.result-canvas svg{position:absolute;inset:0;width:100%;height:100%}
+.result-log{flex:none;max-height:86px;overflow:auto;padding:7px 12px;border-top:1.5px solid var(--line);font-size:11px;line-height:1.6;color:var(--ink-soft)}
+
+/* ============ 设置 ============ */
+.settings-wrap{max-width:640px;margin:10px auto 0}
+.plate{border:1.5px solid var(--ink);background:#fff;position:relative}
+.plate .plate-head{padding:10px 16px;border-bottom:1.5px solid var(--ink);display:flex;justify-content:space-between;font-size:11px;letter-spacing:2px;color:var(--ink-soft);background:linear-gradient(180deg,rgba(47,107,255,.06),transparent)}
+.plate .plate-head b{color:var(--ink)}
+.plate-body{padding:22px 26px 26px;display:flex;flex-direction:column;gap:20px}
+.plate-row{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:baseline}
+.plate-row .lab{font-size:11px;letter-spacing:2px;color:var(--ink-soft);text-align:right}
+.plate-row .lab b{color:var(--blue)}
+.plate-row .val{font-family:var(--mono);font-size:14px;padding:7px 12px;border:none;border-bottom:2px solid var(--ink);background:transparent;color:var(--ink);outline:none;letter-spacing:1px}
+.plate-row .val:focus{border-color:var(--blue)}
+.plate-row .val.mask{letter-spacing:3px}
+.plate-row .hint{font-size:10.5px;color:var(--ink-soft);letter-spacing:.5px;line-height:1.5;margin-top:4px}
+.lang-btns{display:flex;gap:10px;align-items:center}
+.lang-btns .lang-btn{
+  font-family:var(--mono);font-size:13px;letter-spacing:2px;padding:7px 18px;cursor:pointer;user-select:none;
+  border:2px solid var(--line);background:#fff;color:var(--ink-soft);
+}
+.lang-btns .lang-btn:hover{border-color:var(--blue);color:var(--blue)}
+.lang-btns .lang-btn.on{border-color:var(--red);color:var(--red);box-shadow:inset 0 2px 0 rgba(224,69,58,.15)}
+.plate-foot{padding:12px 16px;border-top:1.5px dashed var(--line-soft);font-size:10.5px;color:var(--ink-soft);letter-spacing:1px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.stamp-zone{position:relative;min-height:70px}
+.conn-test{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="logo-mark">AV</span>ALGOVIZ <small>· 算法图纸库 · BLUEPRINT</small></div>
+  <nav>
+    <a href="#home" data-pg="home" class="on">总图 INDEX</a>
+    <a href="#workshop" data-pg="workshop">工艺 WORKSHOP</a>
+    <a href="#lab" data-pg="lab">实验 LAB</a>
+    <a href="#settings" data-pg="settings">铭牌 PLATE</a>
+  </nav>
+  <span class="nav-sheet">DWG <b>ALG-100</b> · V1.0 · MIT</span>
+</header>
+
+<main>
+<!-- ================= 首页 · 总图目录 ================= -->
+<section id="home" class="page active">
+  <div class="page-wrap">
+    <div class="hero">
+      <h1>ALGOVIZ<span class="bl"> · 算法图纸库</span></h1>
+      <div class="sub">
+        <span>DRAWING INDEX —— <b>8 类</b> / 61 张工艺图纸</span>
+        <span>SCALE 1:1</span>
+        <span>编辑数据可视化 · 自定义代码 → AI 生成动画</span>
+      </div>
+      <div class="rule"></div>
+    </div>
+    <div class="search-row">
+      <div class="search-box"><input id="cardSearch" placeholder="检索图纸编号 / 名称，如 SHT-02、图、DP…" autocomplete="off"></div>
+      <span class="search-count" id="cardCount"></span>
+    </div>
+    <div class="cards" id="cards"></div>
+    <div class="foot-row">
+      <span><b>☰</b> 图例：单击图纸进入工艺工作区</span>
+      <span>签核 ◉ <b style="color:var(--green)">APPROVED</b> · MIT LICENSE</span>
+      <span>中 / EN</span>
+      <span style="margin-left:auto">SHEET 1/4 · REV A</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 工作区 · 工艺图纸 ================= -->
+<section id="workshop" class="page">
+  <div class="page-wrap">
+    <div class="sheet-title">
+      <span class="t-no">DRAWING No.ALG-042</span>
+      <span class="t-name" id="wsAlgoName">冒泡排序 · BUBBLE SORT</span>
+      <span class="cx" id="wsComplex" style="color:var(--blue);font-weight:700;font-size:12px">⌀ TIME O(n²) · SPACE O(1)</span>
+      <span class="t-scale">SCALE 1:1</span>
+      <span class="t-sheet">SHEET 2/4</span>
+      <span class="t-stamp" style="color:var(--green);border-color:var(--green)">◉<br>DRAFT<br>B-7</span>
+    </div>
+    <div class="ws-grid">
+      <section class="panel code-sheet">
+        <div class="p-title"><span class="name">CODE SHEET</span><span class="cx" style="margin-left:0">·</span><span id="wsLangLabel" class="cx">JS</span>
+          <span class="grow" id="wsLangTabs"></span>
+        </div>
+        <div class="code-lines" id="wsCode"></div>
+      </section>
+
+      <section class="panel scene">
+        <div class="p-title">
+          <span class="name">SCENE</span>
+          <span class="tab on" data-algo="bubble">冒泡</span>
+          <span class="tab" data-algo="quick">快排</span>
+          <span class="tab" data-algo="bfs">BFS</span>
+          <span class="grow">
+            <button class="btn small ghost" id="wsGenBtn">⌀ 生成图纸</button>
+            <button class="btn small primary" id="wsSubmitBtn">◉ 提交</button>
+          </span>
+        </div>
+        <div class="scene-wrap">
+          <svg id="wsSvg" viewBox="0 0 1000 430" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <marker id="arrL" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M10,0 L0,5 L10,10 z" fill="#2F6BFF"/></marker>
+              <marker id="arrR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#2F6BFF"/></marker>
+            </defs>
+            <g id="wsStatic"></g>
+            <g id="wsItems"></g>
+          </svg>
+          <div class="scan" id="wsScan"><div class="veil"></div><div class="beam"></div></div>
+          <div id="wsStampZone"></div>
+        </div>
+      </section>
+
+      <section class="panel spec">
+        <div class="p-title"><span class="name">SPEC 标注</span><span class="cx" id="stepCount"></span></div>
+        <div class="var-row" id="wsVars"></div>
+        <div class="stat-row">
+          <div class="stat"><div class="k">比较 CMP</div><div class="v" id="stCmp">00</div><div class="bar" id="stCmpBar"></div></div>
+          <div class="stat"><div class="k">交换 SWP</div><div class="v" id="stSwp">00</div><div class="bar" id="stSwpBar"></div></div>
+          <div class="stat"><div class="k">访问 ACC</div><div class="v" id="stAcc">00</div><div class="bar" id="stAccBar"></div></div>
+        </div>
+        <div class="steps" id="wsSteps"></div>
+      </section>
+
+      <section class="panel track">
+        <div class="p-title"><span class="name">PLAYBACK 播放轨道</span><span class="cx" id="trackPos">STEP 01 / 01</span></div>
+        <div class="track-body">
+          <div class="track-line" id="trackLine">
+            <div class="track-rail"></div>
+            <div id="trackTicks"></div>
+            <div class="track-head" id="trackHead" style="left:0%">
+              <span class="hl"></span><span class="cross-l"></span><span class="cross-t"></span><span class="cross-dot"></span>
+            </div>
+            <span class="track-label" id="trackLabel"></span>
+          </div>
+          <div class="track-btns">
+            <button class="tbtn" id="btnReset" title="回到起点">|◀</button>
+            <button class="tbtn" id="btnPrev" title="上一步">◀</button>
+            <button class="tbtn play" id="btnPlay" title="播放/暂停">▶</button>
+            <button class="tbtn" id="btnNext" title="下一步">▶|</button>
+          </div>
+          <div class="speed-tabs">
+            <span>SPD</span>
+            <span class="tab" data-spd="0.5">×0.5</span>
+            <span class="tab on" data-spd="1">×1</span>
+            <span class="tab" data-spd="2">×2</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel term">
+        <div class="p-title"><span class="name">TERMINAL</span><span class="cx">stdin → stdout · result · trace</span><span class="cx" id="termLangTag" style="color:var(--term-blue)">JS</span></div>
+        <div class="term-body" id="wsTerm"></div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<!-- ================= AI 实验室 · 实验记录 ================= -->
+<section id="lab" class="page">
+  <div class="page-wrap">
+    <div class="sheet-title">
+      <span class="t-no">DRAWING No.LAB-090</span>
+      <span class="t-name">实验记录 · AI CODE LAB</span>
+      <span class="t-scale">SCALE 1:1</span>
+      <span class="t-sheet">SHEET 3/4</span>
+      <span class="t-stamp" style="color:var(--amber);border-color:var(--amber)">◉<br>IN PROGRESS</span>
+    </div>
+    <div class="lab-grid">
+      <section class="panel">
+        <div class="lang-tabs" id="labLangTabs"></div>
+        <div class="code-area">
+          <textarea id="labCode" spellcheck="false"></textarea>
+          <div class="input-row">
+            <div class="input-field"><label>INPUT</label><input id="labInput" value="[5,3,8,1,9,2]" spellcheck="false"></div>
+            <button class="btn primary" id="labRunBtn">⌀ 提交实验</button>
+            <button class="btn ghost small" id="labSampleBtn">示例</button>
+          </div>
+        </div>
+      </section>
+      <div class="lab-right">
+        <section class="history" id="labHistory"></section>
+        <section class="panel lab-result">
+          <div class="p-title"><span class="name">RESULT 实验结果</span><span class="cx" id="labResultTag">未提交</span></div>
+          <div class="result-canvas">
+            <svg id="labSvg" viewBox="0 0 900 280" preserveAspectRatio="xMidYMid meet"></svg>
+            <div class="scan" id="labScan"><div class="veil"></div><div class="beam"></div></div>
+            <div id="labStampZone"></div>
+          </div>
+          <div class="result-log" id="labLog"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 设置 · 铭牌参数表 ================= -->
+<section id="settings" class="page">
+  <div class="page-wrap settings-wrap">
+    <div class="sheet-title">
+      <span class="t-no">DRAWING No.PLT-004</span>
+      <span class="t-name">铭牌参数表 · PLATE</span>
+      <span class="t-scale">SCALE 1:1</span>
+      <span class="t-sheet">SHEET 4/4</span>
+      <span class="t-stamp" style="color:var(--blue);border-color:var(--blue)">◉<br>CONFIG<br>OK</span>
+    </div>
+    <div class="plate" id="plate">
+      <div class="plate-head"><span>ALGOVIZ 模型链路 · 参数铭牌</span><span>REV 3</span></div>
+      <div class="plate-body">
+        <div class="plate-row">
+          <span class="lab"><b>BASE URL</b></span>
+          <div><input class="val" id="cfgUrl" value="https://api.deepseek.com"><div class="hint">OpenAI 兼容端点，{baseUrl}/chat/completions · 开发期走 /api/chat 同源代理</div></div>
+        </div>
+        <div class="plate-row">
+          <span class="lab"><b>MODEL</b></span>
+          <div><input class="val" id="cfgModel" value="deepseek-v4-pro"><div class="hint">快捷服务：OpenAI / Anthropic / Gemini / DeepSeek</div></div>
+        </div>
+        <div class="plate-row">
+          <span class="lab"><b>API KEY</b></span>
+          <div><input class="val mask" id="cfgKey" value="sk-••••••••••••••••••" spellcheck="false"><div class="hint">明文保存在浏览器 localStorage —— 仅限本地开发与个人使用</div></div>
+        </div>
+        <div class="plate-row">
+          <span class="lab"><b>LANG 语言</b></span>
+          <div class="lang-btns"><span class="lang-btn on" data-lang="zh">中</span><span class="lang-btn" data-lang="en">EN</span></div>
+        </div>
+        <div class="plate-row">
+          <span class="lab"><b>LINK 链路</b></span>
+          <div class="conn-test">
+            <button class="btn" id="cfgTestBtn">⌀ 测试连接</button>
+            <span class="cx" style="font-size:11px;color:var(--ink-soft);letter-spacing:1px" id="cfgTestState">未测试</span>
+            <div class="stamp-zone" id="cfgStampZone"></div>
+          </div>
+        </div>
+      </div>
+      <div class="plate-foot">
+        <span>存储：localStorage · algoviz-api-config / algoviz-lang / algoviz-ai-history</span>
+        <span>◉ <b style="color:var(--green)">LOCAL ONLY</b></span>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+"use strict";
+/* ================= 路由 ================= */
+const PAGES = ["home", "workshop", "lab", "settings"];
+function go(pg) {
+  if (!PAGES.includes(pg)) pg = "home";
+  PAGES.forEach(p => {
+    document.getElementById(p).classList.toggle("active", p === pg);
+    document.querySelector(`nav a[data-pg="${p}"]`).classList.toggle("on", p === pg);
+  });
+  location.hash = "#" + pg;
+}
+window.addEventListener("hashchange", () => go(location.hash.slice(1)));
+go(location.hash.slice(1) || "home");
+
+/* ================= 通用：终端 ================= */
+function termEl() { return document.getElementById("wsTerm"); }
+function termLog(text, cls) {
+  const el = termEl();
+  const line = document.createElement("div");
+  line.className = "p " + (cls || "");
+  line.textContent = text;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+function typeLine(el, text, cls, ms, done) {
+  const line = document.createElement("div");
+  line.className = "p " + (cls || "");
+  el.appendChild(line);
+  const cur = document.createElement("span");
+  cur.className = "cursor-block";
+  line.appendChild(cur);
+  let i = 0;
+  const t = setInterval(() => {
+    if (i < text.length) {
+      line.insertBefore(document.createTextNode(text[i]), cur);
+      i++;
+      el.scrollTop = el.scrollHeight;
+    } else {
+      clearInterval(t);
+      cur.remove();
+      if (done) done();
+    }
+  }, ms);
+}
+function termClear() { termEl().innerHTML = ""; }
+
+/* ================= 通用：图章 ================= */
+function stamp(zone, text, cls) {
+  zone.innerHTML = "";
+  const s = document.createElement("div");
+  s.className = "stamp " + (cls || "");
+  s.textContent = text;
+  zone.appendChild(s);
+}
+
+/* ================= 通用：场景渲染器（diff 复用 + 过渡） ================= */
+const NS = "http://www.w3.org/2000/svg";
+function makeScene(svg) {
+  return {
+    svg,
+    staticEl: svg.querySelector("g#wsStatic") || svg.querySelector("g#labStatic") || svg.firstElementChild,
+    itemsEl: svg.querySelector("g#wsItems") || svg.querySelector("g#labItems") || svg.firstElementChild,
+    map: new Map()
+  };
+}
+function renderScene(sc, snap) {
+  // 静态层（尺寸线 / 边 / callout / 游标）整层重建
+  let html = "";
+  (snap.edges || []).forEach(e => {
+    html += `<line class="sc-edge ${e.cls || ""}" x1="${e.x1}" y1="${e.y1}" x2="${e.x2}" y2="${e.y2}"/>`;
+  });
+  (snap.dims || []).forEach(d => {
+    html += `<line class="sc-dim" x1="${d.x1}" y1="${d.y1}" x2="${d.x2}" y2="${d.y2}" marker-start="url(#arrL)" marker-end="url(#arrR)"/>`;
+    if (d.label) html += `<text class="sc-dim-label" x="${d.lx}" y="${d.ly}" text-anchor="middle">${d.label}</text>`;
+  });
+  (snap.crosses || []).forEach(c => {
+    const l = 9;
+    html += `<line class="sc-cross-line" x1="${c.x - l}" y1="${c.y}" x2="${c.x + l}" y2="${c.y}"/><line class="sc-cross-line" x1="${c.x}" y1="${c.y - l}" x2="${c.x}" y2="${c.y + l}"/><circle class="sc-cross-dot" cx="${c.x}" cy="${c.y}" r="2.6"/>`;
+  });
+  if (snap.queue) {
+    html += `<text class="sc-queue-label" x="${snap.queue.x}" y="${snap.queue.y - 8}">QUEUE</text>`;
+  }
+  if (snap.desc) {
+    const bx = snap.descBarX, by = snap.descBarY;
+    html += `<rect class="sc-desc-bar" x="${bx}" y="${by}" width="${snap.descW}" height="30" rx="2"/>`;
+    html += `<line class="sc-callout-line" x1="${snap.descFromX}" y1="${snap.descFromY}" x2="${bx + 6}" y2="${by + 15}"/>`;
+    html += `<text class="sc-callout-text" x="${bx + 12}" y="${by + 20}">▸ ${snap.desc}</text>`;
+  }
+  sc.staticEl.innerHTML = html;
+  // 动态层（元素）diff：同 id 复用 g，transform 过渡移动
+  const seen = new Set();
+  (snap.items || []).forEach(it => {
+    seen.add(it.id);
+    let g = sc.map.get(it.id);
+    if (!g) {
+      g = document.createElementNS(NS, "g");
+      g.classList.add(it.shape === "node" ? "sc-node" : "sc-cell");
+      sc.itemsEl.appendChild(g);
+      sc.map.set(it.id, g);
+    }
+    const cls = it.cls || "";
+    g.classList.toggle("cmp", cls.includes("cmp"));
+    g.classList.toggle("swap", cls.includes("swap"));
+    g.classList.toggle("pivot", cls.includes("pivot"));
+    g.classList.toggle("sorted", cls.includes("sorted"));
+    g.classList.toggle("segment", cls.includes("segment"));
+    g.classList.toggle("done", cls.includes("done"));
+    g.classList.toggle("vis", cls.includes("vis"));
+    g.classList.toggle("cur", cls.includes("cur"));
+    g.classList.toggle("front", cls.includes("front"));
+    g.classList.toggle("inq", cls.includes("inq"));
+    g.classList.toggle("bump", it.bump);
+    g.setAttribute("transform", `translate(${it.x},${it.y})`);
+    g.innerHTML = it.body;
+  });
+  for (const [id, g] of sc.map) if (!seen.has(id)) { g.remove(); sc.map.delete(id); }
+}
+function cellBody(w, h, v, idxTxt, r) {
+  return `<rect width="${w}" height="${h}" rx="${r ?? 3}"/><text x="${w / 2}" y="${h / 2 + 7}">${v}</text><text class="idx" x="${w / 2}" y="${h + 15}">${idxTxt || ""}</text>`;
+}
+function nodeBody(r, v) {
+  return `<circle r="${r}"/><text y="4.5">${v}</text>`;
+}
+function qcellBody(w, h, v) {
+  return `<rect width="${w}" height="${h}" rx="2"/><text x="${w / 2}" y="${h / 2 + 5}">${v}</text>`;
+}
+
+/* ================= 算法：步骤生成 ================= */
+const BUBBLE_IN = [5, 3, 8, 1, 9, 2];
+const QUICK_IN = [5, 3, 8, 1, 9, 2, 7];
+const BFS_G = { 0: [1, 2], 1: [0, 3, 4], 2: [0, 4, 5], 3: [1, 5], 4: [1, 2], 5: [2, 3] };
+const BFS_POS = { 0: [120, 190], 1: [290, 95], 2: [290, 285], 3: [470, 95], 4: [470, 285], 5: [650, 190] };
+
+function bubbleSteps(a) {
+  const s = [];
+  const n = a.length;
+  const arr = a.slice();
+  const mk = (desc, line, marks, vars, stats, log) => s.push({ desc, line, marks, vars, stats: { ...stats }, log, a: arr.slice() });
+  mk("输入数组，开始第 1 轮扫描", 2, { sorted: [] }, { i: 0, j: 0 }, { c: 0, w: 0, x: 0 }, `$ node main.js\nstdin> ${arr.join(" ")}`);
+  for (let i = 0; i < n - 1; i++) {
+    for (let j = 0; j < n - i - 1; j++) {
+      const c = s[s.length - 1].stats.c + 1;
+      mk(`比较 a[${j}] 与 a[${j + 1}]：${arr[j]} > ${arr[j + 1]} ?`, 5, { cmp: [j, j + 1], sorted: range(n - i, n) }, { i, j }, { c, w: s[s.length - 1].stats.w, x: s[s.length - 1].stats.x + 2 }, `compare ${j},${j + 1}  (${arr[j]} vs ${arr[j + 1]})`);
+      if (arr[j] > arr[j + 1]) {
+        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+        const w = s[s.length - 1].stats.w + 1;
+        mk(`a[${j}] > a[${j + 1}] → 交换 ${arr[j + 1]} ↔ ${arr[j]}`, 6, { swap: [j, j + 1], sorted: [] }, { i, j }, { c, w, x: s[s.length - 1].stats.x + 2 }, `swap ${arr[j + 1]} ↔ ${arr[j]}`);
+      }
+    }
+    const doneFrom = n - i - 1;
+    mk(`第 ${i + 1} 轮结束：a[${doneFrom}] = ${arr[doneFrom]} 已就位`, 4, { sorted: range(doneFrom, n) }, { i: i + 1, j: 0 }, s[s.length - 1].stats, `round ${i + 1} done → a[${doneFrom}]=${arr[doneFrom]}`);
+  }
+  mk("扫描完成，数组有序", 10, { sorted: range(0, n) }, {}, { ...s[s.length - 1].stats }, `✓ result: [${arr.join(", ")}]`);
+  return s;
+}
+function quickSteps(a) {
+  const s = [];
+  const arr = a.slice();
+  const mk = (desc, line, marks, vars, stats, log) => s.push({ desc, line, marks, vars, stats: { ...stats }, log, a: arr.slice() });
+  mk("对区间 [0, n-1] 开始分区", 3, { segment: [0, arr.length - 1] }, { lo: 0, hi: arr.length - 1 }, { c: 0, w: 0, x: 0 }, `$ node main.js\nstdin> ${arr.join(" ")}`);
+  const stack = [[0, arr.length - 1]];
+  while (stack.length) {
+    const [lo, hi] = stack.pop();
+    if (lo >= hi) {
+      mk(`区间 [${lo}, ${hi}] 为空，回溯`, 2, { segment: [lo, hi] }, { lo, hi }, s[s.length - 1].stats, `backtrack [${lo},${hi}]`);
+      continue;
+    }
+    const p = arr[hi];
+    let i = lo;
+    for (let j = lo; j < hi; j++) {
+      const st = s[s.length - 1].stats;
+      const c = st.c + 1;
+      mk(`比较 a[${j}] 与主元 ${p}`, 5, { segment: [lo, hi], pivot: hi, cmp: [i, j] }, { lo, hi, i, j, p }, { c, w: st.w, x: st.x + 2 }, `compare a[${j}]=${arr[j]} vs pivot=${p}`);
+      if (arr[j] < p) {
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+        const st2 = s[s.length - 1].stats;
+        const w = st2.w + 1;
+        mk(`a[${j}] < ${p} → 交换到 i 位`, 6, { segment: [lo, hi], pivot: hi, swap: [i, j] }, { lo, hi, i, j, p }, { c, w, x: st2.x + 2 }, `swap a[${i}] ↔ a[${j}]  (${arr[j]} ↔ ${arr[i]})`);
+        i++;
+      }
+    }
+    [arr[i], arr[hi]] = [arr[hi], arr[i]];
+    const st3 = s[s.length - 1].stats;
+    const w = st3.w + 1;
+    mk(`主元 ${p} 落位于 a[${i}]`, 7, { segment: [lo, hi], pivot: i, sorted: [i] }, { lo, hi, i, p }, { c: st3.c, w, x: st3.x + 2 }, `pivot ${p} → position ${i}`);
+    stack.push([lo, i - 1]);
+    stack.push([i + 1, hi]);
+  }
+  mk("全部区间处理完毕，数组有序", 10, { sorted: range(0, arr.length) }, {}, { ...s[s.length - 1].stats }, `✓ result: [${arr.join(", ")}]`);
+  return s;
+}
+function bfsSteps(g, start) {
+  const s = [];
+  const seen = new Set([start]);
+  const q = [start];
+  const order = [start];
+  const mk = (desc, line, marks, vars, stats, log) => s.push({ desc, line, marks, vars, stats: { ...stats }, log });
+  mk("访问起点 0，标记并入队", 2, { visited: [0], inq: [0] }, { q: "[0]", n: 1 }, { c: 0, w: 0, x: 1 }, "visit 0 → enqueue");
+  while (q.length) {
+    const u = q.shift();
+    mk(`出队 ${u}，展开邻接边`, 4, { visited: order, cur: u, inq: q.slice() }, { q: "[" + q.join(",") + "]", n: q.length }, s[s.length - 1].stats, `dequeue ${u}`);
+    for (const v of g[u]) {
+      if (!seen.has(v)) {
+        seen.add(v);
+        q.push(v);
+        order.push(v);
+        const st = s[s.length - 1].stats;
+        mk(`发现邻接 ${v}，标记并入队`, 6, { visited: order, cur: u, front: [v], inq: q.slice() }, { q: "[" + q.join(",") + "]", n: q.length }, { c: st.c, w: st.w, x: st.x + 1 }, `discover ${v} → enqueue`);
+      }
+    }
+  }
+  mk("BFS 遍历完成", 9, { visited: order }, { q: "[]", n: 0 }, { ...s[s.length - 1].stats }, `✓ result: [${order.join(", ")}]`);
+  return s;
+}
+function range(a, b) { const r = []; for (let i = a; i < b; i++) r.push(i); return r; }
+
+/* ================= 算法：快照组装 ================= */
+const BLOCK = { w: 74, h: 56, gap: 16, y: 158 };
+function arrSnap(a, marks, desc) {
+  const n = a.length;
+  const x0 = Math.max(60, (1000 - (n * BLOCK.w + (n - 1) * BLOCK.gap)) / 2);
+  const items = a.map((v, i) => {
+    let cls = "";
+    if (marks.cmp && marks.cmp.includes(i)) cls = "cmp";
+    else if (marks.swap && marks.swap.includes(i)) cls = "swap";
+    else if (marks.pivot === i) cls = "pivot";
+    else if (marks.sorted && marks.sorted.includes(i)) cls = "sorted";
+    else if (marks.segment && i >= marks.segment[0] && i <= marks.segment[1]) cls = "segment";
+    return { id: "c" + i, shape: "cell", x: x0 + i * (BLOCK.w + BLOCK.gap), y: BLOCK.y, body: cellBody(BLOCK.w, BLOCK.h, v, "a[" + i + "]"), cls };
+  });
+  const snaps = { items, edges: [], crosses: [], queue: null, dims: [] };
+  let hot = null;
+  if (marks.cmp) hot = marks.cmp;
+  if (marks.swap) hot = marks.swap;
+  if (hot && hot.length === 2) {
+    const cx = [x0 + hot[0] * (BLOCK.w + BLOCK.gap) + BLOCK.w / 2, x0 + hot[1] * (BLOCK.w + BLOCK.gap) + BLOCK.w / 2];
+    const ly = BLOCK.y - 26;
+    const label = marks.swap ? "swap" : `a[${hot[0]}]>a[${hot[1]}]?`;
+    snaps.dims.push({ x1: cx[0], y1: ly, x2: cx[1], y2: ly, lx: (cx[0] + cx[1]) / 2, ly: ly - 8, label });
+    snaps.crosses.push({ x: cx[0], y: BLOCK.y + BLOCK.h + 36 }, { x: cx[1], y: BLOCK.y + BLOCK.h + 36 });
+  }
+  if (desc) {
+    snaps.desc = desc;
+    const f = hot ? x0 + hot[0] * (BLOCK.w + BLOCK.gap) + BLOCK.w / 2 : x0 + BLOCK.w / 2;
+    snaps.descFromX = f; snaps.descFromY = BLOCK.y + BLOCK.h + 18;
+    snaps.descBarX = 520; snaps.descBarY = 34;
+    snaps.descW = 460;
+  }
+  // 把 items 的 bump 标志（swap 时）
+  if (marks.swap) items.forEach(it => { if (marks.swap.includes(+it.id.slice(1))) it.bump = true; });
+  return snaps;
+}
+function graphSnap(a, marks, desc) {
+  const items = [];
+  for (const [id, [x, y]] of Object.entries(BFS_POS)) {
+    let cls = "";
+    if (marks.cur === +id) cls = "cur";
+    else if (marks.front && marks.front.includes(+id)) cls = "front";
+    else if (marks.visited && marks.visited.includes(+id)) cls = "vis";
+    if (marks.inq && marks.inq.includes(+id)) cls = cls ? cls + " inq" : "inq";
+    items.push({ id: "n" + id, shape: "node", x, y, body: nodeBody(34, id), cls });
+  }
+  const edges = [];
+  const seenE = new Set();
+  for (const [u, vs] of Object.entries(BFS_G)) {
+    for (const v of vs) {
+      const key = Math.min(u, v) + "-" + Math.max(u, v);
+      if (seenE.has(key)) continue;
+      seenE.add(key);
+      const [x1, y1] = BFS_POS[u], [x2, y2] = BFS_POS[v];
+      const hot = marks.cur !== undefined && (marks.cur === +u || marks.cur === +v);
+      const done = marks.visited && marks.visited.includes(+u) && marks.visited.includes(+v);
+      edges.push({ x1, y1, x2, y2, cls: done && !hot ? "green" : hot ? "hot" : "" });
+    }
+  }
+  const q = marks.inq || [];
+  const qitems = q.map((v, i) => ({ id: "q" + i, shape: "qcell", x: 60 + i * 42, y: 84, body: qcellBody(34, 26, v) }));
+  const snaps = { items: qitems.concat(items), edges, crosses: [], queue: marks.inq ? { x: 60, y: 84 } : null, dims: [] };
+  if (desc) {
+    snaps.desc = desc;
+    const f = marks.cur !== undefined ? BFS_POS[marks.cur][0] : 120;
+    snaps.descFromX = f; snaps.descFromY = 120;
+    snaps.descBarX = 480; snaps.descBarY = 26;
+    snaps.descW = 500;
+  }
+  return snaps;
+}
+
+/* ================= 播放器 ================= */
+const ALGOS = {
+  bubble: { name: "冒泡排序 · BUBBLE SORT", cx: "⌀ TIME O(n²) · SPACE O(1)", gen: () => bubbleSteps(BUBBLE_IN.slice()), snap: arrSnap, q: "array" },
+  quick: { name: "快速排序 · QUICK SORT", cx: "⌀ TIME O(n log n) · SPACE O(log n)", gen: () => quickSteps(QUICK_IN.slice()), snap: arrSnap, q: "array" },
+  bfs: { name: "广度优先 · BFS", cx: "⌀ TIME O(V+E) · SPACE O(V)", gen: () => bfsSteps(BFS_G, 0), snap: graphSnap, q: "graph" }
+};
+const player = { algo: null, steps: [], idx: 0, speed: 1, timer: null, playing: false, scene: null };
+const $ = id => document.getElementById(id);
+
+function loadAlgo(id) {
+  player.algo = id;
+  const A = ALGOS[id];
+  player.steps = A.gen();
+  player.idx = 0;
+  $("wsAlgoName").textContent = A.name;
+  $("wsComplex").textContent = A.cx;
+  document.querySelectorAll(".scene .p-title .tab[data-algo]").forEach(t => t.classList.toggle("on", t.dataset.algo === id));
+  renderCode(A.code || CODE_JS, 0);
+  renderSteps();
+  $("wsStampZone").innerHTML = "";
+  termClear();
+  termLog("══ 图纸 " + id.toUpperCase() + " 已载入 · SHEET 2/4 ══", "dim");
+  player.scene = makeScene($("wsSvg"));
+  stepTo(0);
+}
+function renderSteps() {
+  const box = $("wsSteps");
+  box.innerHTML = "";
+  player.steps.forEach((st, i) => {
+    const d = document.createElement("div");
+    d.className = "step-item" + (i === player.idx ? " on" : "");
+    d.innerHTML = `<span class="sno">${String(i + 1).padStart(2, "0")}</span><span>${st.desc}</span>`;
+    d.addEventListener("click", () => stepTo(i));
+    box.appendChild(d);
+  });
+  $("stepCount").textContent = `${player.steps.length} STEPS`;
+  updateTicks();
+}
+function updateTicks() {
+  const line = $("trackLine");
+  const n = player.steps.length;
+  let html = "";
+  for (let i = 0; i < n; i++) {
+    const pct = (i / (n - 1)) * 100;
+    html += `<span class="track-tick${i <= player.idx ? " done" : ""}" style="left:${pct}%"></span>`;
+  }
+  $("trackTicks").innerHTML = html;
+}
+function stepTo(i) {
+  if (i < 0 || i >= player.steps.length) return;
+  player.idx = i;
+  const st = player.steps[i];
+  const A = ALGOS[player.algo];
+  const snaps = A.snap(st.a, st.marks || {}, st.desc);
+  renderScene(player.scene, snaps);
+  updateTicks();
+  // 高亮代码行
+  renderCode(A.code || CODE_JS, st.line - 1);
+  // 统计
+  const sts = st.stats;
+  $("stCmp").textContent = String(sts.c).padStart(2, "0");
+  $("stSwp").textContent = String(sts.w).padStart(2, "0");
+  $("stAcc").textContent = String(sts.x).padStart(2, "0");
+  $("stCmpBar").style.width = Math.min(100, sts.c * 4) + "%";
+  $("stSwpBar").style.width = Math.min(100, sts.w * 7) + "%";
+  $("stAccBar").style.width = Math.min(100, sts.x * 3) + "%";
+  // 变量
+  const vars = st.vars || {};
+  $("wsVars").innerHTML = Object.keys(vars).map(k => `<span class="kv">${k} = <b>${vars[k]}</b></span>`).join("") || `<span class="kv" style="color:var(--line)">— 无活动变量 —</span>`;
+  // 播放头
+  const pct = (i / (player.steps.length - 1)) * 100;
+  $("trackHead").style.left = pct + "%";
+  $("trackLabel").textContent = `${String(i + 1).padStart(2, "0")}/${String(player.steps.length).padStart(2, "0")}`;
+  $("trackPos").textContent = `STEP ${String(i + 1).padStart(2, "0")} / ${String(player.steps.length).padStart(2, "0")}`;
+  // 步骤列表滚动
+  const items = $("wsSteps").children;
+  for (let k = 0; k < items.length; k++) items[k].classList.toggle("on", k === i);
+  if (items[i]) items[i].scrollIntoView({ block: "nearest" });
+  // 终端 log（只在向前推进时追加）
+  if (st.log && player._logIdx !== undefined && i > player._logIdx) {
+    st.log.split("\n").forEach(l => termLog(l, l.startsWith("$") || l.startsWith("stdin>") ? "dim" : ""));
+  }
+  player._logIdx = i;
+}
+function advance() {
+  if (player.idx >= player.steps.length - 1) { pause(); return; }
+  stepTo(player.idx + 1);
+}
+function play() {
+  if (player.playing) return;
+  if (player.idx >= player.steps.length - 1) stepTo(0);
+  player.playing = true;
+  $("btnPlay").classList.add("playing");
+  $("btnPlay").textContent = "■";
+  player.timer = setInterval(advance, 800 / player.speed);
+}
+function pause() {
+  player.playing = false;
+  clearInterval(player.timer);
+  $("btnPlay").classList.remove("playing");
+  $("btnPlay").textContent = "▶";
+}
+function togglePlay() { player.playing ? pause() : play(); }
+function setSpeed(v) {
+  player.speed = v;
+  if (player.playing) { clearInterval(player.timer); player.timer = setInterval(advance, 800 / v); }
+  document.querySelectorAll(".speed-tabs .tab").forEach(t => t.classList.toggle("on", +t.dataset.spd === v));
+}
+$("btnPlay").addEventListener("click", togglePlay);
+$("btnNext").addEventListener("click", () => { pause(); stepTo(Math.min(player.idx + 1, player.steps.length - 1)); });
+$("btnPrev").addEventListener("click", () => { pause(); stepTo(Math.max(player.idx - 1, 0)); });
+$("btnReset").addEventListener("click", () => { pause(); stepTo(0); });
+document.querySelectorAll(".speed-tabs .tab").forEach(t => t.addEventListener("click", () => setSpeed(+t.dataset.spd)));
+document.querySelectorAll(".scene .p-title .tab[data-algo]").forEach(t => t.addEventListener("click", () => { pause(); loadAlgo(t.dataset.algo); }));
+
+/* ================= 代码面板 ================= */
+const CODE_JS = `function bubbleSort(a) {
+  const n = a.length
+  for (let i = 0; i < n - 1; i++) {
+    for (let j = 0; j < n - i - 1; j++) {
+      if (a[j] > a[j + 1]) {
+        [a[j], a[j + 1]] = [a[j + 1], a[j]]
+      }
+    }
+  }
+  return a
+}`;
+const CODE_QUICK = `function quickSort(a, lo = 0, hi = a.length - 1) {
+  if (lo >= hi) return a
+  const p = a[hi]; let i = lo
+  for (let j = lo; j < hi; j++) {
+    if (a[j] < p) { [a[i], a[j]] = [a[j], a[i]]; i++ }
+  }
+  [a[i], a[hi]] = [a[hi], a[i]]
+  quickSort(a, lo, i - 1)
+  quickSort(a, i + 1, hi)
+  return a
+}`;
+const CODE_BFS = `function bfs(graph, start) {
+  const q = [start], seen = new Set([start])
+  while (q.length) {
+    const u = q.shift()
+    for (const v of graph[u]) {
+      if (!seen.has(v)) { seen.add(v); q.push(v) }
+    }
+  }
+  return [...seen]
+}`;
+ALGOS.bubble.code = CODE_JS;
+ALGOS.quick.code = CODE_QUICK;
+ALGOS.bfs.code = CODE_BFS;
+function renderCode(code, activeLine) {
+  const lines = code.split("\n");
+  $("wsCode").innerHTML = lines.map((ln, i) =>
+    `<div class="cline${i === activeLine ? " active" : ""}"><span class="ln">${String(i + 1).padStart(2, "0")}</span><span class="tx">${esc(ln) || "&nbsp;"}</span></div>`
+  ).join("");
+  const el = $("wsCode").children[activeLine];
+  if (el) el.scrollIntoView({ block: "nearest" });
+}
+function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+/* 语言签注（CODE SHEET）——切换 bubble 模板 */
+const LANG_CODE = {
+  js: CODE_JS,
+  py: `def bubble_sort(a):
+    n = len(a)
+    for i in range(n - 1):
+        for j in range(n - i - 1):
+            if a[j] > a[j + 1]:
+                a[j], a[j + 1] = a[j + 1], a[j]
+    return a`,
+  cpp: `void bubble_sort(vector<int>& a) {
+  int n = a.size();
+  for (int i = 0; i < n - 1; i++)
+    for (int j = 0; j < n - i - 1; j++)
+      if (a[j] > a[j + 1]) swap(a[j], a[j + 1]);
+}`,
+  java: `static int[] bubbleSort(int[] a) {
+  int n = a.length;
+  for (int i = 0; i < n - 1; i++)
+    for (int j = 0; j < n - i - 1; j++)
+      if (a[j] > a[j + 1]) { int t = a[j]; a[j] = a[j+1]; a[j+1] = t; }
+  return a;
+}`
+};
+["js", "py", "cpp", "java"].forEach(l => {
+  const t = document.createElement("span");
+  t.className = "tab" + (l === "js" ? " on" : "");
+  t.textContent = l.toUpperCase();
+  t.addEventListener("click", () => {
+    if (player.algo !== "bubble") { termLog(`✗ 图纸 ${player.algo.toUpperCase()} 仅提供 JS 模板`, "err"); return; }
+    document.querySelectorAll("#wsLangTabs .tab").forEach(x => x.classList.toggle("on", x === t));
+    $("wsLangLabel").textContent = l.toUpperCase();
+    $("termLangTag").textContent = l.toUpperCase();
+    renderCode(LANG_CODE[l], player.idx >= 0 ? player.steps[player.idx].line - 1 : 0);
+    termLog(`⌀ 语言签注 → ${l.toUpperCase()}（模板已切换，动画逻辑不变）`, "sys");
+  });
+  $("wsLangTabs").appendChild(t);
+});
+
+/* ================= AI 生成模拟（工作区） ================= */
+function aiGenerate() {
+  const btn = $("wsGenBtn");
+  if (btn.disabled) return;
+  btn.disabled = true;
+  const scan = $("wsScan");
+  scan.classList.add("on");
+  const term = termEl();
+  termLog("", "dim");
+  typeLine(term, "⌀ 分析代码语义… ", "sys", 18, () =>
+    typeLine(term, "▸ 结构 OK · 识别为 " + ALGOS[player.algo].name.split(" ")[0].toUpperCase(), "", 12, () =>
+      typeLine(term, "▸ 生成步骤流 …", "", 14, () =>
+        typeLine(term, "▸ 绘制场景 · 编排尺寸标注 / 游标…", "", 13, () => {
+          setTimeout(() => {
+            scan.classList.remove("on");
+            stamp($("wsStampZone"), "AI\n生成", "blue");
+            termLog("✓ 图纸生成完毕 · 自动开始播放", "sys");
+            btn.disabled = false;
+            stepTo(0);
+            play();
+          }, 380);
+        })
+      )
+    )
+  );
+}
+$("wsGenBtn").addEventListener("click", aiGenerate);
+$("wsSubmitBtn").addEventListener("click", () => {
+  pause();
+  termLog("── 提交输入 ──", "dim");
+  stepTo(0);
+  play();
+  stamp($("wsStampZone"), "提交\nB-7", "green");
+});
+
+/* ================= 首页 ================= */
+const CATS = [
+  { no: "SHT-01", name: "排序 SORTING", cnt: 12, mini: "sort", key: ["排序", "sort", "SHT-01"] },
+  { no: "SHT-02", name: "图算法 GRAPH", cnt: 9, mini: "graph", key: ["图", "graph", "bfs", "dijkstra", "SHT-02"] },
+  { no: "SHT-03", name: "数据结构 STRUCT", cnt: 14, mini: "tree", key: ["数据", "树", "堆", "栈", "哈希", "SHT-03"] },
+  { no: "SHT-04", name: "动态规划 DP", cnt: 6, mini: "dp", key: ["DP", "动态", "背包", "SHT-04"] },
+  { no: "SHT-05", name: "搜索回溯 SEARCH", cnt: 4, mini: "search", key: ["搜索", "回溯", "二分", "SHT-05"] },
+  { no: "SHT-06", name: "进阶专题 ADVANCED", cnt: 8, mini: "heap", key: ["进阶", "KMP", "线段树", "滑动窗口", "SHT-06"] },
+  { no: "SHT-07", name: "几何 GEOMETRY", cnt: 3, mini: "geo", key: ["几何", "凸包", "SHT-07"] },
+  { no: "SHT-08", name: "概率·自动机 PROB/AUT", cnt: 5, mini: "prob", key: ["概率", "自动机", "水塘", "SHT-08"] }
+];
+const MINI = {
+  sort: `<svg class="mini-svg" viewBox="0 0 120 48"><g class="mi-swap"><rect x="10" y="18" width="14" height="14" fill="#E3EBFF" stroke="#2F6BFF"/><text x="17" y="28.5" font-size="10" text-anchor="middle" fill="#12307A">3</text></g><g class="mi-swap2"><rect x="44" y="18" width="14" height="14" fill="#E3EBFF" stroke="#2F6BFF"/><text x="51" y="28.5" font-size="10" text-anchor="middle" fill="#12307A">5</text></g><g><rect x="78" y="18" width="14" height="14" fill="#DFF3EA" stroke="#1E9E6A"/><text x="85" y="28.5" font-size="10" text-anchor="middle" fill="#0B5D3F">8</text></g><g><rect x="96" y="18" width="14" height="14" fill="#DFF3EA" stroke="#1E9E6A"/><text x="103" y="28.5" font-size="10" text-anchor="middle" fill="#0B5D3F">9</text></g></svg>`,
+  graph: `<svg class="mini-svg" viewBox="0 0 120 48"><line class="mi-flow" x1="20" y1="24" x2="50" y2="12" stroke="#2F6BFF" stroke-width="2"/><line class="mi-flow" x1="20" y1="24" x2="50" y2="36" stroke="#2F6BFF" stroke-width="2" style="animation-delay:-1s"/><line x1="50" y1="12" x2="80" y2="24" stroke="#E3EBFF" stroke-width="2"/><line x1="50" y1="36" x2="80" y2="24" stroke="#E3EBFF" stroke-width="2"/><circle cx="20" cy="24" r="7" fill="#fff" stroke="#12307A"/><text x="20" y="27.5" font-size="9" text-anchor="middle">0</text><circle cx="50" cy="12" r="7" fill="#fff" stroke="#2F6BFF"/><text x="50" y="15.5" font-size="9" text-anchor="middle">1</text><circle cx="50" cy="36" r="7" fill="#fff" stroke="#2F6BFF"/><text x="50" y="39.5" font-size="9" text-anchor="middle">2</text><circle cx="80" cy="24" r="7" fill="#DFF3EA" stroke="#1E9E6A"/><text x="80" y="27.5" font-size="9" text-anchor="middle">3</text></svg>`,
+  tree: `<svg class="mini-svg" viewBox="0 0 120 48"><line x1="60" y1="12" x2="28" y2="34" stroke="#E3EBFF" stroke-width="2"/><line x1="60" y1="12" x2="92" y2="34" stroke="#E3EBFF" stroke-width="2"/><g class="mi-tree"><circle cx="60" cy="12" r="9" fill="#fff" stroke="#2F6BFF" stroke-width="2"/><text x="60" y="16" font-size="10" text-anchor="middle">8</text></g><circle cx="28" cy="34" r="9" fill="#DFF3EA" stroke="#1E9E6A"/><text x="28" y="38" font-size="10" text-anchor="middle">3</text><circle cx="92" cy="34" r="9" fill="#E3EBFF" stroke="#2F6BFF"/><text x="92" y="38" font-size="10" text-anchor="middle">12</text></svg>`,
+  dp: `<svg class="mini-svg" viewBox="0 0 120 48"><rect x="10" y="8" width="26" height="16" class="mi-dp" fill="#E3EBFF" stroke="#2F6BFF"/><rect x="42" y="8" width="26" height="16" class="mi-dp2" fill="#E3EBFF" stroke="#2F6BFF"/><rect x="74" y="8" width="26" height="16" class="mi-dp" fill="#E3EBFF" stroke="#2F6BFF" style="animation-delay:-1s"/><rect x="10" y="28" width="26" height="16" class="mi-dp2" fill="#DFF3EA" stroke="#1E9E6A" style="animation-delay:-2s"/><rect x="42" y="28" width="26" height="16" class="mi-dp" fill="#E3EBFF" stroke="#2F6BFF" style="animation-delay:-1.5s"/><rect x="74" y="28" width="26" height="16" class="mi-dp2" fill="#E3EBFF" stroke="#2F6BFF" style="animation-delay:-.5s"/></svg>`,
+  search: `<svg class="mini-svg" viewBox="0 0 120 48"><g class="mi-cross"><rect x="8" y="16" width="22" height="16" fill="#fff" stroke="#12307A"/><rect x="34" y="16" width="22" height="16" fill="#fff" stroke="#12307A"/><rect x="60" y="16" width="22" height="16" fill="#DFF3EA" stroke="#1E9E6A"/><rect x="86" y="16" width="22" height="16" fill="#fff" stroke="#12307A"/></g><line x1="18" y1="0" x2="18" y2="48" stroke="#E0453A" stroke-width="1.5" stroke-dasharray="3 3"/></svg>`,
+  heap: `<svg class="mini-svg" viewBox="0 0 120 48"><g class="mi-rise"><rect x="16" y="24" width="16" height="16" fill="#E3EBFF" stroke="#2F6BFF"/><text x="24" y="35.5" font-size="10" text-anchor="middle">9</text></g><rect x="52" y="24" width="16" height="16" fill="#DFF3EA" stroke="#1E9E6A"/><text x="60" y="35.5" font-size="10" text-anchor="middle">7</text><rect x="88" y="24" width="16" height="16" fill="#E3EBFF" stroke="#2F6BFF"/><text x="96" y="35.5" font-size="10" text-anchor="middle">5</text><line x1="24" y1="24" x2="60" y2="24" stroke="#12307A" stroke-width="1.5"/><line x1="60" y1="24" x2="96" y2="24" stroke="#12307A" stroke-width="1.5"/></svg>`,
+  geo: `<svg class="mini-svg" viewBox="0 0 120 48"><g class="mi-pt"><circle cx="12" cy="34" r="5" fill="#E0453A"/><line x1="12" y1="34" x2="56" y2="18" stroke="#2F6BFF" stroke-width="2"/><line x1="56" y1="18" x2="100" y2="30" stroke="#2F6BFF" stroke-width="2"/></g><circle cx="56" cy="18" r="4" fill="#fff" stroke="#12307A"/><circle cx="100" cy="30" r="4" fill="#fff" stroke="#12307A"/></svg>`,
+  prob: `<svg class="mini-svg" viewBox="0 0 120 48"><rect class="mi-bar" x="18" y="18" width="14" height="22" fill="#2F6BFF" opacity=".55"/><rect class="mi-bar" x="52" y="8" width="14" height="32" fill="#2F6BFF" opacity=".8" style="animation-delay:-.5s"/><rect class="mi-bar" x="86" y="22" width="14" height="18" fill="#2F6BFF" opacity=".65" style="animation-delay:-1s"/><line x1="8" y1="44" x2="112" y2="44" stroke="#12307A" stroke-width="1.5"/></svg>`
+};
+function renderCards(filter) {
+  const box = $("cards");
+  box.innerHTML = "";
+  let n = 0;
+  CATS.forEach(c => {
+    const hit = !filter || c.key.some(k => k.toLowerCase().includes(filter));
+    if (!hit) return;
+    n++;
+    const el = document.createElement("div");
+    el.className = "card";
+    el.innerHTML = `${MINI[c.mini]}<span class="c-arrow">▸</span><div class="c-no">${c.no}</div><h3>${c.name}</h3><div class="c-en">${c.no} · REV ${String(n).padStart(2, "0")} · APPROVED</div><div class="c-cnt"><b>${c.cnt}</b> 张图纸</div>`;
+    el.addEventListener("click", () => {
+      const algo = c.no === "SHT-01" ? "bubble" : c.no === "SHT-02" ? "bfs" : "bubble";
+      go("workshop");
+      if (algo !== player.algo) loadAlgo(algo);
+      else { pause(); stepTo(0); play(); }
+    });
+    box.appendChild(el);
+  });
+  $("cardCount").innerHTML = `检索到 <b>${n}</b> 张图纸 / 共 ${CATS.length} 类`;
+}
+$("cardSearch").addEventListener("input", e => renderCards(e.target.value.trim().toLowerCase()));
+renderCards("");
+
+/* ================= AI 实验室 ================= */
+const LAB_CODE = {
+  js: `function solve(data) {
+  const arr = JSON.parse(data)
+  for (let i = 0; i < arr.length - 1; i++)
+    for (let j = 0; j < arr.length - i - 1; j++)
+      if (arr[j] > arr[j + 1])
+        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]]
+  return arr
+}`,
+  py: `def solve(data):
+    arr = list(map(int, data.strip("[]").split(",")))
+    n = len(arr)
+    for i in range(n - 1):
+        for j in range(n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr`,
+  cpp: `int* solve(vector<int>& a) {
+  int n = a.size();
+  for (int i = 0; i < n - 1; i++)
+    for (int j = 0; j < n - i - 1; j++)
+      if (a[j] > a[j + 1]) swap(a[j], a[j + 1]);
+  return a.data();
+}`,
+  java: `static int[] solve(int[] a) {
+  int n = a.length;
+  for (int i = 0; i < n - 1; i++)
+    for (int j = 0; j < n - i - 1; j++)
+      if (a[j] > a[j + 1]) { int t = a[j]; a[j] = a[j+1]; a[j+1] = t; }
+  return a;
+}`
+};
+const HIST = [
+  { exp: "EXP-044", lang: "JVM", code: "java", t: "14:32", st: "fail", tag: "返工", algo: "背包 0/1" },
+  { exp: "EXP-043", lang: "CPP", code: "cpp", t: "14:05", st: "warn", tag: "超时", algo: "Dijkstra" },
+  { exp: "EXP-042", lang: "JS", code: "js", t: "13:47", st: "ok", tag: "完成", algo: "快速排序" },
+  { exp: "EXP-041", lang: "PY", code: "py", t: "13:21", st: "ok", tag: "完成", algo: "归并排序" }
+];
+let labLang = "js";
+function renderLabTabs() {
+  const box = $("labLangTabs");
+  box.innerHTML = "";
+  Object.keys(LAB_CODE).forEach(l => {
+    const t = document.createElement("span");
+    t.className = "tab" + (l === labLang ? " on" : "");
+    t.textContent = l.toUpperCase();
+    t.addEventListener("click", () => { labLang = l; $("labCode").value = LAB_CODE[l]; renderLabTabs(); });
+    box.appendChild(t);
+  });
+}
+function renderHistory() {
+  const box = $("labHistory");
+  box.innerHTML = "";
+  HIST.forEach(h => {
+    const d = document.createElement("div");
+    d.className = "hist-item";
+    d.innerHTML = `<span class="exp">${h.exp}</span><span class="lang">${h.lang}</span><span class="st ${h.st}">${h.tag}</span><span class="t">${h.t} · ${h.algo}</span>`;
+    d.addEventListener("click", () => {
+      labLang = h.code;
+      $("labCode").value = LAB_CODE[h.code];
+      renderLabTabs();
+      $("labResultTag").textContent = h.exp + " · " + h.tag;
+      if (h.st === "ok") stamp($("labStampZone"), "验收\n通过", "green");
+      else if (h.st === "warn") stamp($("labStampZone"), "运行\n超时", "amber");
+      else stamp($("labStampZone"), "退回\n返工", "");
+      $("labLog").textContent = `[${h.exp}] ${h.algo} · ${h.lang} · ${h.t} → ${h.tag}`;
+    });
+    box.appendChild(d);
+  });
+}
+function labRun() {
+  const btn = $("labRunBtn");
+  btn.disabled = true;
+  const scan = $("labScan");
+  scan.classList.add("on");
+  const log = $("labLog");
+  log.textContent = "⌀ 提交实验 … 分析代码 · 生成图纸 …";
+  setTimeout(() => {
+    scan.classList.remove("on");
+    stamp($("labStampZone"), "AI\n生成", "blue");
+    $("labResultTag").textContent = "EXP-045 · 完成";
+    log.textContent = "✓ EXP-045 生成完毕 · 冒泡排序 · " + labLang.toUpperCase() + " · 6 步 → 自动播放中";
+    // 结果画布：静态小场景 + 交换
+    const svg = $("labSvg");
+    svg.innerHTML = "";
+    const sc = { svg, staticEl: null, itemsEl: null, map: new Map() };
+    const g1 = document.createElementNS(NS, "g");
+    const g2 = document.createElementNS(NS, "g");
+    svg.appendChild(g1); svg.appendChild(g2);
+    sc.staticEl = g1; sc.itemsEl = g2;
+    const snap = arrSnap([5, 3, 8, 1], { swap: [0, 1] }, "bubble sort · 交换比较");
+    snap.descBarX = 300; snap.descBarY = 60; snap.descW = 340;
+    renderScene(sc, snap);
+    btn.disabled = false;
+  }, 1600);
+}
+renderLabTabs();
+renderHistory();
+$("labRunBtn").addEventListener("click", labRun);
+$("labSampleBtn").addEventListener("click", () => { $("labCode").value = LAB_CODE[labLang]; $("labInput").value = "[5,3,8,1,9,2]"; });
+
+/* ================= 设置 ================= */
+$("cfgTestBtn").addEventListener("click", () => {
+  const btn = $("cfgTestBtn");
+  btn.disabled = true;
+  $("cfgTestState").textContent = "链路测试中 …";
+  setTimeout(() => {
+    $("cfgTestState").textContent = "✓ 200 OK · 模型可用 · 8ms";
+    stamp($("cfgStampZone"), "链路\n正常", "green");
+    btn.disabled = false;
+  }, 1200);
+});
+document.querySelectorAll(".lang-btn").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".lang-btn").forEach(x => x.classList.toggle("on", x === b));
+}));
+
+/* ================= 启动 ================= */
+renderCode(CODE_JS, -1);
+loadAlgo("bubble");
+</script>
+</body>
+</html>

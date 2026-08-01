@@ -8,7 +8,7 @@ AlgoViz 的核心思路是把算法执行过程统一表达为结构化 `Animati
 
 - 算法目录覆盖排序、图算法、数据结构、动态规划、搜索回溯、进阶专题、面试高频和竞赛模板示例。
 - 主可视化工作区支持算法搜索、分类筛选、代码编辑、输入数据配置、播放控制、步骤说明、复杂度与统计信息展示。
-- 左侧工作区采用 IDE 式终端：结构化模板保留 Draft/Committed 输入；JavaScript `readLine()` 与 Python `input()` 只有执行到读取边界时才激活 `stdin>`，并流式分栏显示 stdout、stderr 和结构化 result。
+- 左侧工作区采用 IDE 式终端：结构化模板保留 Draft/Committed 输入；JavaScript `readLine()`、Python `input()`、C++ `std::cin` 与 Java `Scanner(System.in)` 只有执行到读取边界时才激活 `stdin>`，并流式分栏显示 stdout、stderr 和结构化 result。
 - AI 代码实验室支持 Python、JavaScript、C++、Java 代码输入，并把分析记录保存在本地历史中。
 - AI 调用优先走同源 `/api/chat` 代理，开发环境由 Vite 插件提供，生产环境由 `server/proxy.cjs` 提供。
 - AI 分析支持两条路径：直接生成 `AnimationScript`，或生成可复用的动画生成器并在 Web Worker 沙箱中执行。
@@ -226,9 +226,9 @@ b.desc('比较相邻元素').compare(0, 1)
 
 输入编辑分为 Draft 与 Committed 两层。逐键输入只执行结构扫描和领域校验，不生成半成品动画；旧动画立即暂停并冻结。用户点击“运行”或按 `Ctrl+Enter` 后才提交输入：可信内置模板本地生成 preset，修改后的 JavaScript/Python 先在 Worker 中真实执行，再编译为可复用 `GeneratorArtifact`。同一 Artifact 的后续合法输入仍在本地 Worker 重跑，不再次请求 AI。
 
-所有 75 个内置算法的 Python/JavaScript 模板都暴露统一 `solve(inputData)` 入口。永久契约测试会执行默认 JavaScript 模板并逐项比较其返回值与 `AnimationScript.result`；输入响应测试无豁免地检查每个算法在输入改变后，初始状态、结果或步骤必须改变。现有 C++ 函数式模板会在后续阶段迁移；带 `int main()` 的 C++ 程序已经可以真实执行，Java 仍只进行静态诊断。
+所有 75 个内置算法的 Python/JavaScript 模板都暴露统一 `solve(inputData)` 入口。永久契约测试会执行默认 JavaScript 模板并逐项比较其返回值与 `AnimationScript.result`；输入响应测试无豁免地检查每个算法在输入改变后，初始状态、结果或步骤必须改变。现有 C++/Java 函数式模板会在后续阶段迁移；带 `int main()` 的 C++ 程序和带 `public static void main(String[] args)` 的 Java 程序已经可以真实执行。
 
-严格交互式执行正在按语言纵向迁移。JavaScript 可用 `async function main()` 作为入口，并使用 `await readLine(prompt)`、`write/writeLine`、`console.log/error`、`emitResult` 和 `emitTrace`。Python 代码可直接使用同步 `input()`、`print()`、`emit_result()` 和 `emit_trace()`；Pyodide Worker 使用 Atomics 在读取边界阻塞。C++ `int main()` 由随项目分发的 YoWASP Clang 21 编译为 WASI，再由独立 Worker 执行；`std::cin`、`std::cout`、`std::cerr` 以及 JSON `emit_result/emit_trace` 均进入同一会话协议。开发、预览和生产服务器通过 COOP/COEP 启用 SharedArrayBuffer，等待输入不计入 CPU 超时，后续运行复用已加载的语言 Worker。stdout、stderr、result 与 trace 是独立通道，动画不会解析 stdout 猜测执行过程。Java javac/JVM 尚未接入，且不会使用 Docker、宿主机编译器、远程服务或有限转译器冒充完整运行时。
+严格交互式执行正在按语言纵向迁移。JavaScript 可用 `async function main()` 作为入口，并使用 `await readLine(prompt)`、`write/writeLine`、`console.log/error`、`emitResult` 和 `emitTrace`。Python 代码可直接使用同步 `input()`、`print()`、`emit_result()` 和 `emit_trace()`；Pyodide Worker 使用 Atomics 在读取边界阻塞。C++ `int main()` 由随项目分发的 YoWASP Clang 21 编译为 WASI，再由独立 Worker 执行；`std::cin`、`std::cout`、`std::cerr` 以及 JSON `emit_result/emit_trace` 均进入同一会话协议。Java 源码由 Worker 内的 OpenJDK 8 `javac` 编译为真实 `.class`，再由 DoppioJVM 执行；`Scanner(System.in)`、`System.out/err` 与同包注入的 `AlgoViz.emitResult/emitTrace(JSON字符串)` 使用相同会话协议。开发、预览和生产服务器通过 COOP/COEP 启用 SharedArrayBuffer，等待输入不计入 CPU 超时，后续运行复用已加载的语言 Worker。stdout、stderr、result 与 trace 是独立通道，动画不会解析 stdout 猜测执行过程。所有语言均不依赖 Docker、宿主机编译器或远程执行服务。
 
 ```javascript
 async function main() {
@@ -257,7 +257,7 @@ int main() {
 }
 ```
 
-C++ 工具链资源约 102 MB，只在首次运行 C++ 时懒加载；同一页面后续编译复用 Worker。Clang 的真实错误原样显示在终端，编译失败不会覆盖旧动画。第三方运行时的版本与许可证见 [`public/THIRD_PARTY_NOTICES.txt`](public/THIRD_PARTY_NOTICES.txt)。
+C++ 工具链资源约 102 MB；Java Worker 与本地 Java 8 类库约 47 MB。两者都只在首次运行对应语言时懒加载，同一页面后续编译复用 Worker 和已加载资源。Clang/javac 的真实错误原样显示在终端，编译失败不会覆盖旧动画。Java 当前以 Java 8 语法和标准库为兼容上限。第三方运行时的版本与许可证见 [`public/THIRD_PARTY_NOTICES.txt`](public/THIRD_PARTY_NOTICES.txt)。
 
 交互程序通过版本化 Runtime Trace 直接驱动 Scene Engine。`init` 建立脚本，之后每个 `step` 立即追加一个动画步骤；程序等待 stdin 时画面保持在最新步骤，输入后从同一调用栈继续。更换输入只会在本地 Worker 中重跑代码，不会再次调用 LLM：
 
@@ -561,13 +561,14 @@ AI 历史记录会保存代码、语言、输入数据、状态、生成脚本�
 - `src/scene/layouts/__tests__/`：确定性布局与 ELK 兼容拓扑任务/结果映射
 - `src/scene/graphics/compile/__tests__/`：bitset、hash table、heap、math、set、string 等事件编译器
 - `src/scene/graphics/renderers/__tests__/`：DP 表、调用栈、网格和各图元 Renderer
-- `src/sandbox/__tests__/`：AnimationBuilder、生成器执行、复合 builder、沙箱失败归类
-- `src/workbench/__tests__/`：输入状态机、领域诊断、运行时能力和 Map/Set/Infinity 等 JSON-safe 输出归一化
+- `src/sandbox/__tests__/`：AnimationBuilder、生成器执行、复合 builder、沙箱失败归类，以及 JS/Python/C++/Java 交互会话协议
+- `src/workbench/__tests__/`：输入状态机、领域诊断、执行协议、Runtime Trace 和 Map/Set/Infinity 等 JSON-safe 输出归一化
 - `src/presets/__tests__/`：算法识别、无豁免输入响应、结构化结果契约、堆操作端到端、跳表真实搜索轨迹，以及二叉树/B+ 树的输入驱动结果
 - `src/utils/__tests__/templateRuntimeContract.test.ts`：全部 75 个内置算法的双语言 `solve` 入口，以及 JavaScript 真值与可复用动画结果的一致性
 - `src/hooks/__tests__/`：动画引擎、AI 生成失败归类（`useAIGenerator.fallback`）
 - `src/store/__tests__/`：Zustand store 行为
 - `e2e/algorithm-layout.spec.ts`：跳表在 1440×900 与 1024×768 视口的 Playwright 截图回归
+- `e2e/workbench-terminal.spec.ts`：四种语言的真实 stdin/stdout/result/trace、编译错误与旧动画冻结
 
 运行：
 
