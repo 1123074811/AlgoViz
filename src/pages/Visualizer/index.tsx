@@ -47,10 +47,13 @@ import {
   isInteractiveCpp,
   startInteractiveCppSession,
 } from '@/sandbox/runInteractiveCpp'
+import {
+  isInteractiveJava,
+  startInteractiveJavaSession,
+} from '@/sandbox/runInteractiveJava'
 import type { InteractiveExecutionSession } from '@/sandbox/runInteractiveSession'
 import {
   formatRuntimeOutput,
-  getRuntimeLanguageCapability,
 } from '@/workbench/runtimeContract'
 import type { ExecutionSessionState } from '@/workbench/executionProtocol'
 import {
@@ -200,12 +203,16 @@ export default function Visualizer() {
     (codeLanguage === 'javascript' && isInteractiveJavaScript(code))
     || (codeLanguage === 'python' && isInteractivePython(code))
     || (codeLanguage === 'cpp' && isInteractiveCpp(code))
+    || (codeLanguage === 'java' && isInteractiveJava(code))
   const committedCode = executedCodeByScope[codeScopeKey] ?? defaultCode
   const codeDirty = code !== committedCode
   const codeDiagnostics = useMemo(() => {
     if (!code.trim()) return []
     const result = compileAndValidateCode(code, codeLanguage)
-    if (codeLanguage === 'cpp' && isInteractiveCpp(code)) return result.warnings
+    if (
+      (codeLanguage === 'cpp' && isInteractiveCpp(code))
+      || (codeLanguage === 'java' && isInteractiveJava(code))
+    ) return result.warnings
     return [...result.errors, ...result.warnings]
   }, [code, codeLanguage])
   const inputCompilation = useMemo(
@@ -524,8 +531,10 @@ export default function Visualizer() {
   const handleRun = useCallback(async () => {
     if (!selectedAlgorithm) return
     const compilation = compileAndValidateCode(code, codeLanguage)
-    const useCppCompiler = codeLanguage === 'cpp' && isInteractiveCpp(code)
-    if (!compilation.success && !useCppCompiler) {
+    const useLanguageCompiler =
+      (codeLanguage === 'cpp' && isInteractiveCpp(code))
+      || (codeLanguage === 'java' && isInteractiveJava(code))
+    if (!compilation.success && !useLanguageCompiler) {
       setTerminalRunState({
         status: 'error',
         message: `[${compilation.errors[0].type}] ${compilation.errors[0].message}`,
@@ -604,6 +613,8 @@ export default function Visualizer() {
                     ? '正在加载 Python 并编译…'
                     : codeLanguage === 'cpp'
                       ? '正在加载 Clang 并编译 C++…'
+                      : codeLanguage === 'java'
+                        ? '正在加载 Java 8 并执行 javac…'
                       : '正在编译…'
                   : state.phase === 'waiting-input'
                     ? state.stdinRequest?.prompt || '程序正在等待输入'
@@ -614,6 +625,8 @@ export default function Visualizer() {
         ? startInteractivePythonSession(code, updateInteractiveState)
         : codeLanguage === 'cpp'
           ? startInteractiveCppSession(code, updateInteractiveState)
+          : codeLanguage === 'java'
+            ? startInteractiveJavaSession(code, updateInteractiveState)
           : startInteractiveJavaScriptSession(code, updateInteractiveState)
       interactiveSessionRef.current = session
       return
@@ -670,10 +683,10 @@ export default function Visualizer() {
       return
     }
 
-    if (getRuntimeLanguageCapability(codeLanguage) === 'static-only') {
+    if (codeLanguage === 'java') {
       setTerminalRunState({
         status: 'error',
-        message: 'Java 当前仅支持静态诊断；浏览器内没有对应运行时，未执行也未生成动画',
+        message: 'Java 真实执行需要 public static void main(String[] args) 入口；当前代码仅完成静态诊断，未执行也未生成动画',
       })
       return
     }

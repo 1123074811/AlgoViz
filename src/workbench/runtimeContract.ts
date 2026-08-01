@@ -1,13 +1,5 @@
 import type { AnimationResult } from '@/types/animation'
 
-export type RuntimeLanguageCapability = 'worker' | 'static-only'
-
-export function getRuntimeLanguageCapability(
-  language: 'python' | 'javascript' | 'cpp' | 'java',
-): RuntimeLanguageCapability {
-  return language === 'java' ? 'static-only' : 'worker'
-}
-
 export function normalizeRuntimeValue(value: unknown): AnimationResult | undefined {
   const seen = new WeakSet<object>()
 
