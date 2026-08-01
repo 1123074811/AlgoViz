@@ -35,7 +35,9 @@
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "@runno/wasi": "^0.10.0",
+    "@seth0x41/doppio": "^1.0.0",
     "@yowasp/clang": "^21.1.4-3",
+    "browserfs": "^1.4.3",
     "elkjs": "^0.12.0",
     "i18next": "^26.2.0",
     "lucide-react": "^1.16.0",

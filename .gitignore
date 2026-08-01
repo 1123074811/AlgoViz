@@ -28,6 +28,9 @@ npm-debug.log*
 # Temp
 *.tmp
 
+# Local convenience scripts
+*.bat
+
 # Superpowers (visual companion cache)
 .superpowers/
 

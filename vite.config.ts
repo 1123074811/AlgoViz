@@ -200,6 +200,9 @@ export default defineConfig({
   optimizeDeps: {
     // Preserve YoWASP's import.meta-relative WASM and sysroot asset URLs in dev.
     exclude: ['@yowasp/clang', '@runno/wasi'],
+    // Java is discovered from a lazy Worker import; prebundle it before the first
+    // run so Vite does not reload the workbench mid-session.
+    include: ['browserfs', '@seth0x41/doppio'],
   },
   resolve: {
     alias: {

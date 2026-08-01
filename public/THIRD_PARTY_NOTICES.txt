@@ -20,5 +20,32 @@ The C++ execution path distributes the following third-party components:
    - Source and license:
      https://github.com/taybenlor/runno
 
+The Java execution path distributes the following third-party components:
+
+3. @seth0x41/doppio 1.0.0
+   - Browser bundle of DoppioJVM with an embedded Java 8 home.
+   - Package license: ISC.
+   - The bundled DoppioJVM 0.5 runtime is MIT licensed.
+   - Source and license:
+     https://www.npmjs.com/package/@seth0x41/doppio
+     https://github.com/plasma-umass/doppio
+     https://github.com/plasma-umass/doppio/blob/master/LICENSE
+
+4. Embedded OpenJDK 8 class libraries and javac
+   - rt.jar, tools.jar, charsets.jar, jce.jar and currency.data.
+   - License: GPL-2.0-only WITH Classpath-exception-2.0.
+   - OpenJDK source and license:
+     https://github.com/openjdk/jdk8u
+     https://github.com/openjdk/jdk8u/blob/master/LICENSE
+     https://github.com/openjdk/jdk8u/blob/master/ASSEMBLY_EXCEPTION
+
+5. browserfs 1.4.3
+   - In-browser file system and process/stdin/stdout emulation used by DoppioJVM.
+   - License: MIT.
+   - Copyright (c) 2013-2017 John Vilk and other BrowserFS contributors.
+   - Source and license:
+     https://github.com/jvilk/BrowserFS
+     https://github.com/jvilk/BrowserFS/blob/master/LICENSE
+
 These components are used without affiliation or endorsement. Their complete
 license texts and source notices at the URLs above remain authoritative.
